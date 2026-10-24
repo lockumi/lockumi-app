@@ -70,7 +70,7 @@ const quien = (r: Rol, c: Contexto) => r === 'dueno' && c.prueba ? 'El dueño de
 export const alertaIngreso = (real = modoReal): Alerta => ({
   paso: 'ingreso', titulo: '¡Ingresaste correctamente!',
   linea: { et: 'Sigue:', texto: 'crear o ver tus alquileres' },   // LEGAL: revisado el 23/10
-  hecho: `${real ? 'Estamos preparando tu billetera.' : 'Te damos la bienvenida a la demo.'} Desde aquí puedes ver tus alquileres y crear un depósito protegido.`,
+  hecho: `${real ? 'Estamos preparando tu billetera.' : 'Te damos la bienvenida a la demo.'} Desde aquí puedes ver tus alquileres y crear un depósito de prueba.`,   // LEGAL: revisado (24/10)
 })
 export const alertaIngresoFallo = (): Alerta => ({
   paso: 'ingreso-fallo', tipo: 'error', titulo: 'El ingreso no terminó',

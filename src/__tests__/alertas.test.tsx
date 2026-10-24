@@ -113,6 +113,8 @@ describe('Aviso v2: toast (componente)', () => {
     expect(al.lineaDe({ paso: 'x', titulo: 'T', hecho: 'Pasó esto.', sigue: 'Hacer aquello.' })).toEqual({ texto: 'Hacer aquello.' })
     expect(al.lineaDe({ paso: 'x', titulo: 'T', hecho: 'Pasó esto.' })).toEqual({ texto: 'Pasó esto.' })
     expect(al.lineaDe(al.alertaIngreso(true))).toEqual({ et: 'Sigue:', texto: 'crear o ver tus alquileres' })
+    // LEGAL: revisado (24/10): «depósito de prueba» (antes «depósito protegido»)
+    for (const r of [true, false]) { expect(al.alertaIngreso(r).hecho).toMatch(/Desde aquí puedes ver tus alquileres y crear un depósito de prueba\.$/); expect(al.alertaIngreso(r).hecho).not.toMatch(/protegid/i) }
   })
   it('«Tomar foto» usa el ícono de cámara de la app (sin emoji)', () => {
     const c = leer('../Camara.tsx'); expect(c).toContain('<Icono id="i-camara" />'); expect(c).not.toMatch(EMOJI)

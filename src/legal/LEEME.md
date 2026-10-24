@@ -54,3 +54,6 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   y d) dice quién firma la aprobación si nadie aprobó. Privacidad (Freighter): «ver la cláusula 5.3 de los Términos». Riesgo de producto
   y bloqueo del modo de dos personas: `docs/alertas.md`, «Legal, ronda 9b».
   6.3 f): la parte no reclamada se devuelve cuando se cierra el reclamo, no «de inmediato» (todo el depósito queda bloqueado).
+- **Ronda 9c (24 oct 2026, sin publicar, misma versión 1.6-demo):** Términos 2.1 «guardado con reglas claras» (antes «protegido»).
+  El aviso de bienvenida dice «crear un depósito de prueba». `Login.tsx:118` («protegido») espera el OK de Katherine; cuando se aplique,
+  «protegid» pasa al test de palabras prohibidas (ver `docs/alertas.md`, «Legal, ronda 9c»).

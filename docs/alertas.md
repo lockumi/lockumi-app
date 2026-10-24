@@ -419,3 +419,12 @@ Legal eligió la opción (a), solo texto. Sigue siendo la versión 1.6-demo de l
   - (b) mantener este texto: todo queda bloqueado hasta cerrar el reclamo.
   - **Pregunta para Trustless Work antes de elegir (a):** ¿un hito agregado después del depósito puede usar el saldo ya depositado, o hay que depositar por hito?
 
+## Legal, ronda 9c (24 oct 2026, rama `contrato-compacto`, sin publicar)
+
+Sigue siendo la versión 1.6-demo.
+
+- **`alertas.ts:73`** (aviso de bienvenida al entrar, todos los modos): «…Desde aquí puedes ver tus alquileres y crear un depósito de prueba.» Antes decía «crear un depósito protegido».
+- **Términos 2.1:** «…un depósito de garantía de alquiler guardado con reglas claras.» Antes decía «protegido».
+- Tests: `alertas.test.tsx` (texto nuevo, sin «protegid») y `casillas.test.tsx` (2.1, y ningún «protegid» en los Términos).
+- **Pendiente del OK de Katherine:** `Login.tsx:118`, «El depósito de tu alquiler, protegido». La propuesta de Legal es «…, guardado con reglas claras» más el subtítulo «Demo en la red de prueba de Stellar, sin dinero real.» (imagen `diseno/envio/contrato-compacto/login-titulo.jpg`, sin código). **Cuando se aplique**, se agrega «protegid» al test de palabras prohibidas en todos los textos visibles. Hoy es el único que queda.
+

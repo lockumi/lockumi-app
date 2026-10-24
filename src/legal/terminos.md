@@ -13,7 +13,8 @@ Estos términos aplican a la app app.lockumi.com y están publicados en https://
 1.2 Contacto: **business.applockumi@gmail.com**.
 
 ## 2. Qué es esta app: una demo en la red de prueba
-2.1 app.lockumi.com es una **demostración** de cómo funcionaría un depósito de garantía de alquiler protegido. Funciona en la **testnet (red de prueba)** de **Stellar (una red digital abierta)**, con un **escrow (contrato digital de garantía)** de Trustless Work. **En la red de prueba no hay dinero real.**
+<!-- LEGAL: revisado (24/10) -->
+2.1 app.lockumi.com es una **demostración** de cómo funcionaría un depósito de garantía de alquiler guardado con reglas claras. Funciona en la **testnet (red de prueba)** de **Stellar (una red digital abierta)**, con un **escrow (contrato digital de garantía)** de Trustless Work. **En la red de prueba no hay dinero real.**
 2.2 En la demo:
 a) Los tokens que se usan, incluidos el XLM y el USDC de prueba, **no son dinero real, no tienen valor económico y no se pueden canjear** por dinero ni por ningún otro bien.
 <!-- LEGAL: revisado (24/10) · ronda 9b (2.2 b) -->
