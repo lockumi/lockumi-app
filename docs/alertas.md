@@ -337,3 +337,60 @@ Pruebas: `src/__tests__/alertas.test.tsx`, `recorrido.test.tsx`, `src/legal/__te
 - **BLOQUEO para activar el modo de dos personas:** antes, Legal reescribe Términos 5.3, que hoy dice que la cuenta de Lockumi firma la aprobación. En ese modo la firma la billetera del dueño (`trustless.ts:28-30`). También está en PLAN.md.
 - **Corrección de la ronda 7:** las notas de `Detalle.tsx:158` y `:206` **hoy no se ven en ninguna pantalla**. El alquiler de ejemplo siempre se ve como inquilino (`miRol: 'inquilino'` en `recorrido.ts`; `vistaDe` lo respeta) y no llega al estado «reclamo». Para la imagen `legal-ronda8.jpg` forcé el rol y el estado en una copia aparte, sin subirla.
 - Nueva aceptación con la sesión abierta: propuesta en `docs/reaceptacion.md` (solo imagen; no hay código).
+
+## Legal, ronda 9 (24 oct 2026, rama `contrato-compacto`, sin publicar)
+
+- **Términos 5.3 («Firmas.»)**: se reemplazó entera por el texto exacto de Legal, con las letras a) a f) en líneas separadas. Mismo formato que 4.2.
+- **3.1:** «en el modo por defecto, lo firma Lockumi con tu cuenta de inquilino de prueba (ver 5.3)».
+- **5.5.1 b):** «las demás las firma Lockumi (ver 5.3)».
+- **`Crear.tsx:275`** (modo de una persona): «si no, Lockumi firma el depósito por ti con una cuenta de prueba, en la red de prueba».
+- Tests: `src/legal/__tests__/casillas.test.tsx` (5.3 línea por línea, 3.1, 5.5.1 b) y `src/__tests__/plazo-real.test.ts` (texto de Crear).
+
+### ALERTA: 5.3 e) no coincide con producción
+
+5.3 e) dice: «en la fase 1 no hay reclamos en la red: el reclamo y la mediación son simulados (2.2 b y 6.7)». Eso **no es cierto en el modo que usa app.lockumi.com**. Producción corre `modoVideo`: `VITE_TRUSTLESS=1`, sin servidor compartido y sin `VITE_FLUJO=solo` (`src/servidor/config.ts:12-21`; `escrowReal = modoPrueba`).
+
+En ese modo el reclamo **sí va a la red de prueba**:
+
+1. `acciones.ts:89-91`: `reclamar` llama a `escrow.disputar`.
+2. `services/escrow.ts:135-139`: llama a `solo.disputar`.
+3. `api/_lib/solo.ts:364-370`: `dispute_escrow`, firmado con la llave del dueño de prueba, que guarda el servidor.
+
+El depósito queda bloqueado en la red. El reparto **también se ejecuta en la red**:
+
+1. `acciones.ts:94-96` (aceptar) y la mediación de `Detalle.tsx` llaman a `escrow.resolver`.
+2. `services/escrow.ts:141-146`: llama a `solo.resolver`.
+3. `api/_lib/solo.ts:372-381`: `resolve_dispute`, firmado por la cuenta de plataforma de Lockumi como `disputeResolver` (`solo.ts:291`).
+
+Lo único simulado es la persona mediadora. El reparto lo elige el inquilino con «Resolver el reclamo (simulación)».
+
+- **Solo en `modoSolo`** (`VITE_FLUJO=solo`, el alquiler de ejemplo) el reclamo y la mediación no van a la red: `DetalleSolo` no tiene reclamo. Ahí e) sí es cierto.
+- **«Fase 1» no está en 2.2 b ni en 6.7.** Se define en **2.3**: tú haces de inquilino y el dueño es una cuenta de prueba. Esa es justamente la producción actual.
+- **2.2 b** dice que «los reclamos y la persona mediadora son simulados». En `modoVideo` es parcialmente falso: el reclamo y el reparto quedan en la red.
+- **6.7** dice «el reparto se elige con el botón…» y es correcto, pero no dice que ese reparto se ejecuta en la red.
+- **Primera frase de e).** Hoy el reclamo ya lo abre la cuenta del dueño (de prueba), no la cuenta de Lockumi que resuelve disputas. Eso coincide con la frase «Cuando haya reclamos en la red…».
+- **«solo según el acuerdo de las partes o lo que decida un árbitro o un juez» y «si no hay acuerdo, el depósito sigue bloqueado»** no coinciden con producción: en la mediación simulada el inquilino elige y se ejecuta (`Detalle.tsx:216-224`).
+- **Textos visibles que contradicen e)** (no se cambiaron):
+  - `Crear.tsx:280` (`modoVideo`): «El reclamo lo haces tú con un botón, en nombre del dueño de prueba, y queda registrado en la red de prueba.»
+  - `Detalle.tsx:207` (`modoVideo`): «Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.»
+- **Para que Legal decida:**
+  - (a) cambiar e) a «En la fase 1, el reclamo del dueño de prueba sí queda registrado en la red de prueba y bloquea el depósito; la persona mediadora es simulada y el reparto lo elige el inquilino con un botón y lo ejecuta la cuenta de Lockumi que resuelve disputas»;
+  - (b) pedir un cambio técnico para que `modoVideo` no abra la disputa en la red. Eso es lógica del escrow y necesita el OK de Katherine.
+
+### Lo demás de 5.3, verificado en `modoVideo`
+
+- **a) Depósito: cierto.**
+  - Cuenta propia: `escrow.ts:66-72`. El XDR lo firma tu billetera con `propia.firmar`, y el servidor solo lo reenvía (`solo.ts:314`).
+  - USDC de Lockumi: `escrow.ts:93-112`, `fondear-prueba`, que firma el servidor con la cuenta de inquilino de prueba (`solo.ts:323-333`).
+  - Ojo: 4.1 c) dice que, si falla tu billetera, Lockumi puede usar una cuenta de inquilino de prueba de respaldo. a) no lo menciona.
+- **b) Compra y línea de USDC: coincide con el código** (`cuentaPropia.ts:43`, `billetera.ts:95-100`, `addTrustline`).
+  - Para revisar: el comentario de `billetera.ts:82-83` dice que con el vault las trustlines quedan «fuera del límite» y que el vault muestra su propio aviso. Si es así, abrir la línea **sí** pide confirmación. No lo probé con una cuenta real.
+- **c) Aprobación: cierto.** La firma la llave del dueño de prueba en el servidor (`solo.ts:335-351`, `approve_milestone`). En el modo de dos personas la firma la billetera del dueño (`trustless.ts:28-30`), que coincide con «fase 2». Legal confirma si esto levanta el BLOQUEO de la ronda 8.
+- **d) Liberación: cierto.** La firma la plataforma (`release_funds`, `solo.ts:354-362`), solo con `approved` y hacia `receiver`, que es el inquilino (`solo.ts:291`). La devolución al abrir: `Detalle.tsx:138` (`!modoSolo && resta === 0 && !a.reclamo`).
+  - Matiz: «sin que nadie más tenga que aprobarla» es cierto para la persona, pero la aprobación existe en la red: la firma Lockumi con el dueño de prueba en ese momento (`escrow.ts:117-125`).
+- **f) Cavos: cierto.** La app no usa la firma sin confirmación; lo cubre `src/__tests__/cavos-sin-firma-silenciosa.test.ts`.
+- **Otros textos que todavía dicen que la cuenta de Lockumi firma** (no se cambiaron):
+  - `Real.tsx:43`, `:142`, `:201`, `:204` (`modoSolo`);
+  - `Detalle.tsx:267` (dos personas, «La liberación del depósito la firma la cuenta de Lockumi»: correcto);
+  - `ContratoDoc.tsx:34` («la cuenta de Lockumi es la que ejecuta» el reparto: correcto);
+  - `privacidad.md:16` (Freighter: «Las demás acciones del contrato las firma la cuenta de Lockumi»).

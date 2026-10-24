@@ -40,7 +40,7 @@ describe('Plazo real en la app', () => {
   })
   // LEGAL: revisado (24/10) · ronda 7: quién firma, en las hojas de Crear y en la aprobación (modo de dos personas)
   it('Crear y Detalle: textos de Legal sobre firmas y reclamo registrado', () => {
-    expect(crear).toContain('<p>Tú eres el <strong>inquilino</strong>. Si usas tu propia billetera, depositas con ella; si no, la cuenta de Lockumi firma el depósito por ti en la red de prueba.')
+    expect(crear).toContain('<p>Tú eres el <strong>inquilino</strong>. Si usas tu propia billetera, depositas con ella; si no, Lockumi firma el depósito por ti con una cuenta de prueba, en la red de prueba.')
     expect(crear).toContain('La mediación es simulada. El reclamo lo haces tú con un botón, en nombre del dueño de prueba, y queda registrado en la red de prueba.</p>')
     expect(crear).not.toContain('y depositas con tu billetera')
     // LEGAL: revisado (24/10) · ronda 8

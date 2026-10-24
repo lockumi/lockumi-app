@@ -46,3 +46,6 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   firma. **Aviso de privacidad → 1.6-demo · 24 de octubre de 2026** (párrafo de Freighter). Como cambió su versión, el consentimiento
   1.5-demo ya no cuenta. En «Entrar», quien venga de producción (las dos en 1.5-demo) marca **las dos casillas otra vez, una sola vez**.
   Quien ya aceptó Términos 1.6-demo en la vista previa solo marca la de privacidad.
+- **Ronda 9 (24 oct 2026, sin publicar):** Términos 1.6-demo (misma versión y fecha): 5.3 reemplazada entera por el texto de Legal
+  (a–f: depósito, compra, aprobación, liberación, reclamos y Cavos), 3.1 y 5.5.1 b). **5.3 e) no coincide con producción**
+  (`modoVideo` abre la disputa en la red): ver `docs/alertas.md`, «Legal, ronda 9».

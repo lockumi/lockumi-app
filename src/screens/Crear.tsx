@@ -271,8 +271,8 @@ export function Crear({ u }: { u: Usuario }) {
         {info === 'red' && <>
           <p>Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.</p>
           {modoSolo ? <>
-            {/* LEGAL: revisado (24/10) · ronda 8: modoSolo (con o sin billetera propia); el reclamo y la mediación no van a la red (DetalleSolo no tiene reclamo) */}
-            <p>Tú eres el <strong>inquilino</strong>. Si usas tu propia billetera, depositas con ella; si no, la cuenta de Lockumi firma el depósito por ti en la red de prueba. El dueño es el <strong>{minuscula(DUENO_PRUEBA)}</strong>: por eso no te pedimos su correo.</p>
+            {/* LEGAL: revisado (24/10) · 5.3 ronda 9 (texto del depósito); ronda 8: modoSolo (con o sin billetera propia); el reclamo y la mediación no van a la red (DetalleSolo no tiene reclamo) */}
+            <p>Tú eres el <strong>inquilino</strong>. Si usas tu propia billetera, depositas con ella; si no, Lockumi firma el depósito por ti con una cuenta de prueba, en la red de prueba. El dueño es el <strong>{minuscula(DUENO_PRUEBA)}</strong>: por eso no te pedimos su correo.</p>
             <p>Lockumi firma y confirma por el dueño de prueba: tú tocas el botón en su nombre. El reclamo y la persona mediadora son simulados y no se registran en la red de prueba.</p>
           </> : <>
             <p>Tú eres el <strong>inquilino</strong>. El dueño es el <strong>{minuscula(DUENO_PRUEBA)}</strong>: por eso no te pedimos su correo.</p>
