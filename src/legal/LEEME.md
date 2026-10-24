@@ -49,3 +49,7 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **Ronda 9 (24 oct 2026, sin publicar):** Términos 1.6-demo (misma versión y fecha): 5.3 reemplazada entera por el texto de Legal
   (a–f: depósito, compra, aprobación, liberación, reclamos y Cavos), 3.1 y 5.5.1 b). **5.3 e) no coincide con producción**
   (`modoVideo` abre la disputa en la red): ver `docs/alertas.md`, «Legal, ronda 9».
+- **Ronda 9b (24 oct 2026, sin publicar, misma versión 1.6-demo):** opción (a) de Legal, solo texto. 2.2 b) y 5.3 e) dicen que el reclamo
+  y el reparto sí van a la red de prueba. 5.3 a) agrega la cuenta de respaldo, b) dice que la línea de USDC puede pedir confirmación o no,
+  y d) dice quién firma la aprobación si nadie aprobó. Privacidad (Freighter): «ver la cláusula 5.3 de los Términos». Riesgo de producto
+  y bloqueo del modo de dos personas: `docs/alertas.md`, «Legal, ronda 9b».

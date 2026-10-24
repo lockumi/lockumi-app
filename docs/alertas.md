@@ -346,7 +346,10 @@ Pruebas: `src/__tests__/alertas.test.tsx`, `recorrido.test.tsx`, `src/legal/__te
 - **`Crear.tsx:275`** (modo de una persona): «si no, Lockumi firma el depósito por ti con una cuenta de prueba, en la red de prueba».
 - Tests: `src/legal/__tests__/casillas.test.tsx` (5.3 línea por línea, 3.1, 5.5.1 b) y `src/__tests__/plazo-real.test.ts` (texto de Crear).
 
-### ALERTA: 5.3 e) no coincide con producción
+### ~~ALERTA~~ resuelto con 9b: 5.3 e) no coincidía con producción
+
+Resuelto en la ronda 9b (Legal eligió la opción a, solo texto): 2.2 b) y 5.3 e) ahora dicen que el reclamo y el reparto sí van a la red de prueba. Abajo queda el análisis original como referencia.
+
 
 5.3 e) dice: «en la fase 1 no hay reclamos en la red: el reclamo y la mediación son simulados (2.2 b y 6.7)». Eso **no es cierto en el modo que usa app.lockumi.com**. Producción corre `modoVideo`: `VITE_TRUSTLESS=1`, sin servidor compartido y sin `VITE_FLUJO=solo` (`src/servidor/config.ts:12-21`; `escrowReal = modoPrueba`).
 
@@ -394,3 +397,18 @@ Lo único simulado es la persona mediadora. El reparto lo elige el inquilino con
   - `Detalle.tsx:267` (dos personas, «La liberación del depósito la firma la cuenta de Lockumi»: correcto);
   - `ContratoDoc.tsx:34` («la cuenta de Lockumi es la que ejecuta» el reparto: correcto);
   - `privacidad.md:16` (Freighter: «Las demás acciones del contrato las firma la cuenta de Lockumi»).
+
+## Legal, ronda 9b (24 oct 2026, rama `contrato-compacto`, sin publicar)
+
+Legal eligió la opción (a), solo texto. Sigue siendo la versión 1.6-demo de los Términos y de Privacidad, con fecha 24 oct 2026. No cambió ningún texto de la app.
+
+- **Términos 2.2 b):** el depósito, la aprobación, la liberación, el reclamo y el reparto del reclamo sí se registran en la red de prueba. La persona mediadora es simulada y el reparto se elige con un botón (6.7).
+- **5.3 a):** se agregó la cuenta de inquilino de prueba de respaldo (4.1 c), por si falla la firma de tu billetera.
+- **5.3 b):** «Abrir la línea de USDC en tu billetera no mueve fondos; según la billetera, puede pedirte o no que lo confirmes.» Así queda cubierta la duda sobre `billetera.ts:82-83`.
+- **5.3 d):** «Si nadie aprobó antes, en ese momento Lockumi firma la aprobación con la cuenta del dueño de prueba.» Así lo hace el código (`escrow.ts:117-125`).
+- **5.3 e):** el reclamo abre una disputa en la red de prueba. La firma Lockumi con la cuenta del dueño de prueba. El reparto se elige con «Resolver el reclamo (simulación)» y lo ejecuta la cuenta que resuelve disputas.
+  - Se verificó la etiqueta del botón: es literal en `Detalle.tsx:232` (`modoVideo`). También aparece en `Detalle.tsx:226`, `alertas.ts:66` y Términos 6.7.
+- **Privacidad (Freighter):** «Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba.»
+- **BLOQUEO del modo de dos personas, con un alcance más chico.** 5.3 c) ya cubre la aprobación con la billetera del dueño (fase 2). Pero antes de activar ese modo, Legal tiene que reescribir 5.3 e) y 2.2 b) para la fase 2: ahí la disputa la abriría la billetera del dueño real, no la cuenta del dueño de prueba.
+- **RIESGO DE PRODUCTO:** hoy, en producción (`modoVideo`), el inquilino elige el reparto con un botón y Lockumi lo ejecuta en la red de prueba (`Detalle.tsx:216-232`, `solo.ts:372-381`). Está informado en 6.7, 2.2 b) y 5.3 e), pero **no puede llegar a dinero real**. En un servicio real, sin acuerdo de las partes, el depósito queda bloqueado (criterio 4 de Legal).
+
