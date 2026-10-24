@@ -53,3 +53,4 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   y el reparto sí van a la red de prueba. 5.3 a) agrega la cuenta de respaldo, b) dice que la línea de USDC puede pedir confirmación o no,
   y d) dice quién firma la aprobación si nadie aprobó. Privacidad (Freighter): «ver la cláusula 5.3 de los Términos». Riesgo de producto
   y bloqueo del modo de dos personas: `docs/alertas.md`, «Legal, ronda 9b».
+  6.3 f): la parte no reclamada se devuelve cuando se cierra el reclamo, no «de inmediato» (todo el depósito queda bloqueado).

@@ -411,4 +411,11 @@ Legal eligió la opción (a), solo texto. Sigue siendo la versión 1.6-demo de l
 - **Privacidad (Freighter):** «Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba.»
 - **BLOQUEO del modo de dos personas, con un alcance más chico.** 5.3 c) ya cubre la aprobación con la billetera del dueño (fase 2). Pero antes de activar ese modo, Legal tiene que reescribir 5.3 e) y 2.2 b) para la fase 2: ahí la disputa la abriría la billetera del dueño real, no la cuenta del dueño de prueba.
 - **RIESGO DE PRODUCTO:** hoy, en producción (`modoVideo`), el inquilino elige el reparto con un botón y Lockumi lo ejecuta en la red de prueba (`Detalle.tsx:216-232`, `solo.ts:372-381`). Está informado en 6.7, 2.2 b) y 5.3 e), pero **no puede llegar a dinero real**. En un servicio real, sin acuerdo de las partes, el depósito queda bloqueado (criterio 4 de Legal).
+- **Términos 6.3 f)** (ronda 9b): «la parte no reclamada, cuando se cierre el reclamo. En la demo, mientras hay un reclamo, todo el depósito de prueba queda bloqueado en la cuenta segura, porque la cuenta segura que usa Lockumi no permite liberarlo por partes.» Antes decía «de inmediato».
+  - Así funciona el código: es un escrow *single-release*, y `dispute_escrow` bloquea todo el saldo (`api/_lib/solo.ts:289`, `:364-370`).
+  - Busqué con `rg` otros textos visibles que digan que la parte no reclamada se devuelve «de inmediato» (en `src/`, los textos legales y `index.html`): **no hay ninguno**.
+- **DECISIÓN DE KATHERINE, para dinero real:**
+  - (a) cambiar la técnica a varias liberaciones (escrow *multi-release* o un hito por la parte no reclamada): **3–5 h de tiempo real / 16–24 h para una persona**;
+  - (b) mantener este texto: todo queda bloqueado hasta cerrar el reclamo.
+  - **Pregunta para Trustless Work antes de elegir (a):** ¿un hito agregado después del depósito puede usar el saldo ya depositado, o hay que depositar por hito?
 
