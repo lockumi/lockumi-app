@@ -6,40 +6,53 @@
 // del emisor (JWKS), emisor, audiencia, vencimiento y el correo. Solo WebCrypto (sin dependencias nuevas). Cierre por defecto.
 import { servicio, rpc } from './supabase.js'
 
+// Legal, revisión de 96e931b (4:45 p. m.): audiencias POR EMISOR (CAVOS_AUD_GOOGLE, CAVOS_AUD_APPLE, CAVOS_AUD_EMAIL), iat de 5 minutos
+// como máximo, token de un solo uso (huella en lk_tokens_usados), email_verified false rechazado con cualquier emisor, llave del JWKS
+// solo de firma y con el alg del emisor, kid desconocido → JWKS como mucho una vez por minuto, y límite de intentos (lk_intento_verificacion).
+// Google y Apple (login de Cavos): nonce «<app id>.<BASE64URL(SHA-256(secreto))>» (docs.cavos.xyz/llms-full.txt, «What the enclave
+// verifies»): se exige el prefijo con el App ID de Lockumi (CAVOS_APP_ID). El hash del secreto NO se puede comprobar (el secreto queda en
+// el cliente). El enclave (código por correo) no documenta el formato de su nonce: no se exige.
 export const EMISORES = {
-  google: { iss: ['https://accounts.google.com', 'accounts.google.com'], alg: 'RS256', jwks: 'https://www.googleapis.com/oauth2/v3/certs' },
-  apple: { iss: ['https://appleid.apple.com'], alg: 'RS256', jwks: 'https://appleid.apple.com/auth/keys' },
-  email: { iss: ['https://enclave.cavos.xyz'], alg: 'ES256', jwks: 'https://enclave.cavos.xyz/.well-known/jwks.json' },
+  google: { iss: ['https://accounts.google.com', 'accounts.google.com'], alg: 'RS256', jwks: 'https://www.googleapis.com/oauth2/v3/certs', aud: 'CAVOS_AUD_GOOGLE' },
+  apple: { iss: ['https://appleid.apple.com'], alg: 'RS256', jwks: 'https://appleid.apple.com/auth/keys', aud: 'CAVOS_AUD_APPLE' },
+  email: { iss: ['https://enclave.cavos.xyz'], alg: 'ES256', jwks: 'https://enclave.cavos.xyz/.well-known/jwks.json', aud: 'CAVOS_AUD_EMAIL' },
 } as const
 export type Metodo = keyof typeof EMISORES
 type Env = Record<string, string | undefined>
 export class ErrorVerificacion extends Error { estado: number; constructor(estado: number, motivo: string) { super(motivo); this.estado = estado } }
 const MARGEN = 60   // segundos de tolerancia del reloj
+const EDAD_MAXIMA = 300   // segundos: el token tiene que ser de un login de hace 5 minutos o menos (como exige el enclave de Cavos)
+const JWKS_MINIMO = 60_000   // ms entre lecturas del JWKS por un kid desconocido
 
 const bytes = (b64u: string) => { const b = atob(b64u.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, ch => ch.charCodeAt(0)) }
 const json = (b64: string) => JSON.parse(new TextDecoder().decode(bytes(b64))) as Record<string, unknown>
 const normalizar = (c: unknown) => typeof c === 'string' ? c.trim().toLowerCase() : ''
-export const audiencias = (env: Env) => (env.CAVOS_AUDIENCIAS ?? '').split(',').map(x => x.trim()).filter(Boolean)
+const lista = (v: string | undefined) => (v ?? '').split(',').map(x => x.trim()).filter(Boolean)
+/** Audiencias permitidas de UN emisor (lista separada por comas en su variable). */
+export const audiencias = (env: Env, m: Metodo) => lista(env[EMISORES[m].aud])
+const configurado = (env: Env) => (Object.keys(EMISORES) as Metodo[]).some(m => audiencias(env, m).length > 0)
+export const huellaHex = async (t: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))).map(b => b.toString(16).padStart(2, '0')).join('')
 
 // JWKS por emisor, 10 minutos en memoria (por función fetch, para que las pruebas no se mezclen).
-const cache = new WeakMap<typeof fetch, Map<string, { hasta: number; keys: (JsonWebKey & { kid?: string })[] }>>()
-async function llave(url: string, kid: string, f: typeof fetch, ahora: number) {
+// Un kid desconocido vuelve a leer el JWKS solo si la última lectura fue hace 1 minuto o más (no se puede usar para martillar al emisor).
+type Jwk = JsonWebKey & { kid?: string; use?: string }
+const cache = new WeakMap<typeof fetch, Map<string, { hasta: number; leido: number; keys: Jwk[] }>>()
+async function llave(url: string, kid: string, alg: string, f: typeof fetch, ahora: number) {
   let m = cache.get(f); if (!m) { m = new Map(); cache.set(f, m) }
   let e = m.get(url)
-  if (!e || e.hasta < ahora || !e.keys.some(k => k.kid === kid)) {
+  if (!e || e.hasta < ahora || (!e.keys.some(k => k.kid === kid) && ahora - e.leido >= JWKS_MINIMO)) {
     const r = await f(url).catch(() => null)
     if (!r?.ok) throw new ErrorVerificacion(503, `No se pudieron leer las llaves públicas de ${url}.`)
-    e = { hasta: ahora + 600_000, keys: ((await r.json()) as { keys?: (JsonWebKey & { kid?: string })[] }).keys ?? [] }; m.set(url, e)
+    e = { hasta: ahora + 600_000, leido: ahora, keys: ((await r.json()) as { keys?: Jwk[] }).keys ?? [] }; m.set(url, e)
   }
   const k = e.keys.find(x => x.kid === kid)
   if (!k) throw new ErrorVerificacion(403, 'La firma usa una llave que el emisor no publica.')
+  if (k.use !== 'sig' || k.alg !== alg) throw new ErrorVerificacion(403, 'La llave publicada no es de firma o no es del algoritmo del emisor.')
   return k
 }
 
 /** Valida el token de Cavos y devuelve el correo (normalizado) y el método. Lanza ErrorVerificacion si algo no cuadra. */
 export async function verificarTokenCavos(token: string, env: Env, f: typeof fetch = fetch, ahora = Date.now()): Promise<{ correo: string; metodo: Metodo }> {
-  const auds = audiencias(env)
-  if (!auds.length) throw new ErrorVerificacion(503, 'Falta CAVOS_AUDIENCIAS: no se verifica ningún correo.')
   const partes = String(token ?? '').split('.')
   if (partes.length !== 3 || !partes[0] || !partes[1]) throw new ErrorVerificacion(403, 'El token no tiene el formato de un JWT.')
   let cab: Record<string, unknown>, c: Record<string, unknown>
@@ -49,8 +62,12 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   if (!metodo) throw new ErrorVerificacion(403, 'El emisor del token no es Google, Apple ni el enclave de Cavos.')
   const em = EMISORES[metodo]
   if (cab.alg !== em.alg) throw new ErrorVerificacion(403, 'El algoritmo de la firma no corresponde al emisor.')
+  const auds = audiencias(env, metodo)
+  if (!auds.length) throw new ErrorVerificacion(503, `Falta ${em.aud}: no se verifica ningún correo de ese emisor.`)
+  const appId = env.CAVOS_APP_ID?.trim()
+  if (metodo !== 'email' && !appId) throw new ErrorVerificacion(503, 'Falta CAVOS_APP_ID: no se verifica ningún correo de Google ni de Apple.')
   if (typeof cab.kid !== 'string') throw new ErrorVerificacion(403, 'La firma no dice con qué llave se hizo.')
-  const jwk = await llave(em.jwks, cab.kid, f, ahora)
+  const jwk = await llave(em.jwks, cab.kid, em.alg, f, ahora)
   const algo = em.alg === 'ES256' ? { name: 'ECDSA', namedCurve: 'P-256' } : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
   let ok = false
   try {
@@ -64,8 +81,14 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   const s = Math.floor(ahora / 1000)
   if (typeof c.exp !== 'number' || c.exp + MARGEN < s) throw new ErrorVerificacion(403, 'El token está vencido.')
   if (typeof c.nbf === 'number' && c.nbf - MARGEN > s) throw new ErrorVerificacion(403, 'El token todavía no vale (vencimiento).')
+  if (typeof c.iat !== 'number') throw new ErrorVerificacion(403, 'El token no dice cuándo se emitió (iat).')
+  if (c.iat - MARGEN > s) throw new ErrorVerificacion(403, 'El token dice que se emitió en el futuro.')
+  if (s - c.iat > EDAD_MAXIMA) throw new ErrorVerificacion(403, 'El token tiene más de 5 minutos: hay que volver a entrar.')
+  if (metodo !== 'email' && !(typeof c.nonce === 'string' && c.nonce.startsWith(`${appId}.`) && c.nonce.length > appId!.length + 1))
+    throw new ErrorVerificacion(403, 'El nonce no es de un login de Cavos para el App ID de Lockumi.')
   const correo = normalizar(c.email)
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) throw new ErrorVerificacion(403, 'El token no trae un correo.')
+  if (c.email_verified === false || c.email_verified === 'false') throw new ErrorVerificacion(403, 'El emisor dice que no confirmó el correo.')
   if (metodo !== 'email' && !(c.email_verified === true || c.email_verified === 'true')) throw new ErrorVerificacion(403, 'El proveedor no confirmó el correo.')
   return { correo, metodo }
 }
@@ -73,25 +96,46 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
 // LEGAL: revisado (25/10) · ronda 4:41 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
 export const NO_SE_PUDO_VERIFICAR = 'No pudimos confirmar el correo de tu cuenta. Sal de Lockumi y vuelve a entrar con tu correo.'
 
-/** POST /api/verificar-correo: sesión de Supabase (Bearer) + { token } de Cavos → registra (sesión, correo) con la clave de servicio. */
-export async function atenderVerificacion(env: Env, bearer: string | null, body: unknown, f: typeof fetch = fetch, ahora = Date.now()):
+// LEGAL: revisar · ronda 25/10 4:45 · texto propio (respuesta 429 de /api/verificar-correo; la app no lo muestra)
+export const DEMASIADOS_INTENTOS = 'Hiciste muchos intentos seguidos. Espera 10 minutos y vuelve a entrar con tu correo.'
+/** Límites de intentos (ventana de 10 minutos): por sesión de Supabase y por IP (la IP se guarda como huella, nunca en claro). */
+export const LIMITES = { sesion: 5, ip: 30, ventana: '10 minutes' } as const
+
+/** POST /api/verificar-correo: sesión de Supabase (Bearer) + { token } de Cavos → registra (sesión, correo, huella del token) con la
+ *  clave de servicio. ip: la del pedido (x-forwarded-for / x-real-ip), para el límite de intentos. */
+export async function atenderVerificacion(env: Env, bearer: string | null, body: unknown, f: typeof fetch = fetch, ahora = Date.now(), ip: string | null = null):
   Promise<{ estado: number; cuerpo: { correo: string } | { error: string } }> {
   const s = servicio(env), anon = (env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY)?.trim()
-  if (!s || !anon || !audiencias(env).length) return { estado: 503, cuerpo: { error: 'La verificación del correo no está configurada.' } }
+  if (!s || !anon || !configurado(env)) return { estado: 503, cuerpo: { error: 'La verificación del correo no está configurada.' } }
   if (!bearer || !/^Bearer \S+$/.test(bearer)) return { estado: 401, cuerpo: { error: 'Falta la sesión.' } }
   const token = (body as { token?: unknown } | null)?.token
   if (typeof token !== 'string' || !token) return { estado: 400, cuerpo: { error: 'Falta el token de Cavos.' } }
+  const intento = async (clave: string, max: number) => {
+    try { return await rpc<boolean>(s, 'lk_intento_verificacion', { p_clave: clave, p_max: max, p_ventana: LIMITES.ventana }, f) === true } catch { return null }
+  }
+  const laIp = (ip ?? '').split(',')[0]!.trim()
+  if (laIp) {
+    const ok = await intento(`ip:${await huellaHex(laIp)}`, LIMITES.ip)
+    if (ok === null) return { estado: 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
+    if (!ok) return { estado: 429, cuerpo: { error: DEMASIADOS_INTENTOS } }
+  }
   const r = await f(`${s.url}/auth/v1/user`, { headers: { apikey: anon, authorization: bearer } }).catch(() => null)
   const uid = r?.ok ? ((await r.json()) as { id?: string }).id : undefined
   if (!uid) return { estado: 401, cuerpo: { error: 'La sesión no es válida.' } }
+  const ok = await intento(`sesion:${uid}`, LIMITES.sesion)
+  if (ok === null) return { estado: 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
+  if (!ok) return { estado: 429, cuerpo: { error: DEMASIADOS_INTENTOS } }
   let v: { correo: string; metodo: Metodo }
   try { v = await verificarTokenCavos(token, env, f, ahora) } catch (e) {
     const estado = e instanceof ErrorVerificacion ? e.estado : 403
     console.warn('verificar-correo', e instanceof Error ? e.message : 'error')   // el motivo, nunca el token
     return { estado, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   }
-  try { await rpc(s, 'lk_registrar_correo_verificado', { p_usuario: uid, p_correo: v.correo, p_metodo: v.metodo }, f) } catch {
-    return { estado: 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
+  // Un solo uso: la base guarda la huella SHA-256 del token y rechaza la segunda vez (aunque sea otra sesión).
+  try { await rpc(s, 'lk_registrar_correo_verificado', { p_usuario: uid, p_correo: v.correo, p_metodo: v.metodo, p_huella: await huellaHex(token) }, f) } catch (e) {
+    const usado = e instanceof Error && /409/.test(e.message)
+    console.warn('verificar-correo', usado ? 'token ya usado' : 'no se pudo registrar')
+    return { estado: usado ? 403 : 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   }
   return { estado: 200, cuerpo: { correo: v.correo } }
 }

@@ -51,7 +51,7 @@ create table if not exists public.lk_reputacion_consentimientos (
 create table if not exists public.lk_reputacion_eventos (
   id bigint generated always as identity primary key,
   usuario uuid not null references auth.users(id) on delete cascade,
-  correo text check (correo is null or correo = lower(btrim(correo))),   -- si falta, se toma del email_cavos de ese alquiler
+  correo text check (correo is null or correo = lower(btrim(correo))),   -- si falta, se toma del email_cavos de ese alquiler (solo si esa sesión lo verificó)
   rol text not null check (rol in ('dueno','inquilino')),
   contrato_id uuid not null,
   tipo text not null check (tipo in ('descuento_deposito','reclamo_indebido')),
@@ -62,7 +62,7 @@ create table if not exists public.lk_reputacion_eventos (
 create table if not exists public.lk_reputacion_revisiones (
   id bigint generated always as identity primary key,
   usuario uuid not null references auth.users(id) on delete cascade,
-  correo text check (correo is null or correo = lower(btrim(correo))),   -- si falta, se toma del email_cavos de ese alquiler
+  correo text check (correo is null or correo = lower(btrim(correo))),   -- si falta, se toma del email_cavos de ese alquiler (solo si esa sesión lo verificó)
   rol text not null check (rol in ('dueno','inquilino')),
   contrato_id uuid not null,
   texto text not null check (char_length(btrim(texto)) > 0),
@@ -102,6 +102,8 @@ alter table public.lk_solicitudes_borrado enable row level security;
 drop policy if exists lk_borrado_propio on public.lk_solicitudes_borrado;
 
 -- La persona = el correo que Cavos ya autenticó (Legal, 25/10/2026, 4:01 p. m.) -------------------------------------------------
+-- Desde la revisión de 96e931b (4:45 p. m.): la persona sale SOLO de lk_correos_verificados. Un email_cavos cuenta únicamente si ESA
+-- sesión verificó ese correo (lk_correo_verificado(usuario, email_cavos)); el párrafo de abajo es la historia de la ronda de las 4:01.
 -- auth.uid() es una sesión anónima POR APARATO (src/servidor/repositorio.ts). La persona es su correo, normalizado (trim + minúsculas),
 -- tomado SOLO de lo que la app guarda con la sesión de Cavos: lk_participantes.email_cavos (lk_crear_contrato y lk_aceptar_invitacion),
 -- lk_reputacion_aceptaciones.correo (lk_aceptar_reputacion) y el correo de la sesión autenticada (auth.users.email; las anónimas no tienen).
@@ -120,39 +122,64 @@ create table if not exists public.lk_correos_verificados (
 );
 alter table public.lk_correos_verificados enable row level security;
 revoke all on public.lk_correos_verificados from anon, authenticated;
-create or replace function public.lk_registrar_correo_verificado(p_usuario uuid, p_correo text, p_metodo text) returns boolean
+-- Token de un solo uso (Legal, revisión de 96e931b, 4:45 p. m., BLOQUEANTE 2): la huella SHA-256 (hex) de cada token que verificó un
+-- correo. El mismo token no verifica otra vez (ni en otra sesión). Se guardan 2 días (el token vale 5 minutos para esto).
+create table if not exists public.lk_tokens_usados (
+  huella text primary key check (huella ~ '^[0-9a-f]{64}$'),
+  usado_en timestamptz not null default now()
+);
+alter table public.lk_tokens_usados enable row level security;
+revoke all on public.lk_tokens_usados from anon, authenticated;
+-- Límite de intentos de /api/verificar-correo (por sesión y por huella de IP), compartido entre instancias de la función.
+create table if not exists public.lk_intentos_verificacion (
+  clave text not null check (char_length(clave) between 1 and 120),
+  en timestamptz not null default clock_timestamp()
+);
+create index if not exists lk_intentos_verificacion_clave on public.lk_intentos_verificacion (clave, en);
+alter table public.lk_intentos_verificacion enable row level security;
+revoke all on public.lk_intentos_verificacion from anon, authenticated;
+create or replace function public.lk_intento_verificacion(p_clave text, p_max int, p_ventana interval) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  perform pg_advisory_xact_lock(hashtext('lk_intento_verificacion:' || p_clave));
+  delete from public.lk_intentos_verificacion where en < clock_timestamp() - p_ventana;
+  if (select count(*) from public.lk_intentos_verificacion where clave = p_clave) >= p_max then return false; end if;
+  insert into public.lk_intentos_verificacion(clave) values (p_clave);
+  return true;
+end $$;
+revoke all on function public.lk_intento_verificacion(text, int, interval) from public, anon, authenticated;
+grant execute on function public.lk_intento_verificacion(text, int, interval) to service_role;
+create or replace function public.lk_registrar_correo_verificado(p_usuario uuid, p_correo text, p_metodo text, p_huella text) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare c text := public.lk_normalizar_correo(p_correo);
 begin
-  if p_usuario is null or c is null or c !~* '^[^\s@]+@[^\s@]+\.[^\s@]{2,}$' then
-    raise exception 'Correo o sesión inválidos: no se registra nada.' using errcode = '22023';   -- solo lo ve api/verificar-correo.ts
+  if p_usuario is null or c is null or c !~* '^[^\s@]+@[^\s@]+\.[^\s@]{2,}$' or p_huella is null or p_huella !~ '^[0-9a-f]{64}$' then
+    raise exception 'Correo, sesión o huella del token inválidos: no se registra nada.' using errcode = '22023';   -- solo lo ve api/verificar-correo.ts
   end if;
+  delete from public.lk_tokens_usados where usado_en < now() - interval '2 days';
+  insert into public.lk_tokens_usados(huella) values (p_huella) on conflict do nothing;
+  if not found then raise exception 'Ese token ya se usó: no se registra nada.' using errcode = '23505'; end if;   -- PostgREST: 409
   -- clock_timestamp(): la hora real de esta verificación (lk_correo_activo toma la última; now() sería la de la transacción).
   insert into public.lk_correos_verificados(usuario, correo, metodo, verificado_en) values (p_usuario, c, p_metodo, clock_timestamp())
   on conflict (usuario, correo) do update set metodo = excluded.metodo, verificado_en = excluded.verificado_en;
   return true;
 end $$;
-revoke all on function public.lk_registrar_correo_verificado(uuid, text, text) from public, anon, authenticated;
-grant execute on function public.lk_registrar_correo_verificado(uuid, text, text) to service_role;
+revoke all on function public.lk_registrar_correo_verificado(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function public.lk_registrar_correo_verificado(uuid, text, text, text) to service_role;
 create or replace function public.lk_correo_verificado(p_usuario uuid, p_correo text) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.lk_correos_verificados where usuario = p_usuario and correo = public.lk_normalizar_correo(p_correo))
 $$;
--- Los correos de una sesión.
+-- Los correos de una sesión: SOLO los verificados (Legal, revisión de 96e931b, 4:45 p. m., BLOQUEANTE 1). lk_participantes.email_cavos
+-- lo escribe la app y no prueba nada: una sesión atacante podía poner el correo de la víctima.
 create or replace function public.lk_correos_de(p_usuario uuid) returns setof text
-language sql stable security definer set search_path = public, auth as $$
-  select public.lk_normalizar_correo(email_cavos) from public.lk_participantes where usuario = p_usuario and public.lk_normalizar_correo(email_cavos) is not null
-  union select correo from public.lk_reputacion_aceptaciones where usuario = p_usuario and correo is not null
-  union select correo from public.lk_correos_verificados where usuario = p_usuario
-  union select public.lk_normalizar_correo(email) from auth.users where id = p_usuario and public.lk_normalizar_correo(email) is not null
+language sql stable security definer set search_path = public as $$
+  select correo from public.lk_correos_verificados where usuario = p_usuario
 $$;
--- Todas las sesiones (aparatos) con un correo.
+-- Todas las sesiones (aparatos) que VERIFICARON un correo.
 create or replace function public.lk_uids_de_correo(p_correo text) returns setof uuid
-language sql stable security definer set search_path = public, auth as $$
-  select usuario from public.lk_participantes where public.lk_normalizar_correo(email_cavos) = public.lk_normalizar_correo(p_correo)
-  union select usuario from public.lk_reputacion_aceptaciones where correo = public.lk_normalizar_correo(p_correo)
-  union select usuario from public.lk_correos_verificados where correo = public.lk_normalizar_correo(p_correo)
-  union select id from auth.users where public.lk_normalizar_correo(email) = public.lk_normalizar_correo(p_correo)
+language sql stable security definer set search_path = public as $$
+  select usuario from public.lk_correos_verificados where correo = public.lk_normalizar_correo(p_correo)
 $$;
 -- La persona de esta sesión: esta sesión y todas las que tienen su correo.
 create or replace function public.lk_uids_de_persona(p_usuario uuid, p_correo text) returns setof uuid
@@ -167,7 +194,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 -- ¿Esta fila es de la persona? Por su correo; sin correo, solo si la sesión no tiene otro (dos correos en un aparato: nunca la del otro).
 create or replace function public.lk_de_la_persona(p_fila_usuario uuid, p_fila_correo text, p_correo text, p_exclusivos uuid[]) returns boolean
-language sql immutable as $$
+language sql immutable set search_path = '' as $$
   select coalesce(p_fila_correo = p_correo, false) or (p_fila_correo is null and p_fila_usuario = any(p_exclusivos))
 $$;
 -- El correo con el que la app dice que entró la persona, solo si es el correo verificado ACTIVO de ESTA sesión (lk_correo_activo).
@@ -220,7 +247,7 @@ create policy lk_rep_eventos_propios on public.lk_reputacion_eventos for select 
 create policy lk_borrado_propio on public.lk_solicitudes_borrado for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
 
 -- Domingo de Pascua (Meeus/Jones/Butcher), igual que src/reputacion/borrado.ts.
-create or replace function public.lk_pascua(y int) returns date language plpgsql immutable as $$
+create or replace function public.lk_pascua(y int) returns date language plpgsql immutable set search_path = '' as $$
 declare a int := y % 19; b int := y / 100; c int := y % 100; d int := b / 4; e int := b % 4; f int := (b + 8) / 25; g int := (b - f + 1) / 3;
   h int; i int; k int; l int; m int;
 begin
@@ -228,12 +255,12 @@ begin
   return make_date(y, (h + l - 7 * m + 114) / 31, ((h + l - 7 * m + 114) % 31) + 1);
 end $$;
 -- Feriados de Costa Rica (Código de Trabajo, art. 148; calendario MTSS 2026). Incluye los de pago no obligatorio.
-create or replace function public.lk_es_feriado_cr(d date) returns boolean language sql immutable as $$
+create or replace function public.lk_es_feriado_cr(d date) returns boolean language sql immutable set search_path = '' as $$
   select to_char(d, 'MM-DD') in ('01-01','04-11','05-01','07-25','08-02','08-15','08-31','09-15','12-01','12-25')
       or d in (public.lk_pascua(extract(year from d)::int) - 3, public.lk_pascua(extract(year from d)::int) - 2)
 $$;
 -- Final del n.º día hábil después del día del pedido, en hora de Costa Rica.
-create or replace function public.lk_fecha_limite_borrado(p_pedido timestamptz, p_dias int default 5) returns timestamptz language plpgsql immutable as $$
+create or replace function public.lk_fecha_limite_borrado(p_pedido timestamptz, p_dias int default 5) returns timestamptz language plpgsql immutable set search_path = '' as $$
 declare d date := (p_pedido at time zone 'America/Costa_Rica')::date; n int := 0;
 begin
   while n < p_dias loop
@@ -252,12 +279,13 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.lk_tiene_alquiler_abierto(uuid) from public, anon, authenticated;
 -- La persona tiene un alquiler abierto en CUALQUIERA de sus sesiones: los de su correo (no los de OTRO correo en un aparato compartido)
--- y, por si acaso, los que no tienen correo en sus sesiones.
+-- y, por si acaso, los que no tienen correo en sus sesiones. Con correo, solo si ESA sesión lo verificó (4:45 p. m.: un alquiler de un
+-- atacante con el correo de la víctima no frena su borrado).
 create or replace function public.lk_persona_tiene_alquiler_abierto(p_usuarios uuid[], p_correo text) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.lk_participantes p join public.lk_contratos c on c.id = p.contrato_id
     where c.estado in ('fotos_entrada', 'en_curso', 'salida', 'ventana_reclamo', 'reclamo', 'mediacion')
-      and (public.lk_normalizar_correo(p.email_cavos) = public.lk_normalizar_correo(p_correo)
+      and ((public.lk_normalizar_correo(p.email_cavos) = public.lk_normalizar_correo(p_correo) and public.lk_correo_verificado(p.usuario, p.email_cavos))
            or (public.lk_normalizar_correo(p.email_cavos) is null and p.usuario = any(p_usuarios))))
 $$;
 revoke all on function public.lk_persona_tiene_alquiler_abierto(uuid[], text) from public, anon, authenticated;
@@ -375,7 +403,8 @@ create or replace function public.lk_rep_fila_correo() returns trigger language 
 begin
   if new.correo is null then
     select public.lk_normalizar_correo(email_cavos) into new.correo from public.lk_participantes
-      where contrato_id = new.contrato_id and usuario = new.usuario and rol = new.rol and email_cavos is not null limit 1;
+      where contrato_id = new.contrato_id and usuario = new.usuario and rol = new.rol and email_cavos is not null
+        and public.lk_correo_verificado(usuario, email_cavos) limit 1;   -- solo un correo que ESA sesión verificó (4:45 p. m.)
   end if;
   return new;
 end $$;
@@ -401,7 +430,26 @@ begin
   end if;
   return new;
 end $$;
+-- Con la reputación ENCENDIDA (fila en lk_reputacion_encendido), crear o aceptar un alquiler exige que ESA sesión haya verificado el
+-- correo que manda como p_email_cavos (Legal, revisión de 96e931b, 4:45 p. m., BLOQUEANTE 1). Es un disparador sobre lk_participantes:
+-- cubre lk_crear_contrato, lk_crear_contrato_invitando y lk_aceptar_invitacion (las tres insertan con usuario = auth.uid()) SIN
+-- reescribir esas funciones de producción (escenario C, PR #22). Apagada no cambia nada (compatibilidad); igual, un email_cavos sin
+-- verificar no cuenta para la persona (lk_correos_de, lk_uids_de_correo, lk_persona_tiene_alquiler_abierto, lk_rep_fila_correo,
+-- lk_rep01_pendiente). Va antes que los otros disparadores (orden alfabético).
+-- LEGAL: revisar · ronda 25/10 4:45 · texto propio (solo con la reputación encendida)
+create or replace function public.lk_participante_correo_verificado() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from public.lk_reputacion_encendido)
+     and public.lk_normalizar_correo(new.email_cavos) is not null
+     and not public.lk_correo_verificado(new.usuario, new.email_cavos) then
+    raise exception 'No pudimos confirmar el correo de tu cuenta. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.'
+      using errcode = '28000';
+  end if;
+  return new;
+end $$;
+drop trigger if exists lk_participante_correo_verificado on public.lk_participantes;
 drop trigger if exists lk_sin_alquileres_nuevos_si_borra on public.lk_participantes;
+create trigger lk_participante_correo_verificado before insert on public.lk_participantes for each row execute function public.lk_participante_correo_verificado();
 create trigger lk_sin_alquileres_nuevos_si_borra before insert on public.lk_participantes for each row execute function public.lk_sin_alquileres_nuevos_si_borra();
 
 -- 5. Cuentas sin REP-01 y sin alquileres (Legal, respuesta a 6c71866, 25/10/2026 3:47 p. m.) ----------------------------------------
@@ -427,7 +475,8 @@ language sql stable security definer set search_path = public as $$
                                      or (a.correo is null and (a.usuario = p_usuario or a.usuario in (select public.lk_uids_de_correo(p_correo)))) end)
      and not exists (select 1 from public.lk_participantes
                      where case when public.lk_normalizar_correo(p_correo) is null then usuario = p_usuario
-                                else public.lk_normalizar_correo(email_cavos) = public.lk_normalizar_correo(p_correo) end)
+                                else public.lk_normalizar_correo(email_cavos) = public.lk_normalizar_correo(p_correo)
+                                     and public.lk_correo_verificado(usuario, email_cavos) end)   -- 4:45 p. m.: solo si esa sesión lo verificó
 $$;
 revoke all on function public.lk_rep01_pendiente(uuid, text) from public, anon, authenticated;
 create or replace function public.lk_sin_perfil_ni_alquileres(p_usuario uuid, p_correo text default null) returns boolean

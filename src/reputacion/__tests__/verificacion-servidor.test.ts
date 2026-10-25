@@ -39,11 +39,23 @@ describe('límite 1 en la app: el token de Cavos que ya existe va a /api/verific
     const { v } = await cargar(true)
     srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'a@ejemplo.com' } })
     await v.asegurarCorreo('a@ejemplo.com'); await v.asegurarCorreo('a@ejemplo.com')
+    token = 'token-de-b'   // cambiar de persona = volver a entrar = token nuevo
     srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'b@ejemplo.com' } })
     await v.asegurarCorreo('b@ejemplo.com')
+    token = 'token-de-a-otra-vez'
     srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'a@ejemplo.com' } })
     expect(await v.asegurarCorreo('a@ejemplo.com')).toBe(true)
     expect(srv.verificarCorreo).toHaveBeenCalledTimes(3)
+  })
+  it('Legal 4:45 (token de un solo uso): no reenvía un token que ya mandó; sin volver a entrar, el servidor decide con lo que ya verificó', async () => {
+    const { v } = await cargar(true)
+    srv.verificarCorreo.mockImplementationOnce(async () => { throw new Error('No pudimos confirmar tu correo') })
+    expect(await v.asegurarCorreo('demo@lockumi.com')).toBe(false)
+    expect(await v.asegurarCorreo('demo@lockumi.com')).toBe(false)
+    expect(await v.asegurarCorreo('otra@ejemplo.com')).toBe(false)
+    expect(srv.verificarCorreo).toHaveBeenCalledTimes(1)
+    token = 'token-nuevo'; expect(await v.asegurarCorreo('demo@lockumi.com')).toBe(true)
+    expect(srv.verificarCorreo).toHaveBeenCalledTimes(2)
   })
   it('sin token (pestaña nueva): no manda nada inventado; el servidor decide con lo que ya verificó', async () => {
     token = null; const { v } = await cargar(true)

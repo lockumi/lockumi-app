@@ -14,6 +14,9 @@ const normalizar = (c: string) => c.trim().toLowerCase()
 /** El último correo verificado en esta carga de la app. El servidor lee solo por el correo verificado ACTIVO de la sesión (el último
  *  que verificó; Legal, 25/10/2026, 4:41 p. m.), así que si la persona del aparato cambia, se vuelve a verificar. */
 let activo: { c: string; p: Promise<boolean> } | null = null
+/** Tokens ya enviados en esta carga: el servidor usa cada token UNA sola vez (Legal, 4:45 p. m.), así que no se reenvían (no gastan el
+ *  límite de intentos). Con un token ya usado, el servidor decide con lo que ya verificó; cambiar de persona = volver a entrar = token nuevo. */
+const enviados = new Set<string>()
 /** Verifica una vez por correo activo (y por carga de la app). Nunca lanza: si no se pudo, el servidor rechaza después con un texto que
  *  dice cómo seguir («Sal de Lockumi, vuelve a entrar con tu correo…»). */
 export function asegurarCorreo(email: string): Promise<boolean> {
@@ -22,7 +25,8 @@ export function asegurarCorreo(email: string): Promise<boolean> {
   if (activo?.c === c) return activo.p
   const p = (async () => {
     const token = (await authCavos())?.getAuthToken()
-    if (!token) return false
+    if (!token || enviados.has(token)) return false
+    enviados.add(token)
     const r = await servidor.verificarCorreo(token)
     return normalizar(r.correo) === c
   })().catch(() => false)

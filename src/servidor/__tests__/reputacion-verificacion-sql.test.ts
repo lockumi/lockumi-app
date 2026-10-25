@@ -35,7 +35,7 @@ describe('correo verificado contra el token de Cavos (cierre por defecto)', () =
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const sql = fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8')
     expect(sql).toMatch(/revoke all on public\.lk_correos_verificados from anon, authenticated/)
-    expect(sql).toMatch(/revoke all on function public\.lk_registrar_correo_verificado\(uuid, text, text\) from public, anon, authenticated;\s*grant execute on function public\.lk_registrar_correo_verificado\(uuid, text, text\) to service_role/)
+    expect(sql).toMatch(/revoke all on function public\.lk_registrar_correo_verificado\(uuid, text, text, text\) from public, anon, authenticated;\s*grant execute on function public\.lk_registrar_correo_verificado\(uuid, text, text, text\) to service_role/)
     const A = await aparato(); await verificar(A, ' Ana@Ejemplo.COM ')
     expect((await uno<{ c: string }>('select correo c from public.lk_correos_verificados where usuario = $1', [A])).c).toBe('ana@ejemplo.com')
     await expect(verificar(A, 'no-es-correo')).rejects.toThrow()
@@ -154,7 +154,7 @@ describe('límite 4: ¿tiene que aceptar REP-01? por el correo verificado (segun
     await como(A); await db.query(`select public.lk_aceptar_reputacion('segundo@ejemplo.com', 'v', '{a}')`)
     await como(B); expect((await uno<{ x: boolean }>(`select public.lk_necesita_rep01('segundo@ejemplo.com') x`)).x).toBe(false)
     await como(N); expect((await uno<{ x: boolean }>(`select public.lk_necesita_rep01('nueva.n@ejemplo.com') x`)).x).toBe(true)
-    await como(null); await entrar(await contrato(), 'dueno', await aparato(), 'vieja.v@ejemplo.com')
+    await como(null); const W = await aparato(); await verificar(W, 'vieja.v@ejemplo.com'); await entrar(await contrato(), 'dueno', W, 'vieja.v@ejemplo.com')   // su aparato anterior (verificado)
     await como(V); expect((await uno<{ x: boolean }>(`select public.lk_necesita_rep01('vieja.v@ejemplo.com') x`)).x).toBe(false)
     await como(null)
   })
@@ -166,11 +166,11 @@ describe('límite 4: ¿tiene que aceptar REP-01? por el correo verificado (segun
 })
 
 describe('reglas de los alquileres con un correo sin verificar', () => {
-  it('con la reputación encendida, un email_cavos sin verificar no usa la aceptación de otra persona con ese correo', async () => {
+  it('con la reputación encendida, un email_cavos sin verificar no entra (ni usa la aceptación de otra persona con ese correo)', async () => {
     const A = await aparato(), X = await aparato()
     await verificar(A, 'duena.real@ejemplo.com'); await como(A); await db.query(`select public.lk_aceptar_reputacion('duena.real@ejemplo.com', 'v', '{a}')`); await como(null)
     await db.query('insert into public.lk_reputacion_encendido default values on conflict do nothing')
-    await expect(entrar(await contrato('firmas'), 'dueno', X, 'duena.real@ejemplo.com')).rejects.toThrow(/acepta tu perfil de reputación/)
+    await expect(entrar(await contrato('firmas'), 'dueno', X, 'duena.real@ejemplo.com')).rejects.toThrow(/No pudimos confirmar el correo de tu cuenta/)
     await entrar(await contrato('firmas'), 'dueno', A, 'duena.real@ejemplo.com')
     await db.query('delete from public.lk_reputacion_encendido')
   })

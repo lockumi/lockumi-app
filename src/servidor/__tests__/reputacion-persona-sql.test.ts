@@ -18,7 +18,8 @@ const uno = async <T>(sql: string, p: unknown[] = []) => (await db.query<T>(sql,
 const cuantos = async (tabla: string, uids: string[]) => (await uno<{ n: number }>(`select count(*)::int n from ${tabla} where ${tabla === 'auth.users' ? 'id' : 'usuario'} = any($1::uuid[])`, [uids])).n
 const como = (u: string | null) => db.query(`select set_config('test.uid', $1, false)`, [u ?? ''])
 const contrato = async (estado = 'cerrado', emailInquilino: string | null = null) => { const c = kid(); await db.query('insert into public.lk_contratos(id, estado, email_inquilino) values ($1, $2, $3)', [c, estado, emailInquilino]); return c }
-const entrar = (c: string, rol: string, usuario: string, correo: string) => db.query('insert into public.lk_participantes values ($1, $2, $3, $4)', [c, rol, usuario, correo])
+/** Crear o aceptar un alquiler como lo hace la app: esa sesión ya verificó su correo (Legal 4:45: un email_cavos sin verificar no cuenta). */
+const entrar = async (c: string, rol: string, usuario: string, correo: string) => { await verificar(usuario, correo); return db.query('insert into public.lk_participantes values ($1, $2, $3, $4)', [c, rol, usuario, correo]) }
 const aparato = async (email: string | null = null) => { const u = uid(); await db.query('insert into auth.users(id, email) values ($1, $2)', [u, email]); return u }
 /** Lo que hace api/verificar-correo.ts (clave de servicio) tras validar el token de Cavos (Legal, 25/10 4:23 p. m.: sin esto, se rechaza). */
 const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google', md5(random()::text) || md5(random()::text))`, [u, correo])
@@ -38,10 +39,11 @@ beforeAll(async () => {
 }, 30_000)
 
 describe('el correo de la persona: solo el que Cavos ya autenticó, normalizado', () => {
-  it('lk_correos_de: email_cavos de sus alquileres y el correo de la sesión autenticada, con trim y minúsculas', async () => {
+  it('lk_correos_de: SOLO los correos verificados de la sesión, con trim y minúsculas (Legal 4:45: ni email_cavos sin verificar ni auth.users.email)', async () => {
     const a = await aparato(' Sesion@Ejemplo.com '), c = await contrato(); await entrar(c, 'dueno', a, '  Ana@Ejemplo.COM ')
+    await db.query('insert into public.lk_participantes values ($1, $2, $3, $4)', [await contrato(), 'inquilino', a, 'sin.verificar@ejemplo.com'])
     const xs = (await db.query<{ c: string }>('select c from public.lk_correos_de($1) c order by 1', [a])).rows.map(r => r.c)
-    expect(xs).toEqual(['ana@ejemplo.com', 'sesion@ejemplo.com'])
+    expect(xs).toEqual(['ana@ejemplo.com'])
   })
   it('un correo escrito a mano (p. ej. el del inquilino invitado) no sirve para identificar a nadie', async () => {
     const a = await aparato(), c = await contrato('cerrado', 'escrito@ejemplo.com'); await entrar(c, 'dueno', a, 'dueno-a@ejemplo.com')
@@ -74,6 +76,7 @@ describe('el borrado llega a TODAS las sesiones con ese correo', () => {
     const c1 = await contrato(), c2 = await contrato()
     const A = await aparato(), B = await aparato(), S = await aparato('Todo@Ejemplo.com'), OTRA = await aparato()
     await entrar(c1, 'dueno', A, 'todo@ejemplo.com'); await entrar(c2, 'inquilino', B, ' TODO@ejemplo.com'); await entrar(c2, 'dueno', OTRA, 'vecina@ejemplo.com')
+    await verificar(S, 'todo@ejemplo.com')   // 4:45: el correo de auth.users solo cuenta si esa sesión lo verificó
     for (const u of [A, B, S, OTRA]) await conPerfil(u)
     await evento(A, 'dueno', c1); await evento(B, 'inquilino', c2); await revision(B, c2); await evento(OTRA, 'dueno', c2)
     await verificar(B, 'todo@ejemplo.com'); await como(B); await db.query(`select public.lk_pedir_borrado_cuenta('todo@ejemplo.com')`); await como(null)
@@ -122,6 +125,7 @@ describe('regla «sin REP-01 y sin alquileres» por correo (con la reputación e
   let conAlq = '', conRep = ''
   beforeAll(async () => {
     conAlq = await aparato(); conRep = await aparato('rep@ejemplo.com')
+    await verificar(conRep, 'rep@ejemplo.com')   // 4:45: solo correos verificados
     await entrar(await contrato(), 'dueno', conAlq, 'alquileres@ejemplo.com'); await conPerfil(conRep)
     await db.query('insert into public.lk_reputacion_encendido default values')
   })
