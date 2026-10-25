@@ -2,6 +2,12 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Pasos 14, 11 y 7 publicados detrás de sus interruptores (25 oct 2026), sin cambios visibles
+- Con el OK de Katherine (25/10, 12:04 a. m.). Orden 14 → 11 → 7, cada uno con `git merge --no-ff`, rebasado sobre master, CI verde, comparación píxel a píxel (11 pantallas; con el paso 7, 13) y E2E post-despliegue en verde.
+- **Paso 14 (#16):** «Descargar el expediente (demo)» en PDF con el aviso de la B.11. Detrás de `VITE_PRUEBA_COMPLETA`.
+- **Paso 11 (#17):** avisos por correo con la casilla sin marcar; el servidor guarda el consentimiento (en memoria hasta conectar Supabase) y sin él no envía. Privacidad 1.7-demo solo detrás del interruptor; la 1.6 no cambia.
+- **Paso 7 (#18):** modo de dos personas detrás de `VITE_DOS_PERSONAS` (apagado en producción, sin `VITE_SUPABASE_*`). Invitación de 7 días. Devolución automática del 100 % al inquilino (menos 0,3 % de Trustless Work). Ver docs/prueba-completa.md.
+
 ## Franja: texto nuevo (publicado con el OK de Katherine)
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
 
