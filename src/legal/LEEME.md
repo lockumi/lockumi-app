@@ -68,3 +68,10 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **En línea:** `{{correos: y avisos por correo}}` (sale solo si está encendido) y `{{!dos-personas:texto}}` (solo si está apagado). El espacio después de «:» cuenta: si la frase empieza con espacio, se escribe.
 - Interruptores: `dos-personas` (modo de dos personas) y `correos` (`VITE_CORREOS=1`). Un nombre desconocido o un bloque sin cerrar hace fallar el build y los tests (`condicional.ts`).
 - Las notas `<!-- LEGAL: revisar … -->` en su propia línea no se publican.
+
+## Versiones por escenario (escenario C, preparación; rama `paso17-escenario-c`, sin publicar)
+- Un solo archivo por documento (`v17/terminos.md`, `v17/privacidad.md`) y una versión por escenario encendido, en `versiones.ts`:
+  A → 1.7-demo · 25 de octubre de 2026; B (correos) → 1.8-demo; C (correos + dos personas) → 1.9-demo. Cada una con su fecha
+  (la de la 1.8 y la 1.9 se pone el día en que se enciendan). `{{edicion}}` sale de la versión vigente.
+- Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: aviso que no bloquea en «Tus alquileres» y una
+  casilla dentro de cada función nueva. Un alquiler firmado sigue con su versión salvo que los dos acepten.

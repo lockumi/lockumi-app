@@ -2,34 +2,46 @@
 // (pantallas y plazos de siempre) salvo que los dos acepten la 1.7-demo. Los nuevos, con el interruptor encendido, nacen en la 1.7-demo.
 import type { Alquiler, Rol } from '../types'
 import { pruebaCompleta } from './interruptor'
-import { V17, EDICION_V17 } from '../legal/version17'
+import { V17 } from '../legal/version17'
+import { edicionDe as edicionTexto, desde17, ordenVersion, versionVigente } from '../legal/versiones'
+import { interruptoresLegales } from '../legal/documentos'
 export { V17 }
 export const V16 = '1.6-demo'
-/** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; solo la 1.7-demo la lleva. */
-export const edicionDe = (version: string) => version === V17 ? { edicion: EDICION_V17 } : {}
+/** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; la 1.7-demo y posteriores la llevan. */
+export const edicionDe = (version: string) => { const e = edicionTexto(version); return e ? { edicion: e } : {} }
+/** Escenario C (preparación): la versión de los Términos según lo encendido (1.7-demo con A, 1.8-demo con B, 1.9-demo con C). */
+export const versionActual = () => versionVigente(interruptoresLegales())
 /** Sin versión guardada: el alquiler es de antes del paso 16, o sea 1.6-demo. */
 export const versionAlquiler = (a?: Pick<Alquiler, 'terminos'>) => a?.terminos?.version ?? V16
-/** Reglas de la prueba completa (Términos 1.7-demo): interruptor encendido y alquiler en la 1.7-demo. */
-export const reglas17 = (a?: Pick<Alquiler, 'terminos'>) => pruebaCompleta() && versionAlquiler(a) === V17
+/** Reglas de la prueba completa (Términos 1.7-demo o posteriores): interruptor encendido y alquiler en la 1.7-demo o después. */
+export const reglas17 = (a?: Pick<Alquiler, 'terminos'>) => pruebaCompleta() && desde17(versionAlquiler(a))
 /** Se puede pasar a la 1.7-demo antes de la salida (las reglas no cambian a mitad de un reclamo). */
 const ANTES_DE_SALIR: Alquiler['estado'][] = ['firmas', 'pendiente_pago', 'fotos_entrada', 'en_curso']
-export const puedeCambiarVersion = (a: Alquiler) => pruebaCompleta() && versionAlquiler(a) === V16 && ANTES_DE_SALIR.includes(a.estado)
+/** Solo hacia la versión vigente y nunca hacia atrás. */
+export const puedeCambiarA = (a: Alquiler, destino: string) => pruebaCompleta() && destino === versionActual() && ordenVersion(versionAlquiler(a)) < ordenVersion(destino) && ANTES_DE_SALIR.includes(a.estado)
+export const puedeCambiarVersion = (a: Alquiler) => puedeCambiarA(a, versionActual())
 
 const NOMBRE: Record<Rol, string> = { dueno: 'dueño', inquilino: 'inquilino' }
-/** Una parte acepta pasar el alquiler a la 1.7-demo; con las dos, cambia la versión (queda la fecha de cada aceptación). */
-export function aceptarVersion17(x: Alquiler, rol: Rol, ahora: number) {
-  if (!puedeCambiarVersion(x)) return
+/** Una parte acepta pasar el alquiler a la versión vigente; con las dos, cambia la versión (queda la fecha de cada aceptación).
+ *  Escenario C (preparación): sirve para 1.6 → 1.7 y para 1.7 → 1.8 o 1.9. `acepta` guarda a qué versión aceptó cada parte. */
+export function aceptarVersion(x: Alquiler, rol: Rol, ahora: number, destino = versionActual()) {
+  if (!puedeCambiarA(x, destino)) return
   const f = new Date(ahora).toISOString()
-  const t = x.terminos ??= { version: V16 }; t.acepta ??= {}
+  const t = x.terminos ??= { version: V16 }
+  if (t.hacia !== destino) { t.acepta = {}; t.hacia = destino }   // una aceptación vale solo para la versión que se aceptó
+  t.acepta ??= {}
   if (t.acepta[rol]) return
   t.acepta[rol] = f
   // LEGAL: revisar · historial (texto propio)
-  x.historial.push({ fecha: f, texto: `El ${NOMBRE[rol]} aceptó pasar este alquiler a los Términos ${V17}` })
+  x.historial.push({ fecha: f, texto: `El ${NOMBRE[rol]} aceptó pasar este alquiler a los Términos ${destino}` })
   if (t.acepta.dueno && t.acepta.inquilino) {
-    t.version = V17; t.desde = f; t.edicion = EDICION_V17
-    x.historial.push({ fecha: f, texto: `Los dos aceptaron: este alquiler sigue ahora los Términos ${V17}` })
+    t.version = destino; t.desde = f; Object.assign(t, edicionDe(destino))
+    x.historial.push({ fecha: f, texto: `Los dos aceptaron: este alquiler sigue ahora los Términos ${destino}` })
   }
 }
+/** paso 16 (compatibilidad): pasar a la versión vigente. */
+export const aceptarVersion17 = (x: Alquiler, rol: Rol, ahora: number) => aceptarVersion(x, rol, ahora)
 
 // LEGAL: revisar · tarjeta de cambio de versión (texto propio basado en la cláusula 12)
-export const TEXTO_CAMBIO = `Este alquiler se firmó con los Términos ${V16} y sigue con sus reglas. Solo pasa a la versión ${V17} si los dos lo aceptan. Si alguno no acepta, nada cambia.`
+export const textoCambio = (desde: string, hacia: string) => `Este alquiler se firmó con los Términos ${desde} y sigue con sus reglas. Solo pasa a la versión ${hacia} si los dos lo aceptan. Si alguno no acepta, nada cambia.`
+export const TEXTO_CAMBIO = textoCambio(V16, V17)

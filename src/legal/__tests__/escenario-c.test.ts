@@ -88,3 +88,16 @@ describe('los alquileres firmados conservan su versión salvo que los dos acepte
     expect(puedeCambiarA(alq('1.7-demo'), '1.9-demo')).toBe(false)
   })
 })
+
+describe('AvisoVersion en «Tus alquileres»', () => {
+  it('con B encendido y la 1.7-demo aceptada se ve el aviso (con enlace); con solo A no se ve nada', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const { createElement } = await import('react')
+    const { AvisoVersion } = await import('../AvisoVersion')
+    const u = { email: 'a@b.cr', nombre: 'A', metodo: 'correo' as const, terminos: { version: '1.7-demo', fecha: '2026-10-25T06:00:00Z' } }
+    encender({ dos: false, correos: false }); expect(renderToStaticMarkup(createElement(AvisoVersion, { u }))).toBe('')
+    encender({ dos: false, correos: true })
+    const h = renderToStaticMarkup(createElement(AvisoVersion, { u }))
+    expect(h).toContain('role="status"'); expect(h).toContain('href="/terminos"'); expect(h).toContain(edicionDe('1.8-demo'))
+  })
+})

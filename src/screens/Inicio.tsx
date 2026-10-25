@@ -10,6 +10,7 @@ import { modoSolo, modoVideo } from '../servidor/config'
 import { turno } from '../flujo'
 import { ICONO_ESTADO, claseEstado } from '../estados'
 import { Dibujo } from './dibujos'
+import { AvisoVersion } from '../legal/AvisoVersion'
 
 // Los 3 pasos de la portada, en el orden real de flujo.ts (ETAPAS): las fotos de entrada van después del depósito.
 const PASOS = [
@@ -32,6 +33,7 @@ export function Inicio({ u }: { u: Usuario }) {
       <LogoAnimado className="logo-pieza logo-pieza--hero" />
       <ol className="ta-pasos" aria-label="Cómo funciona">{PASOS.map(p => <li key={p.t}><span className="ta-pasos__ico"><Dibujo n={p.ico} /></span><strong>{p.t}</strong><span>{p.s}</span></li>)}</ol>
     </div>}
+    <AvisoVersion u={u} />{/* escenario C: solo si subió la versión (B o C); con A no se ve */}
     {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera />}
     {/* Volver a ver el recorrido (maqueta aprobada; LEGAL: revisado el 23/10) */}
     <section className="glass tarjeta primera-vez" aria-labelledby="pv-t">

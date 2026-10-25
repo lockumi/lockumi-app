@@ -11,8 +11,8 @@ import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
-import { versionAlquiler, V17 } from '../prueba/version'
-import { EDICION_V17 } from '../legal/version17'
+import { versionAlquiler, versionActual } from '../prueba/version'
+import { edicionDe, desde17 } from '../legal/versiones'
 import { rutaTerminos } from '../legal/documentos'
 
 const ROLES: Rol[] = ['dueno', 'inquilino']
@@ -138,10 +138,11 @@ const fechaCR = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { day
  *  y la fecha en que cada parte la aceptó (al firmar, o al aceptar el cambio desde la 1.6-demo). Los alquileres con otra persona
  *  (servidor) nacen con los Términos 1.7-demo unificados aunque el servidor no guarde la versión. */
 function LineaVersion({ a }: { a: Alquiler }) {
-  const v = deDosPersonas(a) ? V17 : versionAlquiler(a)
-  const enlace = <a href={rutaTerminos(v)} target="_blank" rel="noopener">versión {v === V17 ? EDICION_V17 : v}</a>
-  if (v !== V17) return <p className="ct__version">Términos y condiciones: {enlace}</p>
-  const cuando = (r: Rol) => a.terminos?.acepta?.[r] ?? a.contrato.firmas[r]
+  const v = deDosPersonas(a) && !a.terminos?.version ? versionActual() : versionAlquiler(a)
+  const enlace = <a href={rutaTerminos(v)} target="_blank" rel="noopener">versión {edicionDe(v) ?? v}</a>
+  if (!desde17(v)) return <p className="ct__version">Términos y condiciones: {enlace}</p>
+  const pendiente = !!a.terminos?.hacia && a.terminos.hacia !== a.terminos.version   // aceptaciones de una versión nueva aún sin las dos
+  const cuando = (r: Rol) => (pendiente ? undefined : a.terminos?.acepta?.[r]) ?? a.contrato.firmas[r]
   const [d, i] = [cuando('dueno'), cuando('inquilino')]
   // LEGAL: revisar · línea de aceptaciones (texto propio, arreglo 3)
   const acepta = d && i ? `Aceptada por el dueño el ${fechaCR(d)} y por el inquilino el ${fechaCR(i)}.`

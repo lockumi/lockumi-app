@@ -10,7 +10,7 @@ describe('privacidad de los correos (1.7-demo)', () => {
   it('con el interruptor apagado sigue la 1.6-demo', () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', ''); expect(privacidadVigente()?.version).toBe('1.6-demo') })
   it('con el interruptor encendido, la 1.7-demo con los cambios de Legal', () => {
     encenderTodo(); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
-    expect(d.version).toBe('1.7-demo')
+    expect(d.version).toBe('1.9-demo')   // escenario C: con dos personas y correos, la 1.9-demo
     for (const t of ['Invitaciones y avisos por correo: el correo de la persona que invitas y su papel en el alquiler simulado.',
       'Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.',
       'Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta).',

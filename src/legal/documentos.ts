@@ -2,7 +2,7 @@ import { aHtml } from './markdown'
 import { pruebaCompleta, correosActivos } from '../prueba/interruptor'
 import { calcularModos } from '../servidor/config'
 import { condicional, type Interruptores } from './condicional'
-import { V17 } from './version17'
+import { versionVigente, datosVersion, desde17, ordenVersion, VERSIONES } from './versiones'
 
 /** Textos legales: cada `*.md` de esta carpeta es una página (`terminos.md` → `/terminos`).
  *  Para cambiar un texto basta con reemplazar su archivo (ver LEEME.md). */
@@ -49,20 +49,33 @@ const archivosV17 = import.meta.glob('./v17/*.md', { query: '?raw', import: 'def
 export const interruptoresLegales = (): Interruptores => ({ 'dos-personas': calcularModos(import.meta.env as never).dosPersonas, correos: correosActivos() })
 const DOCS_16_EN_17 = Object.fromEntries(Object.entries(DOCS).filter(([k]) => k === 'terminos' || k === 'privacidad').map(([k, d]) => [k + '-1-6', { ...d, slug: k + '-1-6' }]))
 const cache17 = new Map<string, Record<string, DocLegal>>()
-function docs17(): Record<string, DocLegal> {
-  const s = interruptoresLegales(), k = JSON.stringify(s)
+/** Términos y Privacidad armados para unos interruptores (sin las páginas de versiones anteriores). */
+function armar17(s: Interruptores): Record<string, DocLegal> {
+  const k = JSON.stringify(s)
   let d = cache17.get(k)
-  if (!d) { d = { ...DOCS, ...armar(Object.fromEntries(Object.entries(archivosV17).map(([r, t]) => [r, condicional(t, s)]))), ...DOCS_16_EN_17 }; cache17.set(k, d) }
+  if (!d) { d = armar(Object.fromEntries(Object.entries(archivosV17).map(([r, t]) => [r, condicional(t, s)]))); cache17.set(k, d) }
   return d
+}
+/** Escenario C (preparación): la ruta de una versión anterior a la vigente, «/terminos-1-7» (la 1.6-demo, «/terminos-1-6»). */
+const sufijo = (v: string) => '-' + v.replace(/-demo$/, '').replace('.', '-')
+/** Vigentes según lo encendido, más las versiones anteriores (1.6-demo y, si ya subió, las 1.7-demo o posteriores) en su ruta. */
+function docs17(): Record<string, DocLegal> {
+  const s = interruptoresLegales(), vig = versionVigente(s), anteriores: Record<string, DocLegal> = {}
+  for (const v of VERSIONES) if (ordenVersion(v.version) < ordenVersion(vig)) for (const [k, d] of Object.entries(armar17(v.interruptores)))
+    if (k === 'terminos' || k === 'privacidad') anteriores[k + sufijo(v.version)] = { ...d, slug: k + sufijo(v.version) }
+  return { ...DOCS, ...armar17(s), ...DOCS_16_EN_17, ...anteriores }
 }
 /** Textos legales vigentes en la app (según el interruptor). */
 export const docs = (): Record<string, DocLegal> => pruebaCompleta() ? docs17() : DOCS
 export const terminosActual = (): DocLegal => docs().terminos
 export const privacidadActual = (): DocLegal | undefined => docs().privacidad
-/** Términos con los que se firmó un alquiler (1.6-demo o 1.7-demo). */
-export const docTerminos = (version: string): DocLegal => version === V17 ? docs17().terminos : DOCS.terminos
+/** Términos con los que se firmó un alquiler: la 1.6-demo, la vigente o una 1.7-demo o posterior anterior (con sus interruptores). */
+export const docTerminos = (version: string): DocLegal => {
+  if (!desde17(version) || !datosVersion(version)) return DOCS.terminos
+  return version === versionVigente(interruptoresLegales()) ? docs17().terminos : armar17(datosVersion(version)!.interruptores).terminos
+}
 /** Ruta de los Términos de una versión: la vigente en /terminos; la 1.6-demo, con el interruptor encendido, en /terminos-1-6. */
-export const rutaTerminos = (version: string) => version === terminosActual().version ? '/terminos' : '/terminos-1-6'
+export const rutaTerminos = (version: string) => version === terminosActual().version ? '/terminos' : desde17(version) && datosVersion(version) ? '/terminos' + sufijo(version) : '/terminos-1-6'
 export const TERMINOS = DOCS.terminos
 /** Paso 11 + paso 16: la Privacidad vigente (1.7-demo con el interruptor) sale de un solo archivo, `v17/privacidad.md`. */
 export const privacidadVigente = (): DocLegal | undefined => privacidadActual()

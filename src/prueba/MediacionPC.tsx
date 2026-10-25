@@ -16,7 +16,8 @@ import { pedirMediacion, noUsarMediacion, plazoMediacion, repartoValido, textoCo
 import { AvisosApp } from './AvisosApp'
 import { registrarConsentimiento, CASILLA_MEDIACION } from './consentimientos'
 import { deDosPersonas } from '../servidor/config'
-import { versionAlquiler, V17 } from './version'
+import { versionAlquiler } from './version'
+import { desde17 } from '../legal/versiones'
 import { pasoPorMediacion, datosMediacion, guardarMediacion, textoGuardar, DIAS_BORRADO } from './borrado'
 
 const u = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
@@ -115,7 +116,7 @@ export const notaDatosMediacion = (a: Alquiler): string => deDosPersonas(a) ? NO
 /** paso16-unido (arreglo 3): en «Terminado», una parte puede pedir que se guarden los datos de la mediación para un reclamo fuera
  *  de la app (si no, se borran 30 días después de cerrar el caso). Queda en el historial. */
 export function GuardarDatosMediacion({ a, rol }: { a: Alquiler; rol: Rol }) {
-  if (versionAlquiler(a) !== V17 || deDosPersonas(a) || !pasoPorMediacion(a)) return null   // con otra persona: lo hace el servidor
+  if (!desde17(versionAlquiler(a)) || deDosPersonas(a) || !pasoPorMediacion(a)) return null   // con otra persona: lo hace el servidor
   const d = datosMediacion(a)
   if (d.borrado) return null
   // LEGAL: revisar · texto propio basado en la Privacidad 1.7-demo (conservación); la línea del historial es de Legal

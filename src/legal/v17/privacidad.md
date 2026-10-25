@@ -77,9 +77,10 @@ Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la a
 1. Permitirte entrar a la demo y usarla.
 2. Crear en la red de prueba el **escrow (contrato digital de garantía)**, registrar el depósito, la aprobación y la liberación, y dejar como evidencia solo la huella digital de las fotos.
 <!-- LEGAL: revisar · paso16-unido: punto 3 según los interruptores; el punto de la mediación es de dos-personas-textos.md C -->
+<!-- LEGAL: revisar · escenario C: «registre el reparto que las dos partes acepten en la mediación» (antes, «decida el reparto simulado») -->
 <!-- si: dos-personas -->
 3. Mostrar a la otra parte lo necesario para la simulación{{correos: y enviar por correo la invitación y los avisos del alquiler simulado}}.
-4. Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y, si no lo logran, decida el reparto simulado. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.
+4. Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y registre el reparto que las dos partes acepten en la mediación. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.
 <!-- fin -->
 <!-- si no: dos-personas -->
 3. Mostrar en la app lo necesario para la simulación{{correos: y enviarte por correo los avisos del alquiler simulado, si los pides}}.

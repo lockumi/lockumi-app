@@ -83,7 +83,7 @@ export interface Alquiler {
   /** Paso 16: consentimientos dados al usar una función (mediación; correos en el paso 11). */
   consentimientos?: Consentimiento[]
   /** Paso 16: versión de los Términos del alquiler (sin dato: 1.6-demo) y aceptación de cada parte para pasar a la 1.7-demo. */
-  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string; /** paso16-unido: versión con su fecha (fecha única) */ edicion?: string }
+  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string; /** paso16-unido: versión con su fecha (fecha única) */ edicion?: string; /** escenario C: versión a la que aceptaron pasar */ hacia?: string }
   /** Correos que escribió quien prueba para recibir los avisos (opcional). */
   correos?: Partial<Record<Rol, string>>
   /** Paso 11: avisos ya enviados por correo a cada papel (ids), para no repetirlos. */
