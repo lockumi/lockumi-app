@@ -27,6 +27,7 @@ import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
 import { MediacionPC, ResueltoSimulacion } from '../prueba/MediacionPC'
+import { AvisoSalida } from '../prueba/AvisoSalida'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
 type P = { a: Alquiler; rol: Rol }
@@ -318,7 +319,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
-    en_curso: <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
+    en_curso: pruebaCompleta() ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
     ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
     reclamo: pruebaCompleta() ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]

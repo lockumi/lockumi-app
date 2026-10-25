@@ -10,6 +10,7 @@ import { LogoAnimado } from '../LogoAnimado'
 import { modoSolo, modoPrueba, escrowReal } from '../servidor/config'
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
+import { SuscripcionB8, RendimientoB13 } from '../prueba/SuscripcionPC'
 import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
 import { store } from '../store'
 import { modoServidor } from '../servidor/config'
@@ -266,6 +267,7 @@ export function Crear({ u }: { u: Usuario }) {
 
       {enviado && cuantos > 0 && <p className="error na-error" role="alert">Revisa {cuantos === 1 ? 'el campo marcado' : `los ${cuantos} campos marcados`} y vuelve a intentarlo.</p>}
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
+      {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}
       {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
       <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta)}>{ocupado ? 'Creando…' : modoPrueba ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisar. Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}

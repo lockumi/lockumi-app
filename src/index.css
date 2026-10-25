@@ -795,6 +795,7 @@ html.sin-scroll{overflow:hidden}
 .cc-barra__txt{flex:1;min-width:0;display:grid}
 .cc-barra__txt small{font:700 14px/18px var(--f-texto);letter-spacing:.06em;text-transform:uppercase;color:var(--accion)}
 .cc-barra__txt strong{font:700 16px/22px var(--f-titulo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-barra__txt--ajusta strong{white-space:normal}
 .cc-barra__ver{flex:none;min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:var(--r-pildora);background:var(--fondo);box-shadow:inset 0 0 0 1.5px var(--linea);font:600 15px/20px var(--f-texto);color:var(--accion-activo)}
 .cc-barra:focus-visible{box-shadow:var(--foco)}
 .cc-tarjeta .ct__marca{margin:0}

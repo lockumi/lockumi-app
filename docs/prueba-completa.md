@@ -60,6 +60,23 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
 
+## Franja de la red de prueba
+Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
+
+## Montos y franja (ajustes de Legal, 11:25 p. m.)
+Con el interruptor encendido, `usd()` escribe «800 USDC de prueba» en todas las pantallas (cabecera y tarjeta del detalle incluidas) y la franja de la red de prueba se ve en todas las pantallas, también en la demo local con depósito simulado.
+
+## Suscripción (B.8) y rendimiento (B.13) (PR 8, paso 15)
+1. En «Crear alquiler», antes del Anexo 6-A: la B.8 con el texto «En la demo, la app es gratis…» y el cuadro del servicio real con las dos autorizaciones que se pedirían (sin casillas).
+2. Debajo, la B.13 plegada: «Rendimiento del depósito: función en estudio», etiquetas «Función en estudio» y «Simulación», el texto de Legal, enlace a la cláusula 10 y [Entendido] (cierra el bloque).
+
+## Sin marcadores visibles
+Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice: «la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), que no puede usar tus fotos para entrenar modelos. Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso. …». La B.1 y la B.7 ya no muestran [PENDIENTE] (el costo del servicio real se informará antes de firmar).
+
+## Aviso de 5 días antes de la salida (B.3) y fecha y hora en las fotos (PR 7, pasos 12 y 13)
+1. **B.3 (6.1.1):** con el alquiler en curso, 5 días antes del fin (a las 12:00, hora de Costa Rica) `sincronizar` entrega al inquilino el aviso «reparacion-5». Debajo de «Alquiler en curso» se ve `AvisoSalida`: el texto de la B.3, el enlace «ver las reglas» dentro del texto, las fotos de entrada de cada espacio para comparar y el registro de entrega y apertura. Antes del aviso, en la red de prueba, «Ir al aviso de 5 días» adelanta el reloj de la demo (no la hora real).
+2. **6.4.2:** cada foto muestra «Tomada en la app el …, hora de Costa Rica» (o «Agregada…» si llegó como archivo) y un sello dd/mm/aa hh:mm sobre la foto. Se usa `tomadaEn` (o `fecha`). La app no registra la ubicación.
+
 ## Mediación Lockumi (demo) y «Resolver el reclamo (simulación)» (PR 6, paso 10)
 1. Al no haber acuerdo (propuesta rechazada o silencio sin la regla), el alquiler queda en `mediacion` y se ve `MediacionPC`.
 2. **B.7:** texto, recuadro [SERVICIO REAL] y casilla «Entiendo esto…». «Pedir mediación» guarda `reclamo.mediacion = { estado: 'pedida', fecha }` y muestra el plazo de 3 días hábiles (`sumarHabiles`). Si ya hay 10 casos pedidos en mediación, queda `sin-cupo` y se ve la **B.12**. «Prefiero no usarla» guarda `no-usar`. En la demo nadie del equipo atiende el caso (6.8 b).
