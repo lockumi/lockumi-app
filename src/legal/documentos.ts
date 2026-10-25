@@ -46,7 +46,8 @@ const archivosV17 = import.meta.glob('./v17/*.md', { query: '?raw', import: 'def
 // paso16-unido · UNA sola 1.7-demo: los .md de v17/ traen bloques condicionales (ver condicional.ts) y se arman según lo que está
 // encendido, para que el texto describa exactamente lo que la app hace. Se calcula al pedirlo (las pruebas cambian el entorno).
 /** Lo que está encendido para los textos legales: modo de dos personas (servidor/config) y correos (VITE_CORREOS). */
-export const interruptoresLegales = (): Interruptores => ({ 'dos-personas': calcularModos(import.meta.env as never).dosPersonas, correos: correosActivos() })
+export const interruptoresLegales = (): Interruptores => ({ 'dos-personas': calcularModos(import.meta.env as never).dosPersonas, correos: correosActivos(),
+  reputacion: import.meta.env.VITE_REPUTACION === '1' })   // paso 19: REP-14 y REP-15
 const DOCS_16_EN_17 = Object.fromEntries(Object.entries(DOCS).filter(([k]) => k === 'terminos' || k === 'privacidad').map(([k, d]) => [k + '-1-6', { ...d, slug: k + '-1-6' }]))
 const cache17 = new Map<string, Record<string, DocLegal>>()
 function docs17(): Record<string, DocLegal> {

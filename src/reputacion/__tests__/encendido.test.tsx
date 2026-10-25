@@ -121,3 +121,17 @@ describe('reputación encendida', () => {
     expect(t).toContain('Listo. Eliminamos tu cuenta.'); expect(t).toContain('30 de octubre de 2026')
   })
 })
+
+describe('textos legales con la reputación (REP-14 y REP-15, solo con VITE_REPUTACION=1)', () => {
+  it('encendida: el Aviso 1.7-demo trae «Perfil de reputación» y los Términos la cláusula 15 y el inciso g)', async () => {
+    const { condicional } = await import('../../legal/condicional'), fs = await import(['node', 'fs'].join(':'))
+    const leer = (f: string) => fs.readFileSync(new URL('../../legal/v17/' + f, import.meta.url), 'utf8') as string
+    const on = { 'dos-personas': true, correos: false, reputacion: true }, off = { 'dos-personas': true, correos: false }
+    const p = condicional(leer('privacidad.md'), on), t = condicional(leer('terminos.md'), on)
+    expect(p).toContain('## Perfil de reputación'); expect(p).not.toContain('no calculamos ningún puntaje de reputación')
+    expect(p).toContain('Cualquier persona en internet con el enlace puede ver los datos indicados en «Perfil de reputación», mientras exista tu cuenta.')
+    expect(t).toContain('## 15. Perfil de reputación'); expect(t).toContain('g) usar los perfiles públicos en contra de lo dispuesto en la cláusula 15.4')
+    const p0 = condicional(leer('privacidad.md'), off), t0 = condicional(leer('terminos.md'), off)
+    expect(p0).toContain('no calculamos ningún puntaje de reputación'); expect(p0).not.toContain('Perfil de reputación'); expect(t0).not.toMatch(/15\. Perfil|g\) usar los perfiles/)
+  })
+})

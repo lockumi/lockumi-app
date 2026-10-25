@@ -7,10 +7,11 @@
 // Un interruptor desconocido o un bloque sin cerrar es un error: es mejor que falle la prueba a publicar un texto roto.
 import { EDICION_V17 } from './version17'
 
-export type Interruptor = 'dos-personas' | 'correos'
-export type Interruptores = Record<Interruptor, boolean>
-const NOMBRES: Interruptor[] = ['dos-personas', 'correos']
-const valor = (s: Interruptores, k: string) => { if (!(NOMBRES as string[]).includes(k)) throw new Error(`Interruptor desconocido en un texto legal: ${k}`); return s[k as Interruptor] }
+export type Interruptor = 'dos-personas' | 'correos' | 'reputacion'
+/** `reputacion` (paso 19) es opcional: apagado si no se indica. */
+export type Interruptores = Record<Exclude<Interruptor, 'reputacion'>, boolean> & { reputacion?: boolean }
+const NOMBRES: Interruptor[] = ['dos-personas', 'correos', 'reputacion']
+const valor = (s: Interruptores, k: string) => { if (!(NOMBRES as string[]).includes(k)) throw new Error(`Interruptor desconocido en un texto legal: ${k}`); return !!s[k as Interruptor] }
 
 export function condicional(txt: string, s: Interruptores): string {
   const pila: boolean[] = [], fuera: string[] = []
