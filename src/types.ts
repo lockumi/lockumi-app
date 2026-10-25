@@ -54,7 +54,7 @@ export interface Aviso {
 }
 /** Regla de propuesta automática (6.5.1, B.1): registro de la decisión del inquilino al firmar. */
 export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string }
-export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto'; fecha: string }
+export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
   /** Solo con servidor: mi rol según la sesión, si el inquilino ya aceptó y las cuentas G… declaradas. */

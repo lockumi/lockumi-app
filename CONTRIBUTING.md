@@ -85,6 +85,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Simulador de días: los avisos salen al adelantar el reloj de la demo (`src/prueba/sincronizar.ts`); no hay tareas en el servidor.
 - E2E: `npm run e2e` (Playwright, `e2e/*.e2e.ts`; ver `docs/e2e.md`). Los archivos E2E no terminan en `.spec`/`.test` para que vitest no los tome.
 - Reclamos (PR 5): la lógica va en `src/prueba/reclamos.ts` (funciones puras que se prueban sin pantalla); las acciones primero llaman a la cuenta segura (`escrow`) y después cambian el estado, y usan `paso()` para que un doble toque no repita nada.
+- Mediación (PR 6): en la demo no hay persona mediadora; todo reparto va por `acciones.resolverSimulacion` con confirmación (B.14) y nunca da al dueño más de lo reclamado.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

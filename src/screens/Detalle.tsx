@@ -25,6 +25,7 @@ import { pruebaCompleta } from '../prueba/interruptor'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
+import { MediacionPC, ResueltoSimulacion } from '../prueba/MediacionPC'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
 type P = { a: Alquiler; rol: Rol }
@@ -270,12 +271,14 @@ function Cerrado({ a, rol }: P) {
   const via = escrowReal && r.via === 'automatico' ? `No hubo reclamos en ${textoPlazo(a)}. El dueño de prueba aprobó y Lockumi devolvió el depósito en la red de prueba.` : { automatico: `No hubo reclamos en ${textoPlazo(a)}.`, acuerdo: 'Se pusieron de acuerdo en la app.', mediacion: 'Lo decidió una persona mediadora.',
     // Solo con la prueba completa (interruptor apagado en producción: ningún alquiler llega a estas vías).
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
+    simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisar · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisar
   return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     <h2>Depósito devuelto</h2><p>{via}</p>
     <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>
     <p className="nota">{fechaHora(r.fecha)}</p>
+    {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}{/* solo con la prueba completa (interruptor encendido) */}
     {escrowReal && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}
     {escrowReal && [a.red?.txs.liberacion, a.red?.txs.resolucion].filter(esHash).map(h => <p key={h} className="nota">{h === a.red?.txs.liberacion ? 'Devolución' : 'Reparto'} en la red de prueba: <VerTx h={h} /></p>)}
@@ -312,7 +315,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
     en_curso: <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
     ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
-    reclamo: pruebaCompleta() ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
+    reclamo: pruebaCompleta() ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>
