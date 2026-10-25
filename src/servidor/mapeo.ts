@@ -42,7 +42,7 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string): 
     reclamo: f.reclamo ? { monto: Number(f.reclamo.monto), motivo: f.reclamo.motivo, fecha: f.reclamo.creado_en, respuesta: f.reclamo.respuesta ?? undefined,
       fotos: f.fotos.filter(x => x.etapa === 'reclamo').map(x => aFoto(x, url)) } : undefined,
     resultado: c.resultado ? { via: c.resultado.via, dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,
-    liquidacionTx: c.liquidacion_tx ?? undefined,
+    liquidacionTx: comprobanteLiquidacion(c.liquidacion_tx),
     historial: f.eventos.map(e => ({ fecha: e.creado_en, texto: e.texto, tx: e.tx_hash ?? undefined })),
   }
 }
@@ -54,3 +54,6 @@ export function mensajeServidor(e: unknown): string {
   if (/JWT|session|Inicia sesión/i.test(m)) return 'Tu sesión venció. Vuelve a entrar.'
   return m && m.length < 200 && !/[{}]|relation|function .*does not exist/.test(m) ? m : 'Algo salió mal en el servidor. Intenta de nuevo.'
 }
+
+/** PR #22: liquidacion_tx = 'en-curso' es el bloqueo de «repartir» en /api/tw, no un comprobante. */
+export const comprobanteLiquidacion = (x: string | null | undefined) => x && /^[0-9a-f]{64}$/.test(x) ? x : undefined

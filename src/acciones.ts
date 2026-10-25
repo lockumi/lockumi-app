@@ -209,16 +209,22 @@ const remoto: Acciones = {
   pagar: async a => { await servidor.registrarPago(a.id, modoDe(a).trustless ? await trustless.depositar(a.id) : null) },
   iniciarSalida: a => servidor.iniciarSalida(a.id).then(() => {}),
   reclamar: (a, m, mot, fotos) => servidor.reclamar(a.id, m, mot, fotos).then(() => {}),
-  responder: (a, acepta) => servidor.responder(a.id, acepta).then(() => {}),
+  // PR #22: si el inquilino acepta, el servidor cierra por acuerdo y /api/tw paga el reparto en la red («repartir»).
+  async responder(a, acepta) { await servidor.responder(a.id, acepta); if (acepta && modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
   async cerrarSinReclamo(a) {
     const cerro = await servidor.cerrarSinReclamo(a.id)
+    // PR #22: un caso ya cerrado por acuerdo o por la mediación con las dos aceptaciones y sin pagar → «repartir» (el servidor lo valida).
+    if (a.estado === 'cerrado' && (a.resultado?.via === 'acuerdo' || a.resultado?.via === 'mediacion')) {
+      if (modoDe(a).trustless && a.escrowId && !a.liquidacionTx) await trustless.repartir(a.id)
+      return
+    }
     // Con TW: la plataforma libera el 100 % al inquilino (necesita la aprobación del dueño en la cadena).
     if (modoDe(a).trustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx)))
       // Paso 7 (interruptor encendido): sin la aprobación del dueño, devolución automática del 100 % al inquilino.
       await (pruebaCompleta() && !a.historial.some(e => e.texto === APROBADO_DUENO) ? trustless.devolverAutomatico(a.id) : trustless.liberar(a.id))
   },
   aprobarDevolucion: async (a: Alquiler) => { if (!modoDe(a).trustless) throw new Error('Esta aprobación solo existe con la red de prueba.'); await trustless.aprobarDevolucion(a.id) },
-  decidir: (a, m, mot) => servidor.decidir(a.id, m, mot).then(() => {}),
+  async decidir(a, m, mot) { await servidor.decidir(a.id, m, mot); if (modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
   async aceptarAcuerdo(a, m) {
     const tope = a.reclamo?.monto ?? 0
     if (!(m >= 0 && m <= tope)) throw new Error('El monto para el dueño debe estar entre 0 y lo reclamado.')

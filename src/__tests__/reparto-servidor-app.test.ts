@@ -42,3 +42,12 @@ describe('PR #22 · la app pide el reparto en la red solo con un cierre aceptado
     expect(llamadas).toEqual(['lk_cerrar_sin_reclamo'])
   })
 })
+
+describe('PR #22 · el bloqueo del reparto no se muestra como comprobante', () => {
+  it('liquidacion_tx «en-curso» no llega a la app como hash', async () => {
+    const { comprobanteLiquidacion } = await vi.importActual<typeof import('../servidor/mapeo')>('../servidor/mapeo')
+    expect(comprobanteLiquidacion('en-curso')).toBeUndefined()
+    expect(comprobanteLiquidacion(null)).toBeUndefined()
+    expect(comprobanteLiquidacion('a'.repeat(64))).toBe('a'.repeat(64))
+  })
+})

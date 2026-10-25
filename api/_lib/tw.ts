@@ -75,7 +75,7 @@ export async function usuario(c: Config, bearer: string | null, f = fetch) {
   return ((await r.json()) as { id: string }).id
 }
 type Part = { rol: 'dueno' | 'inquilino'; usuario: string; direccion_stellar: string | null }
-export type Contrato = { id: string; estado: string; monto: number; direccion: string; escrow_contract_id: string | null; resultado: { via?: string; dueno?: number; inquilino?: number } | null; liquidacion_tx: string | null; lk_participantes: Part[] }
+export type Contrato = { id: string; estado: string; monto: number; direccion: string; escrow_contract_id: string | null; resultado: { via?: string; cierre?: string; dueno?: number; inquilino?: number } | null; liquidacion_tx: string | null; lk_participantes: Part[] }
 const rest = (c: Config, ruta: string, init: RequestInit = {}, f = fetch) => f(`${c.supa.url}/rest/v1/${ruta}`, { ...init,
   headers: { apikey: c.supa.servicio, authorization: 'Bearer ' + c.supa.servicio, 'content-type': 'application/json', ...init.headers } })
 export async function contrato(c: Config, id: string, f = fetch): Promise<Contrato> {
@@ -127,6 +127,34 @@ export const DEVUELTO_AUTO = 'Devolución automática: la cuenta que resuelve di
 export function repartoAutomatico(k: Contrato): { address: string; amount: number }[] {
   return [{ address: cuenta(k, 'inquilino'), amount: Number(k.monto) }]
 }
+/** PR #22 · cierres de dos personas que se pagan con «repartir»: acuerdo (el inquilino aceptó) y mediación con las dos aceptaciones.
+ *  Nunca la Regla 6.5.1 (Legal, 25/10, 1:50 a. m., opción 1) ni un caso abierto. */
+export const REPARTO_DISPUTA = 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado'
+const centavos = (x: unknown) => Math.round(Number(x) * 100)
+function cierreAceptado(k: Contrato) {
+  const r = k.resultado
+  if (k.estado !== 'cerrado' || !r) return false
+  if (!(r.via === 'acuerdo' || (r.via === 'mediacion' && r.cierre === 'dos_aceptan'))) return false
+  const d = centavos(r.dueno), i = centavos(r.inquilino)
+  return Number.isFinite(d) && Number.isFinite(i) && d >= 0 && i >= 0 && d + i === centavos(k.monto)
+}
+/** Reparto aceptado por las dos partes (sale de la base, nunca del navegador). Sin líneas en 0; la suma es todo el depósito. */
+export function repartoAceptado(k: Contrato): { address: string; amount: number }[] {
+  const r = k.resultado!
+  return [{ address: cuenta(k, 'dueno'), amount: centavos(r.dueno) / 100 }, { address: cuenta(k, 'inquilino'), amount: centavos(r.inquilino) / 100 }].filter(x => x.amount > 0)
+}
+async function hayEvento(c: Config, id: string, texto: string, f = fetch) {
+  const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(texto)}&select=texto`, {}, f)
+  return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
+}
+/** Bloqueo: solo un pedido a la vez toma el caso (liquidacion_tx vacío → 'en-curso'). */
+async function tomar(c: Config, id: string, f = fetch) {
+  const r = await rest(c, `lk_contratos?id=eq.${id}&liquidacion_tx=is.null`, { method: 'PATCH', headers: { prefer: 'return=representation' }, body: JSON.stringify({ liquidacion_tx: EN_CURSO }) }, f)
+  return r.ok && ((await r.json().catch(() => [])) as unknown[]).length === 1
+}
+const EN_CURSO = 'en-curso'
+const soltar = (c: Config, id: string, f = fetch) => rest(c, `lk_contratos?id=eq.${id}&liquidacion_tx=eq.${EN_CURSO}`, { method: 'PATCH', body: JSON.stringify({ liquidacion_tx: null }) }, f)
+
 async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
   const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(APROBADO)}&select=texto`, {}, f)
   return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
@@ -140,6 +168,7 @@ export type Pedido =
   | { accion: 'enviar'; contrato: string; paso: 'fondear' | 'aprobar'; signedXdr: string }
   | { accion: 'liberar'; contrato: string }
   | { accion: 'devolver-automatico'; contrato: string }
+  | { accion: 'repartir'; contrato: string }
 
 export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const c = configuracion(e)
@@ -219,6 +248,28 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       const tx = hashTx(firmada)
       await anotar(c, k.id, { liquidacion_tx: tx }, DEVUELTO_AUTO, tx, f)
       return { tx, disputaTx: hashTx(abierta) }
+    }
+    case 'repartir': {    // PR #22: acuerdo o mediación con las dos aceptaciones → disputa (plataforma) + resolución (cuenta mediadora)
+      if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) return { tx: k.liquidacion_tx, yaExistia: true }
+      exigir(cierreAceptado(k) && !!k.escrow_contract_id, 409, 'Solo se reparte así un caso cerrado por el servidor con acuerdo o con las dos aceptaciones.')
+      exigir(k.liquidacion_tx !== EN_CURSO, 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
+      exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
+      exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
+      const reparto = repartoAceptado(k)
+      exigir(await tomar(c, k.id, f), 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
+      let disputaTx: string | null = null
+      try {
+        if (!(await hayEvento(c, k.id, REPARTO_DISPUTA, f))) {   // en un reintento la disputa ya está abierta
+          const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: k.escrow_contract_id, signer: P }, f)
+          const abierta = firmarComoPlataforma(c, sinFirmar(d)); await enviar(c, abierta, f)
+          disputaTx = hashTx(abierta); await anotar(c, k.id, {}, REPARTO_DISPUTA, disputaTx, f)
+        }
+        const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: k.escrow_contract_id, disputeResolver: c.mediador, distributions: reparto }, f)
+        const firmada = firmarComoMediador(c, sinFirmar(j)); await enviar(c, firmada, f)
+        const tx = hashTx(firmada), r = k.resultado!
+        await anotar(c, k.id, { liquidacion_tx: tx }, `Se pagó el reparto aceptado desde Trustless Work: ${centavos(r.dueno) / 100} USDC al dueño y ${centavos(r.inquilino) / 100} al inquilino (cada monto menos la comisión de 0,3 % de Trustless Work)`, tx, f)
+        return { tx, disputaTx }
+      } catch (e) { await soltar(c, k.id, f).catch(() => {}); throw e }
     }
   }
   throw new ErrorTw(400, 'Acción no permitida.')
