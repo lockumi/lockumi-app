@@ -13,10 +13,11 @@ export const EMISORES = {
 } as const
 export type Metodo = keyof typeof EMISORES
 type Env = Record<string, string | undefined>
-export class ErrorVerificacion extends Error { constructor(public estado: number, motivo: string) { super(motivo) } }
+export class ErrorVerificacion extends Error { estado: number; constructor(estado: number, motivo: string) { super(motivo); this.estado = estado } }
 const MARGEN = 60   // segundos de tolerancia del reloj
 
-const json = (b64: string) => JSON.parse(Buffer.from(b64, 'base64url').toString('utf8')) as Record<string, unknown>
+const bytes = (b64u: string) => { const b = atob(b64u.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, ch => ch.charCodeAt(0)) }
+const json = (b64: string) => JSON.parse(new TextDecoder().decode(bytes(b64))) as Record<string, unknown>
 const normalizar = (c: unknown) => typeof c === 'string' ? c.trim().toLowerCase() : ''
 export const audiencias = (env: Env) => (env.CAVOS_AUDIENCIAS ?? '').split(',').map(x => x.trim()).filter(Boolean)
 
@@ -55,7 +56,7 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   try {
     const k = await crypto.subtle.importKey('jwk', { kty: jwk.kty, n: jwk.n, e: jwk.e, crv: jwk.crv, x: jwk.x, y: jwk.y }, algo, false, ['verify'])
     ok = await crypto.subtle.verify(em.alg === 'ES256' ? { name: 'ECDSA', hash: 'SHA-256' } : { name: 'RSASSA-PKCS1-v1_5' }, k,
-      Buffer.from(partes[2], 'base64url'), new TextEncoder().encode(`${partes[0]}.${partes[1]}`))
+      bytes(partes[2]), new TextEncoder().encode(`${partes[0]}.${partes[1]}`))
   } catch { ok = false }
   if (!ok) throw new ErrorVerificacion(403, 'La firma del token no es válida.')
   const aud = Array.isArray(c.aud) ? c.aud.map(String) : [String(c.aud ?? '')]

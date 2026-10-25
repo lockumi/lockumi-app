@@ -6,7 +6,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { verificarTokenCavos, atenderVerificacion, EMISORES } from '../../../api/_lib/cavos-token'
 
-const b64u = (b: ArrayBuffer | Uint8Array | string) => Buffer.from(typeof b === 'string' ? b : b instanceof Uint8Array ? b : new Uint8Array(b)).toString('base64url')
+const b64u = (b: ArrayBuffer | Uint8Array | string) => {
+  const u = typeof b === 'string' ? new TextEncoder().encode(b) : b instanceof Uint8Array ? b : new Uint8Array(b)
+  return btoa(String.fromCharCode(...u)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
 type Llaves = { privada: CryptoKey; jwk: JsonWebKey & { kid: string; alg: string } }
 async function llaves(alg: 'ES256' | 'RS256', kid: string): Promise<Llaves> {
   const par = alg === 'ES256'
@@ -26,7 +28,7 @@ async function escenario() {
   const jwks: Record<string, unknown> = { [EMISORES.google.jwks]: { keys: [google.jwk] }, [EMISORES.apple.jwks]: { keys: [apple.jwk] }, [EMISORES.email.jwks]: { keys: [enclave.jwk] } }
   const f = vi.fn(async (url: string, init?: RequestInit) => {
     if (url in jwks) return new Response(JSON.stringify(jwks[url]), { status: 200 })
-    if (url.endsWith('/auth/v1/user')) return (init?.headers as Record<string, string>).authorization === 'Bearer sesion-ok'
+    if (url.endsWith('/auth/v1/user')) return (init?.headers as Record<string, string> | undefined)?.authorization === 'Bearer sesion-ok'
       ? new Response(JSON.stringify({ id: '00000000-0000-4000-8000-000000000001' }), { status: 200 }) : new Response('{}', { status: 401 })
     if (url.endsWith('/rest/v1/rpc/lk_registrar_correo_verificado')) return new Response('true', { status: 200 })
     return new Response('{}', { status: 404 })
