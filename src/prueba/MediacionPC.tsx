@@ -105,6 +105,13 @@ export function ResueltoSimulacion({ a }: { a: Alquiler }) {
     {esHash(h) && <VerTx h={h} />}</div>
 }
 
+// LEGAL: revisado (25/10, 12:52 a. m.) · nota de un solo aparato, texto exacto de Legal (los datos están en el navegador)
+const NOTA_DATOS_LOCAL = `Las fotos, las descripciones y los mensajes de la Mediación Lockumi (demo) se borran de tu navegador ${DIAS_BORRADO} días después de cerrar el caso. Se conservan los montos y el resultado. Si los necesitas para un reclamo fuera de la app, toca «Guardar los datos de la mediación» para que no se borren, y descarga el expediente.`
+// LEGAL: revisar · alquileres con otra persona (servidor, escenario C): los borra Lockumi, por eso «pide que los guardemos»
+const NOTA_DATOS_SERVIDOR = `Las fotos, las descripciones y los mensajes de la Mediación Lockumi (demo) se borran ${DIAS_BORRADO} días después de cerrar el caso. Se conservan los montos y el resultado. Si los necesitas para un reclamo fuera de la app, pide que los guardemos.`
+/** Nota «Datos de la mediación»: en el navegador (un solo aparato) o en el servidor (con otra persona). */
+export const notaDatosMediacion = (a: Alquiler): string => deDosPersonas(a) ? NOTA_DATOS_SERVIDOR : NOTA_DATOS_LOCAL
+
 /** paso16-unido (arreglo 3): en «Terminado», una parte puede pedir que se guarden los datos de la mediación para un reclamo fuera
  *  de la app (si no, se borran 30 días después de cerrar el caso). Queda en el historial. */
 export function GuardarDatosMediacion({ a, rol }: { a: Alquiler; rol: Rol }) {
@@ -115,7 +122,7 @@ export function GuardarDatosMediacion({ a, rol }: { a: Alquiler; rol: Rol }) {
   if (d.guardar) return <p className="nota" role="status">{textoGuardar(d.guardar.por)}</p>
   return <section className="pila guardar-mediacion" aria-labelledby="t-guardar-med">
     <h3 id="t-guardar-med">Datos de la mediación</h3>
-    <p className="nota">Las fotos, las descripciones y los mensajes de la Mediación Lockumi (demo) se borran {DIAS_BORRADO} días después de cerrar el caso. Se conservan los montos y el resultado. Si los necesitas para un reclamo fuera de la app, pide que los guardemos.</p>
+    <p className="nota">{notaDatosMediacion(a)}</p>
     <button type="button" className="boton boton--secundario boton--ancho" onClick={() => store.cambiar(a.id, x => guardarMediacion(x, rol, ahoraDe(x)))}>Guardar los datos de la mediación</button>
   </section>
 }
