@@ -1,11 +1,10 @@
-// Paso 19 · Textos de la reputación. Fuente: legal/reputacion-textos.md (Legal, 25/10/2026), copiados al pie de la letra.
-// Único cambio: «Llave de Oro» → «Llave Lockumi» en todas partes (decisión 2 de Katherine, 25/10/2026). Las negritas van entre **…**.
+// Paso 19 · Textos de la reputación. Fuente: legal/reputacion-textos.md (Legal, actualización del 25/10/2026, 1:56 p. m., hora de
+// Costa Rica, ya con «Llave Lockumi», decisión 2 de Katherine), copiados al pie de la letra. Las negritas van entre **…**.
 // Las variables siguen la convención de Legal: {nombre visible}, {cantón}, {n}.
 // TODO lo que lleva «LEGAL: revisar» puede cambiar: la lista completa está en docs/reputacion.md.
 import type { Rol } from '../types'
 
 export const NOMBRE_LLAVE = 'Llave Lockumi'
-const llave = (t: string) => t.replace(/Llave de Oro/g, NOMBRE_LLAVE)
 
 export interface Bloque { titulo: string; parrafos: string[]; casillas: string[] }
 
@@ -13,13 +12,13 @@ export interface Bloque { titulo: string; parrafos: string[]; casillas: string[]
 const PERFIL_DUENO: Bloque = {
   titulo: 'Hacer público mi perfil de dueño (opcional)',
   parrafos: [
-    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres dueño, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, solo si activas «Mostrar mi puntaje», tu puntaje y la Llave de Oro. **No publicamos** la dirección ni el barrio del inmueble, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
+    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres dueño, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, solo si activas «Mostrar mi puntaje», tu puntaje y la Llave Lockumi. **No publicamos** la dirección ni el barrio del inmueble, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
     '**Para qué:** que inquilinos interesados conozcan tu historial en Lockumi. No es una garantía ni una recomendación de Lockumi. En la demo, los datos salen de la red de prueba y no reflejan alquileres reales.',
     '**Cómo dejar de mostrarlo:** en Ajustes › Perfil público › «Dejar de mostrar». Tu perfil desaparece de las listas al instante y el enlace deja de funcionar. Tus datos de reputación no se borran: siguen en tu cuenta, sin publicarse.',
     '**Cuánto tiempo:** lo público se deja de mostrar en cuanto lo desactivas. Tus datos de reputación (puntaje, insignias, perfil y el historial de alquileres que alimenta el puntaje) se guardan **mientras exista tu cuenta** y se borran solo cuando eliminas tu cuenta.',
     '**Retirar el consentimiento es eliminar la cuenta:** si quieres que Lockumi deje de guardar tus datos de reputación, elimina tu cuenta en Ajustes › Cuenta › «Eliminar mi cuenta» (o pídelo por correo). Es gratis y los borramos en un máximo de 5 días hábiles. Por ley, un descuento del depósito deja de contar y se borra de tu reputación 10 años después de que ocurrió.',
     'Es voluntario: si no lo activas, puedes usar Lockumi igual.',
-  ].map(llave),
+  ],
   casillas: [
     'Confirmo que soy mayor de 18 años y acepto que Lockumi publique estos datos en mi perfil público de dueño.',
     'Entiendo que mis datos de reputación se guardan mientras exista mi cuenta y que, para retirar mi consentimiento, debo eliminar mi cuenta.',
@@ -29,11 +28,11 @@ const PERFIL_DUENO: Bloque = {
 const PERFIL_INQUILINO: Bloque = {
   titulo: 'Hacer público mi perfil de inquilino (opcional)',
   parrafos: [
-    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres inquilino, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, solo si activas «Mostrar mi puntaje», tu puntaje y la Llave de Oro. **No publicamos** tu dirección, tu barrio, dónde vives o vivías, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
+    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres inquilino, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, solo si activas «Mostrar mi puntaje», tu puntaje y la Llave Lockumi. **No publicamos** tu dirección, tu barrio, dónde vives o vivías, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
     '**Para qué:** que dueños interesados conozcan tu historial en Lockumi. No es una garantía ni una recomendación de Lockumi. Nunca ordenamos a los inquilinos por puntaje ni publicamos listas de puntajes bajos. En la demo, los datos salen de la red de prueba y no reflejan alquileres reales.',
     PERFIL_DUENO.parrafos[2], PERFIL_DUENO.parrafos[3], PERFIL_DUENO.parrafos[4],
     'Es voluntario: si no lo activas, puedes usar Lockumi igual, y ningún dueño sabrá que no lo activaste.',
-  ].map(llave),
+  ],
   casillas: [
     'Confirmo que soy mayor de 18 años y acepto que Lockumi publique estos datos en mi perfil público de inquilino.',
     PERFIL_DUENO.casillas[1],
@@ -71,7 +70,7 @@ export const SE_PUBLICA = [
   'Desde cuándo estás en Lockumi y cuántos alquileres cerraste en Lockumi.',
   'Tus insignias, que salen solo de hechos registrados en la app.',
   'Si eres dueño: el precio desde el que alquilas. Si eres inquilino: el rango de alquiler que buscas (solo en la vitrina).',
-  llave('Tu puntaje y la Llave de Oro, solo si activas «Mostrar mi puntaje» y tienes 3 o más alquileres cerrados.'),
+  'Tu puntaje y la Llave Lockumi, solo si activas «Mostrar mi puntaje» y tienes 3 o más alquileres cerrados.',
 ]
 export const NO_SE_PUBLICA = [
   'La dirección ni el barrio del inmueble, ni dónde vives.',

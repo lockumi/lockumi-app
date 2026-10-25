@@ -1,10 +1,12 @@
 // Paso 19 · Reputación: cálculo del puntaje según la sección C.3 de legal/reputacion-textos.md, como funciones puras (sin navegador,
 // sin almacén). Decisiones de Katherine (25/10/2026):
-//  - Solo cuenta en contra un reclamo que terminó con un DESCUENTO del depósito (aceptado por el inquilino, por la Regla 6.5.1 o por
-//    acuerdo en la mediación), en proporción a lo descontado. El descuento lo paga el inquilino: al dueño no le baja.
+//  - Inquilino: solo le baja un reclamo que terminó con un DESCUENTO del depósito (aceptado por el inquilino, por la Regla 6.5.1 o por
+//    acuerdo en la mediación), en proporción a lo descontado.
+//  - Dueño (decisión del 25/10/2026, 2:10 p. m.): solo le baja un reclamo INDEBIDO: terminó en la mediación o en un acuerdo
+//    devolviendo al inquilino todo o casi todo lo reclamado (UMBRAL_CASI_TODO). Un descuento justo no le baja.
 //  - Sin otro plazo de conservación: se usan todos los alquileres cerrados que sigan en la app (se borran solo al borrar la cuenta).
-//    Única excepción, que impone la ley y no Lockumi (Ley 8968, art. 6.1; legal/reputacion-textos.md, sección E, medida a): un descuento
-//    del depósito deja de contar 10 años después de que ocurrió.
+//    Lo negativo (un descuento o un reclamo indebido) deja de contar y se borra 10 años después de que ocurrió (Ley 8968, art. 6.1;
+//    decisión de Katherine del 25/10/2026).
 //  - Nunca un ranking: la vitrina se ordena por cantón y precio; el puntaje no cambia el orden.
 import type { Acta, Alquiler, Rol } from '../types'
 
@@ -15,8 +17,13 @@ export const MINIMO_POR_CANTON = 10
 /** Debajo de este puntaje, el perfil se ve igual que el de quien eligió no mostrar su puntaje. */
 export const PUNTAJE_MINIMO_VISIBLE = 3
 const DIA = 86_400_000
-/** Ley 8968, art. 6.1: un descuento del depósito deja de contar 10 años después de que ocurrió. */
+/** Ley 8968, art. 6.1: lo negativo deja de contar 10 años después de que ocurrió. */
 export const TOPE_LEGAL_DIAS = 3653
+/** Parte de lo reclamado que se devolvió al inquilino desde la que un reclamo es «indebido» («todo o casi todo»).
+ *  LEGAL: revisar · PENDIENTE: Legal todavía no definió «casi todo» en legal/reputacion-textos.md. Valor provisional 1 (solo «todo»),
+ *  el más prudente: así a ningún dueño le baja el puntaje por un número que nadie decidió. Cambiarlo solo aquí. */
+export const UMBRAL_CASI_TODO = 1
+const vigente = (fecha: string, ahora: number) => ahora - Date.parse(fecha) <= TOPE_LEGAL_DIAS * DIA
 
 export interface Puntaje { cerrados: number; valor: number | null; enRevision: boolean }
 
@@ -27,14 +34,35 @@ export const cuentaParaPuntaje = (a: Alquiler): boolean => a.estado === 'cerrado
 export function fraccionDescontada(a: Alquiler, ahora = Date.now()): number {
   const r = a.resultado
   if (!r || !cuentaParaPuntaje(a)) return 0
-  if (ahora - Date.parse(r.fecha) > TOPE_LEGAL_DIAS * DIA) return 0
+  if (!vigente(r.fecha, ahora)) return 0
   if (r.via !== 'acuerdo' && r.via !== 'propuesta' && r.via !== 'mediacion') return 0
   const dueno = Math.max(0, Number(r.dueno) || 0), inquilino = Math.max(0, Number(r.inquilino) || 0), total = dueno + inquilino
   return total > 0 ? Math.min(1, dueno / total) : 0
 }
 
-/** Valor de un alquiler cerrado (0 a 5). Cada uno vale 5,0; para el inquilino baja en proporción a lo descontado. */
-export const valorDelAlquiler = (a: Alquiler, rol: Rol, ahora = Date.now()): number => rol === 'inquilino' ? 5 * (1 - fraccionDescontada(a, ahora)) : 5
+/** Parte del depósito que se quedó el dueño, en dinero del depósito (corrige la comisión de la red con la proporción). */
+const alDuenoEnDeposito = (a: Alquiler) => { const r = a.resultado!, d = Math.max(0, Number(r.dueno) || 0), i = Math.max(0, Number(r.inquilino) || 0)
+  return d + i > 0 ? a.monto * d / (d + i) : 0 }
+/** Parte de lo reclamado que se devolvió al inquilino (0 a 1). Solo si hubo reclamo y terminó en la mediación o en un acuerdo. */
+export function fraccionReclamoDevuelta(a: Alquiler): number {
+  const r = a.resultado, reclamado = Number(a.reclamo?.monto) || 0
+  if (!r || !cuentaParaPuntaje(a) || reclamado <= 0 || (r.via !== 'mediacion' && r.via !== 'acuerdo')) return 0
+  return Math.max(0, Math.min(1, 1 - alDuenoEnDeposito(a) / reclamado))
+}
+/** Reclamo indebido: se devolvió al inquilino todo o casi todo lo reclamado, y pasó hace menos de 10 años. */
+export const reclamoIndebido = (a: Alquiler, ahora = Date.now()) =>
+  fraccionReclamoDevuelta(a) >= UMBRAL_CASI_TODO - 1e-9 && fraccionReclamoDevuelta(a) > 0 && vigente(a.resultado!.fecha, ahora)
+/** ¿Este alquiler le baja a esta persona? Inquilino: un descuento. Dueño: un reclamo indebido. */
+export const eventoNegativo = (a: Alquiler, rol: Rol, ahora = Date.now()) => rol === 'inquilino' ? fraccionDescontada(a, ahora) > 0 : reclamoIndebido(a, ahora)
+
+/** Valor de un alquiler cerrado (0 a 5). Cada uno vale 5,0. Inquilino: baja en proporción a lo descontado del depósito.
+ *  Dueño: con un reclamo indebido, baja en proporción a lo reclamado y devuelto, sobre el depósito (decisión pendiente de confirmar). */
+export function valorDelAlquiler(a: Alquiler, rol: Rol, ahora = Date.now()): number {
+  if (rol === 'inquilino') return 5 * (1 - fraccionDescontada(a, ahora))
+  if (!reclamoIndebido(a, ahora) || !(a.monto > 0)) return 5
+  const devuelto = (Number(a.reclamo!.monto) || 0) - alDuenoEnDeposito(a)
+  return 5 * (1 - Math.max(0, Math.min(1, devuelto / a.monto)))
+}
 
 const redondear1 = (x: number) => Math.round(x * 10 + 1e-9) / 10
 
@@ -76,13 +104,13 @@ export function insignias(alquileres: Alquiler[], rol: Rol): Insignia[] {
   return r
 }
 
-/** Llave Lockumi (C.7): 10 o más alquileres cerrados, puntaje de 4,8 o más, ningún descuento del depósito en los últimos 12 meses y
- *  fotos de entrada y salida completas en todos sus alquileres cerrados. */
+/** Llave Lockumi (C.7): 10 o más alquileres cerrados, puntaje de 4,8 o más, nada negativo en los últimos 12 meses (inquilino: ningún
+ *  descuento del depósito; dueño: ningún reclamo indebido) y fotos de entrada y salida completas en todos sus alquileres cerrados. */
 export function tieneLlave(alquileres: Alquiler[], rol: Rol, ahora: number): boolean {
   const cerrados = alquileres.filter(cuentaParaPuntaje), p = calcularPuntaje(alquileres, rol, ahora)
   if (cerrados.length < 10 || p.valor === null || p.valor < 4.8) return false
   const reciente = (a: Alquiler) => ahora - Date.parse(a.resultado!.fecha) <= 365 * DIA
-  if (cerrados.some(a => reciente(a) && fraccionDescontada(a, ahora) > 0)) return false
+  if (cerrados.some(a => reciente(a) && eventoNegativo(a, rol, ahora))) return false
   return cerrados.every(a => conFotos(a.entrada) && conFotos(a.salida))
 }
 
