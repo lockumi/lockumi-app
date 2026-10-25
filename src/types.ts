@@ -54,6 +54,8 @@ export interface Aviso {
 }
 /** Regla de propuesta automática (6.5.1, B.1): registro de la decisión del inquilino al firmar. */
 export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string }
+/** Consentimiento en el momento de usar una función (paso 16). */
+export interface Consentimiento { tipo: 'mediacion' | 'correo'; cuenta: string; rol: Rol; alquiler: string; version: string; texto: string; fecha: string }
 export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
@@ -73,6 +75,8 @@ export interface Alquiler {
   /** Entrega registrada (fotos de salida confirmadas) y «Recibí la casa» del dueño. */
   entrega?: string; recibido?: string
   avisos?: Aviso[]
+  /** Paso 16: consentimientos dados al usar una función (mediación; correos en el paso 11). */
+  consentimientos?: Consentimiento[]
   /** Paso 16: versión de los Términos del alquiler (sin dato: 1.6-demo) y aceptación de cada parte para pasar a la 1.7-demo. */
   terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string }
   /** Correos que escribió quien prueba para recibir los avisos (opcional). */
