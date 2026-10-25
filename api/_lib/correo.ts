@@ -63,7 +63,7 @@ export function armar(p: PedidoCorreo, origen: string) {
 <p style="font-size:15px;line-height:1.5">${esc(cuerpo)}</p>
 ${botones.map(b => `<p><a href="${esc(b.url)}" style="display:inline-block;background:#FF6B35;color:#3D2A22;font-weight:bold;padding:10px 16px;border-radius:8px;border:1px solid #E8531F;text-decoration:none">${esc(b.texto)}</a></p>`).join('\n')}
 ${p.tipo === 'aviso' ? '<p style="font-size:13px;color:#7A5446">Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.</p>' : ''}
-<hr style="border:none;border-top:1px solid #FFB08A;margin:20px 0"><p style="font-size:12px;color:#7A5446;line-height:1.5">${esc(PIE)} <a href="${esc(origen)}/privacidad">Privacidad</a></p></body></html>`
+<hr style="border:none;border-top:1px solid #FFB08A;margin:20px 0"><p style="font-size:12px;color:#7A5446;line-height:1.5">${esc(PIE)} <a href="${esc(origen)}/privacidad" style="color:#E8531F">Privacidad</a></p></body></html>`
   const texto = `${demo}\n\n${asunto}\n\n${cuerpo}\n\n${botones.map(b => `${b.texto}: ${b.url}`).join('\n')}\n\n${PIE} Privacidad: ${origen}/privacidad`
   return { asunto, html, texto }
 }
