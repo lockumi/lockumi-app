@@ -53,6 +53,20 @@ export const derivar = (c: Pick<ConfigSolo, 'seed'>, contexto: string) =>
   Keypair.fromRawEd25519Seed(hmacSha256(utf8(c.seed), utf8('lockumi-testnet-v1|' + contexto)) as never)
 export const duenoDe = (c: Pick<ConfigSolo, 'seed'>, contrato: string) => derivar(c, 'dueno|' + contrato)
 export const inquilinoPruebaDe = (c: Pick<ConfigSolo, 'seed'>, token: string) => derivar(c, 'inquilino|' + token)
+const hex = (b: Uint8Array) => Array.from(b, x => x.toString(16).padStart(2, '0')).join('')
+/** Permiso del aparato que creó la cuenta segura (modelo de un aparato de la fase 1): HMAC-SHA256(semilla, escrow). Lo devuelve
+ *  «desplegar» y el navegador lo guarda con el alquiler. Sin la semilla nadie lo puede calcular. No es una llave: no firma nada. */
+export const permisoDe = (c: Pick<ConfigSolo, 'seed'>, escrow: string) => hex(hmacSha256(utf8(c.seed), utf8('lockumi-solo-permiso-v1|' + escrow)))
+/** Comparación en tiempo constante (mismo largo). */
+const iguales = (a: string, b: string) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0 }
+/** Legal (25/10, 1:24 a. m.): abrir el reclamo y repartir solo los pide el aparato que creó el depósito. Prueba: el permiso de
+ *  «desplegar» o, en depósitos con «USDC de prueba de Lockumi», el token de la cuenta de prueba que recibe el depósito.
+ *  Depósitos viejos con cuenta propia (sin permiso guardado) no tienen cómo probarlo y se rechazan con un mensaje claro. */
+export function exigirAutorizado(c: ConfigSolo, e: Escrow, p: { permiso?: unknown; token?: unknown }) {
+  const porPermiso = typeof p.permiso === 'string' && TOKEN.test(p.permiso) && iguales(p.permiso, permisoDe(c, e.contractId))
+  const porToken = typeof p.token === 'string' && TOKEN.test(p.token) && inquilinoPruebaDe(c, p.token).publicKey() === e.roles.receiver
+  exigir(porPermiso || porToken, 403, 'Solo el navegador donde se creó este depósito puede abrir el reclamo o repartirlo. Ábrelo desde ese navegador.')
+}
 
 // ── Límite de frecuencia por IP (en memoria) ──
 // Límite conocido: vive en la memoria de cada instancia de la función de Vercel; se reinicia en cada arranque en frío y no se
@@ -226,8 +240,8 @@ export type PedidoSolo =
   | { accion: 'fondear-prueba'; escrow: string; token: string }
   | { accion: 'aprobar'; escrow: string; huella?: string }
   | { accion: 'liberar'; escrow: string }
-  | { accion: 'disputar'; escrow: string }
-  | { accion: 'resolver'; escrow: string; alDueno: number }
+  | { accion: 'disputar'; escrow: string; permiso?: string; token?: string }
+  | { accion: 'resolver'; escrow: string; alDueno: number; reclamado: number; permiso?: string; token?: string }
 export const ACCIONES = ['dueno', 'cuenta-prueba', 'desplegar', 'fondear', 'enviar-deposito', 'fondear-prueba', 'aprobar', 'liberar', 'disputar', 'resolver'] as const
 
 const espera = (ms: number) => new Promise(r => setTimeout(r, ms))
@@ -308,7 +322,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       }))
       const id = String(r.contractId ?? (r.escrow as { contractId?: string } | undefined)?.contractId ?? '')
       exigir(C.test(id), 502, r.recuperada ? 'La cuenta segura se creó, pero la red de prueba tardó en responder. Vuelve a tocar el botón.' : 'Trustless Work no devolvió la cuenta segura del depósito.')
-      return { escrow: id, tx, dueno, ...(recarga && { trustlineTx: recarga.trustline, compraTx: recarga.compra }) }
+      return { escrow: id, tx, dueno, permiso: permisoDe(c, id), ...(recarga && { trustlineTx: recarga.trustline, compraTx: recarga.compra }) }
     }
     case 'fondear': {     // XDR del depósito para que el inquilino la firme con su billetera
       exigir(G.test(p.inquilino), 400, 'La cuenta del inquilino no es válida.')
@@ -372,7 +386,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       return { tx: await firmarYEnviar(c, c.plataforma, '/escrow/single-release/release-funds', { contractId: p.escrow, releaseSigner: c.P }, p.escrow, ['release_funds'], f), receiver: e.roles.receiver }
     }
     case 'disputar': {    // el dueño de prueba abre el reclamo en la cadena (dispute_escrow), firmado por el servidor
-      const e = await leerHasta(c, p.escrow, fondeado, f, 6, opciones.espera); validarEscrow(c, e)
+      const e = await leerHasta(c, p.escrow, fondeado, f, 6, opciones.espera); validarEscrow(c, e); exigirAutorizado(c, e, p)
       if (e.flags.disputed) return { yaDisputado: true }
       exigir(fondeado(e), 409, 'La cuenta segura todavía no tiene el depósito completo. Espera unos segundos y vuelve a intentarlo.')
       exigir(!e.flags.released && !e.flags.resolved, 409, 'Este depósito ya se cerró.')
@@ -380,11 +394,15 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       return { tx: await firmarYEnviar(c, dueno, '/escrow/single-release/dispute-escrow', { contractId: p.escrow, signer: dueno.publicKey() }, p.escrow, ['dispute_escrow'], f) }
     }
     case 'resolver': {    // reparto del reclamo (acuerdo o persona mediadora): resolve_dispute firmado por quien resuelve (c.R: la plataforma, o la persona mediadora con LOCKUMI_DOS_PERSONAS=1)
-      const e = await leerHasta(c, p.escrow, x => x.flags.disputed || x.flags.resolved, f, 6, opciones.espera); validarEscrow(c, e)
+      const e = await leerHasta(c, p.escrow, x => x.flags.disputed || x.flags.resolved, f, 6, opciones.espera); validarEscrow(c, e); exigirAutorizado(c, e, p)
       if (e.flags.resolved) return { yaResuelto: true }
       exigir(e.flags.disputed, 409, 'Este depósito no tiene un reclamo abierto.')
-      const saldo = Number(e.balance)
-      exigir(typeof p.alDueno === 'number' && Number.isFinite(p.alDueno) && p.alDueno >= 0 && p.alDueno <= saldo && Math.round(p.alDueno * 1e7) === p.alDueno * 1e7, 400, `El monto para el dueño tiene que estar entre 0 y ${saldo} USDC de prueba.`)
+      const saldo = Number(e.balance), monto7 = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && Math.round(x * 1e7) === x * 1e7
+      // Repartos de la fase 1 (Términos 1.7-demo 6.3 e y f, 6.6 y 6.7; repartoValido en src/prueba/mediacion.ts): lo reclamado es
+      // mayor que 0 y no supera el depósito, y el dueño recibe entre 0 y lo reclamado. El inquilino recibe el resto.
+      exigir(monto7(p.reclamado) && p.reclamado > 0 && p.reclamado <= saldo, 400, `El monto reclamado tiene que ser mayor que 0 y de ${saldo} USDC de prueba o menos. Recarga la página y vuelve a intentarlo.`)
+      exigir(monto7(p.alDueno) && p.alDueno >= 0, 400, `El monto para el dueño tiene que estar entre 0 y ${p.reclamado} USDC de prueba.`)
+      exigir(p.alDueno <= p.reclamado, 400, `El dueño no puede recibir más de lo que reclamó (${p.reclamado} USDC de prueba).`)
       const alInquilino = Math.round((saldo - p.alDueno) * 1e7) / 1e7
       const distributions = [{ address: e.roles.approver, amount: p.alDueno }, { address: e.roles.receiver, amount: alInquilino }].filter(d => d.amount > 0)
       const tx = await firmarYEnviar(c, c.resolvedor, '/escrow/single-release/resolve-dispute', { contractId: p.escrow, disputeResolver: c.R, distributions }, p.escrow, ['resolve_dispute'], f)

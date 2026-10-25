@@ -112,7 +112,7 @@ flowchart LR
 
 - La llave de Trustless Work (`TRUSTLESS_WORK_API_KEY`), la clave de la cuenta de la plataforma y la semilla de las cuentas de prueba (`LOCKUMI_DEMO_SEED`) solo existen en el servidor. Un build del cliente no las contiene.
 - Trustless Work arma cada transacción y devuelve la XDR sin firmar. La firma quien tiene el rol: la plataforma o el dueño de prueba (en el servidor), o el inquilino (en el servidor si es el inquilino de prueba, o en Cavos `signXdr` o Freighter si deposita desde su propia cuenta).
-- `api/solo.ts` (`api/_lib/solo.ts`) atiende los pasos del flujo de una persona: preparar las cuentas, obtener USDC de prueba, `desplegar`, `fondear`, `aprobar`, `liberar`, `disputar` y `resolver`. Solo trabaja con la API de testnet de Trustless Work y con Horizon de testnet; cada acción se valida contra el escrow que reporta Trustless Work.
+- `api/solo.ts` (`api/_lib/solo.ts`) atiende los pasos del flujo de una persona: preparar las cuentas, obtener USDC de prueba, `desplegar`, `fondear`, `aprobar`, `liberar`, `disputar` y `resolver` (estos dos, solo con el `permiso` que devuelve `desplegar` o el token de la cuenta de prueba que recibe el depósito, y con el dueño entre 0 y lo reclamado). Solo trabaja con la API de testnet de Trustless Work y con Horizon de testnet; cada acción se valida contra el escrow que reporta Trustless Work.
 - `api/tw.ts` es el proxy para la versión con servidor compartido (Supabase, dos personas). No está activo en app.lockumi.com.
 
 Flujo del camino feliz (sin reclamo):
@@ -266,6 +266,10 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 ## Cambios publicados
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
+
+**25 de octubre de 2026 (paso 18, A1: `/api/solo` «resolver» protegido; sin cambios visibles, con el OK de Legal de la 1:24 a. m.)**
+- `disputar` y `resolver` solo los acepta el navegador que creó el depósito (modelo de un aparato de la fase 1): `desplegar` devuelve un `permiso` (HMAC-SHA256 de `LOCKUMI_DEMO_SEED` con el escrow; no firma nada) que el alquiler guarda en `red.permiso`. Los depósitos de antes con «USDC de prueba de Lockumi» se prueban con el token de su cuenta de prueba (tiene que derivar en el `receiver` del escrow). Sin una de las dos pruebas: 403 y no se llama a Trustless Work. Límite conocido: un depósito de antes con cuenta propia (sin permiso guardado) ya no puede abrir el reclamo ni repartir desde la app.
+- El reparto tiene que ser uno de la fase 1 (Términos 1.7-demo 6.3 e y f, 6.6, 6.7): el pedido lleva `reclamado` (mayor que 0 y hasta el depósito) y el dueño recibe entre 0 y lo reclamado; el inquilino, el resto.
 
 **25 de octubre de 2026 (paso 16, Términos y Privacidad 1.7-demo; CAMBIO VISIBLE con el OK de Katherine y de Legal)**
 - Publicado en dos pasos (25/10): primero el contenido con el interruptor apagado (sin cambios visibles, comprobado píxel a píxel en 11 pantallas) y después el interruptor de la prueba completa en un solo aparato (escenario A: `.env.production` con `VITE_PRUEBA_COMPLETA=1`). `VITE_DOS_PERSONAS` y `VITE_CORREOS` siguen apagados.

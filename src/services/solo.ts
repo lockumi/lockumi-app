@@ -130,13 +130,16 @@ export const prepararDueno = (contrato: string) => api<{ dueno: string; trustlin
 /** Crea la cuenta segura. `origen` dice de dónde salen los USDC de prueba: con 'lockumi' va el token de la cuenta de prueba y el
  *  servidor la completa hasta el monto justo antes de revisar el saldo (devuelve `compraTx` si envió USDC de prueba). */
 export const desplegar = (contrato: string, inquilino: string, monto: number, origen: 'lockumi' | 'propia') =>
-  api<{ escrow: string; tx: string; dueno: string; trustlineTx?: string | null; compraTx?: string | null }>({ accion: 'desplegar', contrato, inquilino, monto, origen, ...(origen === 'lockumi' && { token: tokenPrueba() }) })
+  api<{ escrow: string; tx: string; dueno: string; permiso?: string; trustlineTx?: string | null; compraTx?: string | null }>({ accion: 'desplegar', contrato, inquilino, monto, origen, ...(origen === 'lockumi' && { token: tokenPrueba() }) })
 /** Cuenta propia: el servidor arma la transacción del depósito para la dirección de la persona; su billetera la firma. */
 export const fondearPropio = (escrow: string, inquilino: string) => api<{ unsignedXdr: string }>({ accion: 'fondear', escrow, inquilino })
 export const enviarDeposito = (escrow: string, signedXdr: string) => api<{ tx: string }>({ accion: 'enviar-deposito', escrow, signedXdr })
 export const fondearPrueba = (escrow: string) => api<{ tx: string; compraTx: string | null }>({ accion: 'fondear-prueba', escrow, token: tokenPrueba() })
-export const disputar = (escrow: string) => api<{ tx?: string; yaDisputado?: boolean }>({ accion: 'disputar', escrow })
-export const resolver = (escrow: string, alDueno: number) => api<{ tx?: string; yaResuelto?: boolean }>({ accion: 'resolver', escrow, alDueno })
+/** Prueba de que este navegador creó el depósito (A1): el permiso que devolvió «desplegar» o, en depósitos de antes, el token de su cuenta de prueba. */
+export type Autorizacion = { permiso: string } | { token: string }
+export const autorizacion = (red?: { permiso?: string }): Autorizacion => red?.permiso ? { permiso: red.permiso } : { token: tokenPrueba() }
+export const disputar = (escrow: string, auth: Autorizacion) => api<{ tx?: string; yaDisputado?: boolean }>({ accion: 'disputar', escrow, ...auth })
+export const resolver = (escrow: string, alDueno: number, reclamado: number, auth: Autorizacion) => api<{ tx?: string; yaResuelto?: boolean }>({ accion: 'resolver', escrow, alDueno, reclamado, ...auth })
 export const aprobar = (escrow: string, huella?: string) => api<{ evidenciaTx: string | null; aprobacionTx?: string; yaAprobado?: boolean }>({ accion: 'aprobar', escrow, ...(huella && { huella }) })
 export const liberar = (escrow: string) => api<{ tx: string }>({ accion: 'liberar', escrow })
 

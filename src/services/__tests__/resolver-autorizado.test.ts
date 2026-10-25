@@ -27,7 +27,7 @@ beforeEach(() => { cuerpos.length = 0; mem.clear() })
 describe('A1 · el cliente manda la autorización y lo reclamado', () => {
   it('al crear la cuenta segura guarda el permiso que devuelve el servidor', async () => {
     const guardado: unknown[] = []
-    await escrow.depositar({ id: '00000000-0000-4000-8000-000000000001', monto: 1 } as Alquiler, (t, r) => guardado.push(r), () => {})
+    await escrow.depositar({ id: '00000000-0000-4000-8000-000000000001', monto: 1 } as Alquiler, (_t, r) => guardado.push(r), () => {})
     expect(guardado).toContainEqual({ escrow: 'CESCROW', permiso: 'f'.repeat(64) })
   })
   it('abrir el reclamo y repartir llevan el permiso; el reparto lleva lo reclamado', async () => {

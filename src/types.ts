@@ -92,7 +92,7 @@ export interface Alquiler {
   dosPersonas?: boolean
 }
 export type PasoRed = 'trustline' | 'compra' | 'escrow' | 'deposito' | 'evidencia' | 'aprobacion' | 'liberacion' | 'duenoTrustline' | 'disputa' | 'resolucion'
-export interface RedPrueba { escrow?: string; dueno?: string; inquilino?: string; inquilinoPrueba?: boolean; firma?: 'cavos' | 'freighter'; usdcListo?: boolean; txs: Partial<Record<PasoRed, string>> }
+export interface RedPrueba { escrow?: string; /** Permiso del navegador que creó el depósito (lo devuelve /api/solo «desplegar»). */ permiso?: string; dueno?: string; inquilino?: string; inquilinoPrueba?: boolean; firma?: 'cavos' | 'freighter'; usdcListo?: boolean; txs: Partial<Record<PasoRed, string>> }
 export const ETIQUETA_ESTADO: Record<Estado,string> = {
   firmas:'Firmas', pendiente_pago:'Esperando depósito', fotos_entrada:'Fotos de entrada',
   en_curso:'Alquiler en curso', salida:'Fotos de salida', ventana_reclamo:'7 días para reclamos',
