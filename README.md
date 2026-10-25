@@ -233,7 +233,7 @@ Todo lo que se escribe en un escrow queda público y permanente en Stellar. Por 
 | Fotos y actas | Cámara de la app con fecha, hora y huella SHA-256; se guardan en el navegador (localStorage), no en la cadena. Ver [`docs/fotos-captura.md`](docs/fotos-captura.md). |
 | Dos personas e invitaciones | **Próximamente.** En desarrollo; todavía no funciona. El correo de invitación saldría con Resend (ver abajo). |
 | Rendimiento con Blend | **No está activo.** Función futura; si llega, el rendimiento sería variable y no garantizado. |
-| Textos legales | `/terminos` versión **1.6-demo** (24 de octubre de 2026; cláusula 6.7 de Legal, rama `contrato-compacto`, sin publicar) y `/privacidad` versión **1.6-demo** (24 de octubre de 2026; Freighter y quién firma, Legal ronda 7, sin publicar), pendientes de revisión por abogado. Origen y forma de reemplazarlos: [`src/legal/LEEME.md`](src/legal/LEEME.md). |
+| Textos legales | `/terminos` y `/privacidad` versión **1.7-demo** (25 de octubre de 2026; paso 16, publicado con el OK de Katherine y de Legal; describen solo lo encendido). La 1.6-demo (24 de octubre de 2026) sigue en `/terminos-1-6` y `/privacidad-1-6`. Pendientes de revisión por abogado. Origen y forma de reemplazarlos: [`src/legal/LEEME.md`](src/legal/LEEME.md). |
 
 El flujo mínimo anterior de 5 pasos (crear, obtener USDC, depositar, aprobar y devolver) sigue en el código solo si se compila con `VITE_FLUJO=solo`. No es el flujo de app.lockumi.com.
 
@@ -261,12 +261,15 @@ Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de d
 
 Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `master`.
 
-- **Paso 16 · Términos y Privacidad 1.7-demo, una sola versión** (rama `paso16-unido`, unida con los pasos 7 y 11, sin publicar; espera el OK de Katherine porque es un cambio visible): textos de Legal en `/terminos` y `/privacidad` que describen solo lo encendido (dos personas con `VITE_DOS_PERSONAS`, correos con `VITE_CORREOS=1`); la 1.6-demo sigue en `/terminos-1-6` y `/privacidad-1-6`. Cada alquiler guarda su versión y fecha y el contrato muestra cuándo la aceptó cada parte. En un solo aparato la B.7 es solo el aviso de simulación (sin casilla); con otra persona, casilla y registro. Los datos de la mediación se borran 30 días después de cerrar el caso salvo «Guardar los datos de la mediación». Invitación con declaración, un solo correo y borrado del correo a los 7 días (migración pendiente de aplicar). Un commit aparte enciende el interruptor (`.env.production`). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 - **Formulario «Nuevo alquiler» de una pregunta por pantalla** (en desarrollo; no publicado). Hoy «Nuevo alquiler» sigue siendo la pantalla de siempre.
 
 ## Cambios publicados
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
+
+**25 de octubre de 2026 (paso 16, Términos y Privacidad 1.7-demo; CAMBIO VISIBLE con el OK de Katherine y de Legal)**
+- Publicado en dos pasos (25/10): primero el contenido con el interruptor apagado (sin cambios visibles, comprobado píxel a píxel en 11 pantallas) y después el interruptor de la prueba completa en un solo aparato (escenario A: `.env.production` con `VITE_PRUEBA_COMPLETA=1`). `VITE_DOS_PERSONAS` y `VITE_CORREOS` siguen apagados.
+- `/terminos` y `/privacidad` muestran la 1.7-demo («1.7-demo · 25 de octubre de 2026»), que describe solo lo encendido; la 1.6-demo sigue en `/terminos-1-6` y `/privacidad-1-6`. Cada alquiler guarda su versión y fecha. En «Terminado», la nota «Datos de la mediación» con el texto de Legal (12:52 a. m.) y «Guardar los datos de la mediación». Volver atrás: `git revert -m 1` del merge que enciende el interruptor. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
 **24 de octubre de 2026 (franja de la red de prueba, cambio visible con el OK de Katherine)**
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).

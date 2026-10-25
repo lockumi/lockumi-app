@@ -84,7 +84,7 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 4. **6.3 f:** se muestra cuánto es la parte no reclamada y que se libera al cerrar el reclamo (la cuenta segura no permite liberar por partes).
 5. «Otras vías (fuera de la app)»: conciliación o mediación en un centro autorizado, arbitraje si los dos lo firman, tribunales.
 
-## Términos y Privacidad 1.7-demo (paso 16, sin publicar)
+## Términos y Privacidad 1.7-demo (paso 16, publicado el 25/10/2026, escenario A encendido)
 - **Textos:** `src/legal/v17/terminos.md` y `privacidad.md`, con los bloques de Legal (A.1–A.8) y la frase de 30 días de Privacidad. Con el interruptor encendido, `/terminos` y `/privacidad` muestran la 1.7-demo y la 1.6-demo queda en `/terminos-1-6` y `/privacidad-1-6`. `sin-marcadores.test.tsx` también revisa las dos páginas.
 - **Login igual:** no hay pantalla de volver a aceptar; los enlaces llevan a la versión vigente. Como cambió la versión, quien aceptó la 1.6-demo ve las casillas sin marcar otra vez (mismo diseño).
 - **Versión por alquiler:** `terminos: { version, edicion }` al crear. El contrato dice «Términos y condiciones: versión 1.7-demo · 25 de octubre de 2026» con enlace y, debajo, «Aceptada por el dueño el … y por el inquilino el …» (al firmar, o al aceptar el cambio desde la 1.6-demo; si falta una, lo dice). La 1.6-demo sigue como antes. Un alquiler de la 1.6-demo sigue con sus reglas (sin propuesta automática, sin suscripción, sin avisos 1, 4 y 6, sin mediación) salvo que los dos toquen «Acepto pasar este alquiler a la 1.7-demo» antes de la salida.
