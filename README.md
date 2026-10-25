@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (sin marcadores visibles, sin cambios visibles)**
+- Prueba completa (detrás del interruptor): la B.6 ya no muestra la región; usa el texto final de Legal («Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso»). Se quitaron los marcadores [PENDIENTE] de la B.1 y de la B.7, y una prueba impide que vuelva a verse cualquier marcador de borrador.
+
 **24 de octubre de 2026 (PR 6, paso 10, sin cambios visibles)**
 - Mediación Lockumi (demo) de la prueba completa (detrás del interruptor): pedirla con la B.7 (cupo de 10, B.12 sin cupo), «Resolver el reclamo (simulación)» con confirmación y aviso del resultado (B.14), la parte no reclamada (6.3 f) y «Otras vías (fuera de la app)». Nadie del equipo atiende casos en la demo. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 

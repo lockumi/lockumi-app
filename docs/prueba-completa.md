@@ -60,6 +60,9 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
 
+## Sin marcadores visibles
+Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice: «la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), que no puede usar tus fotos para entrenar modelos. Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso. …». La B.1 y la B.7 ya no muestran [PENDIENTE] (el costo del servicio real se informará antes de firmar).
+
 ## Mediación Lockumi (demo) y «Resolver el reclamo (simulación)» (PR 6, paso 10)
 1. Al no haber acuerdo (propuesta rechazada o silencio sin la regla), el alquiler queda en `mediacion` y se ve `MediacionPC`.
 2. **B.7:** texto, recuadro [SERVICIO REAL] y casilla «Entiendo esto…». «Pedir mediación» guarda `reclamo.mediacion = { estado: 'pedida', fecha }` y muestra el plazo de 3 días hábiles (`sumarHabiles`). Si ya hay 10 casos pedidos en mediación, queda `sin-cupo` y se ve la **B.12**. «Prefiero no usarla» guarda `no-usar`. En la demo nadie del equipo atiende el caso (6.8 b).
