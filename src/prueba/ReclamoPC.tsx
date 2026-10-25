@@ -10,6 +10,7 @@ import { modoPrueba, escrowReal } from '../servidor/config'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 import { PRECIOS } from '../../api/_lib/precios'
+import { esDosPersonas, TEXTO_SILENCIO_DOS } from './dosPersonas'
 import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { TomarFoto } from '../Camara'
 import { FotoLista } from '../screens/Acta'
@@ -128,7 +129,7 @@ export function ReclamoPC({ a, rol }: { a: Alquiler; rol: Rol }) {
   const avanzar = (n: number, texto: string) => { if (adelantoPermitido()) store.cambiar(a.id, x => simularDias(x, n), texto) }
   const irA = () => document.getElementById('t-responder')?.scrollIntoView({ block: 'center' })
   let cuerpo: ReactNode
-  if (s) cuerpo = p.ocupado || !p.err ? <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>{p.avance || 'Venció el plazo para responder. Aplicando la regla…'}</p></div>
+  if (s) cuerpo = p.ocupado || !p.err ? <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>{p.avance || (esDosPersonas(a) ? TEXTO_SILENCIO_DOS : 'Venció el plazo para responder. Aplicando la regla…')}</p></div>
     : <>{p.error}<button type="button" className="boton boton--pc boton--ancho" onClick={() => void p.correr(av => acciones.aplicarSilencio!(a, av))}>Volver a intentar</button></>
   else if (rec.propuesta) cuerpo = <Propuesta a={a} rol={rol} />
   else cuerpo = <>

@@ -1,4 +1,5 @@
 import { reglas17 } from './prueba/version'
+import { esDosPersonas, SIGUE_RECLAMO_DOS } from './prueba/dosPersonas'
 // Lógica del flujo del alquiler (pura, con pruebas en __tests__/flujo.test.ts).
 import type { Alquiler, Estado, Rol } from './types'
 
@@ -85,7 +86,10 @@ export function turno(a: Alquiler, yo: Rol): { tu: string; otra: string; sigue: 
       return yo === 'dueno'
       ? { tu: 'Si encontraste un daño, puedes reclamar. Si todo está bien, no hagas nada.', otra: 'El inquilino espera.', sigue: `Si no reclamas, después de ${textoPlazo(a)} el depósito se devuelve al inquilino.` }   // LEGAL: revisado (24/10)
       : { tu: 'No tienes que hacer nada.', otra: 'El dueño puede reclamar si encontró un daño.', sigue: `Si no hay reclamo, después de ${textoPlazo(a)} se te devuelve el depósito.` }   // LEGAL: revisado (24/10)
-    case 'reclamo': if (reglas17(a)) return yo === 'inquilino'   // LEGAL: revisar · prueba completa (6.4.4, 6.7)
+    case 'reclamo': if (esDosPersonas(a)) return yo === 'inquilino'   // LEGAL: revisar · C (Legal, 25/10, 2:53 a. m.)
+      ? { tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: SIGUE_RECLAMO_DOS.inquilino }
+      : { tu: 'No tienes que hacer nada por ahora.', otra: 'El inquilino tiene que responder tu reclamo.', sigue: SIGUE_RECLAMO_DOS.dueno }
+      if (reglas17(a)) return yo === 'inquilino'   // LEGAL: revisar · prueba completa (6.4.4, 6.7)
       ? { tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: 'Si no aceptas todo, verás una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
       : { tu: 'No tienes que hacer nada por ahora.', otra: 'El inquilino tiene que responder tu reclamo.', sigue: 'Si no acepta todo, verán una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
       return yo === 'inquilino'

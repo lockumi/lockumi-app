@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Alquiler } from '../types'
 import { ahoraDe } from '../store'
 import { AVISO_EXPEDIENTE, BOTON_EXPEDIENTE, MARCA_EXPEDIENTE, descargarExpediente } from './expediente'
+import { esDosPersonas, BOTON_EXPEDIENTE_DOS } from './dosPersonas'
 
 export function Expediente({ a }: { a: Alquiler }) {
   const [paso, setPaso] = useState<'boton' | 'aviso' | 'listo'>('boton')
@@ -15,7 +16,7 @@ export function Expediente({ a }: { a: Alquiler }) {
       <button type="button" className="boton boton--secundario" onClick={() => setPaso('boton')}>Cancelar</button>
     </div></div>
   return <div className="pila">
-    <button type="button" className="boton boton--pc boton--ancho" onClick={() => setPaso('aviso')}>{BOTON_EXPEDIENTE}</button>
+    <button type="button" className="boton boton--pc boton--ancho" onClick={() => setPaso('aviso')}>{esDosPersonas(a) ? BOTON_EXPEDIENTE_DOS : BOTON_EXPEDIENTE}</button>
     {paso === 'listo' && <p className="nota" role="status">Listo: el expediente quedó en tus descargas. Si no lo ves, revisa la carpeta de descargas del navegador o vuelve a tocar el botón.</p>}
   </div>
 }

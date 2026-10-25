@@ -17,7 +17,7 @@ describe('interruptor de la prueba completa', () => {
   })
   it('las pantallas nuevas solo se montan con el interruptor encendido', () => {
     expect(leer('../../screens/Crear.tsx')).toMatch(/pruebaCompleta\(\) && <Anexo6A/)
-    expect(leer('../../screens/Detalle.tsx')).toMatch(/reglas17\(a\) && rol === 'inquilino' && !a\.regla/)
+    expect(leer('../../screens/Detalle.tsx')).toMatch(/reglas17\(a\) && !esDosPersonas\(a\) && rol === 'inquilino' && !a\.regla/)
   })
 })
 

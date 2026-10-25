@@ -67,3 +67,15 @@ revoke all on function public.lk_crear_contrato_con_terminos(text, numeric, date
 grant execute on function public.lk_crear_contrato_con_terminos(text, numeric, date, date, text[], text, text, text, text, text, int) to authenticated;
 revoke all on function public.lk_aceptar_invitacion_con_terminos(uuid, text, text, text, text) from public, anon;
 grant execute on function public.lk_aceptar_invitacion_con_terminos(uuid, text, text, text, text) to authenticated;
+
+-- Legal, 25/10, 2:53 a. m. (Términos 1.9-demo, 6.5.1 d): en la versión con dos personas la Regla de propuesta automática no se
+-- ofrece al firmar. Ningún alquiler del servidor (todos son de dos personas) la guarda como aceptada: la función de 030000 ya no
+-- escribe en lk_reglas_651 y nadie más puede (sin insert para authenticated).
+-- LEGAL: revisar
+create or replace function public.lk_aceptar_regla_651(p_contrato uuid, p_version text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  raise exception 'La Regla de propuesta automática no se ofrece en esta versión (6.5.1 d).' using errcode = '55000';
+end $$;
+revoke all on function public.lk_aceptar_regla_651(uuid, text) from public, anon;
+grant execute on function public.lk_aceptar_regla_651(uuid, text) to authenticated;

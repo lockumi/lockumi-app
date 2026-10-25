@@ -16,7 +16,7 @@ describe('E2E del escenario C (simulado, sin llaves)', () => {
     for (const t of ['aprobada: el dueño aprueba la devolución', 'aprobada: devolución del 100 % al inquilino (liberación)',
       'silencio-dueno: la cuenta que resuelve disputas devuelve el 100 % al inquilino', 'mediacion: el inquilino ve lo que aceptó el dueño',
       'mediacion: con una sola aceptación la persona mediadora no puede cerrar', 'mediacion: un segundo «repartir» no paga dos veces (mismo hash)',
-      'silencio-inquilino: el inquilino no respondió: pasa a la mediación (pruebas incompletas, 6.4.1), sin pago'])
+      'silencio-inquilino: el inquilino no respondió: pasa a la mediación (regla no disponible en esta versión, 6.5.1 d), sin pago'])
       expect(pasos).toContain(t)
     expect(e.pasos.every((p: { enlace: string | null }) => p.enlace === null)).toBe(true)   // hashes simulados: nunca como enlaces
     const capa = JSON.parse(readFileSync(join(dir, 'capa-capturas.json'), 'utf8'))

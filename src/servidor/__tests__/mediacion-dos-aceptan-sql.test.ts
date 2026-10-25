@@ -94,19 +94,22 @@ describe('lk_decidir_mediacion: solo con las dos aceptaciones (escenario C)', ()
     await registrar(id, 0)
     expect(await estado(id)).toMatchObject({ estado: 'cerrado', resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 0, inquilino: 100 } })
   })
-  it('con la Regla 6.5.1 aceptada al firmar, la persona mediadora tampoco impone un reparto en la mediación (la regla se aplica antes)', async () => {
+  it('en dos personas la Regla 6.5.1 no se ofrece ni se guarda (6.5.1 d); la persona mediadora tampoco impone un reparto', async () => {
     const id = await crear()
-    await como(INQ); await db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])
-    expect(await uno('select usuario, version from public.lk_reglas_651 where contrato_id = $1', [id])).toEqual({ usuario: INQ, version: '1.9-demo' })
+    await db.query(`update public.lk_contratos set estado = 'firmas' where id = $1`, [id])
+    await como(INQ); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/no se ofrece en esta versión \(6\.5\.1 d\)/)
+    expect(await uno('select count(*)::int n from public.lk_reglas_651 where contrato_id = $1', [id])).toEqual({ n: 0 })
     await enMediacion(id)
     await expect(registrar(id, 20)).rejects.toThrow(/aceptaciones de las dos partes/)
     expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
   })
-  it('la Regla 6.5.1 solo la acepta el inquilino, y solo antes de firmar', async () => {
+  it('nadie la acepta en ningún momento: ni el dueño, ni el inquilino al firmar o después', async () => {
     const id = await crear()
-    await como(DUENO); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/inquilino/)
+    await db.query(`update public.lk_contratos set estado = 'firmas' where id = $1`, [id])
+    await como(DUENO); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/6\.5\.1 d/)
     await db.query(`update public.lk_contratos set estado = 'en_curso' where id = $1`, [id])
-    await como(INQ); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/al firmar/)
+    await como(INQ); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/6\.5\.1 d/)
+    expect(await uno('select count(*)::int n from public.lk_reglas_651')).toEqual({ n: 0 })
   })
   it('nadie escribe directo en las tablas de aceptaciones', async () => {
     const r = await uno<{ a: boolean; b: boolean }>(`select has_table_privilege('authenticated', 'public.lk_aceptaciones_mediacion', 'insert') a, has_table_privilege('authenticated', 'public.lk_reglas_651', 'insert') b`)

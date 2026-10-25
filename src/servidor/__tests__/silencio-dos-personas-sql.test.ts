@@ -37,13 +37,13 @@ beforeAll(async () => {
 
 // B2 (Legal, 25/10, 1:24 a. m.) · alquileres de dos personas en el servidor:
 // - 5.3 d / 6.5 a: si el dueño no aprueba ni reclama en su plazo, el 100 % vuelve al inquilino (lk_cerrar_sin_reclamo y lk_vencimientos).
-// - 6.5 c: si el inquilino no responde en su plazo, el caso pasa a la mediación con el motivo «pruebas incompletas (6.4.1)».
+// - 6.5 c: si el inquilino no responde en su plazo, el caso pasa a la mediación con el motivo «regla no disponible en esta versión (6.5.1 d)» (Legal, 25/10, 2:53 a. m.).
 //   Legal, 25/10, 1:50 a. m. (opción 1): en dos personas la Regla 6.5.1 no se aplica sola por ahora; sin tope ni recorte del 30 %.
 const SEG = 60
 async function enReclamo(o: { regla?: boolean; abre?: boolean; monto?: number; fotosEntrada?: boolean; firmasEntrada?: boolean; vencido?: boolean } = {}) {
-  const { regla = true, abre = true, monto = 30, fotosEntrada = true, firmasEntrada = true, vencido = true } = o
+  const { regla = false, abre = true, monto = 30, fotosEntrada = true, firmasEntrada = true, vencido = true } = o
   const id = await crear()
-  if (regla) { await db.query(`update public.lk_contratos set estado = 'firmas' where id = $1`, [id]); await como(INQ); await db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id]) }
+  if (regla) { await db.query(`update public.lk_contratos set estado = 'firmas' where id = $1`, [id]); await como(INQ); await expect(db.query(`select public.lk_aceptar_regla_651($1, '1.9-demo')`, [id])).rejects.toThrow(/6\.5\.1 d/) }
   await db.query(`update public.lk_contratos set estado = 'ventana_reclamo', ventana_inicio = now(), ventana_segundos = $2 where id = $1`, [id, SEG])
   if (fotosEntrada) await db.query(`insert into public.lk_fotos(contrato_id, etapa, cuarto, por_rol, ruta, sha256, tomada_en, origen) values ($1, 'entrada', 0, 'dueno', $2, repeat('a', 64), now(), 'camara')`, [id, id + '/entrada/a.jpg'])
   if (firmasEntrada) await db.query(`insert into public.lk_firmas(contrato_id, etapa, rol, usuario) values ($1, 'entrada', 'dueno', $2), ($1, 'entrada', 'inquilino', $3)`, [id, DUENO, INQ])
@@ -56,18 +56,19 @@ async function enReclamo(o: { regla?: boolean; abre?: boolean; monto?: number; f
 const silencio = async (id: string, uid = DUENO) => { await como(uid); return (await uno<{ r: string | null }>('select public.lk_aplicar_silencio($1) r', [id]))!.r }
 
 describe('B2 · silencio del inquilino en dos personas (Legal, 25/10, 1:50 a. m., opción 1): la Regla 6.5.1 nunca se aplica sola', () => {
-  it('con todo a favor de la regla (aceptada, aviso abierto, pruebas, ≤ 30 %), al vencer el plazo pasa a la mediación sin reparto', async () => {
-    const id = await enReclamo()
+  it('con todo a favor de la regla (intento de aceptarla, aviso abierto, pruebas, ≤ 30 %), al vencer el plazo pasa a la mediación sin reparto', async () => {
+    const id = await enReclamo({ regla: true })
     expect(await silencio(id)).toBe('mediacion')
     expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
-    expect(await ultimoEvento(id)).toMatch(/pruebas incompletas \(6\.4\.1\)/)
+    expect(await ultimoEvento(id)).toMatch(/regla no disponible en esta versión \(6\.5\.1 d\)/)
+    expect(await uno('select count(*)::int n from public.lk_reglas_651 where contrato_id = $1', [id])).toEqual({ n: 0 })
   })
   it('un reclamo de más del 30 % también pasa a la mediación, sin pago parcial ni recorte', async () => {
     const id = await enReclamo({ monto: 80 })
     expect(await silencio(id)).toBe('mediacion')
     expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
     expect((await uno<{ m: string }>('select monto::text m from public.lk_reclamos where contrato_id = $1', [id]))!.m).toBe('80.00')
-    expect(await ultimoEvento(id)).toMatch(/pruebas incompletas \(6\.4\.1\)/)
+    expect(await ultimoEvento(id)).toMatch(/regla no disponible en esta versión \(6\.5\.1 d\)/)
   })
   it.each([[{ regla: false }], [{ abre: false }], [{ fotosEntrada: false }], [{ firmasEntrada: false }]] as const)('sin las condiciones (%o) también pasa a la mediación', async o => {
     const id = await enReclamo(o)

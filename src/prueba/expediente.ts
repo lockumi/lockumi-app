@@ -7,6 +7,7 @@ import type { Alquiler, Foto, Rol } from '../types'
 import { MOTIVOS, propuesta, referencia } from './propuesta'
 import { nombreRubro } from './reclamos'
 import { leerAceptacion } from '../legal/aceptacion'
+import { esDosPersonas, EXPEDIENTE_REGLA_DOS } from './dosPersonas'
 
 // LEGAL: revisar · B.11
 export const BOTON_EXPEDIENTE = 'Descargar el expediente (demo)'
@@ -59,7 +60,7 @@ export function contenidoExpediente(a: Alquiler, ahora: number, ac: Aceptaciones
     { titulo: 'Resultado', lineas: a.resultado ? [`${VIA[a.resultado.via] ?? a.resultado.via} · ${cr(a.resultado.fecha)}`, `Dueño: ${usdc(a.resultado.dueno)}`, `Inquilino: ${usdc(a.resultado.inquilino)}`,
       ...(a.resultado.via === 'simulacion' ? [NOTA_SIMULACION] : [])] : ['Sin resultado todavía'] },
     { titulo: 'Aceptaciones', lineas: [
-      a.regla ? `Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}` : 'Regla de propuesta automática: sin registro',
+      esDosPersonas(a) ? EXPEDIENTE_REGLA_DOS : a.regla ? `Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}` : 'Regla de propuesta automática: sin registro',
       acepto('Términos y condiciones', ac.terminos), acepto('Aviso de privacidad', ac.privacidad, 'aceptado')] },
     { titulo: 'Registro de avisos', lineas: (a.avisos ?? []).map(v => `${v.id} para ${ROL[v.para].toLowerCase()} · entregado en la app ${cr(v.entregado)} · ${v.abierto ? 'abierto ' + cr(v.abierto) : 'sin abrir'}`) },
     { titulo: 'Red de prueba de Stellar', lineas: tx.length ? [...new Set(tx)].map(h => `Transacción: ${h}`) : ['Sin transacciones'] },

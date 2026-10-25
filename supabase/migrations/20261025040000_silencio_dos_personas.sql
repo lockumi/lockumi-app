@@ -4,7 +4,7 @@
 --   lk_cerrar_sin_reclamo (via 'automatico', que /api/tw paga con «devolver-automatico» o «liberar»); aquí se agrega la corrida
 --   diaria lk_vencimientos para que no dependa de que alguien abra el alquiler.
 -- - Silencio del inquilino (6.5 c): vencido su plazo sin respuesta, el caso pasa a la Mediación Lockumi (demo) con el motivo
---   «pruebas incompletas (6.4.1)». Legal, 25/10, 1:50 a. m. (opción 1): en dos personas la Regla 6.5.1 no se aplica sola por
+--   «regla no disponible en esta versión (6.5.1 d)» (Legal, 25/10, 2:53 a. m.; antes «pruebas incompletas (6.4.1)»). Legal, 25/10, 1:50 a. m. (opción 1): en dos personas la Regla 6.5.1 no se aplica sola por
 --   ahora; no hay tope ni recorte del 30 % ni pago parcial. Solo cierran el acuerdo, la mediación con las dos aceptaciones
 --   (20261025020000) y la devolución del 100 % al inquilino si el dueño no reclama.
 
@@ -31,7 +31,7 @@ begin
   if c.estado is distinct from 'reclamo' or k.contrato_id is null or k.respuesta is not null then return null; end if;
   if now() <= k.entregado_en + make_interval(secs => c.ventana_segundos) then return null; end if;
   update public.lk_contratos set estado = 'mediacion' where id = p_contrato;
-  perform public.lk_evento(p_contrato, 'El inquilino no respondió a tiempo: pruebas incompletas (6.4.1). Pasa a la Mediación Lockumi (demo)');
+  perform public.lk_evento(p_contrato, 'El inquilino no respondió a tiempo: regla no disponible en esta versión (6.5.1 d). Pasa a la Mediación Lockumi (demo)');
   return 'mediacion';
 end $$;
 

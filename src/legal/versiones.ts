@@ -7,11 +7,13 @@ import { V17, FECHA_V17 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
 // LEGAL: revisar · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
-// 1.9-demo: «25 de octubre de 2026» es provisional; cambiarla por la fecha real de encendido (real switch-on date) de C.
+// 1.9-demo: FECHA_V19 es PROVISIONAL. Paso obligatorio al encender C (encendido-lista.md): poner aquí la fecha real del encendido.
+// LEGAL: revisar
+export const FECHA_V19 = '25 de octubre de 2026'
 export const VERSIONES: VersionLegal[] = [
   { version: V17, fecha: FECHA_V17, escenario: 'A', interruptores: { 'dos-personas': false, correos: false } },
   { version: '1.8-demo', fecha: '1 de noviembre de 2026', escenario: 'B', interruptores: { 'dos-personas': false, correos: true } },
-  { version: '1.9-demo', fecha: '25 de octubre de 2026', escenario: 'C', interruptores: { 'dos-personas': true, correos: true } },
+  { version: '1.9-demo', fecha: FECHA_V19, escenario: 'C', interruptores: { 'dos-personas': true, correos: true } },
 ]
 const ORDEN = ['1.6-demo', ...VERSIONES.map(v => v.version)]
 /** Posición de una versión (1.6-demo = 0); una versión desconocida va al final para no tratarla como vieja. */

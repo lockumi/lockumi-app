@@ -25,7 +25,7 @@ import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
-import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -38,12 +38,15 @@ type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
-function Contrato({ a, rol }: P) {
+export function Contrato({ a, rol }: P) {
   const { prueba: modoPrueba } = modoDe(a)
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
-  if (reglas17(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
+  // C (Legal, 25/10, 2:53 a. m.; Términos 1.9-demo, 6.5.1 d): en dos personas la regla no se ofrece ni se guarda; solo una nota sin casilla.
+  if (reglas17(a) && !esDosPersonas(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
     return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
   return <div className="pila">
+    {/* LEGAL: revisar · C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.), en el recuadro informativo de la devolución automática */}
+    {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
     <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
@@ -77,7 +80,7 @@ function PagoSimulado({ a, rol }: P) {
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
       {/* LEGAL: revisar · C: la nota aprobada de cuenta propia («Son USDC de prueba, sin valor, de tu cuenta…»), con la cuenta Lockumi del inquilino */}
-      {dos ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta{a.cuentas?.inquilino ? ` (${abreviar(a.cuentas.inquilino)})` : ''}. Tu cuenta Lockumi te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
+      {dos ? <p className="nota">{TEXTO_PAGO_DOS}</p>
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
