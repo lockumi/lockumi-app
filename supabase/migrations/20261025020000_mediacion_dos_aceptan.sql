@@ -1,8 +1,11 @@
 -- Escenario C (preparación; no se aplica ni se enciende hasta el OK de Katherine y de Legal).
 -- LEGAL: revisar · la persona mediadora no decide: lk_decidir_mediacion solo cierra el caso si constan las aceptaciones
 -- de las dos partes con el mismo reparto (Términos 2.2 b y 6.8; Privacidad, sección C).
--- Excepciones: la devolución del 100 % al inquilino (opción 1) y la Regla de propuesta automática (6.5.1) si el inquilino
--- la aceptó por separado al firmar. Misma firma de lk_decidir_mediacion; no edita migraciones anteriores.
+-- Las dos excepciones de Términos 2.2 b) (texto de Legal, 25/10) no pasan por la mediación: la devolución automática del 100 %
+-- (5.3 d) es sin reclamo (lk_cerrar_sin_reclamo + api/_lib/tw.ts «devolver-automatico»), y la Regla de propuesta automática (6.5.1)
+-- se aplica antes, con el reclamo sin respuesta. Por eso, dentro de la mediación, sin las dos aceptaciones el caso sigue abierto y
+-- el depósito retenido. lk_reglas_651 guarda la aceptación de la regla al firmar. Misma firma de lk_decidir_mediacion; no edita
+-- migraciones anteriores.
 
 create table if not exists public.lk_aceptaciones_mediacion (
   contrato_id uuid not null references public.lk_contratos(id) on delete cascade,
@@ -56,15 +59,10 @@ begin
   if c.estado <> 'mediacion' then raise exception 'Este alquiler no está con mediador.' using errcode = '55000'; end if;
   select monto into m from public.lk_reclamos where contrato_id = p_contrato;
   if p_monto_dueno < 0 or p_monto_dueno > m then raise exception 'El monto para el dueño debe estar entre 0 y lo reclamado.' using errcode = '22023'; end if;
-  if (select count(*) from public.lk_aceptaciones_mediacion where contrato_id = p_contrato and monto_dueno = p_monto_dueno) = 2 then
-    cierre := 'dos_aceptan'; texto := format('Acuerdo registrado: %s USDC al dueño y %s al inquilino (aceptado por las dos partes)', trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno));
-  elsif p_monto_dueno = 0 then
-    cierre := 'devolucion_total'; texto := format('Devolución del 100 %% al inquilino: 0 USDC al dueño y %s al inquilino', trim_scale(c.monto));
-  elsif exists (select 1 from public.lk_reglas_651 where contrato_id = p_contrato) then
-    cierre := 'regla_651'; texto := format('Regla de propuesta automática (6.5.1) aceptada por el inquilino: %s USDC al dueño y %s al inquilino', trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno));
-  else
+  if (select count(*) from public.lk_aceptaciones_mediacion where contrato_id = p_contrato and monto_dueno = p_monto_dueno) <> 2 then
     raise exception 'Faltan las aceptaciones de las dos partes con este reparto. La persona mediadora no decide por las partes.' using errcode = '55000';
   end if;
+  cierre := 'dos_aceptan'; texto := format('Acuerdo registrado: %s USDC al dueño y %s al inquilino (aceptado por las dos partes)', trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno));
   update public.lk_contratos set estado = 'cerrado', resultado = jsonb_build_object('via','mediacion','cierre',cierre,'dueno',p_monto_dueno,'inquilino',c.monto - p_monto_dueno) where id = p_contrato;
   perform public.lk_evento(p_contrato, texto || coalesce(' · ' || nullif(trim(p_motivo), ''), ''));
 end $$;

@@ -261,7 +261,7 @@ Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de d
 
 Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `master`.
 
-- **Escenario C, preparación** (rama `paso17-escenario-c`, PR borrador; no se publica ni se enciende): 2.2 b) y Privacidad dicen «el reparto que las dos partes acepten en la mediación»; `lk_decidir_mediacion` solo cierra con las aceptaciones de las dos partes, salvo la devolución del 100 % al inquilino y la Regla 6.5.1 aceptada (migración sin aplicar); una versión por escenario (1.8-demo con B, 1.9-demo con C), con aviso que no bloquea y casilla dentro de cada función. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+- **Escenario C, preparación** (rama `paso17-escenario-c`, PR borrador; no se publica ni se enciende): 2.2 b) con el texto de Legal del 25/10 (la mediación no decide; sin acuerdo, el depósito sigue retenido; excepciones: devolución automática 5.3 d y Regla 6.5.1) y Privacidad «el reparto que las dos partes acepten en la mediación»; `lk_decidir_mediacion` solo cierra con las aceptaciones de las dos partes del mismo reparto (las dos excepciones no pasan por la mediación; migración sin aplicar); verificado y probado que sin acuerdo el caso sigue abierto y nada libera por plazo; una versión por escenario (1.8-demo con B, 1.9-demo con C), con aviso que no bloquea y casilla dentro de cada función. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 - **Formulario «Nuevo alquiler» de una pregunta por pantalla** (en desarrollo; no publicado). Hoy «Nuevo alquiler» sigue siendo la pantalla de siempre.
 
 ## Cambios publicados
