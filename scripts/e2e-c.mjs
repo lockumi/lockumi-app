@@ -56,12 +56,14 @@ async function destinoSimulado() {
     if (t === 'lk_eventos' && m === 'POST') { await q(null, `insert into public.lk_eventos(contrato_id, texto, tx_hash) values ($1, $2, $3)`, [b.contrato_id, b.texto, b.tx_hash]); return new Response(null, { status: 201 }) }
     if (t === 'lk_eventos' && m === 'GET' && p.tx_hash) return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and tx_hash = $2`, [id, p.tx_hash.slice(3)]))
     if (t === 'lk_eventos' && m === 'GET') return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and texto = $2`, [id, p.texto.slice(3)]))
+    // 20261025060000: «Todo bien, devolver» cierra al instante (solo la clave de servicio puede llamarla)
+    if (t === 'lk_cerrar_aprobado' && m === 'POST') { const [r] = await q(null, `select public.lk_cerrar_aprobado($1) r`, [b.p_contrato]); return ok(r.r) }
     return new Response('ruta no simulada: ' + t, { status: 500 })
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
-    migraciones: async () => ({ m030: true, m040: true, m050: true }), limpiar: async () => 0 }
+    migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true }), limpiar: async () => 0 }
 }
 async function destinoReal() {
   const { createClient } = await import('@supabase/supabase-js')
@@ -81,7 +83,7 @@ async function destinoReal() {
   return { nombre: url.includes('sddgjnuvxzkrhhuczuly') ? 'Supabase de PRODUCCIÓN (datos de prueba marcados)' : 'Supabase ' + new URL(url).host, cuenta, rest: fetch,
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
-    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0') }),
+    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
     limpiar: async () => {
       const r = await rest(`lk_contratos?direccion=like.${encodeURIComponent('E2E-C %')}&select=id`); const ids = r.ok ? (await r.json()).map(x => x.id) : []
       for (const id of ids) await rest(`lk_contratos?id=eq.${id}`, { method: 'DELETE' })
@@ -128,7 +130,8 @@ const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
 const tw = (cta, pedido) => enFila(() => atender(env, pedido, 'Bearer ' + cta.token, fTw))
 const mig = await D.migraciones()
-log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'}`)
+log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'}`)
+if (!mig.m060) log('  (sin 20261025060000, «Todo bien, devolver» no libera al aprobar: el flujo «aprobada» falla)')
 if (!mig.m050) { log('✘ falta la migración 20261025050000 (Términos por alquiler) en el destino: sin ella no se puede crear ni unirse'); process.exit(1) }
 
 const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await D.cuenta()]
@@ -187,13 +190,14 @@ async function capturar(pantalla, id) {
     aceptaciones: (await D.leer('lk_aceptaciones_mediacion', id)).map(a => ({ rol: a.rol, monto_dueno: Number(a.monto_dueno), aceptado_en: a.aceptado_en })) }
 }
 const flujos = {
-  async aprobada() {   // el dueño aprueba en la cadena; al vencer el plazo se cierra y la plataforma libera el 100 %
+  async aprobada() {   // «Todo bien, devolver» (Términos 6.5 a): el dueño aprueba en la cadena y el servidor libera el 100 % en ese momento
     const id = ids.aprobada = await hastaPlazo('aprobada', true)
     const { unsignedXdr, evidenciaTx } = await tw(dueno, { accion: 'aprobar', contrato: id }); paso('aprobada', 'evidencia de la plataforma', evidenciaTx)
     const ap = await tw(dueno, { accion: 'enviar', contrato: id, paso: 'aprobar', signedXdr: firmar(kpD, unsignedXdr) }); paso('aprobada', 'el dueño aprueba la devolución', ap.tx)
-    if (!REAL) await D.q(null, `update public.lk_contratos set ventana_inicio = now() - interval '2 minutes' where id = $1`, [id]); else await esperarPlazo('aprobada')
-    exigir(await inquilino.rpc('lk_cerrar_sin_reclamo', { p_contrato: id }), 'no cerró al vencer el plazo')
-    const l = await tw(inquilino, { accion: 'liberar', contrato: id }); paso('aprobada', 'devolución del 100 % al inquilino (liberación)', l.tx)
+    exigir(ap.liberacion, 'no se liberó al aprobar: ' + (ap.errorLiberacion ?? 'sin respuesta')); paso('aprobada', 'devolución del 100 % al inquilino al aprobar (liberación)', ap.liberacion)
+    const e = await estado(id); exigir(e.estado === 'cerrado' && e.resultado.via === 'devuelto' && Number(e.resultado.inquilino) === MONTO, 'no quedó cerrado como «devuelto» con el 100 % al inquilino')
+    let rechazo = ''; try { await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: 1, p_motivo: 'después de aprobar' }) } catch (x) { rechazo = x.message }
+    exigir(rechazo, 'el servidor dejó reclamar después de aprobar'); paso('aprobada', 'después de aprobar, el servidor no deja reclamar')
   },
   async silencioDueno() {   // 5.3 d: el dueño no aprueba ni reclama → devolución automática del 100 % (disputa + resolución)
     const id = ids.silencioDueno = await hastaPlazo('silencio-dueno', true)
@@ -240,7 +244,7 @@ const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destin
 writeFileSync(SALIDA + '/estado.json', JSON.stringify(est, null, 2))
 writeFileSync(SALIDA + '/capa-capturas.json', JSON.stringify(capa, (k, v) => v instanceof Date ? v.toISOString() : v, 2))
 if (REAL) { writeFileSync(SALIDA + '/sesiones.json', JSON.stringify({ dueno: dueno.sesion, inquilino: inquilino.sesion })); chmodSync(SALIDA + '/sesiones.json', 0o600) }   // solo para las capturas; vencen solas
-const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}`,
+const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}, 060000 ${mig.m060 ? 'sí' : 'NO'}`,
   `- Resultado: ${fallas.length ? fallas.length + ' fallas' : 'todo en verde'}${omitidos.length ? ` · ${omitidos.length} omitido(s)` : ''}`, '', '| Alquiler | Paso | Transacción |', '|---|---|---|',
   ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o)].join('\n')
 writeFileSync(SALIDA + '/informe.md', md + '\n')

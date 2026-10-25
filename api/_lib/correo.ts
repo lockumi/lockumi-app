@@ -88,7 +88,7 @@ export function armar(p: PedidoCorreo, origen: string) {
   const base = `${origen}/#/alquiler/${encodeURIComponent(p.alquiler)}`
   let asunto: string, cuerpo: string, botones: { texto: string; url: string }[]
   if (p.tipo === 'invitacion') {
-    // LEGAL: revisar · asunto de la invitación (Legal no lo dio)
+    // LEGAL: revisado (25/10, lista de Legal) · asunto de la invitación (Legal no lo dio)
     asunto = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
     cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: 'Abrir la demo de Lockumi', url: `${origen}/` }]
   } else {
@@ -100,7 +100,7 @@ export function armar(p: PedidoCorreo, origen: string) {
     botones = botonesAviso(p.plantilla!).map(b => ({ texto: b.texto, url: `${base}?aviso=${p.plantilla}&canal=correo${b.accion === 'confirmar-devolver' ? '&confirmar=devolver' : ''}` }))
   }
   // Paso 11: paleta del logo (#FF6B35, #E8531F, #FFB08A sobre crema #FFF5EE, texto café #3D2A22); nunca texto blanco sobre naranja.
-  // LEGAL: revisar · nota de demo arriba del texto (pedido de Katherine: cada correo dice que es una demo sin dinero real)
+  // LEGAL: revisado (25/10, lista de Legal) · nota de demo arriba del texto (pedido de Katherine: cada correo dice que es una demo sin dinero real)
   const demo = 'Demo en la red de prueba: sin dinero real.'
   const nota = p.tipo !== 'aviso' ? '' : botonesAviso(p.plantilla!).some(b => b.accion === 'confirmar-devolver') ? NOTA_CONFIRMAR : NOTA_UN_BOTON
   const html = `<!doctype html><html lang="es"><body style="font-family:Arial,sans-serif;color:#3D2A22;background:#FFF5EE;max-width:560px;margin:0 auto;padding:16px">

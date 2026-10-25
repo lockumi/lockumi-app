@@ -9,7 +9,7 @@ export function Expediente({ a }: { a: Alquiler }) {
   const [paso, setPaso] = useState<'boton' | 'aviso' | 'listo'>('boton')
   if (paso === 'aviso') return <div className="expediente" role="dialog" aria-labelledby="exp-t">
     <h3 id="exp-t">Antes de descargar</h3>
-    <p>{AVISO_EXPEDIENTE}</p>{/* LEGAL: revisar · B.11 */}
+    <p>{AVISO_EXPEDIENTE}</p>{/* LEGAL: revisado (25/10, lista de Legal) · B.11 */}
     <p className="nota">Cada página lleva la marca «{MARCA_EXPEDIENTE}». No incluye correos, teléfonos, identificaciones ni la dirección.</p>
     <div className="expediente__botones">
       <button type="button" className="boton boton--pc" onClick={() => { void descargarExpediente(a, ahoraDe(a)).finally(() => setPaso('listo')) }}>Descargar</button>

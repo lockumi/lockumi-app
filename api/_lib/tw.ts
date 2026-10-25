@@ -200,6 +200,20 @@ async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
   return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
 }
 
+/** release-funds firmado por la plataforma (releaseSigner): el 100 % al inquilino (receiver), menos la comisión de Trustless Work. */
+async function liberarTodo(c: Config, k: Contrato, f = fetch) {
+  const j = await tw(c, '/escrow/single-release/release-funds', { contractId: k.escrow_contract_id, releaseSigner: c.plataforma.publicKey() }, f)
+  const firmada = firmarComoPlataforma(c, sinFirmar(j)); await enviar(c, firmada, f)
+  const tx = hashTx(firmada)
+  await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC menos la comisión de 0,3 % de Trustless Work)`, tx, f)
+  return tx
+}
+/** lk_cerrar_aprobado (service_role): true si cerró el caso por la aprobación del dueño. */
+async function cerrarAprobado(c: Config, id: string, f = fetch) {
+  const r = await rest(c, 'rpc/lk_cerrar_aprobado', { method: 'POST', body: JSON.stringify({ p_contrato: id }) }, f)
+  return r.ok && (await r.json().catch(() => false)) === true
+}
+
 // ── Acciones (permitidas y nada más) ──
 export type Pedido =
   | { accion: 'desplegar'; contrato: string }
@@ -261,17 +275,20 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(t.source === cuenta(k, quien), 400, 'La transacción no sale de tu cuenta.')
       exigir(t.operations.length === 1 && t.operations[0].type === 'invokeHostFunction', 400, 'Transacción inesperada.')
       const r = await enviar(c, p.signedXdr, f), tx = hashTx(p.signedXdr)
-      if (p.paso === 'aprobar') await anotar(c, k.id, {}, APROBADO, tx, f)
-      return { tx, estado: r.status ?? null }
+      if (p.paso !== 'aprobar') return { tx, estado: r.status ?? null }
+      await anotar(c, k.id, {}, APROBADO, tx, f)
+      // PR #22 (lista de Legal, punto 5; Términos 6.5 a): «Todo bien, devolver» libera todo al inquilino ahora, no al final del
+      // plazo. El servidor cierra el caso (lk_cerrar_aprobado: sin reclamo y con la aprobación anotada) y la plataforma
+      // (releaseSigner) libera en el mismo pedido. Si la red falla, el caso queda cerrado y la app reintenta con «liberar».
+      if (!(await cerrarAprobado(c, k.id, f))) return { tx, estado: r.status ?? null }
+      try { return { tx, estado: r.status ?? null, liberacion: await liberarTodo(c, k, f) } }
+      catch { return { tx, estado: r.status ?? null, errorLiberacion: 'La aprobación quedó en la red de prueba, pero todavía no se pudo entregar el depósito. Vuelve a abrir el alquiler para reintentarlo.' } }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
-      exigir(k.estado === 'cerrado' && k.resultado?.via === 'automatico' && !!k.escrow_contract_id, 409, 'Solo se libera así un contrato cerrado sin reclamo.')
+      // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.
+      exigir(k.estado === 'cerrado' && (k.resultado?.via === 'automatico' || k.resultado?.via === 'devuelto') && !!k.escrow_contract_id, 409, 'Solo se libera así un contrato cerrado sin reclamo.')
       if (k.liquidacion_tx) return { tx: k.liquidacion_tx, yaExistia: true }
-      const j = await tw(c, '/escrow/single-release/release-funds', { contractId: k.escrow_contract_id, releaseSigner: P }, f)
-      const firmada = firmarComoPlataforma(c, sinFirmar(j)); await enviar(c, firmada, f)
-      const tx = hashTx(firmada)
-      await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC menos la comisión de 0,3 % de Trustless Work)`, tx, f)
-      return { tx }
+      return { tx: await liberarTodo(c, k, f) }
     }
     case 'devolver-automatico': { // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño
       exigir(k.estado === 'cerrado' && k.resultado?.via === 'automatico' && !!k.escrow_contract_id, 409, 'La devolución automática solo corre cuando vence el plazo del dueño sin reclamo.')

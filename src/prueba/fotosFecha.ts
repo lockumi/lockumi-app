@@ -4,7 +4,7 @@ import type { Foto } from '../types'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 
 const momento = (f: Foto) => f.tomadaEn ?? Date.parse(f.fecha)
-// LEGAL: revisar · pie de cada foto (6.4.2)
+// LEGAL: revisado (25/10, lista de Legal) · pie de cada foto (6.4.2)
 export function textoFotoPC(f: Foto): string {
   const cuando = `${fechaHoraCR(momento(f))}, hora de Costa Rica`
   if (f.origen === 'ejemplo') return `Foto de ejemplo · registrada el ${cuando}`

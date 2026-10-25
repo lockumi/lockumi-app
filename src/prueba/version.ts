@@ -32,7 +32,7 @@ export function aceptarVersion(x: Alquiler, rol: Rol, ahora: number, destino = v
   t.acepta ??= {}
   if (t.acepta[rol]) return
   t.acepta[rol] = f
-  // LEGAL: revisar · historial (texto propio)
+  // LEGAL: revisado (25/10, lista de Legal) · historial (texto propio)
   x.historial.push({ fecha: f, texto: `El ${NOMBRE[rol]} aceptó pasar este alquiler a los Términos ${destino}` })
   if (t.acepta.dueno && t.acepta.inquilino) {
     t.version = destino; t.desde = f; Object.assign(t, edicionDe(destino))
@@ -42,6 +42,6 @@ export function aceptarVersion(x: Alquiler, rol: Rol, ahora: number, destino = v
 /** paso 16 (compatibilidad): pasar a la versión vigente. */
 export const aceptarVersion17 = (x: Alquiler, rol: Rol, ahora: number) => aceptarVersion(x, rol, ahora)
 
-// LEGAL: revisar · tarjeta de cambio de versión (texto propio basado en la cláusula 12)
+// LEGAL: revisado (25/10, lista de Legal) · tarjeta de cambio de versión (texto propio basado en la cláusula 12)
 export const textoCambio = (desde: string, hacia: string) => `Este alquiler se firmó con los Términos ${desde} y sigue con sus reglas. Solo pasa a la versión ${hacia} si los dos lo aceptan. Si alguno no acepta, nada cambia.`
 export const TEXTO_CAMBIO = textoCambio(V16, V17)

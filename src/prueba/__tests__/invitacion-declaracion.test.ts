@@ -13,7 +13,7 @@ describe('declaración de quien invita', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
     expect(declaracionInvitacion()).toBe('Declaro que esta persona sabe que la invito.')
     vi.stubEnv('VITE_CORREOS', '1')
-    expect(declaracionInvitacion()).toBe('Declaro que esta persona sabe que la invito y que acepta recibir el correo de Lockumi.')
+    expect(declaracionInvitacion()).toBe('Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.')
   })
   it('«Invitar a la otra persona» exige marcarla y el servidor la guarda con el alquiler (lk_crear_contrato_invitando)', async () => {
     const crear = await leer('src/screens/Crear.tsx'), repo = await leer('src/servidor/repositorio.ts')

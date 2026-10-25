@@ -26,7 +26,7 @@ const B68_DOS = 'En los alquileres simulados con otra persona, si los dos lo pid
 const INVITADA_7 = 'Si la persona invitada no se une en 7 días, borramos su correo.'
 // Sección B y E de legal/dos-personas-textos.md (texto exacto de Legal)
 const DOS_TERMINOS = [
-  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. Quien crea el alquiler elige si es el dueño o el inquilino e invita a la otra persona con un enlace que vence a los 7 días.',
+  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. En el alquiler con otra persona, quien lo crea es el dueño e invita al inquilino con un enlace.',
   'En esta fase, el alquiler simulado y las fotos reducidas se guardan en Supabase, en un almacenamiento privado en Estados Unidos.',
   'En la fase 2 no hay dueño de prueba: el dueño firma con su propia billetera, y Lockumi no guarda su llave.',
   'En la fase 1, el dueño es la cuenta de prueba de Lockumi, así que Lockumi firma esa aprobación. En la fase 2, el dueño la firma con su propia billetera.',

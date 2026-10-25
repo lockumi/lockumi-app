@@ -65,7 +65,7 @@ describe('lk_decidir_mediacion en producción: solo con las dos aceptaciones (A2
     await acepta(DUENO, id, 20); await acepta(INQ, id, 20)
     await registrar(id, 20)
     expect(await estado(id)).toMatchObject({ estado: 'cerrado', resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 20, inquilino: 80 } })
-    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC al dueño y 80 al inquilino (aceptado por las dos partes) · Daño parcial')
+    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino (aceptado por las dos partes) · Daño parcial')
   })
   it('una parte puede cambiar su aceptación antes del cierre; el reparto registrado debe ser el aceptado por las dos', async () => {
     const id = await enMediacion()

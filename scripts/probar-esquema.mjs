@@ -109,7 +109,7 @@ await espera('reclamo, rechazo y acuerdo registrado por la persona mediadora', a
   for (const u of [DUENO, INQ]) await como(u, `select public.lk_aceptar_acuerdo_mediacion($1, 20)`, [id])
   await como(MED, `select public.lk_decidir_mediacion($1, 20, 'Daño parcial')`, [id])
   const [c] = await como(INQ, `select estado, resultado from public.lk_contratos where id = $1`, [id]); if (c.estado !== 'cerrado' || Number(c.resultado.dueno) !== 20 || Number(c.resultado.inquilino) !== 80) throw new Error(JSON.stringify(c))
-  const ev = await como(INQ, `select texto from public.lk_eventos where contrato_id = $1 order by id`, [id]); if (!ev.some(x => /^Acuerdo registrado: 20 USDC al dueño y 80(\.00)? al inquilino( \(aceptado por las dos partes\))? · Daño parcial$/.test(x.texto)) || ev.some(x => /decidi/.test(x.texto))) throw new Error(JSON.stringify(ev.map(x => x.texto)))
+  const ev = await como(INQ, `select texto from public.lk_eventos where contrato_id = $1 order by id`, [id]); if (!ev.some(x => /^Acuerdo registrado: 20 USDC( de prueba)? al dueño y 80(\.00)?( USDC de prueba)? al inquilino( \(aceptado por las dos partes\))? · Daño parcial$/.test(x.texto)) || ev.some(x => /decidi/.test(x.texto))) throw new Error(JSON.stringify(ev.map(x => x.texto)))
   await como(MED, `select public.lk_registrar_liquidacion($1, 'txresolve')`, [id])
 })
 await espera('historial con hashes de transacción', async () => {

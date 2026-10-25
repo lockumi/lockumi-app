@@ -16,7 +16,7 @@ export function nuevoReclamo(x: Alquiler, rubros: Rubro[], ahora: number) {
   const monto = totalReclamado(x, rubros)
   x.estado = 'reclamo'
   x.reclamo = { monto, motivo: rubros.map(r => `${nombreRubro(r)}: ${r.descripcion.trim()}`).join(' · '), fotos: rubros.flatMap(r => r.fotos), fecha: iso(ahora), rubros, entregado: iso(ahora) }
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: `El dueño reclamó ${u(monto)} por ${rubros.length === 1 ? '1 rubro' : `${rubros.length} rubros`}` })
 }
 /** Abrir la pantalla del reclamo cuenta como apertura (B.2 v4). Se guarda solo la primera vez. */
@@ -28,7 +28,7 @@ export function responderRubros(x: Alquiler, resp: Record<string, RespuestaRubro
   if ((r.rubros ?? []).every(b => resp[b.id]?.acepta)) { r.respuesta = 'aceptado'; return 'acuerdo' }
   r.respuesta = 'rechazado'
   r.propuesta = { alDueno: propuesta(x, r.rubros ?? [], resp).total, fecha: iso(ahora) }
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: `El inquilino no aceptó todo el reclamo. Propuesta automática (simulación): ${u(r.propuesta.alDueno)} al dueño` })
   return 'propuesta'
 }
@@ -36,7 +36,7 @@ export function responderRubros(x: Alquiler, resp: Record<string, RespuestaRubro
 export function votarPropuesta(x: Alquiler, rol: Rol, si: boolean, ahora: number): 'aplicar' | 'mediacion' | null {
   const p = x.reclamo?.propuesta; if (!p) return null
   p[rol] = si ? 'si' : 'no'
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: `El ${rol === 'dueno' ? 'dueño' : 'inquilino'} ${si ? 'aceptó' : 'no aceptó'} la propuesta automática` })
   if (p.dueno === 'no' || p.inquilino === 'no') return 'mediacion'
   return p.dueno === 'si' && p.inquilino === 'si' ? 'aplicar' : null

@@ -13,7 +13,7 @@ describe('E2E del escenario C (simulado, sin llaves)', () => {
     const e = JSON.parse(readFileSync(join(dir, 'estado.json'), 'utf8'))
     expect(e.fallas).toEqual([]); expect(e.omitidos).toEqual([])
     const pasos = e.pasos.map((p: { alquiler: string; paso: string }) => `${p.alquiler}: ${p.paso}`)
-    for (const t of ['aprobada: el dueño aprueba la devolución', 'aprobada: devolución del 100 % al inquilino (liberación)',
+    for (const t of ['aprobada: el dueño aprueba la devolución', 'aprobada: devolución del 100 % al inquilino al aprobar (liberación)', 'aprobada: después de aprobar, el servidor no deja reclamar',
       'silencio-dueno: la cuenta que resuelve disputas devuelve el 100 % al inquilino', 'mediacion: el inquilino ve lo que aceptó el dueño',
       'mediacion: con una sola aceptación la persona mediadora no puede cerrar', 'mediacion: un segundo «repartir» no paga dos veces (mismo hash)',
       'silencio-inquilino: el inquilino no respondió: pasa a la mediación (regla no disponible en esta versión, 6.5.1 d), sin pago'])

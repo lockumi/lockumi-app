@@ -93,7 +93,7 @@ export const CONSENTIMIENTO_PRIVACIDAD = {
 
 /** paso16-unido · Casilla de privacidad vigente: con los correos encendidos nombra también a Resend (recibe el correo de los avisos
  *  y de las invitaciones). Apagada la prueba completa, es la de siempre. */
-// LEGAL: revisar · se agrega «Resend» a la lista de proveedores solo con VITE_CORREOS=1 (la Privacidad 1.7-demo ya lo nombra)
+// LEGAL: revisado (25/10, lista de Legal) · se agrega «Resend» a la lista de proveedores solo con VITE_CORREOS=1 (la Privacidad 1.7-demo ya lo nombra)
 export const consentimientoPrivacidad = (): typeof CONSENTIMIENTO_PRIVACIDAD | { antes: string; enlace: string; despues: string } =>
   !correosActivos() ? CONSENTIMIENTO_PRIVACIDAD : { ...CONSENTIMIENTO_PRIVACIDAD, despues: CONSENTIMIENTO_PRIVACIDAD.despues.replace('Supabase, Vercel, Cavos y Trustless Work', 'Supabase, Vercel, Cavos, Trustless Work y Resend') }
 

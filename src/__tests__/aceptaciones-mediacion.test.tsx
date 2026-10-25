@@ -23,7 +23,7 @@ describe('PR #22 · aceptaciones de la mediación (dos personas)', () => {
   })
   it('la otra parte aceptó: muestra su reparto', () => {
     const e = estadoAceptaciones('inquilino', [{ rol: 'dueno', montoDueno: 30, fecha: 'x' }], 100)
-    expect(e.otra).toBe(30); expect(e.texto).toBe('El dueño aceptó: 30,00 USDC para el dueño y 70,00 USDC para el inquilino.')
+    expect(e.otra).toBe(30); expect(e.texto).toBe('El dueño aceptó: 30,00 USDC de prueba para el dueño y 70,00 USDC de prueba para el inquilino.')
   })
   it('las dos con el mismo reparto: espera que la persona mediadora lo registre', () => {
     const e = estadoAceptaciones('dueno', [{ rol: 'dueno', montoDueno: 30, fecha: 'x' }, { rol: 'inquilino', montoDueno: 30, fecha: 'y' }], 100)
@@ -31,6 +31,6 @@ describe('PR #22 · aceptaciones de la mediación (dos personas)', () => {
   })
   it('repartos distintos: lo dice', () => {
     const e = estadoAceptaciones('dueno', [{ rol: 'dueno', montoDueno: 50, fecha: 'x' }, { rol: 'inquilino', montoDueno: 20, fecha: 'y' }], 100)
-    expect(e.texto).toBe('El inquilino aceptó otro reparto: 20,00 USDC para el dueño y 80,00 USDC para el inquilino.')
+    expect(e.texto).toBe('El inquilino aceptó otro reparto: 20,00 USDC de prueba para el dueño y 80,00 USDC de prueba para el inquilino.')
   })
 })

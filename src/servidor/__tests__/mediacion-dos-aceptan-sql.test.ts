@@ -1,5 +1,5 @@
 // Escenario C (preparación, sin encender) · 20261025020000_mediacion_solo_dos_aceptan.sql (master, aplicada) + 20261025030000_regla_651.sql (C) en PGlite.
-// LEGAL: revisar · lk_decidir_mediacion solo cierra un caso si constan las aceptaciones de las dos partes (mismo reparto).
+// LEGAL: revisado (25/10, lista de Legal) · lk_decidir_mediacion solo cierra un caso si constan las aceptaciones de las dos partes (mismo reparto).
 // Las dos excepciones de Términos 2.2 b) (texto de Legal, 25/10) NO pasan por la mediación: la devolución automática del 100 % (5.3 d)
 // es sin reclamo (lk_cerrar_sin_reclamo + api/_lib/tw.ts «devolver-automatico») y la Regla 6.5.1 se aplica antes, con el reclamo
 // sin respuesta. Dentro de la mediación, sin las dos aceptaciones el caso sigue abierto y el depósito retenido.
@@ -67,7 +67,7 @@ describe('lk_decidir_mediacion: solo con las dos aceptaciones (escenario C)', ()
     await acepta(DUENO, id, 20); await acepta(INQ, id, 20)
     await registrar(id, 20)
     expect(await estado(id)).toMatchObject({ estado: 'cerrado', resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 20, inquilino: 80 } })
-    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC al dueño y 80 al inquilino (aceptado por las dos partes) · Daño parcial')
+    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino (aceptado por las dos partes) · Daño parcial')
   })
   it('una parte puede cambiar su aceptación antes del cierre; el reparto registrado debe ser el aceptado por las dos', async () => {
     const id = await enMediacion()
@@ -155,10 +155,13 @@ describe('escenario C: sin acuerdo, el caso sigue abierto y nada lo cierra por p
   it('B2 (opción 1 de Legal): solo cuatro funciones cierran un caso, y de la mediación solo sale con lk_decidir_mediacion', async () => {
     const fns = (await db.query<{ n: string; d: string }>(`select p.proname n, pg_get_functiondef(p.oid) d from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname like 'lk\_%'`)).rows
     const cierran = fns.filter(f => /update public\.lk_contratos set estado\s*=\s*'cerrado'/.test(f.d)).map(f => f.n).sort()
-    expect(cierran).toEqual(['lk_cerrar_sin_reclamo', 'lk_decidir_mediacion', 'lk_responder_reclamo', 'lk_vencimientos'])
+    // 20261025060000: lk_cerrar_aprobado («Todo bien, devolver», solo la clave de servicio) cierra sin reclamo y nunca desde la mediación
+    expect(cierran).toEqual(['lk_cerrar_aprobado', 'lk_cerrar_sin_reclamo', 'lk_decidir_mediacion', 'lk_responder_reclamo', 'lk_vencimientos'])
+    expect(fns.find(f => f.n === 'lk_cerrar_aprobado')!.d).toMatch(/c\.estado is distinct from 'ventana_reclamo'/)
     const cerrar = fns.find(f => f.n === 'lk_cerrar_sin_reclamo')!.d, responder = fns.find(f => f.n === 'lk_responder_reclamo')!.d
     expect(cerrar).toMatch(/c\.estado <> 'ventana_reclamo'/); expect(responder).toMatch(/c\.estado <> 'reclamo'/)
     expect(fns.find(f => f.n === 'lk_silencio_inquilino')!.d).not.toMatch(/'cerrado'/)
-    expect(fns.find(f => f.n === 'lk_vencimientos')!.d).toMatch(/where estado = 'ventana_reclamo' and now\(\) >/)
+    // 20261025060000: el fin del plazo sale de lk_fin_plazo (feriados, art. 148), pero solo se cierra lo que está en ventana_reclamo
+    expect(fns.find(f => f.n === 'lk_vencimientos')!.d).toMatch(/from public\.lk_contratos where estado = 'ventana_reclamo'/)
   })
 })

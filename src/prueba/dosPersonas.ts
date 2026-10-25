@@ -11,11 +11,11 @@ export const APROBADO_DUENO = 'El dueño aprobó en la cadena devolver el depós
 /** ¿Este alquiler es del modo de dos personas? (lo marca el servidor compartido al leerlo; nunca el navegador). */
 export const esDosPersonas = (a: Pick<Alquiler, 'dosPersonas'>) => pruebaCompleta() && a.dosPersonas === true
 
-// LEGAL: revisar · 6.5 a) y 5.3 d) (sección E) en la pantalla del dueño
+// LEGAL: revisado (25/10, lista de Legal) · 6.5 a) y 5.3 d) (sección E) en la pantalla del dueño
 export const TEXTO_AUTO_DUENO = 'Si no apruebas ni reclamas antes de que venza tu plazo, el depósito se devuelve automáticamente: el 100 % al inquilino, menos el 0,3 % de comisión de la red de prueba de Trustless Work. No la decide una persona ni pasa a la Mediación Lockumi (demo).'
-// LEGAL: revisar · 6.5 a) en la pantalla del inquilino
+// LEGAL: revisado (25/10, lista de Legal) · 6.5 a) en la pantalla del inquilino
 export const TEXTO_AUTO_INQUILINO = 'Si el dueño no aprueba ni reclama antes de que venza su plazo, se te devuelve automáticamente el 100 % del depósito de prueba, menos el 0,3 % de comisión de la red de prueba de Trustless Work. No lo decide una persona.'
-// LEGAL: revisar · 5.3 d) (sección E), al terminar
+// LEGAL: revisado (25/10, lista de Legal) · 5.3 d) (sección E), al terminar
 export const TEXTO_CERRADO_AUTO = 'El dueño no aprobó ni reclamó dentro de su plazo. El sistema de Lockumi abrió una disputa en la red de prueba solo para poder devolver el depósito, y otra cuenta de Lockumi, la que resuelve disputas, entregó el 100 % al inquilino, menos el 0,3 % de comisión de la red de prueba de Trustless Work. Ninguna persona decidió este reparto.'
 
 /** Comisión de Trustless Work en la red de prueba: 0,3 % también al resolver una disputa (medido en testnet el 24/10/2026:
@@ -26,21 +26,22 @@ const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: Nu
 export const montoPrueba = (n: number) => `${fmt(n)} USDC de prueba`
 /** Lo que llega de verdad al inquilino en la devolución automática (100 % menos la comisión de la red de prueba). */
 export const recibeInquilino = (monto: number) => Math.round(monto * (1 - COMISION_TW) * 1e7) / 1e7
-// LEGAL: revisar · nota bajo los montos al terminar (devolución automática)
+// LEGAL: revisado (25/10, lista de Legal) · nota bajo los montos al terminar (devolución automática)
 export const notaComisionAuto = (monto: number) =>
   `Llegaron ${montoPrueba(recibeInquilino(monto))}: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(Math.round((monto - recibeInquilino(monto)) * 1e7) / 1e7)}). El dueño y Lockumi no reciben nada.`
-// LEGAL: revisar · Términos 1.7-demo, 4.2 e) (texto de Legal del 24/10, 11:29 p. m.; se publica en el paso 16)
+// LEGAL: revisado (25/10, lista de Legal) · Términos 1.7-demo, 4.2 e) (texto de Legal del 24/10, 11:29 p. m.; se publica en el paso 16)
 export const TERMINOS_42E = 'En la devolución automática de la cláusula 5.3 d), la cuenta de Lockumi que resuelve disputas entrega al inquilino el 100 % del saldo del depósito, menos solo la comisión de la red de prueba de Trustless Work. No puede entregar nada al dueño ni a Lockumi.'
 
-// LEGAL: revisar · vencimiento de la invitación: 7 días (el texto aprobado por Legal; el servidor lo recorta a 7 días en
+// LEGAL: revisado (25/10, lista de Legal) · vencimiento de la invitación: 7 días (el texto aprobado por Legal; el servidor lo recorta a 7 días en
 // supabase/migrations/20261025000000_invitacion_7_dias.sql)
 export const TEXTO_INVITACION_VENCE = 'El link sirve una sola vez y vence en 7 días.'
-// LEGAL: revisar · pie del contrato en un alquiler con otra persona (no se guarda solo en el navegador)
-export const TEXTO_GUARDA_DOS = 'Este contrato se guarda en el servidor de Lockumi para que lo vean las dos personas. Las fotos se guardan en un espacio privado.'
-// LEGAL: revisar · alquiler con otra persona: el dueño aprueba en la red de prueba la devolución completa (no se puede adelantar el plazo)
-export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Se le entrega cuando termine tu plazo de reclamos, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
-// LEGAL: revisar · después de aprobar
-export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa. El depósito se le entrega al inquilino cuando termine tu plazo de reclamos.'
+// LEGAL: revisado (25/10, lista de Legal) · pie del contrato en un alquiler con otra persona (no se guarda solo en el navegador)
+export const TEXTO_GUARDA_DOS = 'Este contrato se guarda en Supabase, el proveedor de Lockumi, en Estados Unidos, para que lo vean las dos personas. Las fotos reducidas se guardan en un almacenamiento privado.'
+// LEGAL: revisar · texto de Legal (revision-marcas-pr22.md) salvo el momento de la entrega: el servidor libera todo al inquilino
+// en cuanto el dueño aprueba (6.5 a), por eso «ahora» en vez de «cuando termine tu plazo de reclamos».
+export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Después ya no podrás reclamar en la app. Se le entrega ahora, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
+// LEGAL: revisar · ídem (después de aprobar; se ve mientras la red confirma la entrega)
+export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app. El depósito se le entrega al inquilino ahora, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
 
 // PR #22 (d) · cierre de la mediación con las dos aceptaciones (lk_aceptar_acuerdo_mediacion, resultado.cierre = 'dos_aceptan').
 // Legal: aprobado (25/10, 3:16 a. m.) · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)

@@ -54,7 +54,9 @@ export async function recargar() {
     de('lk_reclamos', 'monto, motivo, creado_en, respuesta'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
   for (const r of [ps, as, fs, fts, rs, es]) if (r.error) throw new ErrorServidor(mensajeServidor(r.error))
   // Escenario C (20261025050000): versión de los Términos por alquiler. Sin la migración, la consulta falla y todo sigue como antes.
-  const [tv, at] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en')]) : []
+  const [tv, at, en] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en'),
+    sb.from('lk_contratos').select('id, entregado_en').in('id', ids)]) : [] // 20261025060000: sin la migración, falla y no se usa
+  const entregaDe = (id: string) => en && !en.error ? ((en.data ?? []) as { id: string; entregado_en: string | null }[]).find(x => x.id === id)?.entregado_en ?? null : null
   const conTerminos = !!tv && !!at && !tv.error && !at.error
   const terminosDe = (id: string): Filas['terminos'] => conTerminos ? { version: ((tv.data ?? []) as { id: string; terminos_version: string | null }[]).find(x => x.id === id)?.terminos_version ?? null,
     aceptaciones: por(at, id) as unknown as NonNullable<Filas['terminos']>['aceptaciones'] } : null
@@ -67,7 +69,7 @@ export async function recargar() {
   }
   const inv = invitaciones()
   datos = (cs ?? []).map(c => {
-    const a = aAlquiler({ contrato: c as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
+    const a = aAlquiler({ contrato: { ...c, entregado_en: entregaDe(c.id) } as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
       firmas: por(fs, c.id) as unknown as Filas['firmas'], fotos: por(fts, c.id) as unknown as Filas['fotos'], reclamo: (por(rs, c.id)[0] ?? null) as unknown as Filas['reclamo'],
       eventos: por(es, c.id) as unknown as Filas['eventos'], terminos: terminosDe(c.id) }, yo, r => urls.get(r) ?? '')
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
@@ -143,6 +145,8 @@ export const servidor = {
   aceptarAcuerdo: (id: string, montoDueno: number) => tras(rpc('lk_aceptar_acuerdo_mediacion', { p_contrato: id, p_monto_dueno: montoDueno })),
   /** 6.5 b: el inquilino abrió el aviso o la pantalla del reclamo (solo cuenta la primera vez). */
   abrirAvisoReclamo: (id: string) => tras(rpc('lk_abrir_aviso_reclamo', { p_contrato: id })),
+  // 20261025060000 (C): «Recibí la casa» empieza el plazo del dueño en el servidor (art. 148 del Código de Trabajo para los feriados).
+  recibirCasa: (id: string) => tras(rpc('lk_recibi_casa', { p_contrato: id })),
   /** 6.5 c: vencido el plazo del inquilino sin respuesta, el servidor pasa el caso a la mediación (en dos personas la 6.5.1 no se aplica sola). */
   aplicarSilencio: (id: string) => tras(rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
   /** PR #22: lo que aceptó cada parte en la mediación (RLS: solo los participantes del alquiler). */

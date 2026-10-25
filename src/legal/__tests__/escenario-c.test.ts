@@ -1,5 +1,5 @@
 // Escenario C (preparación, PR borrador; no se enciende): textos de la mediación con otra persona y una versión por escenario.
-// LEGAL: revisar · 2.2 b) y Privacidad (sección C de dos-personas-textos.md): «el reparto que las dos partes acepten en la mediación».
+// LEGAL: revisado (25/10, lista de Legal) · 2.2 b) y Privacidad (sección C de dos-personas-textos.md): «el reparto que las dos partes acepten en la mediación».
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { terminosActual, privacidadActual } from '../documentos'
 import { versionVigente, edicionDe, VERSIONES, avisoNuevaVersion, casillaDeFuncion, ordenVersion } from '../versiones'
@@ -29,7 +29,7 @@ describe('2.2 b) y Privacidad C: nadie decide el reparto en la mediación', () =
   })
 })
 
-// LEGAL: revisar · 2.2 b) de C: párrafo exacto de Legal (25/10, 1:16 a. m.) y, después, sin cambios, la b) de antes
+// LEGAL: revisado (25/10, lista de Legal) · 2.2 b) de C: párrafo exacto de Legal (25/10, 1:16 a. m.) y, después, sin cambios, la b) de antes
 // (registro en la red de prueba, «simulados» y «Nada de esto tiene efecto legal»), pedido de Legal del 25/10, 1:24 a. m.
 const B22_LEGAL = 'b) En la fase 2, se aplica el reparto que las dos partes acepten en la mediación (cláusula 6). La mediación no decide por ustedes: si no hay acuerdo, el depósito sigue retenido hasta que lo haya o hasta que lo resuelva un centro de conciliación o un tribunal. Hay una excepción: la devolución automática del 100 % al inquilino (cláusula 5.3 d). En esta versión no se ofrece la Regla de propuesta automática (cláusula 6.5.1).'   // Legal, 25/10, 2:53 a. m.
 const bDe = (t: string, desde: string) => t.slice(t.indexOf(desde), t.indexOf('c) No hay rendimiento')).trim()
@@ -37,7 +37,7 @@ const B22_VIEJA = bDe(encender({ dos: false, correos: false }).t, 'b) El depósi
 // Legal, 25/10, 3:34 a. m.: al final de la 2.2 b) de C, quién maneja las cuentas y quién aplica la regla de las dos aceptaciones.
 const B22_CUENTAS = 'En la red de prueba, Lockumi maneja la cuenta que libera el depósito y la cuenta mediadora. La regla de las dos aceptaciones la aplica el servidor de Lockumi, no la red.'
 const B22_C = B22_LEGAL + ' ' + B22_VIEJA + ' ' + B22_CUENTAS
-// LEGAL: revisar · Legal, 25/10, 2:53 a. m.: 6.5.1 d) solo en la versión con dos personas
+// LEGAL: revisado (25/10, lista de Legal) · Legal, 25/10, 2:53 a. m.: 6.5.1 d) solo en la versión con dos personas
 const D651 = 'd) En la versión con dos personas, esta regla no se ofrece al firmar: si el inquilino no responde a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan.'
 describe('6.5.1 d) de C (Legal, 25/10, 2:53 a. m.)', () => {
   it.each([{ dos: true, correos: true }, { dos: true, correos: false }])('con dos personas, 6.5.1 termina con la d) (%o)', c => {

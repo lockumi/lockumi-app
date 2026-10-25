@@ -5,7 +5,7 @@
 // el lugar y las fotos no se envían a ningún lado para mostrarlo o imprimirlo.
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { modoPrueba, modoDe, deDosPersonas } from '../servidor/config'
+import { modoPrueba, modoDe, deDosPersonas, dosPersonas } from '../servidor/config'
 import { TEXTO_GUARDA_DOS, TEXTO_SOLOS_DOS } from '../prueba/dosPersonas'
 import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
@@ -43,8 +43,10 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
     </section>
 
     <section className="ct__sec"><h3>7 días para reclamos</h3>
-      {/* LEGAL: revisar. Resumen de la cláusula 6.5 de los Términos 1.6-demo. LEGAL: revisado (24/10) · «después de 7 días…» */}
-      <p className="ct__texto">Al terminar el alquiler, el dueño tiene 7 días para hacer un reclamo, con fotos y una factura o un presupuesto. Si no reclama, después de 7 días el depósito se devuelve completo al inquilino. El inquilino tiene 7 días para responder.</p>
+      {/* LEGAL: revisado (25/10, lista de Legal). Resumen de la cláusula 6.5 de los Términos 1.6-demo. LEGAL: revisado (24/10) · «después de 7 días…» */}
+      {/* LEGAL: revisado (25/10, lista de Legal) · 1.7-demo o posterior (solo con C encendido en la app): texto exacto de Legal; con dos personas, más la última frase */}
+      <p className="ct__texto">{dosPersonas && desde17(versionAlquiler(a)) ? `Al terminar el alquiler, el dueño tiene 7 días naturales para reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Cada reclamo va con fotos tomadas en la app y una factura o un precio de referencia. Si no reclama a tiempo, el depósito de prueba se devuelve completo al inquilino, menos el 0,3 % de comisión de Trustless Work en la red de prueba. El inquilino tiene 7 días naturales para responder, desde que el aviso le llega en la app. Su silencio no es aceptación. Si el último día cae en domingo o feriado, el plazo termina el siguiente día hábil.${deDosPersonas(a) ? ' Si el inquilino no responde a tiempo, el caso pasa a la Mediación Lockumi (demo).' : ''}`
+        : 'Al terminar el alquiler, el dueño tiene 7 días para hacer un reclamo, con fotos y una factura o un presupuesto. Si no reclama, después de 7 días el depósito se devuelve completo al inquilino. El inquilino tiene 7 días para responder.'}</p>
     </section>
 
     <section className="ct__sec"><h3>Mediación</h3>
@@ -65,7 +67,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       <h2 id={impresion ? undefined : 'ct-titulo'} className="ct__titulo">Contrato</h2>
       <p className="ct__estado"><span className={'ct__sello' + (firmado ? ' ct__sello--ok' : '')}>{firmado ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
         <span className="ct__ref">Referencia {a.id.slice(0, 8).toUpperCase()}</span></p>
-      {/* Paso 16: versión de los Términos de este alquiler (solo con el interruptor encendido). LEGAL: revisar */}
+      {/* Paso 16: versión de los Términos de este alquiler (solo con el interruptor encendido). LEGAL: revisado (25/10, lista de Legal) */}
       {pruebaCompleta() && <LineaVersion a={a} />}
     </header>
 
@@ -92,7 +94,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       </div>
     </> : completo}
 
-    {/* LEGAL: revisar. Resumen de las cláusulas 2.5 y 2.6 de los Términos 1.6-demo y de la línea de privacidad aprobada. */}
+    {/* LEGAL: revisado (25/10, lista de Legal). Resumen de las cláusulas 2.5 y 2.6 de los Términos 1.6-demo y de la línea de privacidad aprobada. */}
     <footer className="ct__pie">
       {modoPrueba && <p>Es una prueba en la red de prueba de Stellar, sin dinero real. No reemplaza un contrato de alquiler.</p>}
       <p>{deDosPersonas(a) ? TEXTO_GUARDA_DOS : 'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.'}</p>
@@ -144,7 +146,7 @@ function LineaVersion({ a }: { a: Alquiler }) {
   const pendiente = !!a.terminos?.hacia && a.terminos.hacia !== a.terminos.version   // aceptaciones de una versión nueva aún sin las dos
   const cuando = (r: Rol) => (pendiente ? undefined : a.terminos?.acepta?.[r]) ?? a.contrato.firmas[r]
   const [d, i] = [cuando('dueno'), cuando('inquilino')]
-  // LEGAL: revisar · línea de aceptaciones (texto propio, arreglo 3)
+  // LEGAL: revisado (25/10, lista de Legal) · línea de aceptaciones (texto propio, arreglo 3)
   const acepta = d && i ? `Aceptada por el dueño el ${fechaCR(d)} y por el inquilino el ${fechaCR(i)}.`
     : d ? `Aceptada por el dueño el ${fechaCR(d)}. Falta la aceptación del inquilino.`
     : i ? `Aceptada por el inquilino el ${fechaCR(i)}. Falta la aceptación del dueño.`

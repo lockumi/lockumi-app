@@ -155,7 +155,7 @@ export function Crear({ u }: { u: Usuario }) {
       if (!propia) e.monto = 'Primero conecta tu cuenta para ver cuántos USDC de prueba tienes.'
       else if ((propia.saldo ?? 0) < m) e.monto = mensajeSaldoPropio(propia.saldo ?? 0)
     }
-    return e })() : validarAlquiler(f, hoyISO(), u.email)
+    return e })() : validarAlquiler(f, hoyISO(), u.email, invitar)
   const ver = (k: Campo) => (enviado || tocado[k]) ? errores[k] : undefined
   const poner = (k: Campo, v: string) => setF(x => ({ ...x, [k]: v }))
   const tocar = (k: Campo) => () => setTocado(t => ({ ...t, [k]: true }))
@@ -190,7 +190,7 @@ export function Crear({ u }: { u: Usuario }) {
   const tope = !escrowReal ? MONTO_MAX : origen === 'lockumi' ? TOPE_USDC : Math.min(propia?.saldo ?? MONTO_MAX_USDC, MONTO_MAX_USDC)
   const mActual = montoNumero(f.monto) || 0
   const paso = (d: number) => { const n = Math.round((mActual + d) * 100) / 100; poner('monto', String(Math.max(1, Math.min(tope, n)))); tocar('monto')() }
-  const etMonto = !escrowReal ? 'USD' : origen === 'lockumi' ? `Máximo ${TOPE_USDC}` : propia?.saldo != null ? `Saldo ${propia.saldo.toLocaleString('es-CR', { maximumFractionDigits: 7 })}` : 'Hasta tu saldo'
+  const etMonto = !escrowReal ? (invitar ? 'USDC de prueba' : 'USD') : origen === 'lockumi' ? `Máximo ${TOPE_USDC}` : propia?.saldo != null ? `Saldo ${propia.saldo.toLocaleString('es-CR', { maximumFractionDigits: 7 })}` : 'Hasta tu saldo'
   const errMonto = ver('monto')
   const cuantos = Object.keys(errores).length
   const hoy = hoyISO(), le = limitesEntrada(hoy), ls = f.inicio ? limitesSalida(f.inicio) : null
@@ -199,7 +199,7 @@ export function Crear({ u }: { u: Usuario }) {
   return <main id="contenido" tabIndex={-1} className="cont cont--form na" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>
     <div className="cab titulo"><h1>Nuevo alquiler</h1><LogoAnimado className="logo-pieza logo-pieza--titulo" /></div>
-    {/* LEGAL: revisar. Resumen corto de «Prueba en la red de prueba de Stellar, sin dinero real»; el texto completo está en la hoja ⓘ. */}
+    {/* LEGAL: revisado (25/10, lista de Legal). Resumen corto de «Prueba en la red de prueba de Stellar, sin dinero real»; el texto completo está en la hoja ⓘ. */}
     {modoPrueba && <div className="na-meta"><button type="button" className="na-red" aria-haspopup="dialog" onClick={() => setInfo('red')}><Ico n="matraz" />Red de prueba · sin dinero real<span className="na-red__i" aria-hidden="true"><Ico n="i" /></span><span className="sr">. Ver detalles</span></button></div>}
 
     {/* Parte 4 (todavía no activa): tú eres el inquilino y el dueño es de prueba. «Soy dueño» e «Invitar» llegan después. */}
@@ -253,7 +253,7 @@ export function Crear({ u }: { u: Usuario }) {
         <div className={'na-paso' + (errMonto ? ' na-paso--error' : '')}>
           <button type="button" aria-label="Restar 1" disabled={mActual <= 1} onClick={() => paso(-1)}><Ico n="menos" /></button>
           <div className="na-paso__valor"><input id="f-monto" value={f.monto} onChange={e => poner('monto', e.target.value)} onBlur={tocar('monto')} inputMode="decimal" placeholder="0" autoComplete="off"
-            aria-invalid={!!errMonto} aria-describedby={'f-monto-u' + (errMonto ? ' f-monto-err' : '')} /><small id="f-monto-u">{escrowReal ? 'USDC de prueba' : 'USD'}</small></div>
+            aria-invalid={!!errMonto} aria-describedby={'f-monto-u' + (errMonto ? ' f-monto-err' : '')} /><small id="f-monto-u">{escrowReal || invitar ? 'USDC de prueba' : 'USD'}</small></div>
           <button type="button" aria-label="Sumar 1" disabled={mActual >= tope} onClick={() => paso(1)}><Ico n="mas" /></button>
         </div>
         {errMonto && <small id="f-monto-err" className="campo__error" role="alert">{errMonto}</small>}
@@ -288,17 +288,22 @@ export function Crear({ u }: { u: Usuario }) {
       {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}
       {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
       <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta) || (invitar && (!declara || !aceptaVersion))}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
-      {/* LEGAL: revisar. Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
+      {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
       {prueba1 ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
         : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}
     </form>
 
     <Hoja id="info" titulo={info === 'red' ? 'Red de prueba' : info === 'usdc' ? 'USDC de prueba' : 'Fechas'} abierta={!!info} onCerrar={() => setInfo(null)}>
       <div className="na-hoja__texto">
-        {/* LEGAL: revisar. Hoja «Red de prueba» 1.5 (borrador): 1.er párrafo = ⓘ de la píldora propuesto por Legal; el resto, versión corta del texto 1.4 con los cambios pedidos. */}
+        {/* LEGAL: revisado (25/10, lista de Legal). Hoja «Red de prueba» 1.5 (borrador): 1.er párrafo = ⓘ de la píldora propuesto por Legal; el resto, versión corta del texto 1.4 con los cambios pedidos. */}
         {info === 'red' && <>
           <p>Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.</p>
-          {modoSolo ? <>
+          {/* LEGAL: revisado (25/10, lista de Legal) · hoja de «Invitar a la otra persona» (C), texto exacto de Legal */}
+          {invitar ? <>
+            <p>Tú eres el dueño y la persona que invitas es el inquilino. Cada uno entra con su propia cuenta y firma por sí mismo.</p>
+            <p>Si hay un reclamo y no se ponen de acuerdo, el caso pasa a la Mediación Lockumi (demo), sin costo. La mediación no decide por ustedes: el reparto solo se aplica si los dos lo aceptan. Si no hay acuerdo, el depósito de prueba sigue retenido. Si el dueño no reclama a tiempo, se devuelve automáticamente el 100 % al inquilino, menos el 0,3 % de comisión de Trustless Work.</p>
+            <p>El alquiler simulado y las fotos reducidas se guardan en Supabase, en un almacenamiento privado en Estados Unidos. A la red solo va una huella de las fotos.</p>
+          </> : modoSolo ? <>
             {/* LEGAL: revisado (24/10) · 5.3 ronda 9 (texto del depósito); ronda 8: modoSolo (con o sin billetera propia); el reclamo y la mediación no van a la red (DetalleSolo no tiene reclamo) */}
             <p>Tú eres el <strong>inquilino</strong>. Si usas tu propia billetera, depositas con ella; si no, Lockumi firma el depósito por ti con una cuenta de prueba, en la red de prueba. El dueño es el <strong>{minuscula(DUENO_PRUEBA)}</strong>: por eso no te pedimos su correo.</p>
             <p>Lockumi firma y confirma por el dueño de prueba: tú tocas el botón en su nombre. El reclamo y la persona mediadora son simulados y no se registran en la red de prueba.</p>
@@ -307,15 +312,15 @@ export function Crear({ u }: { u: Usuario }) {
             {/* LEGAL: revisado (24/10) · ronda 8: modoVideo (producción): el reclamo abre una disputa real en la red de prueba (acciones.reclamar → escrow.disputar); la mediación es simulada */}
             <p>Lockumi firma y confirma por el dueño de prueba. La mediación es simulada. El reclamo lo haces tú con un botón, en nombre del dueño de prueba, y queda registrado en la red de prueba.</p>
           </>}
-          <p>El nombre del lugar y las fotos se quedan en tu navegador; a la red solo va una huella de las fotos.</p></>}
-        {/* LEGAL: revisar. Hoja «USDC de prueba» 1.5 (borrador): base = ⓘ propuesto por Legal, más billeteras (Cavos o Freighter) y «hasta tu saldo». */}
+          {!invitar && <p>El nombre del lugar y las fotos se quedan en tu navegador; a la red solo va una huella de las fotos.</p>}</>}
+        {/* LEGAL: revisado (25/10, lista de Legal). Hoja «USDC de prueba» 1.5 (borrador): base = ⓘ propuesto por Legal, más billeteras (Cavos o Freighter) y «hasta tu saldo». */}
         {info === 'usdc' && <>
           <p>El USDC de prueba no es dinero real y no tiene valor. Tienes dos opciones:</p>
           <ul>
-            <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}.</li>
-            <li><strong>Usar mi propio USDC de prueba:</strong> el de tu billetera de Lockumi (Cavos) o de Freighter, hasta tu saldo y como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}. Lo obtienes con Friendbot y el exchange de la red de prueba.</li>
+            <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.</li>
+            <li><strong>Usar mi propio USDC de prueba:</strong> el de tu billetera de Lockumi (Cavos) o de Freighter, hasta tu saldo y como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Para obtenerlo, recibes XLM de prueba de Friendbot y compras USDC de prueba en el exchange descentralizado de la red de prueba.</> : '. Lo obtienes con Friendbot y el exchange de la red de prueba.'}</li>
           </ul></>}
-        {/* LEGAL: revisar. Texto propuesto por Legal para la ⓘ de «Fechas», palabra por palabra. */}
+        {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal para la ⓘ de «Fechas», palabra por palabra. */}
         {info === 'fechas' && <p>En esta demo, la fecha de entrada es de hoy en adelante (hasta 1 año) y la duración va de 1 mes a 5 años. Son valores de prueba, no plazos legales.</p>}
       </div>
       <button type="button" className="boton boton--primario boton--ancho na-hoja__listo" onClick={() => setInfo(null)}>Entendido</button>

@@ -66,7 +66,7 @@ describe('Estado de espera del pago: botón y accesibilidad', () => {
   it('textos nuevos marcados para Legal', () => {
     const src = leer('../espera.ts')
     for (const t of ['PASOS_PAGO', 'ESPERA_PAGO', 'NOTA_ESPERA_PAGO', 'LISTO_PAGO', 'REINTENTO_PAGO', 'BARRA_PAGO', 'LISTA_PASOS', 'MARCA_PASO', 'vozPago'])
-      expect(src.split('\n').find(l => l.includes(`export const ${t} `) || l.includes(`export const ${t}=`))).toMatch(/\/\/ LEGAL: revisar/)
+      expect(src.split('\n').find(l => l.includes(`export const ${t} `) || l.includes(`export const ${t}=`))).toMatch(/\/\/ LEGAL: revisado \(25\/10, lista de Legal\)/)
   })
 })
 

@@ -3,7 +3,7 @@
 import type { Plantilla, DatosAviso } from '../../api/_lib/avisos'
 import type { Alquiler, Rol } from '../types'
 
-// LEGAL: revisar · casilla de consentimiento (sin marcar al empezar)
+// LEGAL: revisado (25/10, lista de Legal) · casilla de consentimiento (sin marcar al empezar)
 export const CASILLA_CORREO = 'Acepto que Lockumi me envíe avisos por correo'
 const EMAIL = /^[^\s@<>"',;]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/i
 export const puedeEnviarAvisos = (correo: string, acepta: boolean) => acepta && EMAIL.test(correo.trim())

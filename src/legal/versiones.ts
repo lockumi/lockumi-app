@@ -6,13 +6,15 @@ import type { Interruptor, Interruptores } from './condicional'
 import { V17, FECHA_V17 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
-// LEGAL: revisar · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
+// LEGAL: revisado (25/10, lista de Legal) · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
 // 1.9-demo: FECHA_V19 es PROVISIONAL. Paso obligatorio al encender C (encendido-lista.md): poner aquí la fecha real del encendido.
-// LEGAL: revisar
+// LEGAL: revisado (25/10, lista de Legal)
 export const FECHA_V19 = '25 de octubre de 2026'
+/** 1.8-demo (B, solo correos): fecha provisional de B. En C (B se enciende junto con C) se muestra FECHA_V19: ver casillaDeFuncion. */
+export const FECHA_V18 = '1 de noviembre de 2026'
 export const VERSIONES: VersionLegal[] = [
   { version: V17, fecha: FECHA_V17, escenario: 'A', interruptores: { 'dos-personas': false, correos: false } },
-  { version: '1.8-demo', fecha: '1 de noviembre de 2026', escenario: 'B', interruptores: { 'dos-personas': false, correos: true } },
+  { version: '1.8-demo', fecha: FECHA_V18, escenario: 'B', interruptores: { 'dos-personas': false, correos: true } },
   { version: '1.9-demo', fecha: FECHA_V19, escenario: 'C', interruptores: { 'dos-personas': true, correos: true } },
 ]
 const ORDEN = ['1.6-demo', ...VERSIONES.map(v => v.version)]
@@ -27,17 +29,19 @@ export const desde17 = (v: string) => ordenVersion(v) >= ordenVersion(V17)
 
 /** Aviso que no bloquea (tarjeta en «Tus alquileres») para quien aceptó una 1.7-demo o posterior más vieja que la vigente.
  *  Sin aceptación o con la 1.6-demo: lo pide «Entrar», como en el paso 16. */
-// LEGAL: revisar · aviso de nueva versión (texto propio basado en la cláusula 12)
+// LEGAL: revisado (25/10, lista de Legal) · aviso de nueva versión (texto propio basado en la cláusula 12)
 export function avisoNuevaVersion(aceptada: string | undefined, s: Interruptores): string | null {
   const vig = versionVigente(s)
   if (!aceptada || !desde17(aceptada) || ordenVersion(aceptada) >= ordenVersion(vig)) return null
-  return `Actualizamos los Términos y el Aviso de privacidad (versión ${edicionDe(vig)}). Puedes seguir usando la app. Lo nuevo te lo pedimos con una casilla dentro de cada función.`
+  return `Actualizamos los Términos y el Aviso de privacidad (versión ${edicionDe(vig)}). Puedes seguir usando la app. Cuando uses una función nueva, te pediremos que la aceptes con una casilla. Tus alquileres ya firmados siguen con su versión, salvo que el dueño y el inquilino acepten el cambio.`
 }
 
 /** Casilla, dentro de cada función nueva, que acepta lo que agrega su versión (sin marcar; la función no sigue sin ella). */
-// LEGAL: revisar · textos de las casillas dentro de cada función
-export function casillaDeFuncion(f: Interruptor): { version: string; texto: string } {
+// LEGAL: revisado (25/10, lista de Legal) · textos de las casillas dentro de cada función
+// Con C encendido (s['dos-personas']), B se enciende a la vez: la 1.8-demo lleva la fecha de C (FECHA_V19), nunca una fecha futura.
+export function casillaDeFuncion(f: Interruptor, s?: Interruptores): { version: string; texto: string } {
   const version = f === 'correos' ? '1.8-demo' : '1.9-demo'
   const para = f === 'correos' ? 'recibir los avisos del alquiler simulado por correo' : 'simular un alquiler con otra persona'
-  return { version, texto: `Acepto lo que agrega la versión ${edicionDe(version)} de los Términos y del Aviso de privacidad para ${para}.` }
+  const edicion = version === '1.8-demo' && s?.['dos-personas'] ? `${version} · ${FECHA_V19}` : edicionDe(version)
+  return { version, texto: `Acepto lo que agrega la versión ${edicion} de los Términos y del Aviso de privacidad para ${para}.` }
 }

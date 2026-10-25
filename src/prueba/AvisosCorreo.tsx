@@ -31,7 +31,7 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
   }
   if (guardado && estado !== 'enviando') return <div className="avisos-correo" role="status">
     <p><strong>Avisos por correo activados.</strong> Te escribiremos a la dirección que diste cuando haya un aviso nuevo de este alquiler. Los avisos también siguen en la app.</p>
-    <label className="avisos-correo__casilla"><input type="checkbox" checked onChange={desmarcar} /> {CASILLA_CORREO}</label>{/* LEGAL: revisar · desmarcar detiene los envíos */}
+    <label className="avisos-correo__casilla"><input type="checkbox" checked onChange={desmarcar} /> {CASILLA_CORREO}</label>{/* LEGAL: revisado (25/10, lista de Legal) · desmarcar detiene los envíos */}
     <p className="nota">Para dejar de recibirlos, desmarca la casilla. Seguirás viéndolos dentro de la app.</p></div>
   const enviar = async () => {
     setError('')
@@ -49,7 +49,7 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
     <p>Opcional. Te enviamos los mismos avisos de la app: los días 1, 4 y 6 del plazo y si hay un reclamo. Sin la dirección ni fotos; solo montos de prueba, fechas y un enlace a la app.</p>
     <label className="campo"><span>Tu correo</span>
       <input type="email" inputMode="email" autoComplete="email" placeholder="nombre@correo.com" value={correo} onChange={e => setCorreo(e.target.value)} /></label>
-    <label className="avisos-correo__casilla"><input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} /> {CASILLA_CORREO}</label>{/* LEGAL: revisar */}
+    <label className="avisos-correo__casilla"><input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} /> {CASILLA_CORREO}</label>{/* LEGAL: revisado (25/10, lista de Legal) */}
     <button type="button" className="boton boton--pc boton--ancho" disabled={estado === 'enviando'} onClick={() => void enviar()}>{estado === 'enviando' ? 'Guardando…' : 'Recibir los avisos por correo'}</button>
     {error && <p className="error" role="alert">{error}</p>}
   </div>

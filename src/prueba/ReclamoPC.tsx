@@ -37,7 +37,7 @@ export function FormRubros({ a, onCancelar }: { a: Alquiler; onCancelar: () => v
   const cambiar = (i: number, c: Partial<Borrador>) => setLista(l => l.map((b, k) => k === i ? { ...b, ...c } : b))
   const errores = rubros.map(r => [r.cantidad > 0 ? '' : 'Escribe una cantidad mayor que cero.', r.descripcion.trim().length < 10 ? 'Describe el daño en al menos 10 letras.' : '', r.fotos.length ? '' : 'Agrega al menos una foto de salida.'].filter(Boolean))
   const enviar = () => { setEnv(true); if (errores.some(e => e.length) || !(total > 0)) return; void p.correr(av => acciones.reclamarRubros!(a, rubros, av)) }
-  // LEGAL: revisar · formulario del reclamo por rubros (textos de la 6.2, 6.4 y 6.4.1)
+  // LEGAL: revisado (25/10, lista de Legal) · formulario del reclamo por rubros (textos de la 6.2, 6.4 y 6.4.1)
   return <div className="pila reclamo-rubros">
     <h2>Reclamo por rubros</h2>
     <p className="nota">Cada monto debe indicar su motivo (6.2) e ir con fotos y una factura o el precio de referencia (6.4). El desgaste normal nunca se cobra (Anexo 6-A).</p>
@@ -102,7 +102,7 @@ function Respuesta({ a }: { a: Alquiler }) {
   const [r, setR] = useState<Record<string, { acepta: boolean; tipo: 'factura' | 'cotizacion'; monto: string; comercio: string }>>(() => Object.fromEntries(rubros.map(b => [b.id, { acepta: true, tipo: 'cotizacion', monto: '', comercio: '' }])))
   const cambiar = (id: string, c: Partial<(typeof r)[string]>) => setR(v => ({ ...v, [id]: { ...v[id], ...c } }))
   const resp: Record<string, RespuestaRubro> = Object.fromEntries(rubros.map(b => { const x = r[b.id]; return [b.id, x.acepta ? { acepta: true } : { acepta: false, ...(num(x.monto) >= 0 && x.monto.trim() && x.comercio.trim() ? { soporte: { tipo: x.tipo, monto: num(x.monto), comercio: x.comercio.trim() } } : {}) }] }))
-  // LEGAL: revisar · respuesta por rubro (6.4.4: factura o cotización de un comercio inscrito)
+  // LEGAL: revisado (25/10, lista de Legal) · respuesta por rubro (6.4.4: factura o cotización de un comercio inscrito)
   return <section className="pila" aria-labelledby="t-responder"><h3 id="t-responder">Tu respuesta, rubro por rubro</h3>
     {rubros.map(b => { const x = r[b.id]
       return <fieldset key={b.id} className="rubro pila"><legend>{nombreRubro(b)} · {u(calcular(a, b).reclamado)}</legend>
@@ -144,7 +144,7 @@ export function ReclamoPC({ a, rol }: { a: Alquiler; rol: Rol }) {
     {cuerpo}
     <AvisosApp a={a} rol={rol} onAccion={irA} />
     {adelantoPermitido() && !s && !rec.propuesta && pl && <section className="pila simulador" aria-labelledby="t-simulador-r">
-      {/* LEGAL: revisar · simulador de días */}
+      {/* LEGAL: revisado (25/10, lista de Legal) · simulador de días */}
       <h3 id="t-simulador-r">Simulador de días (solo red de prueba)</h3>
       <p className="nota">Reloj de la demo: {cr(ahora)}. Adelántalo para ver los avisos de cada día y qué pasa si el inquilino no responde; no cambia la hora real.</p>
       <div className="fila-botones">

@@ -4,8 +4,10 @@ import { edicionDe } from '../legal/versiones'
 
 export interface Filas {
   contrato: { id: string; direccion: string; monto: number | string; inicio: string; fin: string; reglas: string[]; email_inquilino: string; estado: Estado
-    ventana_inicio: string | null; ventana_segundos: number; escrow_contract_id: string | null; resultado: { via: 'automatico' | 'acuerdo' | 'mediacion'; cierre?: string; dueno: number | string; inquilino: number | string } | null
-    liquidacion_tx: string | null; creado_en: string; actualizado_en: string }
+    ventana_inicio: string | null; ventana_segundos: number; escrow_contract_id: string | null; resultado: { via: 'automatico' | 'acuerdo' | 'mediacion' | 'devuelto'; cierre?: string; dueno: number | string; inquilino: number | string } | null
+    liquidacion_tx: string | null; creado_en: string; actualizado_en: string
+    /** 20261025060000 (C): cuándo se entregó la casa; sin «Recibí», el plazo empieza 2 días después (lk_inicio_plazo). */
+    entregado_en?: string | null }
   participantes: { rol: Rol; usuario: string; email_cavos: string; direccion_stellar: string | null }[]
   actas: { etapa: 'entrada' | 'salida'; cuartos: { nombre: string; nota: string; items: { texto: string; estado: 'bien' | 'detalle' | null }[] }[] }[]
   firmas: { etapa: 'contrato' | 'entrada' | 'salida'; rol: Rol; firmado_en: string }[]
@@ -31,7 +33,16 @@ function acta(f: Filas, etapa: 'entrada' | 'salida', url: (r: string) => string)
     fotos: f.fotos.filter(x => x.etapa === etapa && x.cuarto === i).map(x => aFoto(x, url)) })) }
 }
 
-export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string): Alquiler {
+const INICIO_AUTO_MS = 2 * 86_400_000
+/** Igual que lk_inicio_plazo: ventana_inicio («Recibí») o, si no, 2 días después de la entrega (cuando ya pasaron). */
+function inicioPlazo(c: Filas['contrato'], ahora: number) {
+  if (c.ventana_inicio) return c.ventana_inicio
+  if (!c.entregado_en) return undefined
+  const t = +new Date(c.entregado_en) + INICIO_AUTO_MS
+  return ahora >= t ? new Date(t).toISOString() : undefined
+}
+
+export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string, ahora = Date.now()): Alquiler {
   const c = f.contrato; const p = (r: Rol) => f.participantes.find(x => x.rol === r)
   const mio = f.participantes.find(x => x.usuario === yo)?.rol
   const pagoEv = f.eventos.find(e => /^Depósito de .* pagado/.test(e.texto))
@@ -41,7 +52,7 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string): 
     inquilinoUnido: Boolean(p('inquilino')), miRol: mio, cuentas: { dueno: p('dueno')?.direccion_stellar ?? undefined, inquilino: p('inquilino')?.direccion_stellar ?? undefined },
     estado: c.estado, rendimiento: false, dosPersonas: true, escrowId: c.escrow_contract_id ?? undefined,
     contrato: { firmas: firmasDe(f.firmas, 'contrato') }, entrada: acta(f, 'entrada', url) ?? { firmas: {}, cuartos: [] }, salida: acta(f, 'salida', url),
-    pago: pagoEv?.creado_en, ventanaInicio: c.ventana_inicio ?? undefined, ventanaSegundos: c.ventana_segundos, diasSimulados: 0,
+    pago: pagoEv?.creado_en, ventanaInicio: inicioPlazo(c, ahora), ...(c.entregado_en ? { entrega: c.entregado_en } : {}), ventanaSegundos: c.ventana_segundos, diasSimulados: 0,
     reclamo: f.reclamo ? { monto: Number(f.reclamo.monto), motivo: f.reclamo.motivo, fecha: f.reclamo.creado_en, respuesta: f.reclamo.respuesta ?? undefined,
       fotos: f.fotos.filter(x => x.etapa === 'reclamo').map(x => aFoto(x, url)) } : undefined,
     resultado: c.resultado ? { via: c.resultado.via, ...(c.resultado.cierre ? { cierre: c.resultado.cierre } : {}), dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,

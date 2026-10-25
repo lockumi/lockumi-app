@@ -4,9 +4,9 @@
 import { correosActivos } from './interruptor'
 import { enviarCorreo } from './correoAvisos'
 
-// LEGAL: revisar · casilla de la declaración (texto propio, igual que la Privacidad 1.7-demo)
+// LEGAL: revisado (25/10, lista de Legal) · casilla de la declaración (texto propio, igual que la Privacidad 1.7-demo)
 export const declaracionInvitacion = () => correosActivos()
-  ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de Lockumi.'
+  ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.'
   : 'Declaro que esta persona sabe que la invito.'
 
 const NOMBRE = /^[\p{L} .'-]{1,60}$/u

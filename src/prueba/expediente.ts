@@ -9,14 +9,14 @@ import { nombreRubro } from './reclamos'
 import { leerAceptacion } from '../legal/aceptacion'
 import { esDosPersonas, EXPEDIENTE_REGLA_DOS } from './dosPersonas'
 
-// LEGAL: revisar · B.11
+// LEGAL: revisado (25/10, lista de Legal) · B.11
 export const BOTON_EXPEDIENTE = 'Descargar el expediente (demo)'
-// LEGAL: revisar · B.11 (aviso antes de descargar)
+// LEGAL: revisado (25/10, lista de Legal) · B.11 (aviso antes de descargar)
 export const AVISO_EXPEDIENTE = 'Este expediente tiene datos personales de la otra parte. Úsalo solo para este reclamo: para conversar con la otra parte, en una mediación o conciliación, o ante un tribunal. No lo publiques ni lo compartas con otras personas.'
-// LEGAL: revisar · B.11 (marca de cada página)
+// LEGAL: revisado (25/10, lista de Legal) · B.11 (marca de cada página)
 export const MARCA_EXPEDIENTE = 'DEMO · Sin efecto legal'
 
-// LEGAL: revisar · Legal 24/10 (11:29 p. m.), en «Resultado» cuando el reparto salió del botón de simulación
+// LEGAL: revisado (25/10, lista de Legal) · Legal 24/10 (11:29 p. m.), en «Resultado» cuando el reparto salió del botón de simulación
 export const NOTA_SIMULACION = 'El reparto se eligió con el botón de simulación: no lo decidió una persona.'
 /** `fotos`: índice de línea → src de la foto que va debajo de esa línea. */
 export interface Seccion { titulo: string; lineas: string[]; fotos?: Record<number, string> }
