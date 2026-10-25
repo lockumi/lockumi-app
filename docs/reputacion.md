@@ -43,8 +43,8 @@ frase de reputación que existe hoy en producción es la del Aviso 1.6/1.7 («no
 - **«En revisión»** mientras haya un reclamo abierto o una revisión pedida (esos alquileres no cuentan).
 - **10 años:** un hecho negativo deja de contar 10 años después de que ocurrió (y se avisa con REP-12).
 - Llave Lockumi: 10 o más alquileres, 4,8 o más, fotos completas y sin hechos negativos en 12 meses.
-- Sin rankings, números de posición ni filtros por puntaje. Las vitrinas se ordenan por cantón y precio (1 de cada 3 tarjetas es para nuevos) y solo
-  muestran el cantón (o la provincia si hay menos de 10 personas).
+- Sin rankings, números de posición ni filtros por puntaje. Las vitrinas (opcionales, desde 3 alquileres cerrados) solo muestran el cantón
+  (o la provincia si en el cantón hay menos de 10 personas); nunca barrio, dirección ni distancia.
 
 ## Revisión, avisos y protección
 
