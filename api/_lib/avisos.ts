@@ -19,12 +19,14 @@ const u = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2
 export const venceTexto = (fin: number) => `${fechaHoraCR(fin)}, hora de Costa Rica`
 export interface Contenido { asunto: string; texto: string }
 
+/** Frase de los días 1 y 6 del reclamo según la regla aceptada al firmar (en la app). */
+export const segunRegla = (regla: boolean) => regla ? `Si no respondes, se aplicará la propuesta automática (máximo el ${TOPE_REGLA * 100} % del depósito, solo con pruebas completas).`
+  : 'Si no respondes, el caso pasa a la mediación, que tiene costo (en la demo no se cobra).'
 /** Asunto y texto de cada aviso. */
 export function textoAviso(p: Plantilla, d: DatosAviso): Contenido {
   const vence = venceTexto(d.venceMs ?? 0)
   // LEGAL: revisado (24/10) · B.2 (frase del día 1 y del día 6 según la regla)
-  const segun = d.regla ? `Si no respondes, se aplicará la propuesta automática (máximo el ${TOPE_REGLA * 100} % del depósito, solo con pruebas completas).`
-    : 'Si no respondes, el caso pasa a la mediación, que tiene costo (en la demo no se cobra).'
+  const segun = segunRegla(!!d.regla)
   switch (p) {
     // LEGAL: revisado (24/10) · B.2b (en la demo, «depósito de prueba»)
     case 'dueno-1': return { asunto: 'Tienes 7 días naturales para revisar la casa y reclamar',

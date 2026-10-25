@@ -1,4 +1,6 @@
 import { aHtml } from './markdown'
+import privacidad17 from '../prueba/privacidad-1.7.md?raw'
+import { pruebaCompleta } from '../prueba/interruptor'
 
 /** Textos legales: cada `*.md` de esta carpeta es una página (`terminos.md` → `/terminos`).
  *  Para cambiar un texto basta con reemplazar su archivo (ver LEEME.md). */
@@ -27,6 +29,7 @@ export function leerDoc(slug: string, crudo: string): DocLegal {
   return { slug, titulo, version, fecha, html: aHtml(cuerpo), borrador: /borrador/i.test(version) || /borrador provisional/i.test(cuerpo), metaEnTexto, revisionAbogado: /revisi[oó]n por abogado/i.test(cuerpo) }
 }
 
+
 export const DOCS: Record<string, DocLegal> = Object.fromEntries(
   Object.entries(archivos)
     .map(([ruta, txt]) => [ruta.replace(/^\.\/|\.md$/g, ''), txt] as const)
@@ -34,7 +37,10 @@ export const DOCS: Record<string, DocLegal> = Object.fromEntries(
     .map(([slug, txt]) => [slug, leerDoc(slug, txt)]),
 )
 export const TERMINOS = DOCS.terminos
-export const PRIVACIDAD = DOCS.privacidad as DocLegal | undefined
+/** Paso 11: con el interruptor de la prueba completa, la Privacidad 1.7-demo con los correos (LEGAL-correos-2104.md, punto 2).
+ *  Al cambiar la versión, Reaceptacion.tsx pide aceptarla de nuevo dentro de la sesión. */
+export const privacidadVigente = (): DocLegal | undefined => pruebaCompleta() ? leerDoc('privacidad', privacidad17) : DOCS.privacidad as DocLegal | undefined
+export const PRIVACIDAD = privacidadVigente()
 export const hayPrivacidad = !!PRIVACIDAD
 
 /** Texto fijo de la casilla de consentimiento de privacidad (ya no viene en privacidad.md; sale solo de la app).
