@@ -1,7 +1,7 @@
 // Paso 16 · Privacidad 1.7-demo: «Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso,
 // salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app.»
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import fuenteSincronizar from '../sincronizar.ts?raw'
 import type { Alquiler, Foto } from '../../types'
 import { DIAS_BORRADO, debeBorrarMediacion, borrarMediacion, guardarMediacion, TEXTO_BORRADO } from '../borrado'
 
@@ -49,7 +49,7 @@ describe('borrado de los datos de la mediación a los 30 días', () => {
     expect(debeBorrarMediacion(alq({ terminos: { version: '1.6-demo' } }), t0 + 31 * DIA)).toBe(false)
   })
   it('la sincronización de la prueba lo aplica con el reloj de la demo', () => {
-    const s = readFileSync('src/prueba/sincronizar.ts', 'utf8')
+    const s = fuenteSincronizar
     expect(s).toMatch(/debeBorrarMediacion\(a, ahoraDe\(a\)\)/); expect(s).toMatch(/borrarMediacion\(x, ahoraDe\(x\)\)/)
   })
 })
