@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (ajustes de Legal de las 11:25 p. m., sin cambios visibles)**
+- Prueba completa (detrás del interruptor): todos los montos dicen «800 USDC de prueba» (también la cabecera y la tarjeta del detalle) y la franja de la red de prueba se ve en todas las pantallas.
+
 **24 de octubre de 2026 (PR 8, paso 15, sin cambios visibles)**
 - Prueba completa (detrás del interruptor): al crear un alquiler se ve la B.8 («En la demo, la app es gratis», la suscripción del servicio real y las dos autorizaciones que se pedirían, sin casillas) y la B.13 «Rendimiento del depósito: función en estudio» (sin tasas, montos ni «Próximamente»). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
