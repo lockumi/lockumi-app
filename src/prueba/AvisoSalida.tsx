@@ -1,6 +1,7 @@
 // Aviso de reparación 5 días antes de la salida (Términos 1.7-demo, 6.1.1; B.3), en la app, para el inquilino, con sus fotos de
 // entrada para comparar. Solo con el interruptor encendido. El aviso lo entrega `sincronizar` (avisos.ts: «reparacion-5»).
 import './prueba.css'
+import { Fragment } from 'react'
 import type { Alquiler, Rol } from '../types'
 import { store, ahoraDe } from '../store'
 import { adelantoPermitido } from '../../api/_lib/red'
@@ -21,7 +22,7 @@ export function AvisoSalida({ a, rol }: { a: Alquiler; rol: Rol }) {
       <h3 id="t-aviso-salida">Aviso en la app: 5 días antes de la salida</h3>
       <details className="aviso-app" onToggle={e => { if ((e.target as HTMLDetailsElement).open) abrir() }}>
         <summary><strong>5 días antes de la salida</strong> · {v.asunto}{!v.abierto && <span className="chip chip--coral">Nuevo</span>}</summary>
-        <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <span key={i}><a href="#/terminos">ver las reglas</a>{t}</span>)}</p>
+        <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <Fragment key={i}><a href="#/terminos">ver las reglas</a>{t}</Fragment>)}</p>
         <h4>Tus fotos de entrada</h4>
         {a.entrada.cuartos.map((c, i) => <div key={i} className="pila"><strong>{c.nombre}</strong><FotoLista fotos={c.fotos} vacio="Sin fotos de entrada de este espacio." /></div>)}
         {/* LEGAL: revisar · registro visible en el detalle del caso */}
