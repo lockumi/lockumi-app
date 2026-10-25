@@ -60,9 +60,11 @@ describe('una versión por escenario, cada una con su fecha', () => {
     expect(versionVigente({ 'dos-personas': true, correos: true })).toBe('1.9-demo')
     expect(versionVigente({ 'dos-personas': true, correos: false })).toBe('1.9-demo')
   })
-  it('cada versión tiene su propia fecha; la 1.7-demo sigue con la del 25 de octubre', () => {
+  it('cada versión tiene su fecha; la 1.7-demo sigue con la del 25 de octubre', () => {
     expect(edicionDe('1.7-demo')).toBe('1.7-demo · 25 de octubre de 2026')
-    const fechas = VERSIONES.map(v => v.fecha); expect(new Set(fechas).size).toBe(fechas.length)
+    // PR #22: la 1.9-demo lleva «25 de octubre de 2026» como fecha provisional (poner la fecha real de encendido de C).
+    expect(edicionDe('1.9-demo')).toBe('1.9-demo · 25 de octubre de 2026')
+    const fechas = VERSIONES.filter(v => v.version !== '1.9-demo').map(v => v.fecha); expect(new Set(fechas).size).toBe(fechas.length)
     for (const v of VERSIONES) expect(edicionDe(v.version)).toBe(`${v.version} · ${v.fecha}`)
     expect(ordenVersion('1.6-demo')).toBeLessThan(ordenVersion('1.7-demo')); expect(ordenVersion('1.8-demo')).toBeLessThan(ordenVersion('1.9-demo'))
   })

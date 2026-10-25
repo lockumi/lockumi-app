@@ -5,7 +5,8 @@
 //          https://supabase.com/docs/reference/javascript/storage-from-createsignedurls
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 import type { Alquiler, Foto, Rol } from '../types'
-import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS } from './config'
+import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS, dosPersonas } from './config'
+import { linkInvitacion } from './origen'
 import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
 import type { Aceptacion } from './aceptaciones'
 
@@ -39,7 +40,7 @@ const urls = new Map<string, string>()
 const INV = 'lockumi.invitaciones'
 const invitaciones = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(INV) || '{}') } catch { return {} } }
 const guardarInvitacion = (id: string, t: string) => localStorage.setItem(INV, JSON.stringify({ ...invitaciones(), [id]: t }))
-export const linkInvitacion = (id: string, token: string) => `${location.origin}/#/invitacion/${id}/${token}`
+export { linkInvitacion }
 
 export async function recargar() {
   const sb = await supabase(); yo = await sesion()
@@ -52,6 +53,11 @@ export async function recargar() {
     de('lk_fotos', 'id, etapa, cuarto, por_rol, ruta, sha256, sha256_original, tomada_en, fecha_archivo, origen, posible_galeria, subido_en'),
     de('lk_reclamos', 'monto, motivo, creado_en, respuesta'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
   for (const r of [ps, as, fs, fts, rs, es]) if (r.error) throw new ErrorServidor(mensajeServidor(r.error))
+  // Escenario C (20261025050000): versión de los Términos por alquiler. Sin la migración, la consulta falla y todo sigue como antes.
+  const [tv, at] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en')]) : []
+  const conTerminos = !!tv && !!at && !tv.error && !at.error
+  const terminosDe = (id: string): Filas['terminos'] => conTerminos ? { version: ((tv.data ?? []) as { id: string; terminos_version: string | null }[]).find(x => x.id === id)?.terminos_version ?? null,
+    aceptaciones: por(at, id) as unknown as NonNullable<Filas['terminos']>['aceptaciones'] } : null
   type Fila = Record<string, unknown> & { contrato_id: string }
   const por = (r: { data: unknown }, id: string) => ((r.data ?? []) as Fila[]).filter(x => x.contrato_id === id)
   const faltan = ((fts.data ?? []) as unknown as { ruta: string }[]).map(f => f.ruta).filter(r => !urls.has(r))
@@ -63,7 +69,7 @@ export async function recargar() {
   datos = (cs ?? []).map(c => {
     const a = aAlquiler({ contrato: c as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
       firmas: por(fs, c.id) as unknown as Filas['firmas'], fotos: por(fts, c.id) as unknown as Filas['fotos'], reclamo: (por(rs, c.id)[0] ?? null) as unknown as Filas['reclamo'],
-      eventos: por(es, c.id) as unknown as Filas['eventos'] }, yo, r => urls.get(r) ?? '')
+      eventos: por(es, c.id) as unknown as Filas['eventos'], terminos: terminosDe(c.id) }, yo, r => urls.get(r) ?? '')
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
@@ -106,15 +112,18 @@ async function subirFoto(id: string, etapa: 'entrada' | 'salida' | 'reclamo', cu
 
 const tras = async <T>(p: Promise<T>) => { const r = await p; await recargar(); return r }
 export const servidor = {
-  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string }, email: string, cuenta?: string) {
+  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string; terminosVersion?: string }, email: string, cuenta?: string) {
     // paso16-unido: al invitar, el servidor guarda la declaración (quién, cuándo y el texto) en la misma transacción.
-    const r = await rpc<{ id: string; token: string }>(d.declaracion ? 'lk_crear_contrato_invitando' : 'lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
-      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS, ...(d.declaracion && { p_declaracion: d.declaracion }) })
+    const r = await rpc<{ id: string; token: string }>(d.declaracion ? (d.terminosVersion ? 'lk_crear_contrato_con_terminos' : 'lk_crear_contrato_invitando') : 'lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
+      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS, ...(d.declaracion && { p_declaracion: d.declaracion }), ...(d.declaracion && d.terminosVersion && { p_terminos_version: d.terminosVersion }) })
     guardarInvitacion(r.id, r.token); await recargar(); return { id: r.id, link: linkInvitacion(r.id, r.token) }
   },
   async nuevaInvitacion(id: string) { const t = await rpc<string>('lk_nueva_invitacion', { p_contrato: id }); guardarInvitacion(id, t); await recargar(); return linkInvitacion(id, t) },
   verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
-  aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string) => tras(rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
+  /** Escenario C: con `terminosVersion`, el inquilino se une aceptando esa versión de los Términos y el Aviso de privacidad (queda quién y cuándo). */
+  aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string, terminosVersion?: string) => tras(terminosVersion
+    ? rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: token, p_email_cavos: email, p_terminos_version: terminosVersion, p_direccion_stellar: cuenta ?? null })
+    : rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
   actualizarCuenta: (id: string, cuenta: string) => tras(rpc('lk_actualizar_direccion', { p_contrato: id, p_direccion_stellar: cuenta })),
   firmar: (id: string, etapa: 'contrato' | 'entrada' | 'salida') => tras(rpc<string>('lk_firmar', { p_contrato: id, p_etapa: etapa })),
   marcar: (id: string, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle') => tras(rpc('lk_editar_item', { p_contrato: id, p_etapa: etapa, p_cuarto: cuarto, p_item: item, p_estado: estado })),

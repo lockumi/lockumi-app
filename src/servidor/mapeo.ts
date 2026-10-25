@@ -1,9 +1,10 @@
 // Convierte las filas de Supabase (tablas lk_*) al tipo Alquiler que usan las pantallas. Puro y con pruebas.
 import type { Alquiler, Acta, Foto, Rol, Estado } from '../types'
+import { edicionDe } from '../legal/versiones'
 
 export interface Filas {
   contrato: { id: string; direccion: string; monto: number | string; inicio: string; fin: string; reglas: string[]; email_inquilino: string; estado: Estado
-    ventana_inicio: string | null; ventana_segundos: number; escrow_contract_id: string | null; resultado: { via: 'automatico' | 'acuerdo' | 'mediacion'; dueno: number | string; inquilino: number | string } | null
+    ventana_inicio: string | null; ventana_segundos: number; escrow_contract_id: string | null; resultado: { via: 'automatico' | 'acuerdo' | 'mediacion'; cierre?: string; dueno: number | string; inquilino: number | string } | null
     liquidacion_tx: string | null; creado_en: string; actualizado_en: string }
   participantes: { rol: Rol; usuario: string; email_cavos: string; direccion_stellar: string | null }[]
   actas: { etapa: 'entrada' | 'salida'; cuartos: { nombre: string; nota: string; items: { texto: string; estado: 'bien' | 'detalle' | null }[] }[] }[]
@@ -12,6 +13,8 @@ export interface Filas {
     tomada_en: string; fecha_archivo: string | null; origen: 'camara' | 'archivo'; posible_galeria: boolean; subido_en: string }[]
   reclamo: { monto: number | string; motivo: string; creado_en: string; respuesta: 'aceptado' | 'rechazado' | null } | null
   eventos: { texto: string; tx_hash: string | null; creado_en: string }[]
+  /** 20261025050000 (escenario C): versión de los Términos guardada al crear y quién la aceptó y cuándo. Sin la migración, no viene. */
+  terminos?: { version: string | null; aceptaciones: { rol: Rol; aceptado_en: string }[] } | null
 }
 
 const firmasDe = (f: Filas['firmas'], etapa: string) => Object.fromEntries(f.filter(x => x.etapa === etapa).map(x => [x.rol, x.firmado_en])) as Partial<Record<Rol, string>>
@@ -41,10 +44,19 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string): 
     pago: pagoEv?.creado_en, ventanaInicio: c.ventana_inicio ?? undefined, ventanaSegundos: c.ventana_segundos, diasSimulados: 0,
     reclamo: f.reclamo ? { monto: Number(f.reclamo.monto), motivo: f.reclamo.motivo, fecha: f.reclamo.creado_en, respuesta: f.reclamo.respuesta ?? undefined,
       fotos: f.fotos.filter(x => x.etapa === 'reclamo').map(x => aFoto(x, url)) } : undefined,
-    resultado: c.resultado ? { via: c.resultado.via, dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,
+    resultado: c.resultado ? { via: c.resultado.via, ...(c.resultado.cierre ? { cierre: c.resultado.cierre } : {}), dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,
     liquidacionTx: comprobanteLiquidacion(c.liquidacion_tx),
+    ...terminosDe(f.terminos),
     historial: f.eventos.map(e => ({ fecha: e.creado_en, texto: e.texto, tx: e.tx_hash ?? undefined })),
   }
+}
+
+/** Escenario C: el alquiler sigue la versión guardada en el servidor; sin versión (los de antes), conserva la suya (1.6-demo). */
+function terminosDe(t: Filas['terminos']): Pick<Alquiler, 'terminos'> {
+  if (!t?.version) return {}
+  const acepta = Object.fromEntries(t.aceptaciones.map(x => [x.rol, x.aceptado_en])) as Partial<Record<Rol, string>>
+  const edicion = edicionDe(t.version)
+  return { terminos: { version: t.version, acepta, ...(edicion ? { edicion } : {}) } }
 }
 
 /** Mensaje de un error de Postgres/PostgREST para mostrar al usuario (las funciones ya los escriben en español). */

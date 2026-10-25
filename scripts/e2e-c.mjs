@@ -148,11 +148,14 @@ async function fotos(cta, id, etapa) {
 }
 /** Invitar → unirse → firmar → (pagar en la red) → fotos de entrada → salida → plazo del dueño. */
 async function hastaPlazo(k, conPago) {
-  const r = await dueno.rpc('lk_crear_contrato_invitando', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino'),
-    p_email_cavos: correo('dueno'), p_declaracion: DECL, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: VENTANA })
-  const id = r.id; paso(k, 'el dueño crea el alquiler e invita (link de 7 días, con la declaración)')
+  const r = await dueno.rpc('lk_crear_contrato_con_terminos', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino'),
+    p_email_cavos: correo('dueno'), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: VENTANA })
+  const id = r.id; exigir((await estado(id)).terminos_version === TERMINOS, 'el alquiler no quedó en la ' + TERMINOS)
+  paso(k, `el dueño crea el alquiler e invita (link de 7 días, con la declaración y los Términos ${TERMINOS})`)
   await inquilino.rpc('lk_ver_invitacion', { p_contrato: id, p_token: r.token })
-  await inquilino.rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino'), p_direccion_stellar: kpI.publicKey() }); paso(k, 'el inquilino se une con su propia cuenta')
+  await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino'), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
+  const acept = await inquilino.filas('lk_aceptaciones_terminos', id); exigir(['dueno', 'inquilino'].every(x => acept.some(a => a.rol === x && a.version === TERMINOS && a.aceptado_en)), 'faltan las aceptaciones de los Términos')
+  paso(k, `el inquilino se une con su propia cuenta, aceptando los Términos ${TERMINOS} y el Aviso de privacidad`)
   await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); paso(k, 'los dos firman el contrato')
   let pago = null
   if (conPago) {
@@ -168,13 +171,15 @@ async function hastaPlazo(k, conPago) {
 }
 const esperarPlazo = async k => { log(`… [${k}] esperando el plazo de ${VENTANA} s`); await espera((VENTANA + 3) * 1000) }
 const estado = async id => (await D.leer('lk_contratos', id))[0]
+const TERMINOS = '1.9-demo'   // PR #22 (b)+(c): versión guardada por alquiler (20261025050000)
 const exigir = (ok, m) => { if (!ok) throw new Error(m) }
 const ids = {}
 // Capa para retomar las capturas con los datos de esta corrida (resultado, hashes, historial, aceptaciones): pantalla → foto del alquiler.
 const capa = {}
 async function capturar(pantalla, id) {
   const [c] = await D.leer('lk_contratos', id)
-  capa[pantalla] = { contrato: { monto: Number(c.monto), estado: c.estado, resultado: c.resultado, liquidacion_tx: c.liquidacion_tx, escrow_contract_id: c.escrow_contract_id },
+  capa[pantalla] = { contrato: { monto: Number(c.monto), estado: c.estado, resultado: c.resultado, liquidacion_tx: c.liquidacion_tx, escrow_contract_id: c.escrow_contract_id, terminos_version: c.terminos_version ?? null },
+    aceptaciones_terminos: (await D.leer('lk_aceptaciones_terminos', id)).map(a => ({ rol: a.rol, version: a.version, aceptado_en: a.aceptado_en })),
     eventos: (await D.leer('lk_eventos', id)).map(e => ({ texto: e.texto, tx_hash: e.tx_hash, creado_en: e.creado_en })),
     reclamos: (await D.leer('lk_reclamos', id)).map(r => { const { contrato_id: _c, ...resto } = r; return resto }),
     aceptaciones: (await D.leer('lk_aceptaciones_mediacion', id)).map(a => ({ rol: a.rol, monto_dueno: Number(a.monto_dueno), aceptado_en: a.aceptado_en })) }

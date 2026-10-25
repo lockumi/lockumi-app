@@ -72,7 +72,11 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 ## Versiones por escenario (escenario C, preparación; rama `paso17-escenario-c`, sin publicar)
 - Un solo archivo por documento (`v17/terminos.md`, `v17/privacidad.md`) y una versión por escenario encendido, en `versiones.ts`:
   A → 1.7-demo · 25 de octubre de 2026; B (correos) → 1.8-demo; C (correos + dos personas) → 1.9-demo. Cada una con su fecha
-  (la de la 1.8 y la 1.9 se pone el día en que se enciendan). `{{edicion}}` sale de la versión vigente.
+  (la de la 1.8 y la 1.9 se pone el día en que se enciendan; la 1.9 lleva «25 de octubre de 2026» como fecha provisional, a cambiar por la
+  fecha real de encendido). `{{edicion}}` sale de la versión vigente.
+- Con dos personas, la versión queda guardada por alquiler en el servidor (`terminos_version`, migración 20261025050000) y la casilla
+  «Acepto los Términos 1.9-demo y el Aviso de privacidad» (`CasillaVersion`) se marca al crear invitando y al unirse; quién y cuándo, en
+  `lk_aceptaciones_terminos`. `// LEGAL: revisar`.
 - Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: aviso que no bloquea en «Tus alquileres» y una
   casilla dentro de cada función nueva. Un alquiler firmado sigue con su versión salvo que los dos acepten.
 - **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b): primero el párrafo exacto de Legal y, después, sin cambios, la b) de antes (registro en la red de prueba, «simulados», «Nada de esto tiene efecto legal»; Legal, 25/10, 1:24 a. m.)

@@ -18,9 +18,9 @@ describe('declaración de quien invita', () => {
   it('«Invitar a la otra persona» exige marcarla y el servidor la guarda con el alquiler (lk_crear_contrato_invitando)', async () => {
     const crear = await leer('src/screens/Crear.tsx'), repo = await leer('src/servidor/repositorio.ts')
     expect(crear).toMatch(/invitar && <label className="casilla[^"]*"><input type="checkbox" checked=\{declara\}/)
-    expect(crear).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\) \|\| \(invitar && !declara\)\}/)
+    expect(crear).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\) \|\| \(invitar && \(!declara \|\| !aceptaVersion\)\)\}/)   // PR #22 (c): y la casilla de los Términos vigentes
     expect(crear).toMatch(/declaracion: declaracionInvitacion\(\)/)
-    expect(repo).toMatch(/d\.declaracion \? 'lk_crear_contrato_invitando' : 'lk_crear_contrato'/)
+    expect(repo).toMatch(/d\.declaracion \? \(d\.terminosVersion \? 'lk_crear_contrato_con_terminos' : 'lk_crear_contrato_invitando'\) : 'lk_crear_contrato'/)   // PR #22 (b): con la versión de los Términos
     expect(repo).toMatch(/p_declaracion: d\.declaracion/)
   })
 })

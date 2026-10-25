@@ -41,3 +41,10 @@ export const TEXTO_GUARDA_DOS = 'Este contrato se guarda en el servidor de Locku
 export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Se le entrega cuando termine tu plazo de reclamos, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
 // LEGAL: revisar · después de aprobar
 export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa. El depósito se le entrega al inquilino cuando termine tu plazo de reclamos.'
+
+// PR #22 (d) · cierre de la mediación con las dos aceptaciones (lk_aceptar_acuerdo_mediacion, resultado.cierre = 'dos_aceptan').
+// LEGAL: revisar · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)
+export const TEXTO_ACEPTARON_DOS = 'Lo aceptaron las dos partes.'
+const redondo = (n: number) => Math.round(n * 1e7) / 1e7
+export const notaComisionReparto = (inquilino: number, dueno: number) =>
+  `Llegaron ${montoPrueba(recibeInquilino(inquilino))} al inquilino y ${montoPrueba(recibeInquilino(dueno))} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(redondo(inquilino + dueno - recibeInquilino(inquilino) - recibeInquilino(dueno)))}). Lockumi no recibe nada.`

@@ -61,7 +61,9 @@ export interface Aviso {
 export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string; edicion?: string }
 /** Consentimiento en el momento de usar una función (paso 16). */
 export interface Consentimiento { tipo: 'mediacion' | 'correo'; cuenta: string; rol: Rol; alquiler: string; version: string; texto: string; fecha: string; edicion?: string }
-export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string }
+export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string
+  /** Dos personas (servidor): cómo se cerró la mediación; 'dos_aceptan' = las dos partes aceptaron el reparto. */
+  cierre?: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
   /** Solo con servidor: mi rol según la sesión, si el inquilino ya aceptó y las cuentas G… declaradas. */

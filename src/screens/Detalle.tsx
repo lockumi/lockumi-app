@@ -25,7 +25,7 @@ import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
-import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, montoPrueba, recibeInquilino, notaComisionAuto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -52,7 +52,7 @@ function Contrato({ a, rol }: P) {
 }
 
 /** Paso del depósito. Parte 2: en modoVideo cambiar PagoSimulado por el depósito real (PagoReal ya existe para la red de prueba). */
-function Pago({ a, rol }: P) {
+export function Pago({ a, rol }: P) {
   const { solo: modoSolo } = modoDe(a)
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
@@ -70,12 +70,15 @@ function PagoSimulado({ a, rol }: P) {
       catch (x) { setFallo(actual); setEtapa(0); throw x }
     })
   }
-  return <section className="pila"><div className="cab"><h2>Depósito</h2>{escrowReal ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
+  const dos = esDosPersonas(a)   // PR #22 (a): en C el depósito va a la red de prueba de Trustless Work; nada de «simulado»
+  return <section className="pila"><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
     <div className="monto">{usd(a.monto)}</div>
     <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p>
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
-      {escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
+      {/* LEGAL: revisar · C: la nota aprobada de cuenta propia («Son USDC de prueba, sin valor, de tu cuenta…»), con la cuenta Lockumi del inquilino */}
+      {dos ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta{a.cuentas?.inquilino ? ` (${abreviar(a.cuentas.inquilino)})` : ''}. Tu cuenta Lockumi te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
+        : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
       {p.error}
@@ -129,7 +132,7 @@ function EnCurso({ a }: P) {
   </section>
 }
 
-function Ventana({ a, rol }: P) {
+export function Ventana({ a, rol }: P) {
   const { servidor: modoServidor, solo: modoSolo, video: modoVideo, escrowReal } = modoDe(a)
   const fin = +new Date(a.ventanaInicio!) + plazoMs(a); const [, tick] = useState(0); const [form, setForm] = useState(false); const p = useProceso()
   useEffect(() => { const t = setInterval(() => tick(k => k + 1), 30_000); return () => clearInterval(t) }, [])
@@ -144,6 +147,8 @@ function Ventana({ a, rol }: P) {
     {modoSolo ? <p className="nota">En esta prueba no hay que esperar el plazo: si todo está bien, el dueño de prueba aprueba y el depósito vuelve al inquilino en la red de prueba.</p>
       // LEGAL: revisado (24/10) · ronda 6: «Si no hay reclamo, después de {plazo}…». La devolución la dispara la app abierta (efecto de arriba) y la firma el servidor de Lockumi
       : escrowReal ? <p className="nota">Termina el {conPunto(fechaHora(fin))} Si no hay reclamo, después de {textoPlazo(a)} el depósito de prueba se devuelve completo al inquilino la próxima vez que alguien abra el alquiler. Ninguna de las partes tiene que aprobarlo: lo ejecuta la cuenta de Lockumi.</p>
+      // LEGAL: revisar · C (alquileres de dos personas sin versión guardada): textos aprobados de la devolución automática, sin «demo local»
+      : esDosPersonas(a) ? <p className="nota">Termina el {conPunto(fechaHora(fin))} {rol === 'dueno' ? TEXTO_AUTO_DUENO : TEXTO_AUTO_INQUILINO}</p>
       // LEGAL: revisado (24/10) · demo local sin red
       : <p className="nota">Termina el {conPunto(fechaHora(fin))} Si no hay reclamos, después de {textoPlazo(a)} el depósito se devuelve completo al inquilino. En esta demo local no hay red: es solo una simulación.</p>}
     {resta === 0 && !a.reclamo && !modoSolo && (p.ocupado ? <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>{p.avance || 'Devolviendo el depósito…'}</p></div>
@@ -297,11 +302,13 @@ function EscrowReal({ a, rol }: P) {
   return null
 }
 
-function Cerrado({ a, rol }: P) {
+export function Cerrado({ a, rol }: P) {
   const { escrowReal } = modoDe(a)
   const r = a.resultado!
   // Paso 7 (interruptor encendido, dos personas): devolución automática del 100 % al inquilino (Términos 1.7-demo 5.3 d).
   const auto2 = esDosPersonas(a) && r.via === 'automatico'
+  // PR #22 (d): en C la mediación solo se cierra con las dos aceptaciones.
+  const dosAceptan = esDosPersonas(a) && r.via === 'mediacion' && r.cierre === 'dos_aceptan'
   const via = escrowReal && r.via === 'automatico' ? `No hubo reclamos en ${textoPlazo(a)}. El dueño de prueba aprobó y Lockumi devolvió el depósito en la red de prueba.` : { automatico: `No hubo reclamos en ${textoPlazo(a)}.`, acuerdo: 'Se pusieron de acuerdo en la app.', mediacion: 'Lo decidió una persona mediadora.',
     // Solo con la prueba completa (interruptor apagado en producción: ningún alquiler llega a estas vías).
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
@@ -309,8 +316,9 @@ function Cerrado({ a, rol }: P) {
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisar
   return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
-    {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{via}</p></>}
-    {auto2 ? <ul className="lista"><li><span>Inquilino</span><strong>{montoPrueba(recibeInquilino(r.inquilino))}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
+    {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
+    {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{montoPrueba(recibeInquilino(r.inquilino))}</strong></li><li><span>Dueño</span><strong>{montoPrueba(recibeInquilino(r.dueno))}</strong></li></ul>
+      : auto2 ? <ul className="lista"><li><span>Inquilino</span><strong>{montoPrueba(recibeInquilino(r.inquilino))}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
       : <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
@@ -318,6 +326,8 @@ function Cerrado({ a, rol }: P) {
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}
     {pruebaCompleta() && !!a.reclamo && <Expediente a={a} />}{/* paso 14 · B.11 */}{/* solo con la prueba completa (interruptor encendido) */}
     {auto2 && <p className="nota">{notaComisionAuto(r.inquilino)}</p>}{/* LEGAL: revisar */}
+    {dosAceptan && <p className="nota">{notaComisionReparto(r.inquilino, r.dueno)}</p>}{/* LEGAL: revisar */}
+    {dosAceptan && esHash(a.liquidacionTx) && <p className="nota">Reparto en la red de prueba: <VerTx h={a.liquidacionTx} /></p>}
     {escrowReal && !auto2 && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}
     {escrowReal && [a.red?.txs.liberacion, a.red?.txs.resolucion].filter(esHash).map(h => <p key={h} className="nota">{h === a.red?.txs.liberacion ? 'Devolución' : 'Reparto'} en la red de prueba: <VerTx h={h} /></p>)}
     <EscrowReal a={a} rol={rol} />
