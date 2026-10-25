@@ -8,9 +8,10 @@ import { useSyncExternalStore } from 'react'
 import type { Rol } from '../types'
 import { provinciaDe } from './cantones'
 import { UI } from './textos'
+import { EDICION_REPUTACION } from '../legal/version17'
 
-/** Versión de los textos aprobados por Legal (legal/reputacion-textos-para-producto.md, 25/10/2026, 2:24 p. m.). */
-export const VERSION_TEXTOS = 'reputacion-1.0-demo · 25/10/2026 2:24 p. m.'
+/** Versión de los textos (Legal, revisión del PR #26): «{versión} · {fecha}» = 1.10-demo y la fecha real de encendido (version17.ts). */
+export const VERSION_TEXTOS = EDICION_REPUTACION
 export type Opcion = 'destacados' | 'nuevos'
 const OPCIONES: Opcion[] = ['destacados', 'nuevos']
 export interface Registro { version: string; fecha: string; hora?: string; texto: string[] }
@@ -58,14 +59,25 @@ export const aceptoRep01 = (email: string) => !!leer(email).rep01
 export const perfilCompleto = (email: string) => { const s = leer(email); return !!s.rep01 && !!s.nombre && !!s.canton }
 
 // ——— Antes de crear la cuenta (pantalla previa al login, sin tocar el login) ———
-const PREVIA = 'lockumi.reputacion.previa.v1'
-export function previa(): Registro | null { try { const x = localStorage.getItem(PREVIA); return x ? JSON.parse(x) : null } catch { return null } }
-export function aceptarPrevia(texto: string[], fecha = new Date().toISOString()) { localStorage.setItem(PREVIA, JSON.stringify(registro(texto, fecha))); subs.forEach(f => f()) }
-/** Al entrar: la aceptación previa pasa a la cuenta (si la cuenta todavía no tenía) y se borra del navegador. */
-export function vincularPrevia(email: string) {
+// Legal (revisión del PR #26, regla 2): la aceptación previa vive solo en esta sesión del navegador (sessionStorage) y pasa solo a una
+// cuenta recién creada: sin REP-01 y sin alquileres. Una cuenta con historial ve REP-13 y acepta REP-01 con la casilla de la 1.10-demo.
+const PREVIA = 'lockumi.reputacion.previa.v2', ENTRAR = 'lockumi.reputacion.entrar.v1'
+const sesion = () => { try { return sessionStorage } catch { return null } }
+export function previa(): Registro | null { try { const x = sesion()?.getItem(PREVIA); return x ? JSON.parse(x) : null } catch { return null } }
+export function aceptarPrevia(texto: string[], fecha = new Date().toISOString()) {
+  const s = sesion(); if (!s) throw new Error(UI.errGuardar)
+  s.setItem(PREVIA, JSON.stringify(registro(texto, fecha))); subs.forEach(f => f())
+}
+/** «Ya tengo cuenta: entrar»: abre el login de siempre sin registrar ninguna aceptación (Legal, regla 1). Dura hasta entrar. */
+export function entrarSinAceptar() { try { sesion()?.setItem(ENTRAR, '1') } catch { /* sin almacenamiento: se queda en la pantalla */ } subs.forEach(f => f()) }
+/** Al entrar a la cuenta se olvida: si sale, vuelve a ver la pantalla previa. */
+export const olvidarEntrar = () => { try { sesion()?.removeItem(ENTRAR) } catch { /* nada */ } }
+export const quiereEntrar = () => { try { return sesion()?.getItem(ENTRAR) === '1' } catch { return false } }
+/** Al entrar: la aceptación previa de ESTA sesión pasa a la cuenta solo si es nueva (`cuentaNueva`: sin REP-01 ni alquileres). Se borra igual. */
+export function vincularPrevia(email: string, cuentaNueva: boolean) {
   const p = previa(); if (!p) return
-  const s = leer(email); if (!s.rep01) escribir(email, { ...s, rep01: p })
-  try { localStorage.removeItem(PREVIA) } catch { /* nada */ }
+  const s = leer(email); if (cuentaNueva && !s.rep01) escribir(email, { ...s, rep01: p })
+  try { sesion()?.removeItem(PREVIA) } catch { /* nada */ }
   subs.forEach(f => f())
 }
 /** Solo al eliminar la cuenta (borrado.ts): borra el perfil, las opciones y el registro de esta cuenta. */
@@ -78,6 +90,7 @@ export function validarNombre(n: string): string | null {
   const t = n.trim().replace(/\s+/g, ' ')
   if (!t) return UI.errNombre
   if (t.length > 30) return UI.errNombreLargo
-  return /^\p{L}[\p{L}'-]*( \p{L}[\p{L}'-]*)* \p{L}\.?$/u.test(t) ? null : UI.errNombreLargo
+  // Legal (revisión del PR #26): un nombre y la inicial del apellido («Laura V.»); «Laura Vargas R.» no.
+  return /^\p{L}[\p{L}'-]* \p{L}\.?$/u.test(t) ? null : UI.errNombre
 }
 export const validarCanton = (c: string): string | null => c && provinciaDe(c) ? null : UI.errCanton

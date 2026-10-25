@@ -2,6 +2,6 @@
 // reputación en el build. LEGAL: revisar (redacción nuestra). Ya no dice «Es opcional»: la reputación es obligatoria (Katherine, 2:24 p. m.).
 export const ENTRADA = {
   titulo: 'Tu perfil en Lockumi',
-  texto: 'Así te ven dueños e inquilinos: tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje.',
+  texto: 'Así se ve tu perfil público: tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje.',   // Legal, revisión del PR #26
   boton: 'Ver mi perfil',
 }

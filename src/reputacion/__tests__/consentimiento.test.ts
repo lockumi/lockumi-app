@@ -6,8 +6,8 @@ import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERS
   aceptarPrevia, previa, vincularPrevia } from '../consentimiento'
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
-beforeEach(() => { const m = new Map<string, string>()
-  vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() }) })
+const alm = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() } }
+beforeEach(() => { vi.stubGlobal('localStorage', alm()); vi.stubGlobal('sessionStorage', alm()) })
 
 describe('REP-01: aceptación previa a crear la cuenta', () => {
   it('todo empieza sin aceptar', () => {
@@ -19,13 +19,13 @@ describe('REP-01: aceptación previa a crear la cuenta', () => {
     expect(leer(E).rep01).toEqual({ version: VERSION_TEXTOS, fecha: F, hora: '10:00', texto: ['Entiendo…', 'Confirmo que soy mayor de 18 años.'] })
     expect(aceptoRep01(E)).toBe(true)
   })
-  it('antes de tener cuenta se guarda en este navegador y se pasa a la cuenta al entrar (una sola vez)', () => {
+  it('antes de tener cuenta se guarda en esta sesión y se pasa a la cuenta nueva al entrar (una sola vez)', () => {
     aceptarPrevia(['Entiendo…', 'Confirmo…'], F); expect(previa()?.hora).toBe('10:00')
-    vincularPrevia(E); expect(aceptoRep01(E)).toBe(true); expect(leer(E).rep01?.fecha).toBe(F); expect(previa()).toBeNull()
-    vincularPrevia('otra@x.cr'); expect(aceptoRep01('otra@x.cr')).toBe(false)
+    vincularPrevia(E, true); expect(aceptoRep01(E)).toBe(true); expect(leer(E).rep01?.fecha).toBe(F); expect(previa()).toBeNull()
+    vincularPrevia('otra@x.cr', true); expect(aceptoRep01('otra@x.cr')).toBe(false)
   })
   it('una cuenta que ya aceptó no cambia su registro', () => {
-    aceptarRep01(E, ['a'], F); aceptarPrevia(['b'], '2026-11-17T16:00:00.000Z'); vincularPrevia(E)
+    aceptarRep01(E, ['a'], F); aceptarPrevia(['b'], '2026-11-17T16:00:00.000Z'); vincularPrevia(E, true)
     expect(leer(E).rep01?.texto).toEqual(['a'])
   })
   it('el perfil queda completo con REP-01, el nombre visible y el cantón', () => {
@@ -50,9 +50,9 @@ describe('REP-01: aceptación previa a crear la cuenta', () => {
 
 describe('cada error dice cómo arreglarlo', () => {
   it('nombre visible: nombre y la inicial del apellido', () => {
-    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María José R')).toBeNull()
+    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R')).toBeNull(); expect(validarNombre('María José R')).toMatch(/inicial de tu apellido/)
     expect(validarNombre('')).toMatch(/Escribe tu nombre y la inicial de tu apellido/)
-    expect(validarNombre('Laura Vargas')).toMatch(/inicial del apellido/)
+    expect(validarNombre('Laura Vargas')).toMatch(/inicial de tu apellido/)
     expect(validarNombre('Laura V. ' + 'x'.repeat(30))).toMatch(/Máximo 30/)
   })
   it('cantón: uno de la lista', () => {

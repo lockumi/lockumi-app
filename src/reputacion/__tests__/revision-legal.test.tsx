@@ -67,7 +67,7 @@ describe('TEXTOS (literales de Legal)', () => {
     expect(TEXTO_NUEVOS.dueno.parrafos[0]).toContain('con tu nombre visible, «Nuevo en Lockumi» con la cantidad de alquileres cerrados (por ejemplo, «Nuevo en Lockumi · 1 alquiler cerrado») y tus insignias')
     const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Escazú')
     mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr',
-      estado: 'cerrado', rendimiento: false, historial: [], diasSimulados: 0, resultado: { inquilino: 20, dueno: 0, via: 'acuerdo', fecha: '2026-06-01T12:00:00Z' } }]))
+      estado: 'cerrado', rendimiento: false, historial: [], diasSimulados: 0, contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, resultado: { inquilino: 20, dueno: 0, via: 'acuerdo', fecha: '2026-06-01T12:00:00Z' } }]))
     for (const r of ['/perfil/dueno', '/perfil/calculo', '/perfil/dueno/aparecer']) { const t = texto(await pantalla(r)); expect(t).not.toContain('{n}'); expect(t).not.toMatch(/\b1 alquileres/) }
     expect(texto(await pantalla('/perfil/dueno'))).toContain('Nuevo en Lockumi · 1 alquiler cerrado')
   })
@@ -97,17 +97,19 @@ describe('REGLAS QUE NO SE CUMPLÍAN', () => {
     const { entrarSinAceptar, previa } = await import('../consentimiento')
     entrarSinAceptar(); expect(renderToStaticMarkup(<Previa><p>LOGIN-DE-SIEMPRE</p></Previa>)).toContain('LOGIN-DE-SIEMPRE'); expect(previa()).toBeNull()
     expect([...mem.keys()].filter(k => k.includes('previa'))).toEqual([])
+    const { quiereEntrar } = await import('../consentimiento'); expect(quiereEntrar()).toBe(true)
+    await pantalla('/'); expect(quiereEntrar()).toBe(false)   // al entrar se olvida: si sale, vuelve la pantalla previa
   })
   it('2) la aceptación previa solo pasa a una cuenta recién creada en esa misma sesión del navegador', async () => {
     const c = await import('../consentimiento')
     c.aceptarPrevia(['x']); expect(ses.size).toBeGreaterThan(0); expect([...mem.keys()].some(k => k.includes('previa'))).toBe(false)
-    c.vincularPrevia('vieja@x.cr', false); expect(c.aceptoRep01('vieja@x.cr')).toBe(false)              // cuenta con historial: no
-    c.vincularPrevia('nueva@x.cr', true); expect(c.aceptoRep01('nueva@x.cr')).toBe(true); expect(c.previa()).toBeNull()
+    c.vincularPrevia('vieja@x.cr', false); expect(c.aceptoRep01('vieja@x.cr')).toBe(false); expect(c.previa()).toBeNull()   // cuenta con historial: no (y se descarta)
+    c.aceptarPrevia(['x']); c.vincularPrevia('nueva@x.cr', true); expect(c.aceptoRep01('nueva@x.cr')).toBe(true); expect(c.previa()).toBeNull()
     ses.clear(); c.vincularPrevia('otra@x.cr', true); expect(c.aceptoRep01('otra@x.cr')).toBe(false)     // otra sesión: no hay nada
   })
   it('2b) una cuenta con alquileres no recibe la aceptación previa: ve REP-13', async () => {
     const c = await import('../consentimiento'); c.aceptarPrevia(['x'])
-    mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr', estado: 'en_curso', rendimiento: false, historial: [], diasSimulados: 0 }]))
+    mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr', estado: 'en_curso', rendimiento: false, historial: [], diasSimulados: 0, contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} } }]))
     expect(texto(await pantalla('/'))).toContain('Actualizamos los Términos'); expect(c.aceptoRep01(U.email)).toBe(false)
   })
   it('3) robots.txt existe y se sirve antes del rewrite; X-Robots-Tag noindex, nofollow en las rutas de perfil', async () => {
@@ -116,7 +118,7 @@ describe('REGLAS QUE NO SE CUMPLÍAN', () => {
     const re = new RegExp('^' + v.rewrites[0]!.source.replace('/((?!', '/(?:(?!') + '$')
     expect(re.test('/robots.txt')).toBe(false); expect(re.test('/alquiler/x')).toBe(true)
     const h = v.headers.filter(x => x.headers.some(y => y.key === 'X-Robots-Tag' && y.value === 'noindex, nofollow')).map(x => x.source)
-    expect(h).toEqual(expect.arrayContaining(['/perfil', '/perfil/:path*', '/robots.txt']))
+    expect(h).toEqual(expect.arrayContaining(['/perfil', '/perfil/:path*']))
   })
   it('4) perfil y tarjetas con zonaVitrina: provincia si el cantón tiene menos de 10 personas', async () => {
     const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Liberia')

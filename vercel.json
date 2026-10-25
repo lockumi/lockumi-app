@@ -5,9 +5,29 @@
       "maxDuration": 60
     }
   },
+  "headers": [
+    {
+      "source": "/perfil",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/perfil/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!assets/|fonts/|img/|api/).*)",
+      "source": "/((?!assets/|fonts/|img/|api/|robots.txt).*)",
       "destination": "/index.html"
     }
   ],

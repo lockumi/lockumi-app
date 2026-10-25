@@ -3,11 +3,11 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres, rolDe } from '../store'
+import { useAlquileres, rolDe, store } from '../store'
 import { ir } from '../router'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
   valorDelAlquiler, ordenarVitrina, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
-import { useReputacion, guardarDatos, aceptar, activa, aceptarRep01, aceptarPrevia, previa, vincularPrevia, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
+import { useReputacion, guardarDatos, aceptar, activa, aceptarRep01, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
@@ -74,7 +74,10 @@ export function Md({ t }: { t: string }) {
 const Volver = ({ a = '#/', t = '← Tus alquileres' }: { a?: string; t?: string }) => <a href={a} className="volver">{t}</a>
 const fechaLarga = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Costa_Rica' })
 const mesAnio = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { month: 'long', year: 'numeric', timeZone: 'America/Costa_Rica' })
-const usd = (n: number) => `${n.toLocaleString('es-CR')} USDC`
+const usd = (n: number) => `${n.toLocaleString('es-CR')} USDC de prueba`   // Legal (revisión del PR #26, regla 5)
+/** Legal (regla 4): cantón, o la provincia si en el cantón hay menos de 10 personas. En la demo se cuentan los perfiles de ejemplo;
+ *  en el servidor, los perfiles reales del cantón. */
+export const zonaDe = (canton: string) => zonaVitrina(canton, provinciaDe(canton) ?? '', EJEMPLOS.filter(x => x.canton === canton).length)
 const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
 const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => todos.filter(a => rolDe(a, u.email) === rol)
@@ -105,12 +108,12 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
       <div className="rp-perfil__cuerpo">
         <Avatar nombre={nombre} rol={rol} />
         <h2 id="rp-nombre" className="rp-nombre">{nombre}</h2>
-        <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{e.canton}</span>}</div>
+        <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{zonaDe(e.canton)}</span>}</div>
         <p className="nota" style={{ marginTop: 8 }}>{UI.asiTeVen}{desde(xs) ? ' · ' + UI.enLockumiDesde(mesAnio(desde(xs)!)) : ''}</p>
         <div className="rp-puntaje">
           {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
           <div><div className="rp-linea">{lineaPublica(p)}</div>
-            <p className="nota">{p.enRevision ? AVISO_CAMBIO.nota : p.cerrados < MINIMO_PARA_PUNTAJE ? conVars(TEXTO_PUNTAJE_NUEVO, { n: p.cerrados }) : UI.segunLockumi}</p></div>
+            <p className="nota">{p.enRevision ? AVISO_CAMBIO.nota : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
         </div>
         {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
@@ -165,30 +168,34 @@ const lista = (xs: string[]) => <ul>{xs.map((t, k) => <li key={k}><Md t={t} /></
 // Dos casillas sin marcar (REP-01 y REP-01b); [Continuar] desactivado hasta marcar las dos. Se guarda versión, fecha, hora y texto.
 /** Texto exacto que la persona aceptó (va al registro del consentimiento). */
 export const TEXTO_REP01 = [REP01.titulo, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad]
-export function Rep01({ aviso, onAceptar, onNo, no, extra }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode }) {
-  const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
+/** Lo que se guarda como aceptado por una cuenta que ya existía (1.7-demo): título, casillas (con la de la versión) y cierre propios. */
+export const TEXTO_REP01_CUENTA = [REP01.tituloCuenta, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad, REP01.casillaVersion]
+/** `cuenta`: la persona ya tiene cuenta (1.7-demo): otro título y otro cierre, y una tercera casilla aparte, sin marcar (Legal, VERSIÓN). */
+export function Rep01({ aviso, onAceptar, onNo, no, extra, pie, cuenta = false }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode; cuenta?: boolean }) {
+  const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [version, setVersion] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
   const atras = <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setVista('rep01')}>{REP02.volver}</button></div>
   if (vista === 'ejemplo') return <Ejemplo02 atras={atras} />
   if (vista === 'calculo') return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}><TextoCalculo />{atras}</main>
-  const listas = casilla && edad
+  const listas = casilla && edad && (!cuenta || version)
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     {aviso}
     <section className="glass tarjeta rp-perfil" aria-labelledby="rp-rep01"><Banda mini /><div className="rp-perfil__cuerpo">
-      <h1 id="rp-rep01" className="h2">{REP01.titulo}</h1>
+      <h1 id="rp-rep01" className="h2">{cuenta ? REP01.tituloCuenta : REP01.titulo}</h1>
       <div className="rp-texto" style={{ marginTop: 10 }}><h2 className="h3">{REP01.subtitulo}</h2><p><Md t={REP01.intro} /></p>{lista(REP01.puntos)}</div>
       <ul className="rp-enlaces" style={{ marginTop: 6 }}>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('ejemplo')}>{REP01.enlaces.ejemplo}<Icono n="der" /></button></li>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('calculo')}>{REP01.enlaces.calculo}<Icono n="der" /></button></li>
         <li><a href="#/privacidad">{REP01.enlaces.privacidad}<Icono n="der" /></a></li></ul>
-      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{REP01.titulo}</legend>
+      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{cuenta ? REP01.tituloCuenta : REP01.titulo}</legend>
         <label className="check"><input type="checkbox" checked={casilla} onChange={ev => setCasilla(ev.target.checked)} /><span>{REP01.casilla}</span></label>
         <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={edad} onChange={ev => setEdad(ev.target.checked)} /><span>{REP01.edad}</span></label>
+        {cuenta && <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={version} onChange={ev => setVersion(ev.target.checked)} /><span>{REP01.casillaVersion}</span></label>}
       </fieldset>
-      <p className="nota" style={{ marginTop: 10 }}>{REP01.noAcuerdo}</p>
+      <p className="nota" style={{ marginTop: 10 }}>{cuenta ? REP01.noAcuerdoCuenta : REP01.noAcuerdo}</p>
       <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" disabled={!listas} aria-describedby={listas ? undefined : 'rp-rep01-falta'} onClick={onAceptar}>{REP01.continuar}</button>
         <button type="button" className="boton boton--secundario" onClick={onNo}>{no}</button></div>
-      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{extra ? UI.errRep01Cuenta : UI.errRep01}</p>}
-      {extra}
+      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{cuenta ? UI.errRep01Cuenta : UI.errRep01}</p>}
+      {extra}{pie}
     </div></section>
   </main>
 }
@@ -220,11 +227,13 @@ function TextoCalculo() {
 
 /** Antes del login (App.tsx la pone alrededor de <Login/> sin tocarlo): REP-01 hasta aceptarla en este navegador; después, el login de siempre. */
 export function Previa({ children }: { children: ReactNode }) {
-  const [hecha, setHecha] = useState(() => !!previa()), [no, setNo] = useState(false)
+  const [hecha, setHecha] = useState(() => !!previa() || quiereEntrar()), [no, setNo] = useState(false)
   if (hecha) return <>{children}</>
   if (no) return <Pantalla titulo={UI.noCreasTitulo}><p style={{ marginTop: 8 }}>{UI.noCreasTexto}</p>
     <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setNo(false)}>{UI.volver}</button></div></Pantalla>
-  return <Rep01 no={REP01.noCrear} onNo={() => setNo(true)} onAceptar={() => { try { aceptarPrevia(TEXTO_REP01); setHecha(true) } catch { /* sin almacenamiento */ } }} />
+  return <Rep01 no={REP01.noCrear} onNo={() => setNo(true)} onAceptar={() => { try { aceptarPrevia(TEXTO_REP01); setHecha(true) } catch { /* sin almacenamiento */ } }}
+    // Legal (regla 1): una cuenta 1.7-demo sin sesión llega a su login (y a sus alquileres abiertos) sin aceptar nada aquí.
+    pie={<div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => { entrarSinAceptar(); setHecha(true) }}>{REP01.entrar}</button></div>} />
 }
 
 // ——— Cuentas 1.7-demo sin REP-01 (regla provisional de Katherine, 25/10/2026, 2:33 p. m.) ———
@@ -336,16 +345,26 @@ function Aparecer({ u, rol }: { u: Usuario; rol: Rol }) {
 }
 
 // ——— Mis datos de reputación (C.5.2) ———
+/** Datos de reputación de la cuenta para descargar: por defecto, los dos papeles (Legal, MENORES: al eliminar, también los de inquilino). */
+export function datosParaDescargar(u: Usuario, todos: Alquiler[], roles: Rol[] = ['dueno', 'inquilino'], ahora = Date.now()) {
+  const e = leer(u.email)
+  const papel = (rol: Rol) => { const xs = mios(todos, u, rol)
+    return { puntaje: puntajeDe(todos, u, rol, ahora), insignias: insignias(xs, rol), vitrinas: e.roles[rol],
+      alquileres: xs.filter(cuentaParaPuntaje).map(a => ({ alquiler: a.direccion, cerrado: a.resultado!.fecha, descuento: Math.round(fraccionDescontada(a, ahora) * 100),
+        reclamoDevuelto: rol === 'dueno' ? Math.round(fraccionReclamoDevuelta(a) * 100) : undefined, vale: valorDelAlquiler(a, rol, ahora) })) } }
+  return { cuenta: u.email, nombreVisible: e.nombre ?? null, canton: e.canton ?? null, aceptacion: e.rep01 ?? null, revisiones: revisiones(u.email),
+    papeles: Object.fromEntries(roles.map(r => [r, papel(r)])) }
+}
+function bajar(datos: unknown, nombre: string) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
   const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), xs = mios(todos, u, rol), cerrados = xs.filter(cuentaParaPuntaje)
   const p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol)
   const filas = cerrados.map(a => ({ alquiler: a.direccion, cerrado: a.resultado!.fecha, descuento: Math.round(fraccionDescontada(a, ahora) * 100),
     reclamoDevuelto: rol === 'dueno' ? Math.round(fraccionReclamoDevuelta(a) * 100) : undefined, vale: valorDelAlquiler(a, rol, ahora) }))
-  const descargar = () => {
-    const datos = { cuenta: u.email, papel: rol, nombreVisible: e.nombre ?? null, canton: e.canton ?? null, puntaje: p, insignias: ins, alquileres: filas, aceptacion: e.rep01 ?? null, vitrinas: e.roles[rol], revisiones: revisiones(u.email) }
-    const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }))
-    const a = document.createElement('a'); a.href = url; a.download = `lockumi-reputacion-${rol}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
+  const descargar = () => bajar(datosParaDescargar(u, todos, [rol]), `lockumi-reputacion-${rol}.json`)
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver a={`#/perfil/${rol}`} t="← Tu perfil" />
     <section className="glass tarjeta"><h1 className="h2">{MIS_DATOS.titulo}</h1><p className="nota" style={{ marginTop: 6 }}><Papel rol={rol} /></p>
@@ -392,12 +411,12 @@ function Llave() {
 }
 
 // ——— Vitrina de ejemplo (solo cantón, sin números de posición) ———
-function Tarjeta({ x }: { x: Ejemplo }) {
+function Tarjeta({ x, zona }: { x: Ejemplo; zona: string }) {
   const nuevo = x.cerrados < MINIMO_PARA_PUNTAJE, p = { cerrados: x.cerrados, valor: x.valor, enRevision: false }
   return <li className="glass rp-tarjeta"><Banda mini />{nuevo && <span className="rp-espacio rp-ondas">{VITRINA.espacio}</span>}
     <div className="rp-tarjeta__cuerpo"><div className="rp-tarjeta__cab"><Avatar nombre={x.nombre} rol={x.rol} mini /><div>
       <p className="rp-tarjeta__nombre">{x.nombre}</p><div className="rp-fila" style={{ marginTop: 0 }}><Papel rol={x.rol} /><span className="chip chip--neutro chip--mini">{UI.ejemplo}</span></div></div></div>
-      <p className="nota" style={{ marginTop: 10 }}>{x.canton} · {x.rol === 'dueno' ? UI.alquilaDesde(usd(x.precio)) : UI.buscaDe(`${usd(x.precio)} a ${usd(x.precio + 200)}`)}</p>
+      <p className="nota" style={{ marginTop: 10 }}>{zona} · {x.rol === 'dueno' ? UI.alquilaDesde(usd(x.precio)) : UI.buscaDe(`${usd(x.precio)} a ${usd(x.precio + 200)}`)}</p>
       <p className="rp-linea" style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>{x.llave && puntajeVisible(p) && <Sello t={28} />}{lineaPublica(p)}</p>
       <ul className="rp-burbujas" aria-label={UI.insignias}>{x.insignias.map(i => <li key={i} className="rp-burbuja" title={INSIGNIAS[i]!.nombre}><Icono n={i} /><span className="sr-only">{INSIGNIAS[i]!.nombre}</span></li>)}</ul>
     </div></li>
@@ -411,7 +430,7 @@ function Vitrina({ rol }: { rol: Rol }) {
       <p className="rp-paso">{UI.vitrinaTitulo}</p><h1 className="h2">{UI.vitrinaEn(lista, zona)}</h1>
       <nav className="rp-pestanas" aria-label="Lista">{(['dueno', 'inquilino'] as Rol[]).map(r => <a key={r} href={r === 'dueno' ? '#/perfil/vitrina' : '#/perfil/vitrina/inquilinos'} aria-current={r === rol ? 'page' : undefined}>{r === 'dueno' ? UI.vitrinaDuenos : UI.vitrinaInquilinos}</a>)}</nav>
       <p className="rp-orden">{VITRINA.orden}</p></div></section>
-    {xs.length < MINIMO_POR_CANTON ? <p className="glass tarjeta">{VITRINA.vacio}</p> : <ul className="rp-vitrina" role="list">{ordenarVitrina(xs).map(x => <Tarjeta key={x.nombre} x={x} />)}</ul>}
+    {xs.length < MINIMO_POR_CANTON ? <p className="glass tarjeta">{VITRINA.vacio}</p> : <ul className="rp-vitrina" role="list">{ordenarVitrina(xs).map(x => <Tarjeta key={x.nombre} x={x} zona={zona} />)}</ul>}
     <p className="rp-aviso">{VITRINA.pie(rol === 'dueno' ? 'dueños' : 'inquilinos')}</p>
     <p className="rp-aviso">{AVISO_LISTA}</p>
   </main>
@@ -451,7 +470,7 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
     <section className="glass tarjeta rp-texto"><h1 className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.intro}</p><ul>{ELIMINAR.puntos.map((t, k) => <li key={k}>{t}</li>)}</ul>
       <p className="nota">{ELIMINAR.correo}</p>
       <div className="rp-acciones">
-        <a className="boton boton--secundario" href="#/perfil/dueno/datos">{ELIMINAR.descargar}</a>
+        <button type="button" className="boton boton--secundario" onClick={() => bajar(datosParaDescargar(u, todos), 'lockumi-reputacion.json')}>{ELIMINAR.descargar}</button>
         <button type="button" className="boton rp-peligro" onClick={() => { if (abiertos) ir('/perfil/eliminar/confirmar'); else pedir() }}>{ELIMINAR.si}</button>
         <a className="boton boton--secundario" href="#/perfil">{ELIMINAR.no}</a></div></section>
   </main>
@@ -471,7 +490,8 @@ function useNoIndex(activo: boolean) {
  *  y mientras no acepte, crear o unirse a un alquiler nuevo muestra la tarjeta de bloqueo (los abiertos siguen igual);
  *  3) con REP-01, el último paso (nombre visible y cantón); 4) las rutas #/perfil/… o la pantalla de siempre (children). */
 export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: string; salir: () => void; children?: ReactNode }) {
-  useState(() => { try { vincularPrevia(u.email) } catch { /* sin almacenamiento */ } return 0 })
+  // Legal (regla 2): la aceptación previa de esta sesión solo pasa a una cuenta recién creada (sin alquileres en Lockumi).
+  useState(() => { try { olvidarEntrar(); const m = u.email.toLowerCase(); vincularPrevia(u.email, !store.todos().some(x => [x.duenoEmail, x.inquilinoEmail].some(c => c?.toLowerCase() === m))) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email), [omitido, setOmitido] = useState(() => ahoraNo(u.email))
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
@@ -486,7 +506,7 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   if (!e.rep01) {
     if (perfil) return <Rep01 aviso={<div className="glass tarjeta" role="note"><p>{REP13.texto}</p></div>} no={UI.ahoraNoCuenta}
       onNo={() => { try { sessionStorage.setItem(CLAVE_AHORA_NO + u.email.toLowerCase(), '1') } catch { /* nada */ } setOmitido(true); ir('/') }}
-      onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01) } catch { /* sin almacenamiento */ } }}
+      onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01_CUENTA) } catch { /* sin almacenamiento */ } }} cuenta
       extra={<div className="rp-acciones"><a className="rp-enlace-peligro" href="#/perfil/eliminar">{ELIMINAR.boton}</a></div>} />
     if (!omitido) return <Rep13 u={u} salir={salir} onAhoraNo={() => { try { sessionStorage.setItem(CLAVE_AHORA_NO + u.email.toLowerCase(), '1') } catch { /* nada */ } setOmitido(true) }} />
     return esNuevo(r) ? <BloqueoNuevo /> : <>{children}</>

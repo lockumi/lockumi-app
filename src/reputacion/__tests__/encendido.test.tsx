@@ -8,6 +8,8 @@ import type { Usuario } from '../../types'
 const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, String(v)) }, removeItem: (k: string) => { mem.delete(k) },
   clear: () => mem.clear(), key: (i: number) => [...mem.keys()][i] ?? null, get length() { return mem.size } })
+const ses = new Map<string, string>()
+const sesion = () => vi.stubGlobal('sessionStorage', { getItem: (k: string) => ses.get(k) ?? null, setItem: (k: string, v: string) => { ses.set(k, String(v)) }, removeItem: (k: string) => { ses.delete(k) } })
 const U: Usuario = { email: 'demo@lockumi.com', nombre: 'Demo', metodo: 'correo' }
 const sinNavegador = () => vi.doMock('../../store', async (o) => { const m = await o<typeof import('../../store')>(); return { ...m, useAlquileres: () => m.store.todos() } })
 const pantalla = async (r: string) => { const { default: R } = await import('../Pantallas'); return renderToStaticMarkup(<R u={U} r={r} salir={() => {}}><p>PANTALLA-DE-SIEMPRE</p></R>) }
@@ -18,7 +20,7 @@ const omitir = () => { const m = new Map<string, string>([['lockumi.reputacion.a
   vi.stubGlobal('sessionStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) }, removeItem: (k: string) => { m.delete(k) } }) }
 const texto = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
-beforeEach(() => { vi.resetModules(); mem.clear(); vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1'); sinNavegador() })
+beforeEach(() => { vi.resetModules(); mem.clear(); ses.clear(); sesion(); vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1'); sinNavegador() })
 
 describe('reputación encendida', () => {
   it('Inicio muestra la tarjeta «Tu perfil en Lockumi»', async () => {
@@ -46,10 +48,10 @@ describe('reputación encendida', () => {
   })
   it('cuentas 1.7-demo sin REP-01: al entrar ven el aviso REP-13 con [Ver cambios] (REP-01 aparte)', async () => {
     const t = texto(await pantalla('/'))
-    expect(t).toContain('Actualizamos el Aviso de privacidad (1.8-demo) y los Términos: usar Lockumi ahora incluye un perfil de reputación público y fijo. Antes de seguir, te pedimos aceptarlo en una pantalla aparte. Si no lo aceptas, puedes eliminar tu cuenta sin costo.')
+    expect(t).toContain((await import('../textos')).REP13.texto); expect(t).toContain('Actualizamos los Términos y el Aviso de privacidad (versión 1.10-demo · ')
     expect(t).toContain('Ver cambios'); expect(t).toContain('Eliminar mi cuenta'); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
     const h = await pantalla('/perfil/aceptar')
-    expect(texto(h)).toContain('Antes de crear tu cuenta: tu perfil de reputación'); expect(h).toMatch(/disabled=""[^>]*>Continuar/)
+    expect(texto(h)).toContain('Antes de seguir: tu perfil de reputación'); expect(h).toMatch(/disabled=""[^>]*>Continuar/)
   })
   it('regla provisional: sin REP-01, crear o unirse a un alquiler NUEVO muestra la tarjeta con [Ver y aceptar]; los abiertos siguen igual', async () => {
     omitir()

@@ -59,8 +59,12 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
     await db.query(`insert into public.lk_contratos(id, estado) values ($1, 'ventana_reclamo')`, [K])
     await db.query(`insert into public.lk_participantes(contrato_id, rol, usuario) values ($1, 'dueno', $2), ($1, 'inquilino', $3)`, [K, C, B])
     await como(C)
+    const antes = { p: await cuenta('public.lk_reputacion_perfiles', C), a: await cuenta('public.lk_reputacion_aceptaciones', C), c: await cuenta('public.lk_reputacion_consentimientos', C) }
     expect((await uno<{ f: Date | null }>('select public.lk_pedir_borrado_cuenta() f')).f).toBeNull()
-    expect(await cuenta('public.lk_reputacion_perfiles', C)).toBe(0)
+    // Legal (revisión del PR #26, regla 6): el perfil deja de mostrarse al instante, pero NO se borra nada de la cuenta mientras siga abierto.
+    expect((await uno<{ v: boolean }>('select public.lk_perfil_visible($1) v', [C])).v).toBe(false)
+    expect(antes.p).toBeGreaterThan(0)
+    expect({ p: await cuenta('public.lk_reputacion_perfiles', C), a: await cuenta('public.lk_reputacion_aceptaciones', C), c: await cuenta('public.lk_reputacion_consentimientos', C) }).toEqual(antes)
     const s0 = await uno<{ p: Date; a: boolean; l: Date | null }>('select pedido_en p, alquiler_abierto a, fecha_limite l from public.lk_solicitudes_borrado where usuario = $1', [C])
     expect(s0.p).toBeInstanceOf(Date); expect(s0.a).toBe(true); expect(s0.l).toBeNull()
     await como(null)
@@ -71,6 +75,7 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
     await db.query(`update public.lk_contratos set estado = 'cerrado', actualizado_en = '2026-11-27T15:00:00Z' where id = $1`, [K])
     await db.query('select public.lk_borrar_cuentas_pedidas()')
     expect((await uno<{ n: number }>('select count(*)::int n from auth.users where id = $1', [C])).n).toBe(0)
+    expect(await cuenta('public.lk_reputacion_perfiles', C)).toBe(0); expect(await cuenta('public.lk_reputacion_aceptaciones', C)).toBe(0)
     const s1 = await uno<{ c: Date; l: Date; h: Date | null }>('select cierre_en c, fecha_limite l, hecho_en h from public.lk_solicitudes_borrado where usuario = $1', [C])
     expect(new Date(s1.c).toISOString()).toBe('2026-11-27T15:00:00.000Z'); expect(new Date(s1.l).toISOString()).toBe(fechaLimiteBorrado('2026-11-27T15:00:00Z')); expect(s1.h).not.toBeNull()
   })

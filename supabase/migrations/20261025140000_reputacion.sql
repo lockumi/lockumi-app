@@ -124,6 +124,16 @@ revoke all on function public.lk_tiene_alquiler_abierto(uuid) from public, anon,
 -- La persona pide eliminar su cuenta (gratis y DEFINITIVO: no hay función para deshacerlo). El perfil deja de mostrarse al instante:
 -- se borran ya el perfil y los consentimientos. Sin alquiler abierto, la fecha límite es de 5 días hábiles desde el pedido; con uno,
 -- queda en null y la tarea la fija cuando se cierra el último (5 días hábiles desde el cierre). Devuelve la fecha límite (o null).
+-- ¿Se muestra el perfil? Nunca si la persona pidió eliminar su cuenta (aunque falte cerrar un alquiler). Toda consulta pública del
+-- perfil (vitrina, enlace público) tiene que pasar por aquí.
+create or replace function public.lk_perfil_visible(p_usuario uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lk_reputacion_perfiles where usuario = p_usuario)
+     and not exists (select 1 from public.lk_solicitudes_borrado where usuario = p_usuario)
+$$;
+revoke all on function public.lk_perfil_visible(uuid) from public;
+grant execute on function public.lk_perfil_visible(uuid) to anon, authenticated;
+
 create or replace function public.lk_pedir_borrado_cuenta() returns timestamptz
 language plpgsql security definer set search_path = public as $$
 declare u uuid := auth.uid(); lim timestamptz; abierto boolean;
@@ -133,9 +143,13 @@ begin
   insert into public.lk_solicitudes_borrado(usuario, alquiler_abierto, fecha_limite)
   values (u, abierto, case when abierto then null else public.lk_fecha_limite_borrado(now()) end)
   on conflict (usuario) do nothing;                         -- un segundo pedido no cambia nada del primero
-  delete from public.lk_reputacion_consentimientos where usuario = u;
-  delete from public.lk_reputacion_aceptaciones where usuario = u;
-  delete from public.lk_reputacion_perfiles where usuario = u;
+  -- El perfil deja de mostrarse al instante (lk_perfil_visible). Con un alquiler abierto NO se borra nada de la cuenta hasta que se
+  -- cierra (Legal, revisión del PR #26, regla 6); sin alquiler abierto, se borra ya lo público y la cuenta en la tarea programada.
+  if not abierto then
+    delete from public.lk_reputacion_consentimientos where usuario = u;
+    delete from public.lk_reputacion_aceptaciones where usuario = u;
+    delete from public.lk_reputacion_perfiles where usuario = u;
+  end if;
   select fecha_limite into lim from public.lk_solicitudes_borrado where usuario = u;
   return lim;
 end $$;
