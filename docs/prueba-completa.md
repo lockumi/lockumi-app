@@ -136,3 +136,27 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 - **Versiones** (`src/legal/versiones.ts`): cuando un interruptor cambia el texto visible, sube la versión, cada una con su fecha: A → 1.7-demo (25 de octubre de 2026), B (A + `VITE_CORREOS`) → **1.8-demo**, C (A + B + `VITE_DOS_PERSONAS`) → **1.9-demo**. Las fechas de la 1.8 y la 1.9 (1 y 15 de noviembre de 2026) se cambian por la del día en que se encienda cada una. `{{edicion}}`, el registro de aceptación y el contrato usan la versión vigente; las anteriores quedan en `/terminos-1-7`, `/terminos-1-8` (y `/privacidad-…`).
 - **Sin pantalla que bloquee:** quien aceptó una 1.7-demo o posterior más vieja ve en «Tus alquileres» un aviso (`AvisoVersion`, `role="status"`) con enlace a los Términos; lo nuevo se acepta con una casilla dentro de cada función (`casillaDeFuncion`: correos → 1.8-demo, dos personas → 1.9-demo). Con solo A no se ve nada: la rama es igual píxel a píxel a `master` en las 11 pantallas.
 - **Alquileres firmados:** conservan su versión salvo que los dos acepten pasar a la vigente (`aceptarVersion`, tarjeta `CambioVersion`; solo hacia adelante y antes de la salida). La aceptación vale solo para la versión aceptada (`terminos.hacia`).
+
+## Escenario C en un solo comando: `correr-c.sh` (25/10, ~2:20 a. m. CR)
+`/workspace/lockumi/prueba-completa/correr-c.sh` (en la caja, fuera del repo) corre la prueba de C de punta a punta cuando estén las 4 llaves (`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TRUSTLESS_WORK_API_KEY`, `LOCKUMI_TW_PLATAFORMA_SECRET`) como variables de entorno de un proceso nuevo. La cuenta que resuelve disputas sale de `/workspace/lockumi/seguridad/mediador-testnet.env` (chmod 600). Nunca imprime secretos: de cada variable solo dice «está» o «FALTA». No publica nada y no toca Vercel ni master.
+1. **Llaves.** Si falta alguna, se detiene (salvo con `--simulado`).
+2. **Migraciones 20261025030000 y 20261025040000.** Revisa por REST si están en el destino (`SUPABASE_URL`; por defecto, el proyecto de la app).
+   - Si el destino es **producción**, no las aplica nunca: deja la nota de que hace falta la aprobación de Katherine. Sin 040000, se omite la prueba del silencio del inquilino y queda escrito en el informe.
+   - En otro destino, las aplica con `psql "$SUPABASE_DB_URL"`, solo las que faltan.
+   - Un Supabase local necesita Docker y la Supabase CLI. Esta caja no los tiene, así que el script lo revisa y lo avisa.
+   - Si el único destino es producción, el E2E de testnet **solo** corre con `--prod-datos-prueba`, que escribe datos de prueba marcados en esa base. Sin esa opción, hace el ensayo simulado y sale con el código 3.
+3. **Build** de la rama con `VITE_PRUEBA_COMPLETA=1 VITE_DOS_PERSONAS=1 VITE_TRUSTLESS=1` (con `VITE_CORREOS` apagado) en `/tmp/c-build-<commit>`. Si ya existe para ese commit, se reutiliza.
+4. **E2E de dos cuentas:** `scripts/e2e-c.mjs`.
+   - Dos sesiones anónimas propias (dueño e inquilino) y una persona mediadora de prueba llaman a las mismas funciones `lk_*` que la app y al mismo `/api/tw` (`api/_lib/tw.ts`, cargado en el proceso).
+   - El build local no tiene Cavos, así que las firmas de la billetera (depósito y aprobación) las hacen cuentas Stellar desechables de testnet: Friendbot, trustline y USDC del DEX.
+   - Cuatro alquileres corren en paralelo, con un plazo de 60 s cada uno. Las llamadas a Trustless Work van en fila para que no choquen los números de secuencia:
+     - **aprobada:** invitar, unirse, firmar, desplegar y pagar; el dueño aprueba en la red; vence el plazo y se libera el 100 %.
+     - **silencio-dueno:** el dueño no aprueba ni reclama, así que hay devolución automática del 100 % (disputa más resolución).
+     - **mediacion:** reclamo; el inquilino rechaza; cada parte ve la aceptación de la otra; con una sola aceptación la persona mediadora no puede cerrar; con las dos lo registra; «repartir» paga, y un segundo «repartir» devuelve el mismo hash.
+     - **silencio-inquilino:** pasa a la mediación por «pruebas incompletas (6.4.1)», sin pago.
+   - Los datos de prueba llevan la marca `E2E-C <corrida>` en la dirección y correos `@lockumi.test`. Se borran con `./correr-c.sh --limpiar`.
+   - Es idempotente: no repite una corrida en verde del mismo commit (salvo con `--otra-vez`), cada corrida usa alquileres nuevos y «repartir» no paga dos veces.
+5. **Capturas:** `capturas-c.mjs` y `c-pares.py`, con el mismo método local que las de `paso17-escenario-c`. Las pantallas de mediación, cierre con reparto y devolución automática llevan el resultado, el historial, los hashes y las aceptaciones reales de la corrida (`capa-capturas.json`). Salida: `capturas/paso17-escenario-c-testnet/antes-despues/` con `resumen.jpg`.
+6. **Informe:** `prueba-completa/c-testnet/informe.md`, con los pasos, los hashes y los enlaces a Stellar Expert.
+
+**Ensayo sin llaves:** `./correr-c.sh --simulado` hace el mismo recorrido con PGlite (todas las migraciones), el `/api/tw` de verdad y Trustless Work falso. Los hashes simulados nunca se muestran como enlaces. La prueba `scripts/__tests__/e2e-c-simulado.test.ts` lo mantiene verde en CI.
