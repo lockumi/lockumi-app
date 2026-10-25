@@ -54,3 +54,13 @@ describe('P-05: espera de la mediación en C', () => {
     expect(ESPERA_MEDIACION_C).toBe('Ahora cada parte elige cómo repartir el depósito. Cuando las dos acepten el mismo reparto, la persona mediadora lo registra y liberamos los USDC de prueba, cada monto menos el 0,3 % de comisión de Trustless Work. La persona mediadora puede ayudarles a llegar a un acuerdo, pero no decide por ustedes.')
   })
 })
+
+describe('rpc con la clave de servicio', () => {
+  it('una función «returns void» (204 sin cuerpo) no rompe el envío', async () => {
+    const { rpc } = await import('../../../api/_lib/supabase')
+    const f = (async () => new Response(null, { status: 204 })) as unknown as typeof fetch
+    await expect(rpc({ url: 'https://x.supabase.co', key: 'k' } as never, 'lk_correo_marcar', {}, f)).resolves.toBeNull()
+    const g = (async () => new Response('true', { status: 200 })) as unknown as typeof fetch
+    await expect(rpc({ url: 'https://x.supabase.co', key: 'k' } as never, 'lk_correo_reservar', {}, g)).resolves.toBe(true)
+  })
+})

@@ -15,7 +15,7 @@ for (const c of indice) {
   await p.screenshot({ path: `${OUT}/${nombre}`, fullPage: true }); hechos.push({ nombre, ...c }); console.log(nombre)
 }
 // Hoja resumen: una miniatura por plantilla distinta (la primera de cada una), con Pillow
-const unicas = [...new Map(hechos.map(h => [h.plantilla, h])).values()]
+const unicas = [...new Map(hechos.map(h => [h.plantilla ?? h.nombre, h])).values()]
 const { execFileSync } = await import('node:child_process')
 execFileSync('python3', ['-c', `
 import json,sys
@@ -28,5 +28,5 @@ d.text((20,22),'Correos del escenario C (COR-C-01 a COR-C-09) · borrador «LEGA
 for i,(f,t) in enumerate(L):
   im=Image.open(f).convert('RGB'); im=im.resize((W,int(im.height*W/im.width))).crop((0,0,W,H))
   x=20+(i%C)*(W+20); y=70+(i//C)*(H+50); hoja.paste(im,(x,y)); d.rectangle((x-1,y-1,x+W,y+H),outline='#FFB08A',width=2); d.text((x,y+H+10),t,fill='#3D2A22',font=F)
-hoja.save(out,quality=85)`, JSON.stringify(unicas.map(h => [`${OUT}/${h.nombre}`, h.plantilla])), `${OUT}/resumen-correos.jpg`])
+hoja.save(out,quality=85)`, JSON.stringify(unicas.map(h => [`${OUT}/${h.nombre}`, h.plantilla ?? h.nombre.replace('.png', '')])), `${OUT}/resumen-correos.jpg`])
 await b.close(); console.log(`${hechos.length} correos · ${OUT}/resumen-correos.jpg`)

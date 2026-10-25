@@ -66,7 +66,8 @@ async function destinoSimulado() {
     // Paso 17 · correos de C (api/_lib/correos-c.ts): cualquier rpc/lk_* con la clave de servicio, tal cual (argumentos con nombre).
     if (u.pathname.includes('/rpc/') && /^lk_[a-z0-9_]+$/.test(t) && m === 'POST') {
       const ks = Object.keys(b ?? {}); const rows = await q(null, `select * from public.${t}(${ks.map((k, i) => `${k} => $${i + 1}`).join(', ')})`, ks.map(k => b[k]))
-      return ok(rows.length === 1 && Object.keys(rows[0]).length === 1 && t in rows[0] ? rows[0][t] : rows) }
+      const v = rows.length === 1 && Object.keys(rows[0]).length === 1 && t in rows[0] ? rows[0][t] : rows
+      return v === '' ? new Response(null, { status: 204 }) : ok(v) }   // «returns void»: PostgREST responde 204 sin cuerpo
     return new Response('ruta no simulada: ' + t, { status: 500 })
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
@@ -96,7 +97,9 @@ async function destinoReal() {
     limpiar: async () => {
       const r = await rest(`lk_contratos?direccion=like.${encodeURIComponent('E2E-C %')}&select=id`); const ids = r.ok ? (await r.json()).map(x => x.id) : []
       for (const id of ids) await rest(`lk_contratos?id=eq.${id}`, { method: 'DELETE' })
-      await rest(`lk_mediadores?nombre=like.${encodeURIComponent('E2E-C %')}`, { method: 'DELETE' }); return ids.length } }
+      await rest(`lk_mediadores?nombre=like.${encodeURIComponent('E2E-C %')}`, { method: 'DELETE' })
+      await rest(`lk_correos_enviados?para=like.${encodeURIComponent('lockumi+e2ec-%')}`, { method: 'DELETE' })   // correos de cuenta de prueba (sin alquiler)
+      return ids.length } }
 }
 
 // ── Trustless Work falso (solo --simulado): devuelve XDR válidos de la cuenta que tiene que firmar ──
@@ -172,7 +175,7 @@ const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await 
 await D.hacerMediador(mediador.uid)
 const correo = (r, k) => CORREOS ? correoPrueba(k, r) : `e2e-c+${CORRIDA.toLowerCase()}-${k}-${r}@lockumi.test`
 log('Preparando cuentas de testnet (dueño e inquilino desechables)…')
-const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 3 + 1)])
+const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 4 + 1)])   // 4 alquileres con depósito (aprobada, silencio-dueno, mediacion, recordatorios)
 const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una foto de prueba
 const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 92 * 864e5).toISOString().slice(0, 10)
 // Igual que declaracionInvitacion() de la app: con VITE_CORREOS=1 la declaración incluye el correo de invitación.
