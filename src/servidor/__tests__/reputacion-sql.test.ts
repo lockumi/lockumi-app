@@ -14,6 +14,8 @@ const A = '00000000-0000-4000-8000-000000000001', B = '00000000-0000-4000-8000-0
 let db: PGlite
 const como = (uid: string | null) => db.query(`select set_config('test.uid', $1, false)`, [uid ?? ''])
 const uno = async <T>(sql: string, p: unknown[] = []) => (await db.query<T>(sql, p)).rows[0]!
+/** Lo que hace api/verificar-correo.ts (clave de servicio) tras validar el token de Cavos (Legal, 25/10 4:23 p. m.: sin esto, se rechaza). */
+const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google')`, [u, correo])
 const cuenta = async (t: string, u: string) => (await uno<{ n: number }>(`select count(*)::int n from ${t} where usuario = $1`, [u])).n
 
 beforeAll(async () => {
@@ -28,6 +30,7 @@ beforeAll(async () => {
     await db.query(`insert into public.lk_reputacion_consentimientos(usuario, rol, opcion, version, texto) values ($1, 'dueno', 'destacados', 'demo', '{a}')`, [u])
     await db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, limite) values ($1, 'inquilino', gen_random_uuid(), 'x', now())`, [u])
   }
+  await verificar(A, 'a@ejemplo.com'); await verificar(C, 'c@ejemplo.com')
 }, 30_000)
 
 describe('migración de reputación (archivo; no aplicada a producción)', () => {

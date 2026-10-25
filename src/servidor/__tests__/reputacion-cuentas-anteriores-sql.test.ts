@@ -28,6 +28,7 @@ beforeAll(async () => {
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
   for (const x of [NUEVA1, NUEVA2, VIEJA, BORRA]) await db.query('insert into auth.users(id) values ($1)', [x])
   for (const x of [NUEVA1, NUEVA2, BORRA]) await db.query(`insert into public.lk_reputacion_aceptaciones(usuario, version, texto) values ($1, '1.10-demo', '{a,b}')`, [x])
+  await db.query(`select public.lk_registrar_correo_verificado($1, 'borra@ejemplo.com', 'google')`, [BORRA])   // correo verificado (4:23 p. m.)
 }, 30_000)
 
 describe('cuentas anteriores (sin aceptación de reputación)', () => {

@@ -38,7 +38,7 @@ describe('descargar mis datos', () => {
     const { UI } = await import('../textos')
     expect(UI.errDescarga).toMatch(/Revisa tu conexión.*vuelve a tocar «Descargar mis datos»/)
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
-    expect(fs.readFileSync('src/reputacion/textos.ts', 'utf8')).toMatch(/LEGAL: revisar · ronda 25\/10 4:01[^\n]*\n[^\n]*errDescarga/)
+    expect(fs.readFileSync('src/reputacion/textos.ts', 'utf8')).toMatch(/LEGAL: revisado \(25\/10\)[^\n]*\n[^\n]*errDescarga/)   // Legal, 25/10 4:23 p. m.
   })
   it('RIESGO (Legal, revisión de c887895): en modo servidor, la aceptación de REP-01 se escribe en el servidor por el correo de la cuenta', async () => {
     const R = { version: '1.10-demo', fecha: '2026-10-25T22:00:00Z', texto: ['a', 'b'] }
