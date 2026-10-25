@@ -11,6 +11,7 @@ import { modoServidor, modoTrustless, modoSolo } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
 import { pruebaCompleta } from './prueba/interruptor'
+import { APROBADO_DUENO } from './prueba/dosPersonas'
 import { registrarEntrega, finVentana } from './prueba/dueno'
 import { repartoValido } from './prueba/mediacion'
 import { nuevoReclamo, responderRubros as responderLocal, votarPropuesta as votarLocal, silencio } from './prueba/reclamos'
@@ -207,7 +208,9 @@ const remoto: Acciones = {
   async cerrarSinReclamo(a) {
     const cerro = await servidor.cerrarSinReclamo(a.id)
     // Con TW: la plataforma libera el 100 % al inquilino (necesita la aprobación del dueño en la cadena).
-    if (modoTrustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx))) await trustless.liberar(a.id)
+    if (modoTrustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx)))
+      // Paso 7 (interruptor encendido): sin la aprobación del dueño, devolución automática del 100 % al inquilino.
+      await (pruebaCompleta() && !a.historial.some(e => e.texto === APROBADO_DUENO) ? trustless.devolverAutomatico(a.id) : trustless.liberar(a.id))
   },
   ...(modoTrustless ? { aprobarDevolucion: (a: Alquiler) => trustless.aprobarDevolucion(a.id).then(() => {}) } : {}),
   decidir: (a, m, mot) => servidor.decidir(a.id, m, mot).then(() => {}),

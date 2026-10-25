@@ -22,6 +22,7 @@ import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alert
 import { EsperaPago } from '../EsperaPago'
 import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
+import { esDosPersonas, TEXTO_CERRADO_AUTO } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -268,6 +269,8 @@ function EscrowReal({ a, rol }: P) {
 
 function Cerrado({ a, rol }: P) {
   const r = a.resultado!
+  // Paso 7 (interruptor encendido, dos personas): devolución automática del 100 % al inquilino (Términos 1.7-demo 5.3 d).
+  const auto2 = esDosPersonas(a) && r.via === 'automatico'
   const via = escrowReal && r.via === 'automatico' ? `No hubo reclamos en ${textoPlazo(a)}. El dueño de prueba aprobó y Lockumi devolvió el depósito en la red de prueba.` : { automatico: `No hubo reclamos en ${textoPlazo(a)}.`, acuerdo: 'Se pusieron de acuerdo en la app.', mediacion: 'Lo decidió una persona mediadora.',
     // Solo con la prueba completa (interruptor apagado en producción: ningún alquiler llega a estas vías).
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
@@ -275,7 +278,7 @@ function Cerrado({ a, rol }: P) {
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisar
   return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
-    <h2>Depósito devuelto</h2><p>{via}</p>
+    {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{via}</p></>}
     <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
