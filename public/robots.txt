@@ -1,5 +1,5 @@
-# Lockumi · app.lockumi.com. Los perfiles de reputación no van en buscadores (Legal, revisión del PR #26, regla 3).
-# Cada perfil también lleva «noindex, nofollow» (etiqueta meta y encabezado X-Robots-Tag en vercel.json).
+# Lockumi - app.lockumi.com. Los perfiles de reputacion no van en buscadores (Legal, revision del PR #26, regla 3).
+# Cada perfil tambien lleva "noindex, nofollow" (etiqueta meta y encabezado X-Robots-Tag en vercel.json).
 User-agent: *
 Disallow: /perfil
 Disallow: /api/
