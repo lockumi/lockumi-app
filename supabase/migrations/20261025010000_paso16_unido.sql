@@ -1,5 +1,5 @@
 -- paso16-unido · Privacidad 1.7-demo en los alquileres con otra persona (modo de dos personas). Legal, 25/10, arreglos 5 y 6.
--- PENDIENTE DE APLICAR: el SUPABASE_ACCESS_TOKEN de la caja da 401. Ver docs/prueba-completa.md («Borrados en Supabase»).
+-- Aplicada en producción (proyecto sddgjnuvxzkrhhuczuly) el 25/10/2026.
 -- Idempotente. No edita migraciones anteriores (no se sabe cuáles ya están aplicadas).
 --
 -- A) Invitaciones (7 días):
