@@ -1,4 +1,4 @@
--- Escenario C (PR #22; no se aplica ni se enciende hasta el OK de Katherine y de Legal). Lista de Legal (legal/revision-marcas-pr22.md):
+-- Escenario C (PR #22; aplicada en producción (proyecto sddgjnuvxzkrhhuczuly) el 25/10/2026 a las 2:13 p. m. CR, con el OK de Katherine; C sigue apagado en la app). Lista de Legal (legal/revision-marcas-pr22.md):
 -- 7) Plazos del servidor (Términos 6.5 a y b). El plazo del dueño empieza cuando toca «Recibí la casa» o 2 días después de la
 --    entrega, lo que pase primero. Si el último día cae en domingo o en un feriado de ley de Costa Rica, termina el siguiente día
 --    hábil (misma hora). Solo para plazos en días enteros: los plazos cortos de la red de prueba (VITE_VENTANA_SEGUNDOS) no se mueven

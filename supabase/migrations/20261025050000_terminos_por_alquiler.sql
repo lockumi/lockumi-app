@@ -1,4 +1,4 @@
--- Escenario C (preparación; no se aplica ni se enciende hasta el OK de Katherine y de Legal). Idempotente.
+-- Escenario C (aplicada en producción (proyecto sddgjnuvxzkrhhuczuly) el 25/10/2026 a las 2:13 p. m. CR, con el OK de Katherine; C sigue apagado en la app). Idempotente.
 -- Cada alquiler guarda en el servidor la versión de los Términos con la que se creó (un alquiler nuevo de C nace en la 1.9-demo y
 -- nunca ofrece «pasar a la 1.9-demo»; los de antes quedan con terminos_version = null y conservan la suya, 1.6-demo).
 -- También queda quién aceptó los Términos y el Aviso de privacidad de esa versión y cuándo: el dueño al crear y el inquilino al unirse.

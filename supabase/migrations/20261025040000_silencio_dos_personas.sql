@@ -1,4 +1,4 @@
--- Escenario C (preparación; no se aplica ni se enciende hasta el OK de Katherine y de Legal).
+-- Escenario C (aplicada en producción (proyecto sddgjnuvxzkrhhuczuly) el 25/10/2026 a las 2:13 p. m. CR, con el OK de Katherine; C sigue apagado en la app).
 -- B2 · alquileres de dos personas en el servidor (Legal, 25/10, 1:24 a. m.):
 -- - Silencio del dueño (5.3 d y 6.5 a): si no aprueba ni reclama en su plazo, el 100 % vuelve al inquilino. Ya lo hace
 --   lk_cerrar_sin_reclamo (via 'automatico', que /api/tw paga con «devolver-automatico» o «liberar»); aquí se agrega la corrida

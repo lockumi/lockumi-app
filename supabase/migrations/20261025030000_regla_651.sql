@@ -1,4 +1,4 @@
--- Escenario C (preparación; no se aplica ni se enciende hasta el OK de Katherine y de Legal).
+-- Escenario C (aplicada en producción (proyecto sddgjnuvxzkrhhuczuly) el 25/10/2026 a las 2:12 p. m. CR, con el OK de Katherine; C sigue apagado en la app).
 -- Va después de 20261025020000_mediacion_solo_dos_aceptan.sql (master, ya aplicada en producción): esa migración trae
 -- lk_aceptaciones_mediacion, lk_aceptar_acuerdo_mediacion y lk_decidir_mediacion (solo con las dos aceptaciones). Aquí queda
 -- solo lo del escenario C: la aceptación por separado de la Regla de propuesta automática (6.5.1) al firmar.
