@@ -109,9 +109,14 @@ function partir(s: string, t: number, max: number): string[] {
 export function pdfExpediente(a: Alquiler, ahora: number, ac?: Aceptaciones, imgs: Map<string, ImagenPdf> = new Map()): Uint8Array {
   const W = 595, H = 842, M = 50, paginas: string[][] = [[]]; let y = H - 110
   const usadas = new Map<string, number>(), usoPagina: Set<number>[] = [new Set()]
+  const pagina = () => { paginas.push([]); usoPagina.push(new Set()); y = H - 80 }
+  const altoFoto = (src?: string) => { const im = src ? imgs.get(src) : undefined; if (!im) return 0; const w = Math.min(160, 110 * im.ancho / im.alto); return w * im.alto / im.ancho + 6 }
+  const altoLinea = (s: string, t: number) => partir(s, t, W - 2 * M).length * t * 1.45
+  // Reserva espacio para que un título no quede solo al pie ni una foto se separe de su línea.
+  const asegurar = (alto: number) => { if (y - alto < 70 - 10 * 1.45) pagina() }
   const linea = (s: string, t: number, negrita = false, color = '0.239 0.165 0.133') => {
     for (const l of partir(s, t, W - 2 * M)) {
-      if (y < 70) { paginas.push([]); usoPagina.push(new Set()); y = H - 80 }
+      if (y < 70) pagina()
       paginas[paginas.length - 1].push(`BT /${negrita ? 'F2' : 'F1'} ${t} Tf ${color} rg ${M} ${y} Td ${cadena(l)} Tj ET`); y -= t * 1.45
     }
   }
@@ -119,12 +124,17 @@ export function pdfExpediente(a: Alquiler, ahora: number, ac?: Aceptaciones, img
   const imagen = (src: string) => {
     const im = imgs.get(src); if (!im) return
     const w = Math.min(160, 110 * im.ancho / im.alto), h = w * im.alto / im.ancho
-    if (y - h < 70) { paginas.push([]); usoPagina.push(new Set()); y = H - 80 }
+    if (y - h < 70) pagina()
     if (!usadas.has(src)) usadas.set(src, usadas.size + 1)
     const n = usadas.get(src)!; usoPagina[usoPagina.length - 1].add(n)
     paginas[paginas.length - 1].push(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${M + 12} ${(y - h + 8).toFixed(2)} cm /Im${n} Do Q`); y -= h + 6
   }
-  for (const s of contenidoExpediente(a, ahora, ac)) { y -= 8; linea(s.titulo, 13, true, '0.91 0.325 0.122'); s.lineas.forEach((l, i) => { linea(l, 10); if (s.fotos?.[i]) imagen(s.fotos[i]) }) }
+  for (const s of contenidoExpediente(a, ahora, ac)) {
+    y -= 8; const l0 = s.lineas[0] ?? ''
+    asegurar(13 * 1.45 + altoLinea(l0, 10) + altoFoto(s.fotos?.[0]))
+    linea(s.titulo, 13, true, '0.91 0.325 0.122')
+    s.lineas.forEach((l, i) => { if (s.fotos?.[i]) asegurar(altoLinea(l, 10) + altoFoto(s.fotos[i])); linea(l, 10); if (s.fotos?.[i]) imagen(s.fotos[i]) })
+  }
   const objs: string[] = ['<< /Type /Catalog /Pages 2 0 R >>', '', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>']
   const kids: number[] = []
   // Fotos: un objeto por foto distinta (JPEG sin metadatos, DCTDecode). Bytes 0–255 como caracteres (el PDF se arma byte a byte).
