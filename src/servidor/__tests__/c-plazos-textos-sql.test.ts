@@ -155,10 +155,10 @@ describe('9) eventos del historial con «USDC de prueba»', () => {
     await db.query(`insert into public.lk_reclamos(contrato_id, monto, motivo, respuesta) values ($1, 30, 'Pared manchada en la sala', 'rechazado')`, [med])
     await db.query(`update public.lk_contratos set estado = 'mediacion' where id = $1`, [med])
     await como(DUENO); await db.query('select public.lk_aceptar_acuerdo_mediacion($1, 20)', [med])
-    expect((await eventos(med)).at(-1)).toBe('El dueño aceptó este reparto: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino')
+    expect((await eventos(med)).at(-1)).toBe('El dueño aceptó este reparto: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work')
     await como(INQ); await db.query('select public.lk_aceptar_acuerdo_mediacion($1, 20)', [med])
     await como(MED); await db.query(`select public.lk_decidir_mediacion($1, 20, 'Daño parcial')`, [med])
-    expect((await eventos(med)).at(-1)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino (aceptado por las dos partes) · Daño parcial')
+    expect((await eventos(med)).at(-1)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work (aceptado por las dos partes) · Daño parcial')
   })
 })
 

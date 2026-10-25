@@ -196,7 +196,7 @@ begin
   if p_monto_dueno is null or p_monto_dueno < 0 or p_monto_dueno > m then raise exception 'El monto para el dueño debe estar entre 0 y lo reclamado.' using errcode = '22023'; end if;
   insert into public.lk_aceptaciones_mediacion(contrato_id, rol, usuario, monto_dueno) values (p_contrato, r, auth.uid(), p_monto_dueno)
   on conflict (contrato_id, rol) do update set usuario = excluded.usuario, monto_dueno = excluded.monto_dueno, aceptado_en = now();
-  perform public.lk_evento(p_contrato, format('%s aceptó este reparto: %s USDC de prueba al dueño y %s USDC de prueba al inquilino', case r when 'dueno' then 'El dueño' else 'El inquilino' end, trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno)));
+  perform public.lk_evento(p_contrato, format('%s aceptó este reparto: %s USDC de prueba al dueño y %s USDC de prueba al inquilino, cada monto menos el 0,3 %% de comisión de Trustless Work', case r when 'dueno' then 'El dueño' else 'El inquilino' end, trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno)));
 end $$;
 
 create or replace function public.lk_decidir_mediacion(p_contrato uuid, p_monto_dueno numeric, p_motivo text default null) returns void
@@ -211,7 +211,7 @@ begin
   if (select count(*) from public.lk_aceptaciones_mediacion where contrato_id = p_contrato and monto_dueno = p_monto_dueno) <> 2 then
     raise exception 'Faltan las aceptaciones de las dos partes con este reparto. La persona mediadora no decide por las partes.' using errcode = '55000';
   end if;
-  cierre := 'dos_aceptan'; texto := format('Acuerdo registrado: %s USDC de prueba al dueño y %s USDC de prueba al inquilino (aceptado por las dos partes)', trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno));
+  cierre := 'dos_aceptan'; texto := format('Acuerdo registrado: %s USDC de prueba al dueño y %s USDC de prueba al inquilino, cada monto menos el 0,3 %% de comisión de Trustless Work (aceptado por las dos partes)', trim_scale(p_monto_dueno), trim_scale(c.monto - p_monto_dueno));
   update public.lk_contratos set estado = 'cerrado', resultado = jsonb_build_object('via','mediacion','cierre',cierre,'dueno',p_monto_dueno,'inquilino',c.monto - p_monto_dueno) where id = p_contrato;
   perform public.lk_evento(p_contrato, texto || coalesce(' · ' || nullif(trim(p_motivo), ''), ''));
 end $$;
