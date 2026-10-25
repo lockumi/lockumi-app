@@ -35,6 +35,16 @@ describe('límite 1 en la app: el token de Cavos que ya existe va a /api/verific
     expect(srv.verificarCorreo).toHaveBeenCalledTimes(1); expect(srv.verificarCorreo).toHaveBeenCalledWith('token-de-cavos')
     expect(orden).toEqual(['verificar', 'necesita', 'necesita'])
   })
+  it('el servidor lee por el ÚLTIMO correo verificado de la sesión: si cambia la persona en el aparato, se verifica otra vez', async () => {
+    const { v } = await cargar(true)
+    srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'a@ejemplo.com' } })
+    await v.asegurarCorreo('a@ejemplo.com'); await v.asegurarCorreo('a@ejemplo.com')
+    srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'b@ejemplo.com' } })
+    await v.asegurarCorreo('b@ejemplo.com')
+    srv.verificarCorreo.mockImplementationOnce(async () => { orden.push('verificar'); return { correo: 'a@ejemplo.com' } })
+    expect(await v.asegurarCorreo('a@ejemplo.com')).toBe(true)
+    expect(srv.verificarCorreo).toHaveBeenCalledTimes(3)
+  })
   it('sin token (pestaña nueva): no manda nada inventado; el servidor decide con lo que ya verificó', async () => {
     token = null; const { v } = await cargar(true)
     await v.necesitaRep01EnServidor('demo@lockumi.com')
@@ -76,7 +86,10 @@ describe('límite 5: eliminar la cuenta pide el borrado al servidor', () => {
     expect(UI.errBorrado).toMatch(/vuelve a tocar «Eliminar mi cuenta»/)
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     expect(fs.readFileSync('src/reputacion/Pantallas.tsx', 'utf8')).toMatch(/eliminarCuenta\(u\.email, todos, ahora\)/)
-    expect(fs.readFileSync('src/reputacion/textos.ts', 'utf8')).toMatch(/LEGAL: revisar · ronda 25\/10 4:23[^\n]*\n[^\n]*errBorrado/)
+    // Legal, respuesta a 96e931b (4:41 p. m.): «solicitud» en vez de «pedido», y revisado.
+    expect(UI.errBorrado).toBe('No pudimos enviar tu solicitud para eliminar la cuenta. Revisa tu conexión y vuelve a tocar «Eliminar mi cuenta». Si sigue igual, sal de Lockumi y vuelve a entrar con tu correo.')
+    expect(fs.readFileSync('src/reputacion/textos.ts', 'utf8')).toMatch(/LEGAL: revisado \(25\/10\)[^\n]*\n[^\n]*errBorrado/)
+    expect(fs.readFileSync('api/_lib/cavos-token.ts', 'utf8')).toMatch(/LEGAL: revisado \(25\/10\)[^\n]*\n[^\n]*NO_SE_PUDO_VERIFICAR/)
   })
 })
 
