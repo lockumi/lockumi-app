@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { LogoAnimado } from '../LogoAnimado'
 import { store, useAlquileres, obtener, ahoraDe, DIA, vistaDe, rolDe, fijarVista } from '../store'
 import { acciones, plazoMs, textoPlazo } from '../acciones'
-import { modoServidor, modoTrustless, modoSolo, modoPrueba, modoVideo, escrowReal } from '../servidor/config'
+import { modoDe } from '../servidor/config'
 import { COMISION_TEXTO, usaCuentaPropia } from '../services/escrow'
 import { abreviar } from '../services/billetera'
 import { PagoReal, CierreReal, Comprobantes, Cuentas, UltimoComprobante, DetalleSolo, VerTx } from './Real'
@@ -23,7 +23,7 @@ import { EsperaPago } from '../EsperaPago'
 import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { Expediente } from '../prueba/Expediente'
-import { esDosPersonas, TEXTO_CERRADO_AUTO, montoPrueba, recibeInquilino, notaComisionAuto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, montoPrueba, recibeInquilino, notaComisionAuto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -36,6 +36,7 @@ const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 function Contrato({ a, rol }: P) {
+  const { prueba: modoPrueba } = modoDe(a)
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
   if (pruebaCompleta() && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
     return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
@@ -49,10 +50,12 @@ function Contrato({ a, rol }: P) {
 
 /** Paso del depósito. Parte 2: en modoVideo cambiar PagoSimulado por el depósito real (PagoReal ya existe para la red de prueba). */
 function Pago({ a, rol }: P) {
+  const { solo: modoSolo } = modoDe(a)
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
 function PagoSimulado({ a, rol }: P) {
+  const { video: modoVideo, escrowReal } = modoDe(a)
   const p = useProceso()
   // Estado de espera v2: el paso sale del avance real de services/escrow.ts (sin temporizadores). `fallo` = paso en que falló.
   const [etapa, setEtapa] = useState<EtapaPago>(0); const [fallo, setFallo] = useState<EtapaPago>(0)
@@ -124,6 +127,7 @@ function EnCurso({ a }: P) {
 }
 
 function Ventana({ a, rol }: P) {
+  const { servidor: modoServidor, solo: modoSolo, video: modoVideo, escrowReal } = modoDe(a)
   const fin = +new Date(a.ventanaInicio!) + plazoMs(a); const [, tick] = useState(0); const [form, setForm] = useState(false); const p = useProceso()
   useEffect(() => { const t = setInterval(() => tick(k => k + 1), 30_000); return () => clearInterval(t) }, [])
   const resta = Math.max(0, fin - ahoraDe(a)); const dias = Math.floor(resta / DIA); const horas = Math.floor(resta % DIA / 3_600_000)
@@ -162,6 +166,7 @@ function Ventana({ a, rol }: P) {
 }
 
 function FormReclamo({ a, onCancelar }: { a: Alquiler; onCancelar: () => void }) {
+  const { escrowReal } = modoDe(a)
   const p = useProceso()
   const [monto, setMonto] = useState(''); const [motivo, setMotivo] = useState(''); const [fotos, setFotos] = useState<Foto[]>([]); const [env, setEnv] = useState(false)
   const m = Number(monto.replace(',', '.'))
@@ -195,6 +200,7 @@ function Evidencia({ a }: { a: Alquiler }) {
 }
 
 function Reclamo({ a, rol }: P) {
+  const { solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a)
   const r = a.reclamo!; const p = useProceso()
   const aceptar = () => p.correr(av => acciones.responder(a, true, av))
   return <section className="pila"><div className="cab"><h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}</div>{/* LEGAL: revisado (24/10) */}<Evidencia a={a} />
@@ -212,9 +218,10 @@ function Reclamo({ a, rol }: P) {
 }
 
 function Mediacion({ a }: P) {
+  const { servidor: modoServidor, solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a)
   const r = a.reclamo!; const [panel, setPanel] = useState(false); const [aDueno, setAD] = useState(Math.round(r.monto / 2 * 100) / 100); const p = useProceso()
   const [mediador, setMediador] = useState(!modoServidor)
-  useEffect(() => { if (modoServidor) servidor.esMediador().then(setMediador).catch(() => {}) }, [])
+  useEffect(() => { if (modoServidor) servidor.esMediador().then(setMediador).catch(() => {}) }, [modoServidor])
   const decidir = () => p.correr(av => acciones.decidir(a, aDueno, undefined, av))
   return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
@@ -241,7 +248,7 @@ function Invitacion({ a }: { a: Alquiler }) {
   const nuevo = async () => { try { setLink(await servidor.nuevaInvitacion(a.id)); setErr('') } catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos crear el link.') } }
   return <section className="glass tarjeta pila invitacion" aria-labelledby="inv-t">
     <h2 id="inv-t">Invita al inquilino</h2>
-    <p className="nota">Envía este link a {a.inquilinoEmail}. Tiene que entrar con ese correo. El link sirve una sola vez y vence en 14 días.</p>
+    <p className="nota">Envía este link a {a.inquilinoEmail}. Tiene que entrar con ese correo. {TEXTO_INVITACION_VENCE}</p>
     {link ? <><input readOnly value={link} aria-label="Link de invitación" onFocus={e => e.target.select()} />
       <button type="button" className="boton boton--primario boton--ancho" onClick={copiar}>{copiado ? 'Copiado ✓' : 'Copiar link'}</button></>
       : <p className="nota">Este aparato no tiene el link guardado.</p>}
@@ -254,6 +261,7 @@ function Invitacion({ a }: { a: Alquiler }) {
 const APROBADO = 'El dueño aprobó en la cadena devolver el depósito completo'
 const enlaceTx = (tx: string) => 'https://stellar.expert/explorer/testnet/tx/' + tx
 function EscrowReal({ a, rol }: P) {
+  const { trustless: modoTrustless } = modoDe(a)
   const [ocupado, setOcupado] = useState(false); const [error, setError] = useState('')
   if (!modoTrustless || !a.escrowId) return null
   const aprobado = a.historial.some(e => e.texto === APROBADO)
@@ -270,6 +278,7 @@ function EscrowReal({ a, rol }: P) {
 }
 
 function Cerrado({ a, rol }: P) {
+  const { escrowReal } = modoDe(a)
   const r = a.resultado!
   // Paso 7 (interruptor encendido, dos personas): devolución automática del 100 % al inquilino (Términos 1.7-demo 5.3 d).
   const auto2 = esDosPersonas(a) && r.via === 'automatico'
@@ -297,6 +306,7 @@ function Cerrado({ a, rol }: P) {
 /** `ejemplo`: alquiler de ejemplo del recorrido guiado (solo lectura: sin red, sin avisos, sin el dueño de prueba automático). */
 export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: Alquiler }) {
   useAlquileres(); const a = ejemplo ?? obtener(id); const escritorio = useEscritorio()
+  const { servidor: modoServidor, solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a) // cada alquiler con su modo: el de dos personas usa el servidor
   const real: Rol = a ? rolDe(a, u.email) : 'dueno'
   const rol: Rol = a ? vistaDe(a, u.email) : 'dueno'
   useEffect(() => { window.scrollTo(0, 0) }, [a?.estado, rol])
@@ -314,7 +324,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const antes = useRef<Instantanea | null>(null)
   useEffect(() => {
     const x = antes.current; antes.current = a ? instantanea(a) : null
-    if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol))
+    if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))
   })
   if (!a) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta">No encontramos ese alquiler. <a href="#/">Volver a tus alquileres</a></div></main>
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
@@ -322,8 +332,8 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
     en_curso: pruebaCompleta() ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
-    ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
-    reclamo: pruebaCompleta() ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
+    ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
+    reclamo: pruebaCompleta() && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>

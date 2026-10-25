@@ -7,7 +7,7 @@ import { unaVez } from './services/pasos'
 import { firmar as firmarLocal, ambos, NOMBRE, plazoMs, textoPlazo } from './flujo'
 import { usd } from './ui'
 import type { Alquiler, Foto, Rol, Rubro, RespuestaRubro } from './types'
-import { modoServidor, modoTrustless, modoSolo } from './servidor/config'
+import { modoServidor, modoSolo, modoDe } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
 import { pruebaCompleta } from './prueba/interruptor'
@@ -201,19 +201,33 @@ const remoto: Acciones = {
   nota: (a, etapa, c, n) => servidor.nota(a.id, etapa, c, n).then(() => {}),
   agregarFoto: (a, etapa, c, f) => servidor.agregarFoto(a.id, etapa, c, f).then(() => {}),
   // Sin Trustless Work el pago queda registrado sin transacción (tx null). Con TW: escrow real en testnet y su hash.
-  pagar: async a => { await servidor.registrarPago(a.id, modoTrustless ? await trustless.depositar(a.id) : null) },
+  pagar: async a => { await servidor.registrarPago(a.id, modoDe(a).trustless ? await trustless.depositar(a.id) : null) },
   iniciarSalida: a => servidor.iniciarSalida(a.id).then(() => {}),
   reclamar: (a, m, mot, fotos) => servidor.reclamar(a.id, m, mot, fotos).then(() => {}),
   responder: (a, acepta) => servidor.responder(a.id, acepta).then(() => {}),
   async cerrarSinReclamo(a) {
     const cerro = await servidor.cerrarSinReclamo(a.id)
     // Con TW: la plataforma libera el 100 % al inquilino (necesita la aprobación del dueño en la cadena).
-    if (modoTrustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx)))
+    if (modoDe(a).trustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx)))
       // Paso 7 (interruptor encendido): sin la aprobación del dueño, devolución automática del 100 % al inquilino.
       await (pruebaCompleta() && !a.historial.some(e => e.texto === APROBADO_DUENO) ? trustless.devolverAutomatico(a.id) : trustless.liberar(a.id))
   },
-  ...(modoTrustless ? { aprobarDevolucion: (a: Alquiler) => trustless.aprobarDevolucion(a.id).then(() => {}) } : {}),
+  aprobarDevolucion: async (a: Alquiler) => { if (!modoDe(a).trustless) throw new Error('Esta aprobación solo existe con la red de prueba.'); await trustless.aprobarDevolucion(a.id) },
   decidir: (a, m, mot) => servidor.decidir(a.id, m, mot).then(() => {}),
 }
 
-export const acciones: Acciones = modoServidor ? remoto : local
+/** Acciones de los alquileres con otra persona (servidor compartido). `crear` e invitar usan estas directamente. */
+export const accionesServidor = remoto
+/** Cada alquiler usa sus acciones: el de dos personas va al servidor; el de una persona sigue en este navegador como hoy. */
+const de = (a?: Alquiler): Acciones => modoServidor || modoDe(a).servidor ? remoto : local
+export const acciones: Acciones = new Proxy(local, {
+  get(_, k: keyof Acciones) {
+    if (k === 'crear') return modoServidor ? remoto.crear : local.crear
+    if (!(k in local) && !(k in remoto)) return undefined
+    return (a: Alquiler, ...resto: unknown[]) => {
+      const f = de(a)[k] as ((...x: unknown[]) => unknown) | undefined
+      if (!f) return Promise.reject(new Error('Este paso no está disponible en este alquiler. Vuelve a abrirlo desde «Tus alquileres».'))
+      return f(a, ...resto)
+    }
+  },
+})

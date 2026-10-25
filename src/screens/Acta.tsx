@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { actaCompleta, ahoraDe } from '../store'
 import { acciones } from '../acciones'
-import { modoServidor, modoPrueba } from '../servidor/config'
+import { modoDe } from '../servidor/config'
 import type { Alquiler, Rol, Cuarto, Foto } from '../types'
 import { NOMBRE_ROL } from '../types'
 import { fotoEjemplo } from '../demoFotos'
@@ -24,6 +24,7 @@ export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: 
 
 /** Un espacio de la casa, en su propia pantalla. */
 export function CuartoEditor({ a, cual, idx, rol }: { a: Alquiler; cual: 'entrada' | 'salida'; idx: number; rol: Rol }) {
+  const { servidor: modoServidor } = modoDe(a)
   const acta = a[cual]!; const c = acta.cuartos[idx]
   const habiaFirmas = Object.keys(acta.firmas).length > 0
   const [err, setErr] = useState('')
@@ -58,6 +59,7 @@ export const cuartoListo = (c: Cuarto) => c.fotos.length > 0 && c.items.every(i 
 export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
   a: Alquiler; que: 'contrato' | 'entrada' | 'salida'; rol: Rol; titulo: string; texto: string; casilla: string; alCompletar?: () => void
 }) {
+  const { prueba: modoPrueba } = modoDe(a)
   const f: Firmas = (que === 'contrato' ? a.contrato : a[que]!).firmas
   const listoParaFirmar = que === 'contrato' || actaCompleta(a[que]!)
   const [ok, setOk] = useState(false); const [err, setErr] = useState('')
