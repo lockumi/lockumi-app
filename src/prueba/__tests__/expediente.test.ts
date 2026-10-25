@@ -38,7 +38,7 @@ describe('expediente (B.11)', () => {
     const pdf = pdfExpediente(alquiler(60), AHORA), t = textoPdf(pdf)
     const paginas = (t.match(/\/Type \/Page\b/g) ?? []).length
     expect(paginas).toBeGreaterThan(1)
-    expect((t.match(/DEMO \\267 Sin efecto legal/g) ?? []).length).toBe(paginas)
+    expect((t.match(/\(DEMO \\267 Sin efecto legal\) Tj/g) ?? []).length).toBe(paginas)   // encabezado de cada página
     expect(t.startsWith('%PDF-1.4')).toBe(true); expect(t.trimEnd().endsWith('%%EOF')).toBe(true)
   })
 })
