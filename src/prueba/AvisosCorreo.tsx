@@ -6,16 +6,25 @@ import { store } from '../store'
 import { CASILLA_CORREO, puedeEnviarAvisos, enviarCorreo, avisosPorEnviar, desactivarCorreo, guardarConsentimiento } from './correoAvisos'
 import { datosAviso } from './avisos'
 import type { Plantilla } from '../../api/_lib/avisos'
+import { deDosPersonas } from '../servidor/config'
+
+/** Escenario C: con otra persona, la casilla se guarda en el servidor y es el servidor quien envía (docs/correos-c.md). */
+async function guardarEnServidor(a: Alquiler, para: string, acepta: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  try { const { servidor } = await import('../servidor/repositorio'); await servidor.guardarCasillaCorreo(a.id, para.trim(), acepta, CASILLA_CORREO); return { ok: true } }
+  catch (e) { return { ok: false, error: e instanceof Error && e.message ? e.message : 'No pudimos guardar la casilla. Los avisos siguen en la app; vuelve a intentarlo en unos minutos.' } }
+}
+// LEGAL: revisar · qué avisos salen por correo en los alquileres con otra persona (escenario C)
+export const AVISOS_CORREO_C = 'Opcional. Te escribimos cuando empieza el plazo, para recordarte los días que quedan, si hay un reclamo o una mediación y cuando se cierra el alquiler. Sin la dirección ni fotos; solo montos de prueba, fechas y un enlace a la app.'
 
 export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
-  const guardado = a.correos?.[rol]
+  const guardado = a.correos?.[rol]; const enServidor = deDosPersonas(a)
   const [correo, setCorreo] = useState(''); const [acepta, setAcepta] = useState(false)
   const [estado, setEstado] = useState<'' | 'enviando' | 'listo'>(''); const [error, setError] = useState('')
   // Envío automático: cada aviso nuevo que se entrega en la app sale también por correo (solo con la casilla marcada).
   const enCurso = useRef(new Set<string>())
   const pendientes = avisosPorEnviar(a, rol).map(v => v.id).join(',')
   useEffect(() => {
-    const para = a.correos?.[rol]; if (!para) return
+    const para = a.correos?.[rol]; if (!para || enServidor) return // C: envía el servidor
     for (const v of avisosPorEnviar(a, rol)) {
       if (enCurso.current.has(v.id)) continue
       enCurso.current.add(v.id)
@@ -26,7 +35,9 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
     }
   }, [pendientes, a.id, rol]) // eslint-disable-line
   const desmarcar = () => {
-    const para = guardado; store.cambiar(a.id, x => desactivarCorreo(x, rol), 'Avisos por correo desactivados'); setAcepta(false); setEstado('')
+    const para = guardado; setAcepta(false); setEstado('')
+    if (enServidor) { if (para) void guardarEnServidor(a, para, false); return }
+    store.cambiar(a.id, x => desactivarCorreo(x, rol), 'Avisos por correo desactivados')
     if (para) void guardarConsentimiento(para, a.id, false)
   }
   if (guardado && estado !== 'enviando') return <div className="avisos-correo" role="status">
@@ -37,6 +48,7 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
     setError('')
     if (!puedeEnviarAvisos(correo, acepta)) { setError(acepta ? 'Revisa el correo: tiene que ser como nombre@correo.com.' : 'Marca la casilla para recibir los avisos por correo. Si no quieres, no hace falta: los avisos siguen en la app.'); return }
     setEstado('enviando')
+    if (enServidor) { const c = await guardarEnServidor(a, correo, true); if (!c.ok) { setEstado(''); setError(c.error); return } setEstado('listo'); return }
     const c = await guardarConsentimiento(correo, a.id, true)
     if (!c.ok) { setEstado(''); setError(c.error); return }
     const ultimo = [...(a.avisos ?? [])].reverse().find(v => v.para === rol && typeof v.dia === 'number')
@@ -46,7 +58,7 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
   }
   return <div className="avisos-correo">
     <h3>Recibir los avisos por correo</h3>
-    <p>Opcional. Te enviamos los mismos avisos de la app: los días 1, 4 y 6 del plazo y si hay un reclamo. Sin la dirección ni fotos; solo montos de prueba, fechas y un enlace a la app.</p>
+    <p>{enServidor ? AVISOS_CORREO_C : 'Opcional. Te enviamos los mismos avisos de la app: los días 1, 4 y 6 del plazo y si hay un reclamo. Sin la dirección ni fotos; solo montos de prueba, fechas y un enlace a la app.'}</p>
     <label className="campo"><span>Tu correo</span>
       <input type="email" inputMode="email" autoComplete="email" placeholder="nombre@correo.com" value={correo} onChange={e => setCorreo(e.target.value)} /></label>
     <label className="avisos-correo__casilla"><input type="checkbox" checked={acepta} onChange={e => setAcepta(e.target.checked)} /> {CASILLA_CORREO}</label>{/* LEGAL: revisado (25/10, lista de Legal) */}

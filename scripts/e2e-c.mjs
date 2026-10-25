@@ -63,6 +63,10 @@ async function destinoSimulado() {
     if (t === 'lk_registrar_correo_invitacion' && m === 'POST') { const [r] = await q(null, `select public.lk_registrar_correo_invitacion($1, $2) r`, [b.p_contrato, b.p_para]); return ok(r.r) }
     // 20261025060000: «Todo bien, devolver» cierra al instante (solo la clave de servicio puede llamarla)
     if (t === 'lk_cerrar_aprobado' && m === 'POST') { const [r] = await q(null, `select public.lk_cerrar_aprobado($1) r`, [b.p_contrato]); return ok(r.r) }
+    // Paso 17 · correos de C (api/_lib/correos-c.ts): cualquier rpc/lk_* con la clave de servicio, tal cual (argumentos con nombre).
+    if (u.pathname.includes('/rpc/') && /^lk_[a-z0-9_]+$/.test(t) && m === 'POST') {
+      const ks = Object.keys(b ?? {}); const rows = await q(null, `select * from public.${t}(${ks.map((k, i) => `${k} => $${i + 1}`).join(', ')})`, ks.map(k => b[k]))
+      return ok(rows.length === 1 && Object.keys(rows[0]).length === 1 && t in rows[0] ? rows[0][t] : rows) }
     return new Response('ruta no simulada: ' + t, { status: 500 })
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
@@ -125,6 +129,7 @@ const firmar = (kp, xdr) => { const t = TransactionBuilder.fromXDR(xdr, Networks
 // ── Corrida ──
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
 const { atender } = await vite.ssrLoadModule('/api/_lib/tw.ts'), { atenderCorreo } = await vite.ssrLoadModule('/api/_lib/correo.ts')
+const { procesarCorreos, enviarCorreoCuenta, abrirCorreo } = await vite.ssrLoadModule('/api/_lib/correos-c.ts')
 const D = REAL ? await destinoReal() : await destinoSimulado()
 if (LIMPIAR) { log('Borrados', await D.limpiar(), 'alquileres marcados E2E-C en', D.nombre); await vite.close(); process.exit(0) }
 if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (CORREOS && !env.RESEND_API_KEY) falta.push('RESEND_API_KEY'); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
@@ -134,6 +139,26 @@ const fTw = REAL ? fetch : twFalso(D)
 const resendFalso = async (url, init) => /^https:\/\/api\.resend\.com\//.test(String(url)) ? new Response(JSON.stringify({ id: 'sim-' + randomUUID() }), { status: 200 }) : fTw(url, init)
 const fCorreo = fetchSoloBuzon(REAL ? fetch : resendFalso), ORIGEN_CORREO = 'https://app.lockumi.com', enviados = []
 const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
+// ── Paso 17 · correos de C desde el servidor (docs/correos-c.md): el MISMO procesarCorreos de /api/correo, /api/tw y la corrida
+// diaria, con el borrador de textos permitido SOLO aquí (fuera de Vercel) y SOLO al buzón de prueba (doble corte: CORREOS_SOLO_BUZON
+// en el servidor y fetchSoloBuzon en el script). Cada correo enviado deja su HTML en <salida>/correos/ para las capturas.
+const CORREO_MEDIADOR = 'lockumi+e2ec-mediador@mail.grokbot.com'
+const envC = { ...env, CORREOS_C: '1', LOCKUMI_CORREOS_BORRADOR: '1', CORREOS_SOLO_BUZON: '1', CORREO_MEDIACION: CORREO_MEDIADOR, CORREOS_ORIGEN: ORIGEN_CORREO }
+delete envC.VERCEL; delete envC.VERCEL_ENV
+const htmls = [], enviadosC = []
+const fC = async (url, init) => { if (/^https:\/\/api\.resend\.com\//.test(String(url))) { const b = JSON.parse(init.body); htmls.push({ to: b.to, subject: b.subject, html: b.html, text: b.text }) } return fCorreo(url, init) }
+let filaCorreos = Promise.resolve(); const enFilaCorreos = fn => { const p = filaCorreos.then(fn, fn); filaCorreos = p.catch(() => {}); return p }
+/** Corre el envío del servidor para ESE alquiler (con el reloj de prueba `ahora` para los recordatorios) y exige exactamente `esperado`. */
+async function correosC(k, id, esperado, ahora) {
+  const r = await enFilaCorreos(() => procesarCorreos(envC, { contrato: id, ahora, origen: ORIGEN_CORREO }, fC))
+  for (const e of r.enviados) { enviadosC.push({ caso: k, ...e, resend_id: REAL ? e.id : 'simulado', enviado_en: new Date().toISOString(), reloj: ahora ?? null }); paso(k, `${e.plantilla} → ${e.para}${ahora ? ` (reloj de prueba ${ahora})` : ''}`) }
+  const malos = r.omitidos.filter(o => o.motivo !== 'ya-enviado'); exigir(!malos.length, 'correos omitidos: ' + JSON.stringify(malos))
+  const hechos = r.enviados.map(e => e.plantilla).sort(), quiero = [...esperado].sort()
+  exigir(JSON.stringify(hechos) === JSON.stringify(quiero), `correos: se esperaba ${quiero.join(', ') || 'ninguno'} y salió ${hechos.join(', ') || 'ninguno'}`)
+  return r
+}
+const CASILLA = 'Acepto que Lockumi me envíe avisos por correo'
+const masDias = (t, d) => new Date(+new Date(t) + d * 864e5).toISOString()
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
 const twDirecto = (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
@@ -176,9 +201,9 @@ async function fotos(cta, id, etapa) {
   }
 }
 /** Invitar → unirse → firmar → (pagar en la red) → fotos de entrada → salida → plazo del dueño. */
-async function hastaPlazo(k, conPago) {
+async function hastaPlazo(k, conPago, ventana = VENTANA) {
   const r = await dueno.rpc('lk_crear_contrato_con_terminos', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino', k),
-    p_email_cavos: correo('dueno', k), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: VENTANA })
+    p_email_cavos: correo('dueno', k), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: ventana })
   const id = r.id; exigir((await estado(id)).terminos_version === TERMINOS, 'el alquiler no quedó en la ' + TERMINOS)
   paso(k, `el dueño crea el alquiler e invita (link de 7 días, con la declaración y los Términos ${TERMINOS})`)
   if (CORREOS) await invitarPorCorreo(k, id)
@@ -186,6 +211,9 @@ async function hastaPlazo(k, conPago) {
   await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino', k), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
   const acept = await inquilino.filas('lk_aceptaciones_terminos', id); exigir(['dueno', 'inquilino'].every(x => acept.some(a => a.rol === x && a.version === TERMINOS && a.aceptado_en)), 'faltan las aceptaciones de los Términos')
   paso(k, `el inquilino se une con su propia cuenta, aceptando los Términos ${TERMINOS} y el Aviso de privacidad`)
+  // La casilla de la app (AvisosCorreo → lk_guardar_consentimiento_correo): cada parte marca «Acepto…» con su correo de prueba.
+  for (const [cta, rol] of [[dueno, 'dueno'], [inquilino, 'inquilino']]) await cta.rpc('lk_guardar_consentimiento_correo', { p_contrato: id, p_para: correoPrueba(k, rol), p_acepta: true, p_texto: CASILLA })
+  paso(k, 'las dos partes marcan la casilla de avisos por correo (guardada en el servidor)')
   await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); paso(k, 'los dos firman el contrato')
   let pago = null
   if (conPago) {
@@ -198,6 +226,8 @@ async function hastaPlazo(k, conPago) {
   await fotos(inquilino, id, 'entrada'); await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' })
   await dueno.rpc('lk_iniciar_salida', { p_contrato: id }); await fotos(dueno, id, 'salida')
   await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'salida' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'salida' }); paso(k, 'fotos de entrada y salida firmadas: empieza el plazo del dueño')
+  if (!(await estado(id)).ventana_inicio) { await dueno.rpc('lk_recibi_casa', { p_contrato: id }); paso(k, 'el dueño toca «Recibí la casa»: empieza su plazo') }
+  await correosC(k, id, ['COR-C-01/dueno', 'COR-C-01/inquilino'])
   return id
 }
 const esperarPlazo = async k => { log(`… [${k}] esperando el plazo de ${VENTANA} s`); await espera((VENTANA + 3) * 1000) }
@@ -224,6 +254,7 @@ const flujos = {
     const e = await estado(id); exigir(e.estado === 'cerrado' && e.resultado.via === 'devuelto' && Number(e.resultado.inquilino) === MONTO, 'no quedó cerrado como «devuelto» con el 100 % al inquilino')
     let rechazo = ''; try { await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: 1, p_motivo: 'después de aprobar' }) } catch (x) { rechazo = x.message }
     exigir(rechazo, 'el servidor dejó reclamar después de aprobar'); paso('aprobada', 'después de aprobar, el servidor no deja reclamar')
+    await correosC('aprobada', id, ['COR-C-07/devuelto', 'COR-C-07/devuelto'])   // lo que hace /api/tw después de pagar
   },
   async silencioDueno() {   // 5.3 d: el dueño no aprueba ni reclama → devolución automática del 100 % (disputa + resolución)
     const id = ids.silencioDueno = await hastaPlazo('silencio-dueno', true)
@@ -237,13 +268,23 @@ const flujos = {
     const r = await tw(inquilino, { accion: 'devolver-automatico', contrato: id }); paso('silencio-dueno', 'disputa abierta por la plataforma', r.disputaTx); paso('silencio-dueno', 'la cuenta que resuelve disputas devuelve el 100 % al inquilino', r.tx)
     exigir((await D.leer('lk_eventos', id)).some(e => e.tx_hash === r.tx), 'la firma de la mediadora no quedó en el historial'); paso('silencio-dueno', 'la firma de la mediadora queda en el historial con su hash', r.tx)
     const e = await estado(id); exigir(e.resultado.via === 'automatico' && Number(e.resultado.inquilino) === MONTO, 'el resultado no es 100 % al inquilino'); await capturar('auto', id)
+    await correosC('silencio-dueno', id, ['COR-C-07/automatico', 'COR-C-07/automatico'])
   },
   async mediacion() {   // reclamo → el inquilino rechaza → las dos partes aceptan el mismo reparto → la persona mediadora lo registra → «repartir»
     const id = ids.mediacion = await hastaPlazo('mediacion', true)
     const ruta = `${id}/reclamo/${randomUUID()}.jpg`; await dueno.subirFoto(ruta, FOTO)
     await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
     await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Mancha en la pared de la sala (prueba)' }); paso('mediacion', `el dueño reclama ${RECLAMO} USDC`)
+    await correosC('mediacion', id, ['COR-C-03'])
+    // El inquilino toca «Ver el reclamo» en el correo: GET /api/correo?abrir=<enlace> registra la apertura (6.5 b) una sola vez.
+    const aviso = htmls.filter(h => h.to?.[0] === correoPrueba('mediacion', 'inquilino') && /\/api\/correo\?abrir=/.test(h.html)).pop()
+    const token = aviso?.html.match(/\/api\/correo\?abrir=([0-9a-f]{64})/)?.[1]; exigir(token, 'COR-C-03 no trae el enlace de apertura')
+    exigir(await abrirCorreo(envC, token, fC) === id, 'el enlace de COR-C-03 no abrió el alquiler'); await abrirCorreo(envC, token, fC)
+    const [rec] = await D.leer('lk_reclamos', id); exigir(rec.abierto_en, 'no quedó registrada la apertura del aviso')
+    exigir((await D.leer('lk_eventos', id)).filter(e => e.texto === 'El inquilino abrió el aviso del reclamo').length === 1, 'la apertura no quedó una sola vez en el historial')
+    paso('mediacion', 'el inquilino abre el aviso del reclamo desde el correo: queda la hora (una sola vez en el historial)')
     await inquilino.rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: false }); paso('mediacion', 'el inquilino rechaza: pasa a la mediación')
+    await correosC('mediacion', id, ['COR-C-05/partes', 'COR-C-05/partes', 'COR-C-05/mediacion'])
     await dueno.rpc('lk_aceptar_acuerdo_mediacion', { p_contrato: id, p_monto_dueno: ACORDADO })
     const vistas = await inquilino.filas('lk_aceptaciones_mediacion', id); exigir(vistas.some(v => v.rol === 'dueno' && Number(v.monto_dueno) === ACORDADO), 'el inquilino no ve la aceptación del dueño')
     paso('mediacion', 'el inquilino ve lo que aceptó el dueño'); await capturar('mediacion', id)
@@ -255,6 +296,7 @@ const flujos = {
     const otra = await tw(dueno, { accion: 'repartir', contrato: id }); exigir(otra.yaExistia && otra.tx === r.tx, 'el segundo «repartir» no fue idempotente'); paso('mediacion', 'un segundo «repartir» no paga dos veces (mismo hash)')
     exigir((await D.leer('lk_eventos', id)).some(e => e.tx_hash === r.tx), 'la firma de la mediadora no quedó en el historial'); paso('mediacion', 'la firma de la mediadora queda en el historial con su hash', r.tx)
     exigir((await estado(id)).liquidacion_tx === r.tx, 'no guardó el hash en liquidacion_tx'); await capturar('cerrado', id)
+    await correosC('mediacion', id, ['COR-C-06/partes', 'COR-C-06/partes'])
   },
   async silencioInquilino() {   // 6.5 c, opción 1 de Legal: el inquilino no responde → mediación «regla no disponible en esta versión (6.5.1 d)», sin pago
     if (!mig.m040) { omitidos.push('silencio del inquilino: falta la migración 20261025040000 en el destino (aplicarla en producción necesita aprobación)'); log('↷ silencio del inquilino OMITIDO: falta 040000'); return }
@@ -262,18 +304,63 @@ const flujos = {
     const ruta = `${id}/reclamo/${randomUUID()}.jpg`; await dueno.subirFoto(ruta, FOTO)
     await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
     await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Pomo del dormitorio quebrado (prueba)' }); paso('silencio-inquilino', `el dueño reclama ${RECLAMO} USDC`)
+    await correosC('silencio-inquilino', id, ['COR-C-03'])
     exigir(await inquilino.rpc('lk_aplicar_silencio', { p_contrato: id }) === null, 'pasó a mediación antes del plazo')
     if (!REAL) await D.q(null, `update public.lk_reclamos set entregado_en = now() - interval '2 minutes' where contrato_id = $1`, [id]); else await esperarPlazo('silencio-inquilino')
     exigir(await dueno.rpc('lk_aplicar_silencio', { p_contrato: id }) === 'mediacion', 'no pasó a la mediación')
     const e = await estado(id); exigir(e.estado === 'mediacion' && !e.resultado && !e.liquidacion_tx, 'no debía cerrar ni pagar'); paso('silencio-inquilino', 'el inquilino no respondió: pasa a la mediación (regla no disponible en esta versión, 6.5.1 d), sin pago')
+    await correosC('silencio-inquilino', id, ['COR-C-05/partes', 'COR-C-05/partes', 'COR-C-05/mediacion'])
+    // P-06: plazo de 3 días hábiles de la mediación (lunes a viernes, sin feriados de Costa Rica), con el reloj de prueba.
+    const [pl] = await D.leer('lk_mediacion_plazos', id); exigir(pl?.vence, 'no quedó programado el plazo de la mediación')
+    paso('silencio-inquilino', `plazo de la mediación: ${pl.desde} → vence ${pl.vence} (3 días hábiles)`)
+    await correosC('silencio-inquilino', id, ['COR-C-05/recordatorio', 'COR-C-05/recordatorio', 'COR-C-05/recordatorio-mediacion'], masDias(pl.vence, -1 + 1 / 1440))
+    await correosC('silencio-inquilino', id, ['COR-C-06/vencida', 'COR-C-06/vencida', 'COR-C-06/vencida-mediacion'], masDias(pl.vence, 1 / 1440))
+    const v = await estado(id), [pl2] = await D.leer('lk_mediacion_plazos', id)
+    exigir(v.estado === 'mediacion' && !v.resultado && !v.liquidacion_tx && pl2.vencido_en, 'al vencer la mediación no debía pagar ni cerrar')
+    exigir((await D.leer('lk_eventos', id)).some(x => x.texto.startsWith('Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo)')), 'el vencimiento no quedó en el historial')
+    paso('silencio-inquilino', 'vence la mediación (reloj de prueba): queda en el historial, no se paga nada y la mediación sigue abierta')
+  },
+  async recordatorios() {   // plazo de 7 días: recordatorios del dueño (días 4 y 6) y del inquilino tras el reclamo (días 4 y 6), con el reloj de prueba
+    const id = ids.recordatorios = await hastaPlazo('recordatorios', true, 7 * 86400)
+    const inicio = (await estado(id)).ventana_inicio; exigir(inicio, 'no empezó el plazo del dueño')
+    await correosC('recordatorios', id, ['COR-C-02/d4'], masDias(inicio, 3.5))
+    await correosC('recordatorios', id, ['COR-C-02/d6'], masDias(inicio, 5.5))
+    const ruta = `${id}/reclamo/${randomUUID()}.jpg`; await dueno.subirFoto(ruta, FOTO)
+    await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
+    await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Vidrio de la ventana rajado (prueba)' }); paso('recordatorios', `el dueño reclama ${RECLAMO} USDC`)
+    await correosC('recordatorios', id, ['COR-C-03'])
+    const [rec] = await D.leer('lk_reclamos', id); exigir(rec?.entregado_en, 'el reclamo no tiene hora de entrega')
+    await correosC('recordatorios', id, ['COR-C-04/d4'], masDias(rec.entregado_en, 3.5))
+    await correosC('recordatorios', id, ['COR-C-04/d6'], masDias(rec.entregado_en, 5.5))
+    // 6.5 c) el inquilino acepta el reclamo: cierre por acuerdo, «repartir» en la red de prueba y COR-C-07 «acuerdo» a los dos
+    await inquilino.rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: true }); paso('recordatorios', 'el inquilino acepta el reclamo: cierre por acuerdo')
+    const r = await tw(inquilino, { accion: 'repartir', contrato: id }); paso('recordatorios', `«repartir» del acuerdo: ${RECLAMO} USDC al dueño y ${MONTO - RECLAMO} al inquilino (menos 0,3 %)`, r.tx)
+    exigir((await estado(id)).liquidacion_tx === r.tx, 'no guardó el hash del acuerdo')
+    await correosC('recordatorios', id, ['COR-C-07/acuerdo', 'COR-C-07/acuerdo'])
   },
 }
 await Promise.all(Object.entries(flujos).map(([k, f]) => f().catch(e => { fallas.push(`${k}: ${limpio(e.message)}`); log(`✘ [${k}] ${limpio(e.message)}`) })))
+// COR-C-08 y COR-C-09: correos de servicio de la cuenta (sin casilla). Una sola vez por pedido.
+try {
+  const pedido = Date.now(), para = correoPrueba('cuenta', 'dueno'), paraB = correoPrueba('cuenta', 'inquilino')
+  const a1 = await enviarCorreoCuenta(envC, { correo: 'COR-C-08', variante: 'A', para, pedidoEn: pedido }, fC)
+  const b1 = await enviarCorreoCuenta(envC, { correo: 'COR-C-08', variante: 'B', para: paraB, pedidoEn: pedido }, fC)
+  const c1 = await enviarCorreoCuenta(envC, { correo: 'COR-C-09', para, pedidoEn: pedido, eliminadoEn: Date.now() }, fC)
+  for (const [x, to] of [[a1, para], [b1, paraB], [c1, para]]) { exigir(x.id, x.plantilla + ' sin id de Resend'); enviadosC.push({ caso: 'cuenta', clave: x.clave, correo: x.plantilla.slice(0, 8), plantilla: x.plantilla, para: to, resend_id: REAL ? x.id : 'simulado', enviado_en: new Date().toISOString(), reloj: null }); paso('cuenta', `${x.plantilla} → ${to}`) }
+  const otra = await enviarCorreoCuenta(envC, { correo: 'COR-C-08', variante: 'A', para, pedidoEn: pedido }, fC); exigir(otra.yaEnviado && !otra.id, 'COR-C-08 salió dos veces')
+  paso('cuenta', 'el mismo pedido no envía COR-C-08 dos veces')
+} catch (e) { fallas.push('cuenta: ' + limpio(e.message)); log('✘ [cuenta] ' + limpio(e.message)) }
+// Segunda pasada: con todo ya enviado, el servidor no repite ningún correo (una vez por evento).
+for (const [k, id] of Object.entries(ids)) { if (!id) continue
+  try { await correosC(k, id, []); paso(k, 'segunda pasada: ningún correo repetido') } catch (e) { fallas.push(`${k} (segunda pasada): ${limpio(e.message)}`); log(`✘ [${k}] ${limpio(e.message)}`) } }
+mkdirSync(SALIDA + '/correos', { recursive: true })
+htmls.forEach((h, i) => writeFileSync(`${SALIDA}/correos/${String(i + 1).padStart(2, '0')}.html`, h.html))
+writeFileSync(SALIDA + '/correos/indice.json', JSON.stringify(htmls.map((h, i) => ({ archivo: `${String(i + 1).padStart(2, '0')}.html`, para: h.to, asunto: h.subject, plantilla: enviadosC[i]?.plantilla ?? null })), null, 2))
 const seg = Math.round((Date.now() - t0) / 1000)
 mkdirSync(SALIDA, { recursive: true })
-const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { activos: CORREOS, enviados,
+const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { activos: CORREOS, enviados, servidor: enviadosC,
   // Lo que la app NO envía en C (modo servidor): no se finge. Ver docs/prueba-completa.md.
-  no_cubiertos: CORREOS ? ['recordatorios de los días 1, 4 y 6 del plazo del dueño (dueno-1/4/6)', 'avisos del reclamo al inquilino (reclamo-1/4/6)', 'aviso de reparación (reparacion-5)', 'avisos de mediación y de cierre (no existen plantillas)'] : [] } }
+  no_cubiertos: [] } }
 writeFileSync(SALIDA + '/estado.json', JSON.stringify(est, null, 2))
 writeFileSync(SALIDA + '/capa-capturas.json', JSON.stringify(capa, (k, v) => v instanceof Date ? v.toISOString() : v, 2))
 if (REAL) { writeFileSync(SALIDA + '/sesiones.json', JSON.stringify({ dueno: dueno.sesion, inquilino: inquilino.sesion })); chmodSync(SALIDA + '/sesiones.json', 0o600) }   // solo para las capturas; vencen solas
@@ -281,7 +368,8 @@ const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · dest
   `- Resultado: ${fallas.length ? fallas.length + ' fallas' : 'todo en verde'}${omitidos.length ? ` · ${omitidos.length} omitido(s)` : ''}`, '', '| Alquiler | Paso | Transacción |', '|---|---|---|',
   ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o),
   ...(CORREOS ? ['', '## Correos', '', '| Alquiler | Correo | Para | Id de Resend | Enviado (UTC) |', '|---|---|---|---|---|', ...enviados.map(c => `| ${c.caso} | ${c.asunto} | ${c.para} | ${c.resend_id} | ${c.enviado_en} |`), '',
-    'La app no envía en C (modo servidor, sin cron ni consentimiento guardado en Supabase): ' + est.correos.no_cubiertos.join('; ') + '.'] : [])].join('\n')
+    '## Correos del servidor (COR-C-01 a COR-C-09)', '', '| Alquiler | Plantilla | Para | Id de Resend | Enviado (UTC) | Reloj de prueba |', '|---|---|---|---|---|---|',
+    ...enviadosC.map(c => `| ${c.caso} | ${c.plantilla} | ${c.para} | ${c.resend_id} | ${c.enviado_en} | ${c.reloj ?? ''} |`)] : [])].join('\n')
 writeFileSync(SALIDA + '/informe.md', md + '\n')
 log(`\n${fallas.length ? '✘' : '✔'} ${pasos.length} pasos, ${fallas.length} fallas, ${omitidos.length} omitidos en ${seg} s · ${SALIDA}/informe.md`)
 await vite.close(); process.exit(fallas.length ? 1 : 0)

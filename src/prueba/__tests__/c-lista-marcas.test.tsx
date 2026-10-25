@@ -27,7 +27,12 @@ describe('1) marcas: las 109 OK se quitan; solo quedan las de textos nuevos', ()
     for (const [p, src] of Object.entries(todos)) src.split('\n').forEach((l, i) => { if (l.includes('LEGAL: revisar')) hallados.push(`${p.slice(1)}:${i + 1}`) })
     // Legal 25/10, 4:56 a. m.: con los errores del servidor revisados, solo queda alertas.ts:5, que explica qué es la marca
     // (las migraciones 030000–070000 las vigila c-errores-legal.test.ts).
-    expect(hallados).toEqual(['src/alertas.ts:5'])
+    // Paso 17 · correos de C (docs/correos-c.md): los textos nuevos esperan a Legal. Solo pueden estar en el archivo único de textos
+    // (textos-correos.ts), en la guarda que los bloquea (correos-c.ts y guarda-correos.ts: nombran la marca), en el texto nuevo de
+    // la casilla de C (AvisosCorreo.tsx) y en la línea nueva de la Privacidad 1.9-demo. La guarda impide enviarlos y publicarlos.
+    const CORREOS_C = ['api/_lib/textos-correos.ts', 'api/_lib/correos-c.ts', 'api/_lib/guarda-correos.ts', 'src/prueba/AvisosCorreo.tsx', 'src/legal/v17/privacidad.md']
+    expect(hallados.filter(h => !CORREOS_C.includes(h.split(':')[0]))).toEqual(['src/alertas.ts:5'])
+    expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toHaveLength(2)
   })
 })
 

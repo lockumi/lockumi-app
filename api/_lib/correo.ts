@@ -15,20 +15,9 @@ export const origenPermitido = (o: string) => o === 'https://app.lockumi.com' ||
 
 export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
 
-// LEGAL: revisado (24/10) · pie común (LEGAL-correos-2104.md, punto 3)
-export const PIE = 'Lockumi · Demo en la red de prueba de Stellar, sin dinero real. Nada de lo que pasa en esta demo tiene efecto legal. Este es un aviso del servicio, no publicidad. Lockumi nunca te pedirá por correo tu contraseña, tu frase secreta ni tus claves. Esta dirección no recibe respuestas; para consultas: business.applockumi@gmail.com.'
-// LEGAL: revisado (24/10) · invitación, arriba del botón
-export const textoInvitacion = (nombre: string, rol: 'dueno' | 'inquilino') =>
-  `Recibes este correo porque ${nombre} escribió tu correo para invitarte como ${rol === 'dueno' ? 'dueño' : 'inquilino'} a un alquiler de ejemplo en la demo de Lockumi. Usamos tu correo solo para esta invitación y para los avisos de ese alquiler. Si no quieres participar, ignora este correo: el enlace vence en 7 días. Puedes pedir que borremos tu correo cuando quieras.`
-
-// LEGAL: revisado (24/10, 11:29 p. m.) · pie solo de los avisos (no de la invitación)
-export const PIE_BAJA = 'Para dejar de recibir estos avisos, desmarca la casilla en la app; seguirás viéndolos dentro de la app.'
-// LEGAL: revisado (24/10, 11:29 p. m.) · correo del reclamo, según lo registrado al firmar (regla aceptada o no)
-export const RECLAMO_CON_REGLA = 'Si no respondes a tiempo y abriste al menos un aviso, se aplicará la propuesta automática (máximo el 30 % del depósito de prueba, solo con pruebas completas).'
-// LEGAL: revisado (24/10, 11:51 p. m.) · la nota de «Todo bien, devolver» solo va en el correo que tiene ese botón
-export const NOTA_CONFIRMAR = 'Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.'
-export const NOTA_UN_BOTON = 'El botón abre la app. Desde el correo no se acepta ni se devuelve nada.'
-export const RECLAMO_SIN_REGLA = 'Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo).'
+// Todos los textos de los correos viven en api/_lib/textos-correos.ts (lista en docs/correos-c.md).
+import { PIE, PIE_BAJA, RECLAMO_CON_REGLA, RECLAMO_SIN_REGLA, NOTA_CONFIRMAR, NOTA_UN_BOTON, textoInvitacion, ASUNTO_INVITACION, BOTON_INVITACION, DEMO } from './textos-correos.js'
+export { PIE, PIE_BAJA, RECLAMO_CON_REGLA, RECLAMO_SIN_REGLA, NOTA_CONFIRMAR, NOTA_UN_BOTON, textoInvitacion }
 
 // Consentimiento (Legal 24/10, 11:51 p. m.): el servidor guarda la casilla MARCADA, no la baja, y sin consentimiento guardado no envía
 // ningún aviso. Marcar la casilla lo guarda; desmarcarla lo borra. Hoy vive en memoria por instancia (la red de prueba no tiene base
@@ -88,9 +77,8 @@ export function armar(p: PedidoCorreo, origen: string) {
   const base = `${origen}/#/alquiler/${encodeURIComponent(p.alquiler)}`
   let asunto: string, cuerpo: string, botones: { texto: string; url: string }[]
   if (p.tipo === 'invitacion') {
-    // LEGAL: revisado (25/10, lista de Legal) · asunto de la invitación (Legal no lo dio)
-    asunto = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
-    cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: 'Abrir la demo de Lockumi', url: `${origen}/` }]
+    asunto = ASUNTO_INVITACION
+    cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: BOTON_INVITACION, url: `${origen}/` }]
   } else {
     // LEGAL: revisado (24/10) · LEGAL-correos-2104.md, punto 3: en el correo, «depósito» pasa a «depósito de prueba»
     const c = textoAviso(p.plantilla!, p.datos!), dp = (x: string) => x.replace(/depósito(?! de prueba)/g, 'depósito de prueba')
@@ -100,8 +88,7 @@ export function armar(p: PedidoCorreo, origen: string) {
     botones = botonesAviso(p.plantilla!).map(b => ({ texto: b.texto, url: `${base}?aviso=${p.plantilla}&canal=correo${b.accion === 'confirmar-devolver' ? '&confirmar=devolver' : ''}` }))
   }
   // Paso 11: paleta del logo (#FF6B35, #E8531F, #FFB08A sobre crema #FFF5EE, texto café #3D2A22); nunca texto blanco sobre naranja.
-  // LEGAL: revisado (25/10, lista de Legal) · nota de demo arriba del texto (pedido de Katherine: cada correo dice que es una demo sin dinero real)
-  const demo = 'Demo en la red de prueba: sin dinero real.'
+  const demo = DEMO
   const nota = p.tipo !== 'aviso' ? '' : botonesAviso(p.plantilla!).some(b => b.accion === 'confirmar-devolver') ? NOTA_CONFIRMAR : NOTA_UN_BOTON
   const html = `<!doctype html><html lang="es"><body style="font-family:Arial,sans-serif;color:#3D2A22;background:#FFF5EE;max-width:560px;margin:0 auto;padding:16px">
 <p style="font-size:13px;color:#7A5446;margin:0 0 12px"><strong>${esc(demo)}</strong></p>

@@ -57,6 +57,9 @@ export async function recargar() {
   const [tv, at, en] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en'),
     sb.from('lk_contratos').select('id, entregado_en').in('id', ids)]) : [] // 20261025060000: sin la migración, falla y no se usa
   const entregaDe = (id: string) => en && !en.error ? ((en.data ?? []) as { id: string; entregado_en: string | null }[]).find(x => x.id === id)?.entregado_en ?? null : null
+  // Escenario C (20261025090000): mi casilla de avisos por correo, guardada en el servidor (RLS: solo la mía). Sin la migración, no se usa.
+  const cc = dosPersonas ? await sb.from('lk_correos_consentimiento').select('contrato_id, rol, para').in('contrato_id', ids) : null
+  const casillas = cc && !cc.error ? (cc.data ?? []) as { contrato_id: string; rol: Rol; para: string }[] : []
   const conTerminos = !!tv && !!at && !tv.error && !at.error
   const terminosDe = (id: string): Filas['terminos'] => conTerminos ? { version: ((tv.data ?? []) as { id: string; terminos_version: string | null }[]).find(x => x.id === id)?.terminos_version ?? null,
     aceptaciones: por(at, id) as unknown as NonNullable<Filas['terminos']>['aceptaciones'] } : null
@@ -72,6 +75,8 @@ export async function recargar() {
     const a = aAlquiler({ contrato: { ...c, entregado_en: entregaDe(c.id) } as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
       firmas: por(fs, c.id) as unknown as Filas['firmas'], fotos: por(fts, c.id) as unknown as Filas['fotos'], reclamo: (por(rs, c.id)[0] ?? null) as unknown as Filas['reclamo'],
       eventos: por(es, c.id) as unknown as Filas['eventos'], terminos: terminosDe(c.id) }, yo, r => urls.get(r) ?? '')
+    const mias = casillas.filter(x => x.contrato_id === c.id)
+    if (mias.length) a.correos = Object.fromEntries(mias.map(x => [x.rol, x.para]))
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
@@ -113,6 +118,13 @@ async function subirFoto(id: string, etapa: 'entrada' | 'salida' | 'reclamo', cu
 }
 
 const tras = async <T>(p: Promise<T>) => { const r = await p; await recargar(); return r }
+/** Escenario C (docs/correos-c.md): después de un paso, se le pide al servidor que envíe los correos que tocan de ESE alquiler.
+ *  El navegador no elige textos ni destinatarios; si el servidor tiene los correos apagados, no pasa nada. Nunca frena la app. */
+export function avisarCorreos(id: string) {
+  if (import.meta.env.VITE_CORREOS !== '1' || !dosPersonas) return
+  void tokenSesion().then(t => fetch('/api/correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + t }, body: JSON.stringify({ tipo: 'avisos', alquiler: id }) })).catch(() => {})
+}
+const yAvisar = async <T>(id: string, p: Promise<T>) => { const r = await tras(p); avisarCorreos(id); return r }
 export const servidor = {
   async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string; terminosVersion?: string }, email: string, cuenta?: string) {
     // paso16-unido: al invitar, el servidor guarda la declaración (quién, cuándo y el texto) en la misma transacción.
@@ -136,19 +148,19 @@ export const servidor = {
   iniciarSalida: (id: string) => tras(rpc('lk_iniciar_salida', { p_contrato: id })),
   async reclamar(id: string, monto: number, motivo: string, fotos: Foto[]) {
     for (const f of fotos) await subirFoto(id, 'reclamo', null, f)
-    return tras(rpc('lk_reclamar', { p_contrato: id, p_monto: monto, p_motivo: motivo }))
+    return yAvisar(id, rpc('lk_reclamar', { p_contrato: id, p_monto: monto, p_motivo: motivo }))
   },
-  responder: (id: string, acepta: boolean) => tras(rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: acepta })),
+  responder: (id: string, acepta: boolean) => yAvisar(id, rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: acepta })),
   cerrarSinReclamo: (id: string) => tras(rpc<boolean>('lk_cerrar_sin_reclamo', { p_contrato: id })),
-  decidir: (id: string, montoDueno: number, motivo?: string) => tras(rpc('lk_decidir_mediacion', { p_contrato: id, p_monto_dueno: montoDueno, p_motivo: motivo ?? null })),
+  decidir: (id: string, montoDueno: number, motivo?: string) => yAvisar(id, rpc('lk_decidir_mediacion', { p_contrato: id, p_monto_dueno: montoDueno, p_motivo: motivo ?? null })),
   // B2 (escenario C): cada parte acepta un reparto; lk_decidir_mediacion solo cierra con las dos aceptaciones del mismo monto.
   aceptarAcuerdo: (id: string, montoDueno: number) => tras(rpc('lk_aceptar_acuerdo_mediacion', { p_contrato: id, p_monto_dueno: montoDueno })),
   /** 6.5 b: el inquilino abrió el aviso o la pantalla del reclamo (solo cuenta la primera vez). */
   abrirAvisoReclamo: (id: string) => tras(rpc('lk_abrir_aviso_reclamo', { p_contrato: id })),
   // 20261025060000 (C): «Recibí la casa» empieza el plazo del dueño en el servidor (art. 148 del Código de Trabajo para los feriados).
-  recibirCasa: (id: string) => tras(rpc('lk_recibi_casa', { p_contrato: id })),
+  recibirCasa: (id: string) => yAvisar(id, rpc('lk_recibi_casa', { p_contrato: id })),
   /** 6.5 c: vencido el plazo del inquilino sin respuesta, el servidor pasa el caso a la mediación (en dos personas la 6.5.1 no se aplica sola). */
-  aplicarSilencio: (id: string) => tras(rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
+  aplicarSilencio: (id: string) => yAvisar(id, rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
   /** PR #22: lo que aceptó cada parte en la mediación (RLS: solo los participantes del alquiler). */
   async aceptaciones(id: string): Promise<Aceptacion[]> {
     await sesion(); const { data, error } = await (await supabase()).from('lk_aceptaciones_mediacion').select('rol, monto_dueno, aceptado_en').eq('contrato_id', id)
@@ -156,7 +168,10 @@ export const servidor = {
     return ((data ?? []) as { rol: Rol; monto_dueno: string | number; aceptado_en: string }[]).map(f => ({ rol: f.rol, montoDueno: Number(f.monto_dueno), fecha: f.aceptado_en }))
   },
   esMediador: () => rpc<boolean>('lk_es_mediador', {}),
-  registrarLiquidacion: (id: string, tx: string) => tras(rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
+  /** Escenario C: la casilla «Acepto que Lockumi me envíe avisos por correo» se guarda en el servidor (quién, cuándo y el texto).
+   *  Desmarcarla la borra y el servidor deja de enviar. El papel sale de la sesión, no del navegador. */
+  guardarCasillaCorreo: (id: string, para: string, acepta: boolean, texto: string) => yAvisar(id, rpc('lk_guardar_consentimiento_correo', { p_contrato: id, p_para: para, p_acepta: acepta, p_texto: texto })),
+  registrarLiquidacion: (id: string, tx: string) => yAvisar(id, rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }
 export type Servidor = typeof servidor
 export type { Rol }

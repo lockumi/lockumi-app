@@ -36,6 +36,8 @@ import { etapaDeAvance, type EtapaPago } from '../espera'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
+// LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
+export const ESPERA_MEDIACION_C = 'Ahora cada parte elige cómo repartir el depósito. Cuando las dos acepten el mismo reparto, la persona mediadora lo registra y liberamos los USDC de prueba, cada monto menos el 0,3 % de comisión de Trustless Work. La persona mediadora puede ayudarles a llegar a un acuerdo, pero no decide por ustedes.'
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 export function Contrato({ a, rol }: P) {
@@ -250,8 +252,8 @@ function Mediacion({ a, rol }: P) {
     {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)». El reparto que elijas sí se hace de verdad en la red de prueba.</p>}
     {/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
     <p>No hubo acuerdo. Una persona mediadora revisa con ustedes las fotos de entrada y salida y les ayuda a buscar un acuerdo sobre el reparto.</p>
-    {/* LEGAL: revisado (24/10) · botones y espera: «registrar el acuerdo», sin «decidir» */}
-    {!modoVideo && <Espera texto="No tienes que hacer nada. Te avisaremos cuando haya un acuerdo." />}
+    {/* LEGAL: revisado (25/10, P-05) · texto literal de la decisión P-05: cada parte elige el reparto; la persona mediadora no decide */}
+    {!modoVideo && <Espera texto={modoServidor ? ESPERA_MEDIACION_C : 'No tienes que hacer nada. Te avisaremos cuando haya un acuerdo.'} />}
     <Evidencia a={a} />
     {/* LEGAL: revisado (25/10, lista de Legal) · B2 (dos personas): cada parte acepta el reparto en la app; se cierra solo con las dos aceptaciones del mismo monto (2.2 b) */}
     {modoServidor && !mediador && <div className="pila">

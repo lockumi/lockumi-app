@@ -50,7 +50,8 @@
 - Una cuenta nueva acepta la 1.9-demo en «Entrar», como siempre, sin aviso ni pantalla de volver a aceptar (la misma decisión que con la 1.6-demo). Sigue la casilla de los Términos dentro de cada alquiler, al crear invitando y al unirse.
 - **Servidor en producción (25/10/2026, CR):** migraciones 20261025030000 a 20261025070000 aplicadas entre las 2:12 y las 2:13 p. m., y 20261025080000 (permisos de `service_role` en `lk_*`) a las 2:28 p. m., con el OK de Katherine. C sigue apagado en app.lockumi.com.
 - **E2E real** (`correr-c.sh --prod-datos-prueba`, datos `E2E-C`, Stellar testnet, dos cuentas): 41 pasos, 0 fallas (commit f16fc47). Datos de prueba, usuarios anónimos y fotos borrados después; quedan en 0.
-- Pendiente: encender C (solo con el OK de Katherine y de Legal).
+- **Correos de C (COR-C-00 a COR-C-09), 25/10/2026:** todos desde el servidor (`api/_lib/correos-c.ts`; textos en un solo archivo, `api/_lib/textos-correos.ts`; diseño y lista en [`docs/correos-c.md`](docs/correos-c.md)). Casilla guardada en el servidor, una vez por evento, registro de cada envío, plazo de 3 días hábiles de la mediación (P-06) y texto P-05 en la pantalla de la mediación. Los 20 textos nuevos siguen con «LEGAL: revisar»: el envío y el build de producción fallan a propósito hasta que Legal los confirme. Migración `20261025090000_c_correos.sql` (solo agrega) aplicada en producción a las 4:25 p. m. y 4:31 p. m. CR; `waitlist` y `waitlist_intentos` sin cambios.
+- Pendiente: encender C y los correos (solo con el OK de Katherine y de Legal).
 
 ## E2E automática (24 oct 2026)
 - Playwright + workflow post-despliegue, cada 6 h y a pedido; E2E.md en la rama e2e-resultados. Ver docs/e2e.md.

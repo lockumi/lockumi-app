@@ -62,7 +62,7 @@ describe('desmarcar la casilla detiene los envíos', () => {
 describe('Privacidad 1.7-demo (Legal 11:29 p. m.)', () => {
   it('casilla, :32, :33 y fase 2 en presente', () => {
     encenderTodo(); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
-    expect(texto).toContain('Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.')
+    expect(texto).toContain('Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.')
     expect(d.html).toContain('>Invitar a otra persona y avisos por correo<')
     expect(texto).toContain('Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuenta. Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.')
     expect(texto).not.toMatch(/cuando se active|todavía no está disponible|Hoy la app no envía invitaciones/)
