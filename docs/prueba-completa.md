@@ -60,6 +60,10 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
 
+## Suscripción (B.8) y rendimiento (B.13) (PR 8, paso 15)
+1. En «Crear alquiler», antes del Anexo 6-A: la B.8 con el texto «En la demo, la app es gratis…» y el cuadro del servicio real con las dos autorizaciones que se pedirían (sin casillas).
+2. Debajo, la B.13 plegada: «Rendimiento del depósito: función en estudio», etiquetas «Función en estudio» y «Simulación», el texto de Legal, enlace a la cláusula 10 y [Entendido] (cierra el bloque).
+
 ## Sin marcadores visibles
 Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice: «la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), que no puede usar tus fotos para entrenar modelos. Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso. …». La B.1 y la B.7 ya no muestran [PENDIENTE] (el costo del servicio real se informará antes de firmar).
 
