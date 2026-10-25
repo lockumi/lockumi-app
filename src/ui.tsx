@@ -24,7 +24,8 @@ export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
     </div>
   </header>
 }
-export const AVISO_RED = 'Red de prueba: depósitos reales en testnet, sin valor'
+// LEGAL: revisado (24/10, 11:25 p. m.) · CAMBIO VISIBLE: espera el OK de Katherine
+export const AVISO_RED = 'Red de prueba de Stellar: sin dinero real.'
 /** Mismo aviso mientras el depósito sea simulado (modoVideo): no promete movimientos reales en la red. */
 export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito simulado'
 export const Fondo = ({ children }: { children: ReactNode }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>

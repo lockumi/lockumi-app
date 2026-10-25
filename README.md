@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**Pendiente del OK de Katherine (sin publicar)**
+- Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción: rama aparte, sin publicar hasta el OK de Katherine.
+
 **24 de octubre de 2026 (PR 8, paso 15, sin cambios visibles)**
 - Prueba completa (detrás del interruptor): al crear un alquiler se ve la B.8 («En la demo, la app es gratis», la suscripción del servicio real y las dos autorizaciones que se pedirían, sin casillas) y la B.13 «Rendimiento del depósito: función en estudio» (sin tasas, montos ni «Próximamente»). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 

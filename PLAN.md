@@ -2,6 +2,9 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Franja: texto nuevo (sin publicar)
+- Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción: rama aparte, sin publicar hasta el OK de Katherine.
+
 ## PR 8 · paso 15 (24 oct 2026): B.8 suscripción y B.13 rendimiento «función en estudio», sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/SuscripcionPC.tsx`, montado en Crear antes del Anexo 6-A.
 
