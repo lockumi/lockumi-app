@@ -122,6 +122,39 @@ describe('reputación encendida', () => {
   })
 })
 
+const REP09_ABIERTO = 'Si tienes un alquiler abierto (un depósito guardado, un plazo para reclamar o una mediación en curso), tu perfil deja de mostrarse en cuanto lo pides, pero tu cuenta se elimina cuando ese alquiler se cierre, en un máximo de 5 días hábiles después del cierre. Mientras tanto, solo usamos tus datos para cerrar el alquiler, y la otra parte sigue viendo el contrato y el historial. Esta solicitud no se puede deshacer.'
+const CONFIRMAR = 'Tienes un alquiler abierto. Tu perfil dejará de mostrarse ahora y tu cuenta se eliminará cuando el alquiler se cierre. Esta solicitud no se puede deshacer.'
+const abierto = () => mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'ab1', direccion: 'Casa abierta', monto: 20, moneda: 'USDC', inicio: '2026-10-01', fin: '2027-10-01', reglas: [],
+  duenoEmail: U.email, inquilinoEmail: 'otro@lockumi.com', estado: 'en_curso', rendimiento: false, historial: [], diasSimulados: 0 }]))
+describe('eliminar la cuenta con un alquiler abierto (Legal, respuesta final)', () => {
+  it('REP-09 trae el párrafo del alquiler abierto justo después del de los 5 días hábiles', async () => {
+    const { ELIMINAR } = await import('../textos')
+    const i = ELIMINAR.puntos.findIndex(x => x.startsWith('Borramos tus datos de reputación')); expect(ELIMINAR.puntos[i + 1]).toBe(REP09_ABIERTO)
+    expect(texto(await pantalla('/perfil/eliminar'))).toContain(REP09_ABIERTO)
+  })
+  it('con un alquiler abierto, «Eliminar mi cuenta» pide confirmar: [Eliminar mi cuenta] [Cancelar]', async () => {
+    abierto(); await aceptarTodo()
+    const h = await pantalla('/perfil/eliminar/confirmar'), t = texto(h)
+    expect(t).toContain(CONFIRMAR); expect(h).toMatch(/<button[^>]*>Eliminar mi cuenta<\/button>/); expect(h).toMatch(/<a[^>]*href="#\/perfil\/eliminar"[^>]*>Cancelar<\/a>/)
+    const { solicitudBorrado } = await import('../borrado'); expect(solicitudBorrado(U.email)).toBeNull()   // confirmar todavía no pide nada
+  })
+  it('sin alquiler abierto no hay pantalla de confirmación (va directo al pedido)', async () => {
+    await aceptarTodo(); expect(texto(await pantalla('/perfil/eliminar/confirmar'))).not.toContain(CONFIRMAR)
+  })
+  it('pedida con el alquiler abierto: el perfil no se muestra, no se recalcula ni avisa, la app sigue para cerrar el alquiler', async () => {
+    abierto(); await aceptarTodo()
+    const { pedirBorrado, ejecutarBorrados, perfilDisponible } = await import('../borrado'), { store } = await import('../../store')
+    pedirBorrado(U.email, '2026-10-25T20:00:00Z', store.todos()); ejecutarBorrados(Date.now(), store.todos())
+    expect(perfilDisponible(U.email)).toBe(false)
+    const l = texto(await pantalla('/perfil/eliminar/listo'))
+    expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toMatch(/Pedido el 25 de octubre de 2026 a las 14:00/)
+    expect(l).not.toContain('Listo. Eliminamos tu cuenta.')
+    for (const r of ['/perfil', '/perfil/dueno', '/perfil/calculo']) { const t = texto(await pantalla(r)); expect(t).toContain('Ya pediste eliminar tu cuenta'); expect(t).not.toMatch(/de 5|Nuevo en Lockumi/) }
+    expect(texto(await pantalla('/perfil/eliminar'))).not.toMatch(/<button[^>]*>Eliminar mi cuenta/)
+    const t = texto(await pantalla('/')); expect(t).toContain('PANTALLA-DE-SIEMPRE'); expect(t).not.toContain('Tu puntaje cambió')
+  })
+})
+
 describe('textos legales con la reputación (REP-14 y REP-15, solo con VITE_REPUTACION=1)', () => {
   it('encendida: el Aviso 1.7-demo trae «Perfil de reputación» y los Términos la cláusula 15 y el inciso g)', async () => {
     const { condicional } = await import('../../legal/condicional'), fs = await import(['node', 'fs'].join(':'))
@@ -130,6 +163,8 @@ describe('textos legales con la reputación (REP-14 y REP-15, solo con VITE_REPU
     const p = condicional(leer('privacidad.md'), on), t = condicional(leer('terminos.md'), on)
     expect(p).toContain('## Perfil de reputación'); expect(p).not.toContain('no calculamos ningún puntaje de reputación')
     expect(p).toContain('Cualquier persona en internet con el enlace puede ver los datos indicados en «Perfil de reputación», mientras exista tu cuenta.')
+    expect(p).toMatch(/\*\*Perfil fijo y retiro del consentimiento:\*\*[^\n]*No podemos borrar las capturas que otras personas hayan hecho\. Si tienes un alquiler abierto, el plazo de 5 días hábiles corre desde que se cierra\.\n/)
+    expect(t).toContain('en un máximo de 5 días hábiles (si tienes un alquiler abierto, desde que se cierra)')
     expect(t).toContain('## 15. Perfil de reputación'); expect(t).toContain('g) usar los perfiles públicos en contra de lo dispuesto en la cláusula 15.4')
     const p0 = condicional(leer('privacidad.md'), off), t0 = condicional(leer('terminos.md'), off)
     expect(p0).toContain('no calculamos ningún puntaje de reputación'); expect(p0).not.toContain('Perfil de reputación'); expect(t0).not.toMatch(/15\. Perfil|g\) usar los perfiles/)
