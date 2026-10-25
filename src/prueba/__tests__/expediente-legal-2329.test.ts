@@ -60,3 +60,20 @@ describe('expediente · fotos dentro del PDF', () => {
     expect(t).not.toContain('/Subtype /Image'); expect(t.trimEnd().endsWith('%%EOF')).toBe(true)
   })
 })
+
+describe('expediente · saltos de página', () => {
+  it('ninguna página termina en un título ni separa una foto de su línea', () => {
+    const imgs = new Map<string, ImagenPdf>([['foto-entrada', { ancho: 8, alto: 6, jpeg: JPEG }], ['foto-reclamo', { ancho: 8, alto: 6, jpeg: JPEG }]])
+    for (let extra = 0; extra < 12; extra++) {
+      const a = alquiler(); for (let i = 0; i < extra; i++) a.reclamo!.rubros!.push({ ...a.reclamo!.rubros![0], id: 'x' + i })
+      const bin = new TextDecoder('latin1').decode(pdfExpediente(a, AHORA, undefined, imgs))
+      const paginas = [...bin.matchAll(/stream\n([\s\S]*?)\nendstream/g)].map(m => m[1]).filter(s => s.includes(' Tj ET'))
+      expect(paginas.length).toBeGreaterThan(1)
+      for (const p of paginas) {
+        const ops = p.split('\n').filter(o => o.includes(' Tj ET') || o.includes(' Do Q')).filter(o => !o.includes('DEMO') && !o.includes('Página '))
+        expect(ops.at(-1)).not.toMatch(/\/F2 13 Tf/)
+        expect(ops[0]).not.toMatch(/ Do Q/)
+      }
+    }
+  })
+})
