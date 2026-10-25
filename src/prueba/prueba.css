@@ -15,3 +15,10 @@
 .antes-despues{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rubros-lista{list-style:none;padding:0;margin:0}
 .lista-vias{list-style:none;padding:0;margin:0}
+
+/* Paso 11 · avisos por correo (paleta del logo sobre crema, texto café) */
+.avisos-correo { background: #FFF5EE; border: 1px solid #FFB08A; border-radius: 12px; padding: 14px; color: #3D2A22; display: grid; gap: 10px; }
+.avisos-correo h3, .avisos-correo p { margin: 0; color: #3D2A22; }
+.avisos-correo input[type=email] { width: 100%; box-sizing: border-box; }
+.avisos-correo__casilla { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
+.avisos-correo__casilla input { accent-color: #E8531F; width: 18px; height: 18px; margin-top: 2px; }
