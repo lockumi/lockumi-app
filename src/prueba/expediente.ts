@@ -19,7 +19,7 @@ const ROL: Record<Rol, string> = { dueno: 'Dueño', inquilino: 'Inquilino' }
 const VIA: Record<string, string> = { automatico: 'Sin reclamo en el plazo', acuerdo: 'Acuerdo en la app', mediacion: 'Mediación Lockumi (demo)', propuesta: 'Propuesta automática', devuelto: 'El dueño devolvió todo', simulacion: 'Resolver el reclamo (simulación)' }
 const usdc = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
 const cr = (s?: string | number) => s === undefined || s === '' ? '—' : new Date(s).toLocaleString('es-CR', { timeZone: 'America/Costa_Rica', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' (hora de Costa Rica)'
-const dia = (s: string) => new Date(s).toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: 'numeric', month: 'long', year: 'numeric' })
+const dia = (s: string) => new Date(s).toLocaleDateString('es-CR', { timeZone: /^\d{4}-\d\d-\d\d$/.test(s) ? 'UTC' : 'America/Costa_Rica', day: 'numeric', month: 'long', year: 'numeric' })
 /** Quita del texto libre correos, teléfonos y números de identificación que alguien haya escrito. */
 export const sinDatos = (s: string) => s.replace(/[^\s@]+@[^\s@]+/g, '(dato quitado)').replace(/\+?\d[\d\s-]{6,}\d/g, '(dato quitado)')
 const fotos = (fs: Foto[]) => fs.map(f => `Foto de ${ROL[f.por].toLowerCase()} · ${cr(f.fecha)}`)
@@ -29,14 +29,14 @@ export function contenidoExpediente(a: Alquiler, ahora: number): Seccion[] {
   const tx = [a.liquidacionTx, a.red?.txs.resolucion, a.red?.txs.liberacion, ...a.historial.map(e => e.tx)].filter((x): x is string => !!x)
   return [
     { titulo: 'Alquiler', lineas: [`Número: ${a.id}`, `Desde el ${dia(a.inicio)} hasta el ${dia(a.fin)}`, `Depósito: ${usdc(a.monto)}`, `Expediente generado: ${cr(ahora)}`] },
-    { titulo: 'Partes', lineas: ['Dueño: Dueño (nombre visible en la app)', 'Inquilino: Inquilino (nombre visible en la app)', 'Sin correos, teléfonos, identificaciones ni la dirección del inmueble.'] },
+    { titulo: 'Partes', lineas: ['Dueño: se identifica por su rol en la app', 'Inquilino: se identifica por su rol en la app', 'Sin correos, teléfonos, identificaciones ni la dirección del inmueble.'] },
     { titulo: 'Fotos de entrada', lineas: a.entrada.cuartos.flatMap(c => fotos(c.fotos).map(f => `${c.nombre}: ${f}`)) },
     { titulo: 'Fotos de salida', lineas: (a.salida?.cuartos ?? []).flatMap(c => fotos(c.fotos).map(f => `${c.nombre}: ${f}`)) },
     { titulo: 'Reclamo del dueño', lineas: [`Abierto: ${cr(a.reclamo?.fecha)}`, ...rubros.flatMap((r, i) => [
       `${i + 1}. ${nombreRubro(r)} × ${r.cantidad}: ${sinDatos(r.descripcion)}`, `   Motivo: ${MOTIVOS[r.motivo]}`,
       `   ${r.factura ? `Factura: ${usdc(r.factura.monto)}` : 'Sin factura'} · Precio de referencia: ${referencia(r) === null ? '—' : usdc(referencia(r)!)}`,
       ...fotos(r.fotos).map(f => '   ' + f), ...(a.reclamo?.respuestas?.[r.id] ? [`   Inquilino: ${a.reclamo.respuestas[r.id].acepta ? 'acepta' : 'no acepta'}`] : [])])] },
-    { titulo: 'Propuesta y cálculo', lineas: [...p.filas.map((f, i) => `${i + 1}. Reclamado ${usdc(f.reclamado)} · propuesto ${usdc(f.propuesto)}${f.razones.length ? ' · ' + f.razones.join('; ') : ''}`), `Total propuesto al dueño: ${usdc(p.total)}`] },
+    { titulo: 'Propuesta y cálculo', lineas: [...p.filas.map((f, i) => `${i + 1}. Reclamado ${usdc(f.reclamado)} · propuesto ${usdc(f.propuesto)}${f.razones.length ? ' · ' + f.razones.map(z => z.replace(/\.$/, '')).join('; ') : ''}`), `Total propuesto al dueño: ${usdc(p.total)}`] },
     { titulo: 'Resultado', lineas: a.resultado ? [`${VIA[a.resultado.via] ?? a.resultado.via} · ${cr(a.resultado.fecha)}`, `Dueño: ${usdc(a.resultado.dueno)}`, `Inquilino: ${usdc(a.resultado.inquilino)}`] : ['Sin resultado todavía'] },
     { titulo: 'Aceptaciones', lineas: a.regla ? [`Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}`] : ['Sin registro'] },
     { titulo: 'Registro de avisos', lineas: (a.avisos ?? []).map(v => `${v.id} para ${ROL[v.para].toLowerCase()} · entregado en la app ${cr(v.entregado)} · ${v.abierto ? 'abierto ' + cr(v.abierto) : 'sin abrir'}`) },
