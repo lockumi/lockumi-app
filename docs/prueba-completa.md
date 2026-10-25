@@ -182,6 +182,12 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 - **Reclamo con el plazo vencido (migración `20261025070000_c_reclamo_vencido.sql`, SIN aplicar; Legal 25/10, 4:33 a. m.):** el cron diario de `lk_vencimientos` puede tardar hasta 24 h en devolver el depósito (Términos 6.5 a). En ese tiempo el caso sigue en `ventana_reclamo`, pero `lk_reclamar` ya lo rechaza con «El plazo para reclamar ya terminó. El depósito se le devuelve al inquilino.» (`-- LEGAL: revisar`). Lo prueban `c-plazos-textos-sql.test.ts` y el paso «plazo vencido sin cron: el servidor rechaza el reclamo» de `correr-c.sh --simulado`. Solo reemplaza `lk_reclamar` y se puede volver a aplicar.
 - FECHA_V19 sigue provisional. La casilla de correos en C muestra «1.8-demo · FECHA_V19»: en C los correos se encienden junto con las dos personas, así que nunca hay una fecha futura distinta.
 
+### Diseño sin tocar (25/10, 6:49 a. m. CR)
+Regla de Katherine: el diseño que ya existe no se toca; solo se agregan pantallas o tarjetas con los estilos que ya hay.
+- «Elegir modo» (Crear): con C, «Simular con dueño de prueba» e «Invitar a la otra persona» usan `ModoOpciones` (src/screens/Crear.tsx), con el mismo marcado que producción (`div.na-modo__op`). Antes eran `<button>`, y el navegador les cambiaba el estilo (texto centrado y negro, otro borde y otra sombra). En C solo cambia cuál está elegida (`is-sel` y la marca) y desaparece «Pronto». El teclado funciona con `role="radio"`, sin CSS nuevo.
+- «Invita al inquilino» (Detalle): el link va dentro de `label.campo`, el campo de la app, no el del navegador.
+- Guarda: `src/screens/__tests__/c-diseno-modo.test.tsx` compara el marcado con C y sin C.
+
 ## Escenario C en un solo comando: `correr-c.sh` (25/10, ~2:20 a. m. CR)
 `/workspace/lockumi/prueba-completa/correr-c.sh` (en la caja, fuera del repo) corre la prueba de C de punta a punta cuando estén las 4 llaves (`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TRUSTLESS_WORK_API_KEY`, `LOCKUMI_TW_PLATAFORMA_SECRET`) como variables de entorno de un proceso nuevo. La cuenta que resuelve disputas sale de `/workspace/lockumi/seguridad/mediador-testnet.env` (chmod 600). Nunca imprime secretos: de cada variable solo dice «está» o «FALTA». No publica nada y no toca Vercel ni master.
 1. **Llaves.** Si falta alguna, se detiene (salvo con `--simulado`).

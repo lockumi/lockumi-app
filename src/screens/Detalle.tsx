@@ -277,7 +277,7 @@ function Invitacion({ a }: { a: Alquiler }) {
   return <section className="glass tarjeta pila invitacion" aria-labelledby="inv-t">
     <h2 id="inv-t">Invita al inquilino</h2>
     <p className="nota">Envía este link a {a.inquilinoEmail}. Tiene que entrar con ese correo. {TEXTO_INVITACION_VENCE}</p>
-    {link ? <><input readOnly value={link} aria-label="Link de invitación" onFocus={e => e.target.select()} />
+    {link ? <><label className="campo"><input readOnly value={link} aria-label="Link de invitación" onFocus={e => e.target.select()} /></label>
       <button type="button" className="boton boton--primario boton--ancho" onClick={copiar}>{copiado ? 'Copiado ✓' : 'Copiar link'}</button></>
       : <p className="nota">Este aparato no tiene el link guardado.</p>}
     <button type="button" className="enlace" onClick={nuevo}>Crear un link nuevo (el anterior deja de servir)</button>

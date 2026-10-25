@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { es } from 'react-day-picker/locale'
 import 'react-day-picker/style.css'
@@ -42,6 +42,21 @@ const TRAZOS = {
   enviar: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z" />,
 }
 const Ico = ({ n, c = '' }: { n: keyof typeof TRAZOS; c?: string }) => <svg className={'ico ' + c} viewBox="0 0 24 24" aria-hidden="true">{TRAZOS[n]}</svg>
+
+/** «Simular con dueño de prueba» / «Invitar a la otra persona». Mismo marcado y clases que producción (master): en C solo cambia
+ *  cuál está elegida (is-sel y la marca) y desaparece «Pronto». Sin <button>: el estilo del navegador cambiaba el diseño. */
+export function ModoOpciones({ dosPersonas, invitar, setInvitar }: { dosPersonas: boolean; invitar: boolean; setInvitar: (v: boolean) => void }) {
+  if (!dosPersonas) return <div className="na-modo">
+    <div className="na-modo__op is-sel"><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span><span className="na-marca"><Ico n="check" /></span></div>
+    <div className="na-modo__op is-off" aria-disabled="true"><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span><span className="na-pronto">Pronto</span></div>
+  </div>
+  const op = (v: boolean) => ({ role: 'radio', tabIndex: 0, 'aria-checked': invitar === v, className: 'na-modo__op' + (invitar === v ? ' is-sel' : ''),
+    onClick: () => setInvitar(v), onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setInvitar(v) } } })
+  return <div className="na-modo" role="radiogroup" aria-label="Cómo quieres hacer la prueba">
+    <div {...op(false)}><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span>{!invitar && <span className="na-marca"><Ico n="check" /></span>}</div>
+    <div {...op(true)}><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span>{invitar && <span className="na-marca"><Ico n="check" /></span>}</div>
+  </div>
+}
 const Info = ({ et, onClick }: { et: string; onClick: () => void }) => <button type="button" className="na-info" aria-label={et} aria-haspopup="dialog" onClick={onClick}><Ico n="i" /></button>
 
 // ---------- Fechas: "aaaa-mm-dd" ↔ Date local ----------
@@ -205,15 +220,7 @@ export function Crear({ u }: { u: Usuario }) {
     {/* Parte 4 (todavía no activa): tú eres el inquilino y el dueño es de prueba. «Soy dueño» e «Invitar» llegan después. */}
     {modoPrueba && <section className="glass na-p4" aria-label="Tu papel en esta prueba">
       <div className="roles roles--ancho" role="group" aria-label="Tu papel"><button type="button" aria-pressed={!invitar} onClick={dosPersonas ? () => setInvitar(false) : undefined}>Soy inquilino</button><button type="button" aria-pressed={invitar} disabled={!dosPersonas} title={dosPersonas ? undefined : 'Pronto'} onClick={() => setInvitar(true)}>Soy dueño</button></div>
-      <div className="na-modo">
-        {dosPersonas ? <>
-          <button type="button" aria-pressed={!invitar} className={'na-modo__op' + (!invitar ? ' is-sel' : '')} onClick={() => setInvitar(false)}><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span>{!invitar && <span className="na-marca"><Ico n="check" /></span>}</button>
-          <button type="button" aria-pressed={invitar} className={'na-modo__op' + (invitar ? ' is-sel' : '')} onClick={() => setInvitar(true)}><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span>{invitar && <span className="na-marca"><Ico n="check" /></span>}</button>
-        </> : <>
-        <div className="na-modo__op is-sel"><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span><span className="na-marca"><Ico n="check" /></span></div>
-        <div className="na-modo__op is-off" aria-disabled="true"><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span><span className="na-pronto">Pronto</span></div>
-        </>}
-      </div>
+      <ModoOpciones dosPersonas={dosPersonas} invitar={invitar} setInvitar={setInvitar} />
     </section>}
 
     <form className="glass glass--fuerte na-form" noValidate onSubmit={e => { e.preventDefault(); crear() }}>
