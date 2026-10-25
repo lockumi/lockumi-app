@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { auth, guardarUsuario } from './services/auth'
 import type { Usuario } from './types'
 import { conAceptacion } from './legal/aceptacion'
@@ -19,6 +19,8 @@ import { Invitacion } from './screens/Invitacion'
 import { Ejemplo, useRecorridoPrimeraVez } from './screens/Ejemplo'
 import { RUTA_EJEMPLO } from './recorrido'
 import { useSincronizarPrueba } from './prueba/sincronizar'
+// Paso 19 · Reputación: interruptor VITE_REPUTACION (apagado por defecto). Apagado, el código ni siquiera entra en el build.
+const Reputacion = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('./reputacion/Pantallas')) : null
 const volver = () => { const v = sessionStorage.getItem('lockumi.regreso'); sessionStorage.removeItem('lockumi.regreso'); return v ?? '/' }
 export default function App() {
   const [u, setU] = useState(auth.actual()); const r = useHash()
@@ -43,10 +45,12 @@ export default function App() {
   const m = r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
+  const salir = () => { auth.salir(); olvidarBilletera(); setU(null) }
   return <Fondo>{skip}
     <Alertas />
-    <Barra u={u} onSalir={() => { auth.salir(); olvidarBilletera(); setU(null) }} />
-    {r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />}
+    <Barra u={u} onSalir={salir} />
+    {Reputacion && (r === '/perfil' || r.startsWith('/perfil/')) ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir} /></Suspense>
+      : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />}
     <Pie />
   </Fondo>
 }
