@@ -9,6 +9,10 @@ import type { Usuario } from '../types'
 import { LogoAnimado } from '../LogoAnimado'
 import { modoSolo, modoPrueba, escrowReal } from '../servidor/config'
 import { DUENO_PRUEBA } from './Real'
+import { pruebaCompleta } from '../prueba/interruptor'
+import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
+import { store } from '../store'
+import { modoServidor } from '../servidor/config'
 /** Primera letra en minúscula, sin tocar el resto («cuenta de Lockumi» conserva la L). */
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 import { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio } from '../services/solo'
@@ -125,6 +129,7 @@ export function Crear({ u }: { u: Usuario }) {
   const [conectando, setConectando] = useState<Firma | null>(null); const [errCuenta, setErrCuenta] = useState('')
   const [freighter, setFreighter] = useState(false)
   const [info, setInfo] = useState<InfoClave | null>(null)
+  const [anexo, setAnexo] = useState<ValorAnexo>({ acepta: false, reparaciones: [] })
   const [avisoFin, setAvisoFin] = useState('')
   useEffect(() => { if (escrowReal) void hayFreighter().then(setFreighter) }, [])
   const usar = async (firma: Firma) => {
@@ -163,6 +168,8 @@ export function Crear({ u }: { u: Usuario }) {
       const r = modoPrueba
         ? await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: u.email, ...(escrowReal && origen === 'propia' && propia && { propia: { g: propia.g, firma: propia.firma } }) }, DUENO_PRUEBA)
         : await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: f.email.trim() }, u.email, await cuentaPropia())
+      // Prueba completa: registro del Anexo 6-A aceptado al crear (fecha y reparaciones de uso marcadas).
+      if (pruebaCompleta() && !modoServidor) store.cambiar(r.id, x => { x.anexo = registroAnexo(reparacionesDe(anexo)) }, 'Anexo 6-A aceptado')
       avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))
       ir('/alquiler/' + r.id)
     } catch (e) { setOcupado(false); setErrSrv(e instanceof Error ? e.message : 'No pudimos crear el alquiler. Intenta de nuevo.') }
@@ -259,7 +266,8 @@ export function Crear({ u }: { u: Usuario }) {
 
       {enviado && cuantos > 0 && <p className="error na-error" role="alert">Revisa {cuantos === 1 ? 'el campo marcado' : `los ${cuantos} campos marcados`} y vuelve a intentarlo.</p>}
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
-      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado}>{ocupado ? 'Creando…' : modoPrueba ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
+      {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
+      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta)}>{ocupado ? 'Creando…' : modoPrueba ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisar. Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
       {modoPrueba ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
         : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}

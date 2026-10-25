@@ -8,6 +8,7 @@ El PR 10 enciende el interruptor junto con los Términos y la Privacidad 1.7-dem
 | PR | Qué agrega | Visible en producción |
 |---|---|---|
 | 2 | Plazos con feriados de Costa Rica (`api/_lib/plazos.ts`), precios de referencia (`api/_lib/precios.ts`), textos de avisos (`api/_lib/avisos.ts`), propuesta automática simulada (`src/prueba/propuesta.ts`) y cálculo de avisos debidos (`src/prueba/avisos.ts`) | No (solo funciones y tipos) |
+| 3 | Interruptor `src/prueba/interruptor.ts` (`pruebaCompleta()`); pantalla B.1 «Regla de propuesta automática (opcional)» antes de que el inquilino firme el contrato (`src/prueba/Regla.tsx`), con registro `a.regla` {cuenta, alquiler, versión, sí/no, fecha ISO}; Anexo 6-A (B.5) al crear el alquiler (`src/prueba/Anexo.tsx`): listas A, B con casillas (y «otra que escriban las partes») y C; «Crear» inactivo hasta marcar «Leímos y aceptamos el Anexo 6-A.»; registro `a.anexo` | No (interruptor apagado) |
 
 ## Plazos
 - **Días naturales** (7 días del dueño y 7 del inquilino): cuentan todos los días. Si el día 7 cae **domingo o feriado** de Costa Rica, el plazo pasa al **siguiente día hábil** a la misma hora.
@@ -26,3 +27,17 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 - Si el inquilino trae una cotización más baja, se usa el punto medio.
 - Precios: `precios-referencia.csv` (filas con fuente; «desde» o rango usa el mínimo). Tipo de cambio simulado: 500 colones por USDC de prueba.
 - Regla del silencio: solo si el inquilino aceptó la regla, el reclamo es ≤ 30 % del depósito, las pruebas están completas y abrió al menos un aviso del reclamo (en la app, por el enlace del correo o abriendo la pantalla del reclamo).
+
+## Interruptor y cómo probar con él encendido (PR 3)
+- `pruebaCompleta()` lee `import.meta.env.VITE_PRUEBA_COMPLETA === '1'`. En producción la variable no está puesta: las pantallas nuevas no se montan.
+- Local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 npm run build && npx vite preview` (o `npm run dev` con las mismas variables).
+- En las pruebas: `vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')`.
+- Estilos nuevos en `src/prueba/prueba.css` (botón `boton--pc`: texto café sobre el degradado #FFB08A → #FF6B35; nunca texto blanco sobre naranja).
+
+## Regla de propuesta automática (B.1)
+- Sale **solo al inquilino**, una vez, antes de la firma del contrato. La casilla empieza sin marcar y «Continuar» funciona con o sin marcarla.
+- Se guarda en el alquiler: `regla = { cuenta, alquiler, version, acepta, fecha }` y una línea en el historial («El inquilino aceptó / no aceptó la Regla…»).
+
+## Anexo 6-A al crear (B.5)
+- Debajo del formulario de «Crear». El botón de crear queda inactivo hasta marcar «Leímos y aceptamos el Anexo 6-A.».
+- Se guarda `anexo = { acepta: fecha ISO, reparaciones: [...] }` (las reparaciones de uso marcadas en la parte B y la que escriban).
