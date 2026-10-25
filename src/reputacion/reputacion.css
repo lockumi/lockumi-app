@@ -1,0 +1,83 @@
+/* Paso 19 · Reputación («coral con amor», sin casitas). Solo clases .rp-*; no cambia ningún estilo existente.
+   Se carga solo con el interruptor encendido (pantallas en un archivo aparte, con carga diferida).
+   Nunca texto blanco sobre naranja: los botones de estas pantallas usan texto café sobre el degradado del logo. */
+.rp{--rp-coral:#FF6B35;--rp-coral-osc:#E8531F;--rp-coral-claro:#FFB08A;--rp-crema:#FFF5EE;--rp-cafe:#3D2A22;
+  --rd:#1E4F30;--rd-claro:#E3F2E8;--ri:#7A5446;--ri-claro:#F1EFEE;--ri-tinta:#3D2A22}
+.rp-boton{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 24px;border:0;border-radius:999px;
+  background:linear-gradient(135deg,#FFB08A,#FF6B35);color:#3D2A22;font:700 16px/20px var(--f-texto);text-decoration:none;cursor:pointer;
+  box-shadow:0 6px 16px rgba(232,83,31,.22)}
+.rp-boton:active{transform:scale(.98)}
+.rp-boton:focus-visible,.rp-rol:focus-visible,.rp-enlaces a:focus-visible{outline:3px solid #3D2A22;outline-offset:2px}
+.rp-boton--ancho{width:100%}
+.rp-acciones{display:flex;flex-direction:column;gap:10px;margin-top:var(--s5)}
+.rp-acciones .boton{width:100%}
+/* Banda con borde ondulado */
+.rp-perfil{position:relative;padding:0;overflow:hidden}
+.rp-banda{display:block;height:150px;margin-bottom:-56px}
+.rp-banda svg{display:block;width:100%;height:100%}
+.rp-banda--mini{height:64px;margin-bottom:-30px}
+.rp-perfil__cuerpo{position:relative;padding:0 var(--s5) var(--s5)}
+.rp-avatar{display:inline-grid;place-items:center;width:84px;height:84px;border-radius:26px;border:4px solid #FFF5EE;font:900 30px/1 var(--f-titulo);
+  box-shadow:0 6px 16px rgba(61,42,34,.12)}
+.rp-avatar--dueno{background:var(--rd);color:#fff}
+.rp-avatar--inquilino{background:var(--ri-tinta);color:#fff}
+.rp-avatar--mini{width:56px;height:56px;border-radius:18px;font-size:20px;border-width:3px}
+.rp-nombre{margin-top:10px;font:800 24px/30px var(--f-titulo)}
+.rp-fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+/* Píldoras de papel */
+.rp-rol{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;border-radius:999px;border:0;font:700 14px/18px var(--f-texto);cursor:default}
+.rp-rol svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rp-rol--dueno{background:var(--rd-claro);color:var(--rd);box-shadow:inset 0 0 0 1.5px rgba(30,79,48,.25)}
+.rp-rol--inquilino{background:var(--ri-claro);color:var(--ri-tinta);box-shadow:inset 0 0 0 1.5px rgba(122,84,70,.3)}
+.rp-papeles{display:flex;gap:8px;margin:4px 0 var(--s4)}
+.rp-papeles .rp-rol{cursor:pointer;min-height:40px;padding:8px 14px 8px 11px;background:rgba(61,42,34,.06);color:var(--cafe-suave);box-shadow:none}
+.rp-papeles .rp-rol[aria-current="page"].rp-rol--dueno{background:var(--rd);color:#fff}
+.rp-papeles .rp-rol[aria-current="page"].rp-rol--inquilino{background:var(--ri-tinta);color:#fff}
+/* Puntaje */
+.rp-puntaje{display:flex;align-items:center;gap:16px;margin-top:var(--s4);padding:14px;border-radius:20px;background:#FFF5EE;border:1px solid #FFD3BF}
+.rp-anillo{position:relative;flex:none}
+.rp-anillo svg{display:block;transform:rotate(-90deg)}
+.rp-anillo__c{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.rp-anillo__n{font:800 30px/1 var(--f-titulo);color:#3D2A22}
+.rp-anillo__d{font-size:12px;color:var(--cafe-suave)}
+.rp-linea{font:800 18px/24px var(--f-titulo);color:#3D2A22}
+/* Llave Lockumi: sello con borde ondulado, colores del logo (sin dorado) */
+.rp-llave{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:999px;background:#FFE8DA;color:#3D2A22;font:700 14px/18px var(--f-texto)}
+.rp-sello{flex:none;display:block}
+/* Insignias */
+.rp-insignias{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding:0;list-style:none}
+.rp-insignia{display:flex;align-items:center;gap:8px;padding:10px;border-radius:16px;background:#fff;border:1px solid #FFD3BF;font-size:13px;line-height:17px;font-weight:600}
+.rp-burbuja{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;background:#FFE8DA;color:#9E2E00}
+.rp-burbuja svg,.rp-ico{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rp-burbujas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding:0;list-style:none}
+.rp-burbujas .rp-burbuja{width:28px;height:28px}
+.rp-aviso{margin-top:var(--s4);padding:12px 14px;border-radius:16px;background:rgba(61,42,34,.05);font-size:13px;line-height:19px;color:var(--cafe-suave)}
+.rp-aviso a{font-weight:600;color:var(--enlace)}
+.rp-solo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--cafe-suave)}
+.rp-enlaces{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.rp-enlaces a{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 4px;border-bottom:1px solid #FFD3BF;color:#3D2A22;font-weight:600;text-decoration:none}
+.rp-enlaces li:last-child a{border-bottom:0}
+.rp-texto p+p{margin-top:10px}
+.rp-texto ul{margin:8px 0 0;padding-left:20px}.rp-texto li+li{margin-top:6px}
+.rp-paso{font-size:13px;font-weight:700;color:var(--cafe-suave)}
+.rp-campo select{width:100%;min-height:48px;padding:12px 14px;border:1.5px solid var(--borde);border-radius:var(--r-campo);background:#fff;color:#3D2A22;font:400 16px/22px var(--f-texto)}
+.rp-campo select:focus{outline:none;border-color:var(--accion);box-shadow:0 0 0 3px rgba(219,59,0,.18)}
+.rp-campo--error input,.rp-campo--error select{border-color:var(--error)}
+.rp-deshabilitada{opacity:.6}
+.rp-estado{display:flex;align-items:center;gap:10px;font-weight:700}
+.rp-estado__punto{width:10px;height:10px;border-radius:50%;background:var(--borde)}
+.rp-estado__punto--si{background:var(--exito)}
+.rp-opciones{margin:8px 0 0;padding:0;list-style:none;font-size:14px}
+.rp-opciones li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed #FFD3BF}
+/* Vitrina */
+.rp-pestanas{display:flex;gap:6px;padding:4px;border-radius:999px;background:rgba(61,42,34,.07);margin:var(--s3) 0}
+.rp-pestanas a{flex:1;text-align:center;min-height:40px;display:grid;place-items:center;border-radius:999px;font:600 14px/18px var(--f-texto);color:var(--cafe-suave);text-decoration:none}
+.rp-pestanas a[aria-current="page"]{background:#fff;color:#3D2A22;box-shadow:0 1px 3px rgba(61,42,34,.12)}
+.rp-vitrina{display:grid;gap:12px;margin:var(--s3) 0 0;padding:0;list-style:none}
+@media (min-width:760px){.rp-vitrina{grid-template-columns:1fr 1fr}}
+.rp-tarjeta{position:relative;overflow:hidden;padding:0;border-radius:24px}
+.rp-tarjeta__cuerpo{position:relative;padding:0 16px 16px}
+.rp-tarjeta__cab{display:flex;align-items:flex-end;gap:12px}
+.rp-tarjeta__nombre{font:800 18px/22px var(--f-titulo);margin-bottom:4px}
+.rp-espacio{position:absolute;top:10px;right:12px;padding:3px 10px;border-radius:999px;background:#FFF5EE;color:#3D2A22;font-size:12px;font-weight:700}
+.rp-orden{font-size:14px;line-height:20px;font-weight:600;color:#3D2A22}

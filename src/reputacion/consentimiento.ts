@@ -1,7 +1,7 @@
 // Paso 19 · Registro de consentimientos de la reputación (C.1 y C.8 de legal/reputacion-textos.md).
 // Cuatro opciones independientes por papel (perfil público, Destacados, Nuevos en Lockumi y Mostrar mi puntaje), todas apagadas.
-// Se guarda la versión, la fecha y el texto aceptado; al «Dejar de mostrar» se guarda la fecha del retiro y NO se borra nada:
-// los datos se borran solo cuando la persona elimina su cuenta (decisión 5 de Katherine). En la demo, se guarda en este navegador;
+// Se guarda la versión, la fecha y el texto aceptado. No hay «Dejar de mostrar» (decisión de Katherine del 25/10/2026, 2:11 p. m.):
+// el perfil queda fijo y visible y solo desaparece cuando la persona elimina su cuenta (borrado.ts). En la demo, se guarda en este navegador;
 // en el servidor, la tabla de supabase/migrations/20261025140000_reputacion.sql (escrita, no aplicada).
 import { useSyncExternalStore } from 'react'
 import type { Rol } from '../types'
@@ -10,7 +10,7 @@ import { UI } from './textos'
 
 export const VERSION_TEXTOS = 'reputacion-1.0-demo · 25 de octubre de 2026'
 export type Opcion = 'perfil' | 'destacados' | 'nuevos' | 'puntaje'
-export interface Registro { version: string; fecha: string; texto: string[]; retirado?: string }
+export interface Registro { version: string; fecha: string; texto: string[] }
 export interface EstadoReputacion { nombre?: string; canton?: string; roles: Record<Rol, Partial<Record<Opcion, Registro>>> }
 
 const clave = (email: string) => 'lockumi.reputacion.v1.' + email.trim().toLowerCase()
@@ -31,7 +31,7 @@ function escribir(email: string, v: EstadoReputacion) {
   try { localStorage.setItem(clave(email), JSON.stringify(v)) } catch { throw new Error(UI.errGuardar) }
   subs.forEach(f => f())
 }
-export const activa = (s: EstadoReputacion, rol: Rol, o: Opcion) => !!s.roles[rol][o] && !s.roles[rol][o]!.retirado
+export const activa = (s: EstadoReputacion, rol: Rol, o: Opcion) => !!s.roles[rol][o]
 
 export function guardarDatos(email: string, nombre: string, canton: string) { escribir(email, { ...leer(email), nombre: nombre.trim().replace(/\s+/g, ' '), canton }) }
 
@@ -41,15 +41,8 @@ export function aceptar(email: string, rol: Rol, o: Opcion, texto: string[], fec
   if (o !== 'perfil' && !activa(s, rol, 'perfil')) throw new Error('Primero haz público tu perfil.')
   escribir(email, { ...s, roles: { ...s.roles, [rol]: { ...s.roles[rol], [o]: { version: VERSION_TEXTOS, fecha, texto } } } })
 }
-export function retirar(email: string, rol: Rol, o: Opcion, fecha = new Date().toISOString()) {
-  const s = leer(email), r = s.roles[rol][o]
-  if (!r || r.retirado) return
-  escribir(email, { ...s, roles: { ...s.roles, [rol]: { ...s.roles[rol], [o]: { ...r, retirado: fecha } } } })
-}
-/** C.5: apaga todo lo público de ese papel al instante. No borra el puntaje, las insignias ni el registro. */
-export function dejarDeMostrar(email: string, rol: Rol, fecha = new Date().toISOString()) {
-  for (const o of ['destacados', 'nuevos', 'puntaje', 'perfil'] as const) retirar(email, rol, o, fecha)
-}
+/** Solo al eliminar la cuenta (borrado.ts): borra el perfil, las opciones y el registro de esta cuenta. */
+export function borrarTodo(email: string) { try { localStorage.removeItem(clave(email)) } catch { /* nada que borrar */ } cache.delete(email); subs.forEach(f => f()) }
 
 export const useReputacion = (email: string) => useSyncExternalStore(f => { subs.add(f); addEventListener('storage', f); return () => { subs.delete(f); removeEventListener('storage', f) } },
   () => leer(email), () => leer(email))

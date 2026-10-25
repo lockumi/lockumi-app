@@ -1,6 +1,7 @@
 // Paso 19 · Registro de consentimientos (C.1 y C.8): una casilla por opción y por papel, sin marcar, con versión, fecha y texto.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { leer, guardarDatos, aceptar, dejarDeMostrar, activa, validarNombre, validarCanton, VERSION_TEXTOS } from '../consentimiento'
+import * as modulo from '../consentimiento'
+import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo } from '../consentimiento'
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
 beforeEach(() => { const m = new Map<string, string>()
@@ -22,16 +23,10 @@ describe('consentimientos', () => {
   it('no se puede activar Destacados, Nuevos ni el puntaje sin el perfil público', () => {
     for (const o of ['destacados', 'nuevos', 'puntaje'] as const) expect(() => aceptar(E, 'dueno', o, ['x'], F)).toThrow()
   })
-  it('«Dejar de mostrar» apaga todo lo público al instante y guarda la fecha en que se retiró', () => {
-    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F); aceptar(E, 'dueno', 'destacados', ['c'], F); aceptar(E, 'dueno', 'puntaje', ['d'], F)
-    dejarDeMostrar(E, 'dueno', '2026-11-17T10:00:00.000Z')
-    const s = leer(E)
-    for (const o of ['perfil', 'destacados', 'nuevos', 'puntaje'] as const) expect(activa(s, 'dueno', o)).toBe(false)
-    expect(s.roles.dueno.perfil?.retirado).toBe('2026-11-17T10:00:00.000Z')
-  })
-  it('«Dejar de mostrar» no borra los datos (decisión 5: se borran solo al eliminar la cuenta)', () => {
-    guardarDatos(E, 'Laura V.', 'Escazú'); aceptar(E, 'dueno', 'perfil', ['a', 'b'], F); dejarDeMostrar(E, 'dueno', F)
-    expect(leer(E)).toMatchObject({ nombre: 'Laura V.', canton: 'Escazú' })
+  it('no hay «Dejar de mostrar»: el perfil queda fijo y solo desaparece al eliminar la cuenta (decisión del 25/10/2026)', () => {
+    expect(Object.keys(modulo).filter(k => /dejar|retirar|ocultar/i.test(k))).toEqual([])
+    guardarDatos(E, 'Laura V.', 'Escazú'); aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
+    borrarTodo(E); expect(leer(E)).toEqual({ roles: { dueno: {}, inquilino: {} } })
   })
   it('se guarda por cuenta (sin importar mayúsculas)', () => {
     guardarDatos(E, 'Laura V.', 'Escazú'); expect(leer('demo@lockumi.com').canton).toBe('Escazú'); expect(leer('otra@x.cr').canton).toBeUndefined()

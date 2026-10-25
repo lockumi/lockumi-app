@@ -31,13 +31,13 @@ describe('plazo: 5 días hábiles, contados desde el día siguiente al pedido (h
     expect(fechaLimiteBorrado('2026-10-25T20:00:00Z')).toBe('2026-10-31T05:59:59.999Z')   // viernes 30/10, 23:59:59 CR
   })
   it('un feriado en medio corre el plazo un día', () => {
-    expect(fechaLimiteBorrado('2026-11-27T15:00:00Z')).toBe('2026-12-05T05:59:59.999Z')   // vie 27/11 → lun 30, (mar 1 feriado), mié 2… vie 4
+    expect(fechaLimiteBorrado('2026-11-27T15:00:00Z')).toBe('2026-12-08T05:59:59.999Z')   // vie 27/11 → lun 30, (mar 1 feriado), mié 2, jue 3, vie 4, lun 7
   })
   it('se usa la fecha de Costa Rica: el domingo 11 p. m. CR (lunes 5 a. m. UTC) sigue siendo domingo', () => {
     expect(fechaLimiteBorrado('2026-10-26T05:00:00Z')).toBe('2026-10-31T05:59:59.999Z')
   })
-  it('Semana Santa: pedido el lunes 30/3/2026 vence el martes 7/4', () => {
-    expect(fechaLimiteBorrado('2026-03-30T15:00:00Z')).toBe('2026-04-08T05:59:59.999Z')   // 31, 1, (2 y 3 feriados), 6, 7
+  it('Semana Santa: pedido el lunes 30/3/2026 vence el miércoles 8/4', () => {
+    expect(fechaLimiteBorrado('2026-03-30T15:00:00Z')).toBe('2026-04-09T05:59:59.999Z')   // 31, 1, (2 y 3 feriados), 6, 7, 8
   })
 })
 

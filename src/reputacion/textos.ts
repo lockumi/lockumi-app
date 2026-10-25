@@ -99,25 +99,38 @@ export const COMO_SE_CALCULA = {
 export const AVISO_PERFIL = 'No es una garantía ni una recomendación de Lockumi. Solo resume lo registrado en la app. Demo en la red de prueba: datos de ejemplo, sin dinero real.'
 export const AVISO_LISTA = 'Solo aparecen personas que eligieron aparecer. No es una garantía ni una recomendación de Lockumi, y el orden no es un ranking. Demo en la red de prueba: datos de ejemplo, sin dinero real.'
 
-// LEGAL: revisar · C.5
-export const DEJAR = {
-  boton: 'Dejar de mostrar mi perfil',
-  titulo: '¿Dejar de mostrar tu perfil?',
-  parrafos: [
-    'Tu perfil y tus tarjetas desaparecen **de inmediato** de Dueños destacados, Inquilinos destacados y Nuevos en Lockumi, y el enlace público mostrará «Este perfil ya no está disponible». No podemos borrar las capturas ni las imágenes que otras personas ya hayan guardado.',
-    'Dejar de mostrarlo **no borra** tus datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje): siguen guardados en tu cuenta, sin publicarse, y se borran solo si eliminas tu cuenta. Retirar el consentimiento es eliminar la cuenta (Ajustes › Cuenta › «Eliminar mi cuenta»). Si vuelves a activar el perfil, se muestra con los datos que sigan en tu cuenta.',
-    'Puedes volver a activarlo cuando quieras.',
+// C.5 («Dejar de mostrar mi perfil») NO se usa: Katherine decidió el 25/10/2026 (2:11 p. m.) que no hay botón para ocultar el perfil;
+// queda fijo y solo desaparece al eliminar la cuenta. Legal tiene que quitar de C.1, C.2 y C.8 las frases que lo prometen.
+
+// LEGAL: revisar · C.5.1 Eliminar la cuenta. El plazo de 5 días hábiles excluye sábados, domingos y feriados de Costa Rica.
+export const ELIMINAR = {
+  boton: 'Eliminar mi cuenta',
+  titulo: '¿Eliminar tu cuenta?',
+  intro: 'Retirar tu consentimiento para los datos de reputación es eliminar tu cuenta. Si la eliminas:',
+  puntos: [
+    'Tu perfil y tus tarjetas dejan de mostrarse al instante, y el enlace público mostrará «Este perfil ya no está disponible».',
+    'Borramos tus datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje) en un máximo de 5 días hábiles. No se pueden recuperar.',
+    'Los datos del contrato y del depósito siguen la regla general del Aviso de privacidad. Lo registrado en la red de prueba de Stellar no se puede borrar.',
+    'No podemos borrar las capturas ni las imágenes que otras personas ya hayan guardado.',
+    'Antes de eliminarla, puedes descargar tus datos.',
   ],
-  si: 'Dejar de mostrar', no: 'Cancelar',
-  listo: 'Listo. Tu perfil ya no es público.',
+  descargar: 'Descargar mis datos', si: 'Eliminar mi cuenta', no: 'Cancelar',
+  listo: 'Listo. Eliminamos tu cuenta. Tus datos de reputación se borrarán en un máximo de 5 días hábiles.',
+  correo: 'También se puede pedir por correo a business.applockumi@gmail.com desde el correo registrado.',
+}
+// Redacción nuestra (LEGAL: revisar): fecha límite visible y salida de la sesión en la demo.
+export const ELIMINAR_UI = {
+  limite: (f: string) => `Fecha límite: ${f}.`,
+  salir: 'Salir',
+  enCurso: 'Ya pediste eliminar tu cuenta. Tu perfil ya no se muestra.',
 }
 
-// LEGAL: revisar · C.5.2 (sin el botón «Eliminar mi cuenta»: la app todavía no tiene esa función; ver docs/reputacion.md)
+// LEGAL: revisar · C.5.2
 export const MIS_DATOS = {
   boton: 'Ver mis datos de reputación',
   titulo: 'Tus datos de reputación',
   texto: 'Aquí ves todo lo que guardamos para tu reputación: cada alquiler cerrado que cuenta, si tuvo un descuento del depósito y de cuánto, cómo afecta tu puntaje, tus insignias y qué opciones de publicación tienes activas. Se guardan mientras exista tu cuenta. Es gratis (Ley 8968, art. 7).',
-  descargar: 'Descargar mis datos', corregir: 'Corregir o pedir revisión',
+  descargar: 'Descargar mis datos', corregir: 'Corregir o pedir revisión', eliminar: 'Eliminar mi cuenta',
 }
 
 // LEGAL: revisar · C.6
