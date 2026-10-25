@@ -149,11 +149,13 @@ describe('escenario C: sin acuerdo, el caso sigue abierto y nada lo cierra por p
     await como(INQ); await expect(db.query(`select public.lk_registrar_liquidacion($1, 'tx')`, [id])).rejects.toThrow(/no está terminado/)
     await sinTocar(id)
   })
-  it('solo tres funciones cierran un caso, y de la mediación solo sale con lk_decidir_mediacion', async () => {
+  it('B2: solo cinco funciones cierran un caso, y de la mediación solo sale con lk_decidir_mediacion', async () => {
     const fns = (await db.query<{ n: string; d: string }>(`select p.proname n, pg_get_functiondef(p.oid) d from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname like 'lk\_%'`)).rows
     const cierran = fns.filter(f => /update public\.lk_contratos set estado\s*=\s*'cerrado'/.test(f.d)).map(f => f.n).sort()
-    expect(cierran).toEqual(['lk_cerrar_sin_reclamo', 'lk_decidir_mediacion', 'lk_responder_reclamo'])
+    expect(cierran).toEqual(['lk_cerrar_sin_reclamo', 'lk_decidir_mediacion', 'lk_responder_reclamo', 'lk_silencio_inquilino', 'lk_vencimientos'])
     const cerrar = fns.find(f => f.n === 'lk_cerrar_sin_reclamo')!.d, responder = fns.find(f => f.n === 'lk_responder_reclamo')!.d
     expect(cerrar).toMatch(/c\.estado <> 'ventana_reclamo'/); expect(responder).toMatch(/c\.estado <> 'reclamo'/)
+    expect(fns.find(f => f.n === 'lk_silencio_inquilino')!.d).toMatch(/c\.estado is distinct from 'reclamo'/)
+    expect(fns.find(f => f.n === 'lk_vencimientos')!.d).toMatch(/where estado = 'ventana_reclamo' and now\(\) >/)
   })
 })

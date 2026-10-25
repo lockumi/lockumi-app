@@ -202,8 +202,12 @@ function Evidencia({ a }: { a: Alquiler }) {
 }
 
 function Reclamo({ a, rol }: P) {
-  const { solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a)
+  const { solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal, servidor: modoServidor } = modoDe(a)
   const r = a.reclamo!; const p = useProceso()
+  // B2 (dos personas): el inquilino deja registro de que abrió el reclamo (6.5 b) y, vencido su plazo, el servidor aplica 6.5 c / 6.5.1.
+  useEffect(() => { if (!modoServidor) return
+    void (async () => { try { if (rol === 'inquilino') await acciones.abrirAvisoReclamo!(a); await acciones.aplicarSilencio!(a) } catch { /* se reintenta al volver a abrir */ } })()
+  }, [modoServidor, rol, a.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const aceptar = () => p.correr(av => acciones.responder(a, true, av))
   return <section className="pila"><div className="cab"><h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}</div>{/* LEGAL: revisado (24/10) */}<Evidencia a={a} />
     {/* LEGAL: revisado (24/10) · ronda 8. modoSolo: solo el alquiler de ejemplo (sin red, reclamo simulado). modoVideo (producción): disputa real en la red de prueba (acciones.reclamar → escrow.disputar) */}
@@ -219,12 +223,14 @@ function Reclamo({ a, rol }: P) {
   </section>
 }
 
-function Mediacion({ a }: P) {
+function Mediacion({ a, rol }: P) {
   const { servidor: modoServidor, solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a)
   const r = a.reclamo!; const [panel, setPanel] = useState(false); const [aDueno, setAD] = useState(Math.round(r.monto / 2 * 100) / 100); const p = useProceso()
   const [mediador, setMediador] = useState(!modoServidor)
   useEffect(() => { if (modoServidor) servidor.esMediador().then(setMediador).catch(() => {}) }, [modoServidor])
   const decidir = () => p.correr(av => acciones.decidir(a, aDueno, undefined, av))
+  const [aceptado, setAceptado] = useState<number | null>(null)
+  const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); setAceptado(aDueno) })
   return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
@@ -234,6 +240,13 @@ function Mediacion({ a }: P) {
     {/* LEGAL: revisado (24/10) · botones y espera: «registrar el acuerdo», sin «decidir» */}
     {!modoVideo && <Espera texto="No tienes que hacer nada. Te avisaremos cuando haya un acuerdo." />}
     <Evidencia a={a} />
+    {/* LEGAL: revisar · B2 (dos personas): cada parte acepta el reparto en la app; se cierra solo con las dos aceptaciones del mismo monto (2.2 b) */}
+    {modoServidor && !mediador && <div className="pila">
+      <label className="campo"><span>Reparto que aceptas: {usd(aDueno)} para el dueño · {usd(a.monto - aDueno)} para el inquilino</span>
+        <input type="range" min={0} max={r.monto} step={0.01} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
+      <button type="button" className="boton boton--primario boton--ancho" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto(rol === 'dueno' ? 'Acepto este reparto (dueño)' : 'Acepto este reparto (inquilino)')}</button>
+      {aceptado !== null && <p className="nota" role="status">Aceptaste {usd(aceptado)} para el dueño. Se cierra cuando la otra parte acepte el mismo reparto.</p>}
+      {p.error}</div>}
     {mediador && (!panel ? <button type="button" className={modoVideo ? 'boton boton--primario boton--ancho boton--grande' : 'enlace'} onClick={() => setPanel(true)}>{modoServidor ? 'Registrar el acuerdo' : modoVideo ? 'Resolver el reclamo (simulación)' : 'Demo: registrar el acuerdo'}</button>
       : <div className="mediador pila"><label className="campo"><span>Para el dueño: {usd(aDueno)} · para el inquilino: {usd(a.monto - aDueno)}</span>
           <input type="range" min={0} max={r.monto} step={escrowReal ? 0.01 : 10} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>

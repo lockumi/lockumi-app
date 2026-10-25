@@ -44,6 +44,10 @@ export interface Acciones {
   responder(a: Alquiler, acepta: boolean, avance?: Avance): Promise<void>
   cerrarSinReclamo(a: Alquiler, avance?: Avance): Promise<void>
   decidir(a: Alquiler, montoDueno: number, motivo?: string, avance?: Avance): Promise<void>
+  /** Dos personas (servidor): esta parte acepta el reparto `montoDueno` (lk_aceptar_acuerdo_mediacion). */
+  aceptarAcuerdo?(a: Alquiler, montoDueno: number): Promise<void>
+  /** Dos personas (servidor): el inquilino abrió el aviso del reclamo (6.5 b). */
+  abrirAvisoReclamo?(a: Alquiler): Promise<void>
   /** Solo con Trustless Work real: el dueño aprueba en la cadena devolver el depósito. */
   aprobarDevolucion?(a: Alquiler): Promise<void>
   /** Red de prueba (un solo aparato): el dueño de prueba firma o confirma solo, apenas el inquilino lo hizo. Devuelve qué hizo. */
@@ -215,6 +219,13 @@ const remoto: Acciones = {
   },
   aprobarDevolucion: async (a: Alquiler) => { if (!modoDe(a).trustless) throw new Error('Esta aprobación solo existe con la red de prueba.'); await trustless.aprobarDevolucion(a.id) },
   decidir: (a, m, mot) => servidor.decidir(a.id, m, mot).then(() => {}),
+  async aceptarAcuerdo(a, m) {
+    const tope = a.reclamo?.monto ?? 0
+    if (!(m >= 0 && m <= tope)) throw new Error('El monto para el dueño debe estar entre 0 y lo reclamado.')
+    await servidor.aceptarAcuerdo(a.id, Math.round(m * 100) / 100)
+  },
+  abrirAvisoReclamo: a => servidor.abrirAvisoReclamo(a.id).then(() => {}),
+  aplicarSilencio: a => servidor.aplicarSilencio(a.id).then(() => {}),
 }
 
 /** Acciones de los alquileres con otra persona (servidor compartido). `crear` e invitar usan estas directamente. */
