@@ -233,8 +233,10 @@ export const UI = {
   errRep01: 'Marca las dos casillas para continuar. Si no estás de acuerdo, toca «No crear mi cuenta».',
   // LEGAL: revisado (25/10) · cuenta que ya existe: solo la primera oración de errRep01 (revisión de c887895)
   errRep01Existente: 'Marca las dos casillas para continuar.',
-  // LEGAL: revisar · ronda 25/10 4:01 · si falla «Descargar mis datos» en modo servidor (texto propio)
+  // LEGAL: revisado (25/10) · si falla «Descargar mis datos» en modo servidor
   errDescarga: 'No pudimos descargar tus datos. Revisa tu conexión y vuelve a tocar «Descargar mis datos».',
+  // LEGAL: revisar · ronda 25/10 4:23 · si el servidor no recibe el pedido de «Eliminar mi cuenta» (texto propio)
+  errBorrado: 'No pudimos enviar tu pedido para eliminar la cuenta. Revisa tu conexión y vuelve a tocar «Eliminar mi cuenta». Si sigue igual, sal de Lockumi y vuelve a entrar con tu correo.',
   errCasilla: 'Para aparecer, marca la casilla. Si prefieres no aparecer, toca «Ahora no».',
   activar: 'Activar',
   opcion: { destacados: 'Destacados', nuevos: 'Nuevos en Lockumi' } as Record<'destacados' | 'nuevos', string>,

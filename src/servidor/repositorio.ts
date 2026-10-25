@@ -117,6 +117,17 @@ export const servidor = {
   // Paso 19 · reputación por la persona (Legal, 25/10/2026): el correo es el de la sesión de Cavos (el mismo que p_email_cavos).
   datosReputacion: (email: string, rol?: 'dueno' | 'inquilino') => rpc<Record<string, unknown>>('lk_mis_datos_reputacion', { p_correo: email, p_rol: rol ?? null }),
   aceptarReputacion: (email: string, version: string, texto: string[]) => rpc<boolean>('lk_aceptar_reputacion', { p_correo: email, p_version: version, p_texto: texto }),
+  // Ronda 25/10, 4:22–4:23 p. m.: límite 5 (eliminar en el servidor), límite 4 (REP-01 por el correo) y límite 1 (correo verificado).
+  pedirBorradoCuenta: (email: string) => rpc<string | null>('lk_pedir_borrado_cuenta', { p_correo: email }),
+  necesitaRep01: (email: string) => rpc<boolean>('lk_necesita_rep01', { p_correo: email }),
+  /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase. */
+  async verificarCorreo(tokenCavos: string): Promise<{ correo: string }> {
+    const r = await fetch('/api/verificar-correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenSesion()}` },
+      body: JSON.stringify({ token: tokenCavos }) })
+    const j = await r.json().catch(() => ({})) as { correo?: string; error?: string }
+    if (!r.ok || !j.correo) throw new ErrorServidor(j.error ?? 'No pudimos confirmar el correo de tu cuenta.')
+    return { correo: j.correo }
+  },
   actualizarCuenta: (id: string, cuenta: string) => tras(rpc('lk_actualizar_direccion', { p_contrato: id, p_direccion_stellar: cuenta })),
   firmar: (id: string, etapa: 'contrato' | 'entrada' | 'salida') => tras(rpc<string>('lk_firmar', { p_contrato: id, p_etapa: etapa })),
   marcar: (id: string, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle') => tras(rpc('lk_editar_item', { p_contrato: id, p_etapa: etapa, p_cuarto: cuarto, p_item: item, p_estado: estado })),

@@ -12,11 +12,12 @@ import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, ty
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
-import { pedirBorrado, ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, type Solicitud } from './borrado'
+import { ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, type Solicitud } from './borrado'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
 import type { Registro } from './consentimiento'
 import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
+import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, type EstadoServidor } from './verificacion'
 import { REP01, REP01_EXISTENTE, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
@@ -352,12 +353,14 @@ export function datosParaDescargar(u: Usuario, todos: Alquiler[], roles: Rol[] =
 export async function datosDeDescarga(u: Usuario, todos: Alquiler[], rol?: Rol) {
   const local = datosParaDescargar(u, todos, rol ? [rol] : undefined)
   if (!conServidor) return local
+  await asegurarCorreo(u.email)   // límite 1: el servidor solo acepta el correo verificado contra el token de Cavos
   return { ...await servidor.datosReputacion(u.email, rol) as object, enEsteAparato: local }
 }
 /** RIESGO de Legal (revisión de c887895): en modo servidor, la aceptación de REP-01 se escribe también en el servidor por el correo de la
  *  cuenta (lk_aceptar_reputacion), para que la fila de encendido no bloquee a quien ya aceptó. Idempotente: se reintenta en cada carga. */
 export async function subirAceptacion(email: string, rep01: Registro | undefined) {
   if (!conServidor || !rep01) return false
+  await asegurarCorreo(email)
   return await servidor.aceptarReputacion(email, rep01.version, rep01.texto)
 }
 function bajar(datos: unknown, nombre: string) {
@@ -458,7 +461,10 @@ function BorradoEnCurso({ s }: { s: Solicitud }) {
 }
 function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => void }) {
   const todos = useAlquileres(), s = solicitudBorrado(u.email), abiertos = abiertosDe(todos, u.email).length > 0
-  const pedir = () => { const ahora = Date.now(); pedirBorrado(u.email, ahora, todos); ejecutarBorrados(ahora, todos); ir('/perfil/eliminar/listo') }
+  const [errBorrado, setErrBorrado] = useState<string | null>(null), [enviando, setEnviando] = useState(false)
+  // Límite 5: en modo servidor, el pedido va al servidor (lk_pedir_borrado_cuenta); si falla, no se borra nada y se explica cómo seguir.
+  const pedir = () => { if (enviando) return; const ahora = Date.now(); setErrBorrado(null); setEnviando(true)
+    eliminarCuenta(u.email, todos, ahora).then(() => ir('/perfil/eliminar/listo'), () => { setErrBorrado(UI.errBorrado); setEnviando(false) }) }
   const [errDescarga, setErrDescarga] = useState<string | null>(null)
   const descargar = () => { setErrDescarga(null); datosDeDescarga(u, todos).then(d => bajar(d, 'lockumi-reputacion.json'), () => setErrDescarga(UI.errDescarga)) }
   if (s && (paso === 'listo' || !s.hecho)) {
@@ -472,22 +478,33 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
   if (paso === 'confirmar' && abiertos && !s) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <section className="glass tarjeta rp-texto" role="alertdialog" aria-labelledby="rp-conf"><h1 id="rp-conf" className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.confirmarAbierto}</p>
       <div className="rp-acciones">
-        <button type="button" className="boton rp-peligro" onClick={pedir}>{ELIMINAR.si}</button>
-        <a className="boton boton--secundario" href="#/perfil/eliminar">{ELIMINAR.no}</a></div></section></main>
+        <button type="button" className="boton rp-peligro" onClick={pedir} disabled={enviando}>{ELIMINAR.si}</button>
+        <a className="boton boton--secundario" href="#/perfil/eliminar">{ELIMINAR.no}</a></div>
+      {errBorrado && <p className="error" role="alert" style={{ marginTop: 8 }}>{errBorrado}</p>}</section></main>
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver a="#/perfil" t="← Tu perfil" />
     <section className="glass tarjeta rp-texto"><h1 className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.intro}</p><ul>{ELIMINAR.puntos.map((t, k) => <li key={k}>{t}</li>)}</ul>
       <p className="nota">{ELIMINAR.correo}</p>
       <div className="rp-acciones">
         <button type="button" className="boton boton--secundario" onClick={descargar}>{ELIMINAR.descargar}</button>
-        <button type="button" className="boton rp-peligro" onClick={() => { if (abiertos) ir('/perfil/eliminar/confirmar'); else pedir() }}>{ELIMINAR.si}</button>
+        <button type="button" className="boton rp-peligro" disabled={enviando} onClick={() => { if (abiertos) ir('/perfil/eliminar/confirmar'); else pedir() }}>{ELIMINAR.si}</button>
         <a className="boton boton--secundario" href="#/perfil">{ELIMINAR.no}</a></div>
-      {errDescarga && <p className="error" role="alert" style={{ marginTop: 8 }}>{errDescarga}</p>}</section>
+      {errDescarga && <p className="error" role="alert" style={{ marginTop: 8 }}>{errDescarga}</p>}
+      {errBorrado && <p className="error" role="alert" style={{ marginTop: 8 }}>{errBorrado}</p>}</section>
   </main>
 }
 
 /** Rutas que crean o unen a un alquiler NUEVO (bloqueadas mientras hay un pedido de borrado pendiente). */
 const esNuevo = (r: string) => r === '/crear' || r.startsWith('/invitacion/')
+/** Límite 4: en modo servidor, si este aparato dice que falta REP-01, se pregunta al servidor por el correo (otro aparato pudo aceptarla). */
+function useRep01Servidor(email: string, activo: boolean): EstadoServidor {
+  const [x, setX] = useState<{ email: string; v: EstadoServidor } | null>(null)
+  useEffect(() => { if (!activo || !conServidor) return; let vivo = true
+    necesitaRep01EnServidor(email).then(v => { if (vivo) setX({ email, v }) }, () => { if (vivo) setX({ email, v: 'error' }) })
+    return () => { vivo = false } }, [email, activo])
+  if (!conServidor) return null
+  return x && x.email === email ? x.v : 'cargando'
+}
 /** Regla 6: los perfiles no aparecen en buscadores (noindex en todas las rutas #/perfil). */
 function useNoIndex(activo: boolean) {
   useEffect(() => { if (!activo || typeof document === 'undefined') return
@@ -511,13 +528,17 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // Tarea programada de la demo: borra los pedidos vencidos y, con un alquiler abierto, cuando ya se cerró (nunca toca los alquileres).
   useEffect(() => { try { ejecutarBorrados(Date.now(), todos) } catch { /* sin almacenamiento */ } }, [todos])
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
+  const localPrevia = !e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)
+  const previaServidor = useRep01Servidor(u.email, localPrevia && !pendiente), previa = decidirPrevia(localPrevia, previaServidor)
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
   // Legal (respuesta a 6c71866, punto 2): sin REP-01 y sin alquileres (p. ej. entró por «Ya tengo cuenta: entrar» o por un enlace mágico
   // en otra pestaña), la pantalla previa de siempre antes de crear o unirse a su primer alquiler.
   // Textos literales de Legal (revisión de c887895): título, nota, «Volver» y solo la primera oración del error; el resto es REP-01.
-  if (!e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)) return <Rep01 no={UI.volver} onNo={() => { location.hash = '/' }}
+  // Límite 4 (4:22 p. m.): en modo servidor manda lo que diga el servidor por el correo; mientras pregunta, «Cargando…».
+  if (previa === 'cargando') return <main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>
+  if (previa) return <Rep01 no={UI.volver} onNo={() => { location.hash = '/' }}
     titulo={REP01_EXISTENTE.titulo} noAcuerdo={REP01_EXISTENTE.noAcuerdo} falta={UI.errRep01Existente}
     onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01_EXISTENTE) } catch { /* sin almacenamiento: se queda en la pantalla */ } }} />
   // Cuenta que ya existía (sin REP-01): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
