@@ -29,7 +29,11 @@ export function avisosPorEnviar(a: Alquiler, rol: Rol) {
 export function desactivarCorreo(x: Alquiler, rol: Rol) {
   if (x.correos) { const c = { ...x.correos }; delete c[rol]; x.correos = c }
 }
-/** Avisa al servidor de la baja (también deja de enviar si otra pestaña lo pidiera). Si falla, la app igual ya no pide envíos. */
-export async function avisarBaja(para: string, alquiler: string) {
-  try { await fetch('/api/correo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'baja', para: para.trim(), alquiler }) }) } catch { /* sin conexión: la app ya no envía */ }
+/** Guarda en el servidor la casilla marcada (acepta) o la borra (desmarcada). Sin consentimiento guardado, el servidor no envía avisos. */
+export async function guardarConsentimiento(para: string, alquiler: string, acepta: boolean): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await fetch('/api/correo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'consentimiento', para: para.trim(), alquiler, acepta }) })
+    const j = await r.json().catch(() => ({})) as { error?: string }
+    return r.ok ? { ok: true } : { ok: false, error: j.error ?? 'No pudimos guardar la casilla. Los avisos siguen en la app; vuelve a intentarlo en unos minutos.' }
+  } catch { return { ok: false, error: 'Sin conexión: revisa tu internet y vuelve a intentarlo. Los avisos siguen en la app.' } }
 }
