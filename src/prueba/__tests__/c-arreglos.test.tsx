@@ -98,3 +98,10 @@ describe('fecha de la 1.9-demo', () => {
     expect(VERSIONES.find(v => v.version === '1.9-demo')?.fecha).toBe('25 de octubre de 2026')
   })
 })
+
+describe('(b) consecuencia: un alquiler de C en la 1.9-demo usa el plazo de la prueba completa (PlazoDueno)', () => {
+  it('sin un segundo botón de aprobar: PlazoDueno ya trae «Todo bien, devolver el depósito» en el servidor', async () => {
+    const fuente = (await import('../../screens/Detalle.tsx?raw')).default
+    expect(fuente).toContain('{!esDosPersonas(a) && <EscrowReal a={a} rol={rol} />}</PlazoDueno>')
+  })
+})

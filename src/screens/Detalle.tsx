@@ -363,7 +363,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
     en_curso: reglas17(a) ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
-    ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
+    ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}>{!esDosPersonas(a) && <EscrowReal a={a} rol={rol} />}</PlazoDueno> : <Ventana {...p} />,
     reclamo: reglas17(a) && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
