@@ -262,6 +262,7 @@ Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de d
 Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `master`.
 
 - **Formulario «Nuevo alquiler» de una pregunta por pantalla** (en desarrollo; no publicado). Hoy «Nuevo alquiler» sigue siendo la pantalla de siempre.
+- **Paso 19 · Reputación** (rama `paso19-reputacion`, borrador; no publicado). Detrás de `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual). Textos de Legal al pie de la letra (`legal/reputacion-textos-para-producto.md`, REP-01 a REP-15): pantalla REP-01 aparte **antes** de crear la cuenta (sin tocar el login), perfil público y fijo, puntaje siempre desde el 3.er alquiler cerrado, «En revisión», avisos de cambio de puntaje, eliminación gratis en 5 días hábiles y vitrinas opcionales. La migración `20261025140000_reputacion.sql` está escrita y **no aplicada**. Ver [docs/reputacion.md](docs/reputacion.md).
 
 ## Cambios publicados
 
@@ -374,6 +375,7 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 | `LOCKUMI_TW_PLATAFORMA_SECRET` | Servidor | Clave secreta de la cuenta de la plataforma (platformAddress, serviceProvider, releaseSigner y disputeResolver). |
 | `LOCKUMI_DEMO_SEED` | Servidor | Semilla (32 caracteres o más) de la que se derivan las cuentas del dueño de prueba y del inquilino de prueba. |
 | `RESEND_API_KEY` | Servidor | Llave de Resend para el correo de invitación (Parte 4). En Vercel solo en **Preview**, marcada como sensible. **Próximamente**; no se usa en app.lockumi.com. |
+| `VITE_REPUTACION` | Cliente | `1` enciende la reputación (paso 19): REP-01 antes de crear la cuenta, perfil, puntaje, vitrinas, revisión, eliminación de la cuenta y REP-14/REP-15 en los textos legales. Sin definir: apagado (las pantallas no entran en el build). Ver [docs/reputacion.md](docs/reputacion.md). |
 | `VITE_CORREOS` | Cliente | `1` enciende los avisos y la invitación por correo dentro de la prueba completa (y su texto en Términos y Privacidad). Sin definir: apagado. |
 | `CRON_SECRET` | Servidor | Protege `GET /api/borrados` (borrado de correos de invitación vencidos y de los datos de la mediación a los 30 días). **Pendiente**; sin él la ruta responde 401. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LOCKUMI_TW_MEDIADOR_PUBLICA`, `TRUSTLESS_WORK_BASE_URL`, `TRUSTLESS_WORK_TRUSTLINE` | Cliente / Servidor | Para la versión con servidor compartido y dos personas (`api/tw.ts`). **Próximamente**; no se usan en app.lockumi.com. `SUPABASE_SERVICE_ROLE_KEY` está en Vercel solo en **Preview**, marcada como sensible. |

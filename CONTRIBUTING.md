@@ -96,6 +96,15 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Consentimientos (paso 16): cada función que trata datos nuevos pide su casilla sin marcar en el momento de usarla y la registra con `registrarConsentimiento` (`src/prueba/consentimientos.ts`). Datos de la mediación: se borran a los 30 días del cierre (`src/prueba/borrado.ts`, lo aplica `sincronizarTodos`).
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
+## Reputación (`src/reputacion/`, paso 19, `docs/reputacion.md`)
+- Todo va detrás de `VITE_REPUTACION`, siempre con la comparación en línea `import.meta.env.VITE_REPUTACION === '1'` (así el código apagado no entra en el build). Las pantallas se cargan en diferido desde `App.tsx`.
+- La fuente única de los textos es `legal/reputacion-textos-para-producto.md` (REP-01 a REP-15), copiados al pie de la letra en `src/reputacion/textos.ts`. Textos propios con `// LEGAL: revisar`.
+- No se toca el login ni Cavos: REP-01 envuelve a `<Login/>` (`Previa`) y, ya con sesión, la aceptación pasa a la cuenta.
+- Reglas del puntaje solo en `src/reputacion/puntaje.ts` (funciones puras): 90 % antes del 0,3 %, 10 años, siempre visible desde el 3.er alquiler, «En revisión».
+- Estilos solo en `src/reputacion/reputacion.css` (clases `.rp-*`), sin casitas ni ilustraciones, nunca texto blanco sobre naranja. La tarjeta de bloqueo usa solo `glass tarjeta` y `boton`.
+- Nunca: rankings, números de posición, filtros por puntaje, barrio, distancia, «verificado», «Llave de Oro» (es «Llave Lockumi»), ni un botón para ocultar el perfil.
+- Pruebas: `src/reputacion/__tests__/` (apagado = mismas pantallas, con instantáneas), SQL con PGlite y E2E con dos cuentas solo en local (`e2e/pruebas/reputacion.e2e.ts`).
+
 ## Proponer cambios
 
 1. Abre un *issue* con el problema o la idea, o comenta en uno existente.
