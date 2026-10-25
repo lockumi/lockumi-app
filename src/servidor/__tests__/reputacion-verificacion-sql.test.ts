@@ -20,7 +20,7 @@ const aparato = async () => { const u = uid(); await db.query('insert into auth.
 const contrato = async (estado = 'cerrado') => { const c = kid(); await db.query('insert into public.lk_contratos(id, estado) values ($1, $2)', [c, estado]); return c }
 const entrar = (c: string, rol: string, usuario: string, correo: string) => db.query('insert into public.lk_participantes values ($1, $2, $3, $4)', [c, rol, usuario, correo])
 /** Lo que hace api/verificar-correo.ts (con la clave de servicio) después de validar el token de Cavos. */
-const verificar = (u: string, correo: string, metodo = 'google') => db.query('select public.lk_registrar_correo_verificado($1, $2, $3)', [u, correo, metodo])
+const verificar = (u: string, correo: string, metodo = 'google') => db.query('select public.lk_registrar_correo_verificado($1, $2, $3, md5(random()::text) || md5(random()::text))', [u, correo, metodo])
 const NO_VERIFICADO = /Ese correo no es el de tu cuenta en este aparato\. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo\./
 const ACEPTAR_NO_VERIFICADO = /No pudimos leer el correo de tu cuenta\. Sal de Lockumi, vuelve a entrar con tu correo y acepta de nuevo\./
 

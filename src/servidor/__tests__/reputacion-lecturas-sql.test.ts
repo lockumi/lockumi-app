@@ -20,7 +20,7 @@ const uno = async <T>(sql: string, p: unknown[] = []) => (await db.query<T>(sql,
 const como = (u: string | null) => db.query(`select set_config('test.uid', $1, false)`, [u ?? ''])
 const aparato = async () => { const u = uid(); await db.query('insert into auth.users(id) values ($1)', [u]); return u }
 /** api/verificar-correo.ts con la clave de servicio: es lo que pasa cada vez que alguien entra con Cavos en ese aparato. */
-const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google')`, [u, correo])
+const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google', md5(random()::text) || md5(random()::text))`, [u, correo])
 const TABLAS = ['lk_reputacion_perfiles', 'lk_reputacion_aceptaciones', 'lk_reputacion_consentimientos', 'lk_reputacion_eventos', 'lk_reputacion_revisiones', 'lk_solicitudes_borrado']
 /** Lo que la sesión ve de cada tabla, leyendo como `authenticated` (con RLS). */
 async function veo(u: string) {

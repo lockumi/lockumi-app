@@ -21,7 +21,7 @@ const contrato = async (estado = 'cerrado', emailInquilino: string | null = null
 const entrar = (c: string, rol: string, usuario: string, correo: string) => db.query('insert into public.lk_participantes values ($1, $2, $3, $4)', [c, rol, usuario, correo])
 const aparato = async (email: string | null = null) => { const u = uid(); await db.query('insert into auth.users(id, email) values ($1, $2)', [u, email]); return u }
 /** Lo que hace api/verificar-correo.ts (clave de servicio) tras validar el token de Cavos (Legal, 25/10 4:23 p. m.: sin esto, se rechaza). */
-const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google')`, [u, correo])
+const verificar = (u: string, correo: string) => db.query(`select public.lk_registrar_correo_verificado($1, $2, 'google', md5(random()::text) || md5(random()::text))`, [u, correo])
 const conPerfil = async (u: string) => {
   await db.query(`insert into public.lk_reputacion_aceptaciones(usuario, version, texto) values ($1, '1.10-demo', '{a,b}')`, [u])
   await db.query(`insert into public.lk_reputacion_perfiles(usuario, nombre_visible, canton) values ($1, 'Ejemplo E.', 'Escazú')`, [u])
