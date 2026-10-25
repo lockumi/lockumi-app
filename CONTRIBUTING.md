@@ -87,6 +87,8 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Reclamos (PR 5): la lógica va en `src/prueba/reclamos.ts` (funciones puras que se prueban sin pantalla); las acciones primero llaman a la cuenta segura (`escrow`) y después cambian el estado, y usan `paso()` para que un doble toque no repita nada.
 - Franja de la red de prueba: su texto es `AVISO_RED` en `src/ui.tsx`; cambiarlo es un cambio visible y necesita el OK de Katherine.
 
+- Modo de dos personas (paso 7): las banderas de cada alquiler salen de `modoDe(a)` (`src/servidor/config.ts`); para saber si un alquiler es de dos personas usa `deDosPersonas(a)` (no `a.dosPersonas` solo: con el interruptor apagado debe verse igual que hoy). Para ver el modo en local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 VITE_DOS_PERSONAS=1 VITE_SUPABASE_URL=http://localhost:54321 VITE_SUPABASE_ANON_KEY=falsa`.
+- Antes de publicar algo detrás de un interruptor: build de master y de la rama con `VITE_TRUSTLESS=1` (sin nada más), capturas fijas de 11 pantallas (13 con las 2 de dos personas) y comparar: deben ser iguales.
 - Montos: con la prueba completa, usa siempre `usd()` (da «N USDC de prueba»); no formatees montos a mano en pantallas nuevas.
 - Suscripción y rendimiento (PR 8): la B.8 no lleva casillas (en la demo no se autoriza nada) y la B.13 nunca lleva tasas, porcentajes, montos, fechas, «gana», «Activar», «Avisarme» ni «Próximamente» (lo revisa `suscripcion-rendimiento.test.tsx`).
 - Sin marcadores visibles: ningún texto de la app puede tener «[REGIÓN…]», «[PENDIENTE…]», «[CONFIRMAR]», «ABIERTO» ni «[ALGO: …]» (lo revisa `src/prueba/__tests__/sin-marcadores.test.tsx`). Los pendientes van en comentarios `// LEGAL: revisar`.

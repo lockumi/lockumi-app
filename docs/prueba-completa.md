@@ -83,3 +83,20 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 3. **B.14:** el reparto se elige con «Resolver el reclamo (simulación)»: dueño entre 0 y lo reclamado, el inquilino recibe el resto (la suma es el depósito). Confirmación «¿Resolver el reclamo así?» → `acciones.resolverSimulacion` (una sola vez) → `cerrado`, `via: 'simulacion'` y el aviso «Reclamo resuelto (simulación)» con el comprobante.
 4. **6.3 f:** se muestra cuánto es la parte no reclamada y que se libera al cerrar el reclamo (la cuenta segura no permite liberar por partes).
 5. «Otras vías (fuera de la app)»: conciliación o mediación en un centro autorizado, arbitraje si los dos lo firman, tribunales.
+
+## Expediente en PDF (paso 14)
+- Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/expediente.ts` (PDF sin datos personales; fotos JPEG sin metadatos; aceptaciones leídas del registro; nota de simulación) y `src/prueba/Expediente.tsx` (aviso de la B.11 antes de descargar). Los saltos de página no dejan títulos solos ni separan una foto de su línea.
+
+## Avisos por correo (paso 11)
+- Detrás de `VITE_PRUEBA_COMPLETA`. «Recibir los avisos por correo» con la casilla **sin marcar**, en el momento de uso (`src/prueba/AvisosCorreo.tsx`).
+- `/api/correo` (Resend, desde invitaciones@lockumi.com) solo arma correos con los textos de `api/_lib/avisos.ts`. El servidor guarda el consentimiento (`tipo: 'consentimiento'`) y **sin él no envía avisos**. Hoy el consentimiento vive en memoria del servidor hasta conectar Supabase. Las invitaciones no exigen consentimiento guardado (pendiente de Legal).
+- Pie con la forma de darse de baja (desmarcar la casilla). `RESEND_API_KEY` está solo en Preview: en app.lockumi.com no sale ningún correo.
+- Privacidad 1.7-demo solo con el interruptor; la 1.6-demo publicada no cambia.
+
+## Modo de dos personas (paso 7)
+- Interruptor propio: `VITE_DOS_PERSONAS=1` (además de `VITE_TRUSTLESS=1`, `VITE_PRUEBA_COMPLETA=1` y `VITE_SUPABASE_*`). Las variables de Supabase solas **ya no cambian la app**: el modo de una persona sigue igual.
+- Con el interruptor, en «Nuevo alquiler» se elige «Soy dueño» e «Invitar a la otra persona». Solo ese alquiler va al servidor compartido (con Trustless Work por `/api/tw`); los demás siguen como hoy. Las banderas por alquiler salen de `modoDe(a)`.
+- La invitación sirve una sola vez y **vence en 7 días** (texto aprobado por Legal; la migración `20261025000000_invitacion_7_dias.sql` lo asegura en la base).
+- Devolución automática: si el dueño no aprueba ni reclama a tiempo, el 100 % vuelve al inquilino (menos el 0,3 % de Trustless Work), con la cuenta que resuelve disputas. El dueño puede aprobar antes (aprobación en la red de prueba).
+- En `/api/solo`, `LOCKUMI_DOS_PERSONAS=1` usa la persona mediadora (`LOCKUMI_TW_MEDIADOR_PUBLICA`/`_SECRET`) como disputeResolver. La E2E tiene `resolver=mediador` para comprobarlo cuando se encienda; en producción sigue `plataforma`.
+- Textos nuevos con `// LEGAL: revisar`.

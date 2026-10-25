@@ -357,12 +357,17 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 | `VITE_CAVOS_APP_ID` | Cliente | App ID público de Cavos. Sin esta variable la app usa el acceso simulado. |
 | `VITE_TRUSTLESS` | Cliente | `1` activa la red de prueba con escrow real de Trustless Work. Sin Supabase, es el flujo de una persona por `/api/solo` (lo que corre en app.lockumi.com). |
 | `VITE_FLUJO` | Cliente | `solo` vuelve al flujo mínimo anterior de 5 pasos. Sin definir: flujo completo de 8 pasos. |
+| `VITE_PRUEBA_COMPLETA` | Cliente | `1` enciende la prueba completa 1.7-demo (pasos 7 a 15). **Apagado en producción.** |
+| `VITE_DOS_PERSONAS` | Cliente | `1` enciende el modo de dos personas (paso 7). Solo vale con `VITE_TRUSTLESS=1`, `VITE_PRUEBA_COMPLETA=1` y las dos variables `VITE_SUPABASE_*`. **Apagado en producción.** Sin este interruptor, las variables de Supabase solas ya no cambian la app. |
 | `VITE_VENTANA_SEGUNDOS` | Cliente | Plazo de reclamos al crear, en segundos (mínimo 60; por defecto 7 días). |
 | `TRUSTLESS_WORK_API_KEY` | Servidor | Llave de la API de testnet de Trustless Work. Nunca con prefijo `VITE_`. |
 | `LOCKUMI_TW_PLATAFORMA_SECRET` | Servidor | Clave secreta de la cuenta de la plataforma (platformAddress, serviceProvider, releaseSigner y disputeResolver). |
 | `LOCKUMI_DEMO_SEED` | Servidor | Semilla (32 caracteres o más) de la que se derivan las cuentas del dueño de prueba y del inquilino de prueba. |
 | `RESEND_API_KEY` | Servidor | Llave de Resend para el correo de invitación (Parte 4). En Vercel solo en **Preview**, marcada como sensible. **Próximamente**; no se usa en app.lockumi.com. |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LOCKUMI_TW_MEDIADOR_PUBLICA`, `TRUSTLESS_WORK_BASE_URL`, `TRUSTLESS_WORK_TRUSTLINE` | Cliente / Servidor | Para la versión con servidor compartido y dos personas (`api/tw.ts`). **Próximamente**; no se usan en app.lockumi.com. `SUPABASE_SERVICE_ROLE_KEY` está en Vercel solo en **Preview**, marcada como sensible. |
+| `LOCKUMI_DOS_PERSONAS` | Servidor | `1` hace que `/api/solo` use la persona mediadora como disputeResolver y para resolver disputas (paso 7). Exige `LOCKUMI_TW_MEDIADOR_PUBLICA` y `LOCKUMI_TW_MEDIADOR_SECRET` (que coincidan). **No está en producción.** |
+| `LOCKUMI_TW_MEDIADOR_PUBLICA`, `LOCKUMI_TW_MEDIADOR_SECRET` | Servidor | Cuenta de la persona mediadora en testnet (disputeResolver). Solo con `LOCKUMI_DOS_PERSONAS=1` en `/api/solo`; `api/tw.ts` usa la pública. Nunca con prefijo `VITE_`. |
+| `HORIZON_URL`, `STELLAR_NETWORK_PASSPHRASE` | Servidor | Opcionales: Horizon y red de Stellar (por defecto, testnet). |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TRUSTLESS_WORK_BASE_URL`, `TRUSTLESS_WORK_TRUSTLINE` | Cliente / Servidor | Para el modo de dos personas (`api/tw.ts`, detrás de `VITE_DOS_PERSONAS`). **Próximamente**; no se usan en app.lockumi.com (no definas `VITE_SUPABASE_*` en Production). `SUPABASE_SERVICE_ROLE_KEY` está en Vercel solo en **Preview**, marcada como sensible. |
 
 ## Stack
 
