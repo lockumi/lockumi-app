@@ -24,7 +24,8 @@ describe('Términos 1.7-demo', () => {
     for (const f of ['Versión 1.7-demo · 25 de octubre de 2026', 'la propuesta automática no usa inteligencia artificial', 'con su propia llave, distinta de la cuenta de Lockumi',
       '5.2.1 Suscripción.', 'En la demo, la app es gratis: no hay suscripción ni se cobra nada.', 'el reparto se elige con el botón «Resolver el reclamo (simulación)» (cláusula 6.7)',
       '6.1.1 Aviso antes de la salida.', '6.4.1 Pruebas completas.', '6.5.1 Regla de propuesta automática (opcional).', '6.7.1 En el servicio con dinero real,',
-      '6.8 Mediación Lockumi (demo).', '6.9 No renuncia a derechos.', 'Anexo 6-A. Desgaste normal y daños', 'a la persona del equipo de Lockumi que haga la Mediación Lockumi (demo), solo para que la demo funcione.'])
+      '6.8 Mediación Lockumi (demo).', '6.9 No renuncia a derechos.', 'Anexo 6-A. Desgaste normal y daños'])
+      // (la cláusula 8 con la persona del equipo solo aparece con el modo de dos personas: unificado-17.test.ts)
       expect(t).toContain(f)
     expect(t).not.toContain('persona mediadora simulada')
   })

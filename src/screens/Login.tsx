@@ -6,7 +6,7 @@ import { LogoAnimado } from '../LogoAnimado'
 import { alertaIngresoFallo } from '../alertas'
 import { WORDMARK_SVG } from '../wordmark'
 import { CasillaLegal } from '../legal/CasillaLegal'
-import { CONSENTIMIENTO_PRIVACIDAD as cons, terminosActual, privacidadActual } from '../legal/documentos'
+import { consentimientoPrivacidad, terminosActual, privacidadActual } from '../legal/documentos'
 import { aceptoVersion, borrarAceptacion, guardarAceptacion, validarAceptaciones, erroresTrasCambio, ERRORES_INICIALES, type ClaveLegal } from '../legal/aceptacion'
 
 type Paso = 'opciones' | 'correo' | 'codigo'
@@ -127,7 +127,7 @@ export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario)
       <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos}>
         Acepto los <a href="/terminos" target="_blank" rel="noopener">Términos y condiciones</a></CasillaLegal>
       {pidePrivacidad && <CasillaLegal id="acepto-privacidad" ref={refP} marcada={marcas.privacidad} onCambio={cambiar('privacidad')} error={errores.privacidad}>
-        {cons.antes}<a href="/privacidad" target="_blank" rel="noopener">{cons.enlace}</a>{cons.despues}</CasillaLegal>}
+        {consentimientoPrivacidad().antes}<a href="/privacidad" target="_blank" rel="noopener">{consentimientoPrivacidad().enlace}</a>{consentimientoPrivacidad().despues}</CasillaLegal>}
     </div>
     {error && <div id="error-ingreso" className="entrada-app__error"><strong>{ERROR_INGRESO.titulo}</strong> <span>{ERROR_INGRESO.hecho}</span></div>}
     <button type="button" className="boton boton--primario boton--ancho" onClick={entrar} aria-haspopup="dialog" aria-describedby={error ? 'error-ingreso' : undefined}>Entrar</button>

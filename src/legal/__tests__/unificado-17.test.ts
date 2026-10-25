@@ -79,7 +79,7 @@ describe('Una sola 1.7-demo para todas las combinaciones', () => {
     // Correos: todo o nada
     for (const f of CORREOS_PRIVACIDAD) expect(p.includes(f), f).toBe(c.correos)
     expect(t.includes('En la demo, los avisos son solo en la app, sin correo.')).toBe(!c.correos)
-    expect(t.includes('y que acepta recibir el correo de invitación de Lockumi')).toBe(c.dos && c.correos)
+    expect(t.includes('declaras que ella sabe que la invitas y que acepta recibir el correo de invitación de Lockumi')).toBe(c.dos && c.correos)
     expect(t.includes('Si invitas a otra persona, declaras que ella sabe que la invitas')).toBe(c.dos)
     expect(p.includes('correo de invitación') || p.includes('correos de invitación')).toBe(c.dos && c.correos)
     // La casilla de privacidad nombra a Resend solo si se le envían datos

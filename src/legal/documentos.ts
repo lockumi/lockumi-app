@@ -1,5 +1,8 @@
 import { aHtml } from './markdown'
-import { pruebaCompleta } from '../prueba/interruptor'
+import { pruebaCompleta, correosActivos } from '../prueba/interruptor'
+import { calcularModos } from '../servidor/config'
+import { condicional, type Interruptores } from './condicional'
+import { V17 } from './version17'
 
 /** Textos legales: cada `*.md` de esta carpeta es una página (`terminos.md` → `/terminos`).
  *  Para cambiar un texto basta con reemplazar su archivo (ver LEEME.md). */
@@ -40,14 +43,24 @@ export const DOCS: Record<string, DocLegal> = armar(archivos)
 // Con el interruptor encendido, /terminos y /privacidad muestran la 1.7-demo, y la 1.6-demo sigue en /terminos-1-6 y /privacidad-1-6
 // para los alquileres firmados con ella (siguen con sus reglas salvo que los dos acepten la nueva versión).
 const archivosV17 = import.meta.glob('./v17/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
-const DOCS_17: Record<string, DocLegal> = { ...DOCS, ...armar(archivosV17),
-  ...Object.fromEntries(Object.entries(DOCS).filter(([k]) => k === 'terminos' || k === 'privacidad').map(([k, d]) => [k + '-1-6', { ...d, slug: k + '-1-6' }])) }
+// paso16-unido · UNA sola 1.7-demo: los .md de v17/ traen bloques condicionales (ver condicional.ts) y se arman según lo que está
+// encendido, para que el texto describa exactamente lo que la app hace. Se calcula al pedirlo (las pruebas cambian el entorno).
+/** Lo que está encendido para los textos legales: modo de dos personas (servidor/config) y correos (VITE_CORREOS). */
+export const interruptoresLegales = (): Interruptores => ({ 'dos-personas': calcularModos(import.meta.env as never).dosPersonas, correos: correosActivos() })
+const DOCS_16_EN_17 = Object.fromEntries(Object.entries(DOCS).filter(([k]) => k === 'terminos' || k === 'privacidad').map(([k, d]) => [k + '-1-6', { ...d, slug: k + '-1-6' }]))
+const cache17 = new Map<string, Record<string, DocLegal>>()
+function docs17(): Record<string, DocLegal> {
+  const s = interruptoresLegales(), k = JSON.stringify(s)
+  let d = cache17.get(k)
+  if (!d) { d = { ...DOCS, ...armar(Object.fromEntries(Object.entries(archivosV17).map(([r, t]) => [r, condicional(t, s)]))), ...DOCS_16_EN_17 }; cache17.set(k, d) }
+  return d
+}
 /** Textos legales vigentes en la app (según el interruptor). */
-export const docs = (): Record<string, DocLegal> => pruebaCompleta() ? DOCS_17 : DOCS
+export const docs = (): Record<string, DocLegal> => pruebaCompleta() ? docs17() : DOCS
 export const terminosActual = (): DocLegal => docs().terminos
 export const privacidadActual = (): DocLegal | undefined => docs().privacidad
 /** Términos con los que se firmó un alquiler (1.6-demo o 1.7-demo). */
-export const docTerminos = (version: string): DocLegal => version === DOCS_17.terminos.version ? DOCS_17.terminos : DOCS.terminos
+export const docTerminos = (version: string): DocLegal => version === V17 ? docs17().terminos : DOCS.terminos
 /** Ruta de los Términos de una versión: la vigente en /terminos; la 1.6-demo, con el interruptor encendido, en /terminos-1-6. */
 export const rutaTerminos = (version: string) => version === terminosActual().version ? '/terminos' : '/terminos-1-6'
 export const TERMINOS = DOCS.terminos
@@ -64,6 +77,12 @@ export const CONSENTIMIENTO_PRIVACIDAD = {
   enlace: 'Aviso de privacidad de la app',
   despues: ' y autorizo que Lockumi trate mis datos y los transfiera a Supabase, Vercel, Cavos y Trustless Work, dentro y fuera de Costa Rica, para usar la demo. Entiendo que la demo funciona en la red de prueba de Stellar, con tokens sin valor y sin dinero real, y que la dirección de mi billetera o de mi cuenta de prueba, los montos y las fechas quedan registrados en esa red, que es pública y no se puede borrar.',
 } as const
+
+/** paso16-unido · Casilla de privacidad vigente: con los correos encendidos nombra también a Resend (recibe el correo de los avisos
+ *  y de las invitaciones). Apagada la prueba completa, es la de siempre. */
+// LEGAL: revisar · se agrega «Resend» a la lista de proveedores solo con VITE_CORREOS=1 (la Privacidad 1.7-demo ya lo nombra)
+export const consentimientoPrivacidad = (): typeof CONSENTIMIENTO_PRIVACIDAD | { antes: string; enlace: string; despues: string } =>
+  !correosActivos() ? CONSENTIMIENTO_PRIVACIDAD : { ...CONSENTIMIENTO_PRIVACIDAD, despues: CONSENTIMIENTO_PRIVACIDAD.despues.replace('Supabase, Vercel, Cavos y Trustless Work', 'Supabase, Vercel, Cavos, Trustless Work y Resend') }
 
 /** Fecha legible: acepta ISO aaaa-mm-dd; si viene en otro formato se muestra tal cual. */
 export const fechaLegible = (f: string | null) => !f ? null : /^\d{4}-\d{2}-\d{2}$/.test(f)

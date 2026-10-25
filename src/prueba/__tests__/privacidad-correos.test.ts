@@ -4,10 +4,12 @@ import { privacidadVigente } from '../../legal/documentos'
 import { puedeEnviarAvisos, CASILLA_CORREO } from '../correoAvisos'
 
 afterEach(() => vi.unstubAllEnvs())
+// paso16-unido: con el modo de dos personas y los correos encendidos (una sola 1.7-demo)
+const encenderTodo = () => { for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'anon', VITE_DOS_PERSONAS: '1', VITE_CORREOS: '1' })) vi.stubEnv(k, v) }
 describe('privacidad de los correos (1.7-demo)', () => {
   it('con el interruptor apagado sigue la 1.6-demo', () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', ''); expect(privacidadVigente()?.version).toBe('1.6-demo') })
   it('con el interruptor encendido, la 1.7-demo con los cambios de Legal', () => {
-    vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
+    encenderTodo(); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
     expect(d.version).toBe('1.7-demo')
     for (const t of ['Invitaciones y avisos por correo: el correo de la persona que invitas y su papel en el alquiler simulado.',
       'Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.',
