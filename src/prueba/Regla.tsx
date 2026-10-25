@@ -2,7 +2,7 @@
 import './prueba.css'
 import { useState } from 'react'
 import type { RegistroRegla } from '../types'
-import { TERMINOS } from '../legal/documentos'
+import { terminosActual } from '../legal/documentos'
 
 // LEGAL: revisado (24/10) · B.1 v4 (prueba-completa-textos.md), palabra por palabra
 export const TITULO_REGLA = 'Regla de propuesta automática (opcional)'
@@ -14,7 +14,7 @@ export const EJEMPLO_REGLA = 'Depósito de 800 USDC de prueba: el 30 % es 240. S
 
 /** Registro (no visible): cuenta, alquiler, versión de los Términos, sí o no, fecha y hora ISO 8601. */
 export const registroRegla = (cuenta: string, alquiler: string, acepta: boolean, ahora = new Date()): RegistroRegla =>
-  ({ cuenta, alquiler, version: TERMINOS.version, acepta, fecha: ahora.toISOString() })
+  ({ cuenta, alquiler, version: terminosActual().version, acepta, fecha: ahora.toISOString() })
 
 /** Las partes en negrita del texto de Legal. */
 const NEGRITA = ['con o sin', 'Si la aceptas:', '7 días naturales', '30 % de tu depósito', 'Si no la aceptas:', 'la mediación tiene costo']

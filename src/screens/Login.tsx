@@ -6,7 +6,7 @@ import { LogoAnimado } from '../LogoAnimado'
 import { alertaIngresoFallo } from '../alertas'
 import { WORDMARK_SVG } from '../wordmark'
 import { CasillaLegal } from '../legal/CasillaLegal'
-import { CONSENTIMIENTO_PRIVACIDAD as cons, PRIVACIDAD, TERMINOS } from '../legal/documentos'
+import { CONSENTIMIENTO_PRIVACIDAD as cons, terminosActual, privacidadActual } from '../legal/documentos'
 import { aceptoVersion, borrarAceptacion, guardarAceptacion, validarAceptaciones, erroresTrasCambio, ERRORES_INICIALES, type ClaveLegal } from '../legal/aceptacion'
 
 type Paso = 'opciones' | 'correo' | 'codigo'
@@ -94,8 +94,9 @@ export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real
 export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void }) {
   const [abierta, setAbierta] = useState(false)
   // Dos casillas obligatorias y separadas: Términos, y Aviso de privacidad con transferencia de datos.
-  const pidePrivacidad = !!PRIVACIDAD
-  const VERSION: Record<ClaveLegal, string> = { terminos: TERMINOS.version, privacidad: PRIVACIDAD?.version ?? '' }
+  // Paso 16: la versión vigente (1.7-demo con el interruptor encendido). La pantalla no cambia: solo el texto detrás de los enlaces.
+  const PRIVACIDAD = privacidadActual(), pidePrivacidad = !!PRIVACIDAD
+  const VERSION: Record<ClaveLegal, string> = { terminos: terminosActual().version, privacidad: PRIVACIDAD?.version ?? '' }
   const [marcas, setMarcas] = useState(() => ({ terminos: aceptoVersion('terminos', VERSION.terminos), privacidad: !pidePrivacidad || aceptoVersion('privacidad', VERSION.privacidad) }))
   const [errores, setErrores] = useState<Partial<Record<ClaveLegal, string>>>(ERRORES_INICIALES)
   const refT = useRef<HTMLInputElement>(null), refP = useRef<HTMLInputElement>(null)
