@@ -86,3 +86,4 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **Legal 25/10, 3:16 a. m. (C):** la 6.5 c) termina, solo con dos personas, con «En la versión con dos personas, la regla no se ofrece (6.5.1 d).» (`{{dos-personas: …}}`). Se quitaron las marcas `LEGAL: revisar` de lo aprobado (2.2 b, 6.5.1 d, 6.5 c y los textos de C en `src/prueba/dosPersonas.ts`). Prueba: `escenario-c.test.ts`.
 
 - **Fecha de la 1.9-demo:** `FECHA_V19` en `versiones.ts` es provisional («25 de octubre de 2026»). Al encender C hay que poner la fecha real del encendido (paso obligatorio de `encendido-lista.md`).
+- **Legal 25/10, 3:34 a. m.:** `TEXTO_SOLOS_DOS` en contrato y «En curso» de C; 2.2 b) de C termina con quién maneja las cuentas y quién aplica la regla de las dos aceptaciones.

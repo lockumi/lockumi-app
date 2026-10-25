@@ -102,6 +102,7 @@ describe('4) fecha de la 1.9-demo: una sola constante, provisional hasta el ence
 // Legal, 25/10, 3:16 a. m. (sobre 1c8af23): segunda línea del pago, 6.5 c), aviso del silencio y marcas quitadas de lo aprobado.
 const ESCROW = 'El depósito queda guardado en una cuenta de garantía (escrow) de Trustless Work en la red de prueba, y se libera según las reglas de los Términos (cláusulas 5 y 6).'
 const SOLOS = /(sacar|tomar|liberar)l[oa]s? solos|lo pueden sacar solos|nadie puede (sacar|tomar|mover)l[oa]/i
+const NADIE = /nadie puede (sacar|tomar|mover)l[oa]/i
 describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «nadie puede sacarlo solo»', () => {
   it('la nota del pago es la línea de Legal y, después, la del escrow, palabra por palabra', () => {
     expect(D.TEXTO_ESCROW_DOS).toBe(ESCROW)
@@ -111,9 +112,8 @@ describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «na
   it('ninguna pantalla de C dice que nadie puede sacar el depósito solo (pago, contrato, en curso, aviso del pago)', () => {
     const hs = [renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino' })} rol="inquilino" />), renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'dueno' })} rol="dueno" />),
       renderToStaticMarkup(<ContratoDoc a={A()} completo />), renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)]
-    for (const h of hs) expect(h).not.toMatch(SOLOS)
-    expect(renderToStaticMarkup(<ContratoDoc a={A()} completo />)).toContain('El depósito queda guardado hasta el final. Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.')
-    expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)).toContain('El depósito sigue guardado.</p>')
+    for (const h of hs) expect(h).not.toMatch(NADIE)
+    for (const h of hs.slice(0, 2)) expect(h).not.toMatch(SOLOS)   // el pago no lo dice; contrato y en curso: ver 8)
     for (const red of [true, false]) {
       const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago' })), A({ estado: 'fotos_entrada' }), 'inquilino', { prueba: false, video: false, red })!
       expect(al.titulo).toBe('¡Depósito guardado!'); expect(al.hecho).toMatch(/^800 USDC( de prueba)? guardados en una cuenta segura de la red de prueba\.$/); expect(al.hecho).not.toMatch(SOLOS)
@@ -124,8 +124,8 @@ describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «na
     expect(al.hecho).toMatch(/Ni el dueño ni el inquilino pueden sacarlos solos\.$/)
     expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso', dosPersonas: false })} rol="inquilino" />)).toContain('ni el dueño ni el inquilino pueden tomarlo solos')
   })
-  it('los textos de C (dosPersonas.ts) no lo dicen', async () => {
-    expect((await import('../dosPersonas.ts?raw')).default as string).not.toMatch(SOLOS)
+  it('los textos de C (dosPersonas.ts) no dicen «nadie puede sacarlo solo»', async () => {
+    expect((await import('../dosPersonas.ts?raw')).default as string).not.toMatch(NADIE)
   })
 })
 describe('6) Legal 3:16: aviso del silencio del inquilino', () => {
@@ -161,5 +161,35 @@ describe('7) Legal 3:16: sin «LEGAL: revisar» en lo que Legal aprobó', () => 
     expect(antesDe(src, '<!-- si: dos-personas -->\nb) En la fase 2')).not.toMatch(/LEGAL: revisar/)
     expect(antesDe(src, '<!-- si: dos-personas -->\nd) En la versión con dos personas')).not.toMatch(/LEGAL: revisar/)
     expect(antesDe(src, 'c) **Si el inquilino no responde:**')).not.toMatch(/LEGAL: revisar/)
+  })
+})
+
+// Legal, 25/10, 3:34 a. m. (sobre f0276bd): en C, el contrato y «En curso» vuelven a decirlo, con el texto exacto de Legal.
+const SOLOS_C = 'Ni el dueño ni el inquilino pueden tomarlo solos. Lockumi maneja en su servidor la cuenta que libera el depósito y la cuenta mediadora, y el servidor solo reparte cuando las dos partes aceptan el mismo reparto.'
+describe('8) Legal 3:34: contrato y «En curso» de C con el texto de Legal; el aviso del pago no cambia', () => {
+  it('la constante es la de Legal, palabra por palabra', () => { expect(D.TEXTO_SOLOS_DOS).toBe(SOLOS_C) })
+  it('contrato de C: el texto de Legal y, después, quién ejecuta el reparto', () => {
+    expect(renderToStaticMarkup(<ContratoDoc a={A()} completo />)).toContain(`El depósito queda guardado hasta el final. ${SOLOS_C} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`)
+  })
+  it('«En curso» de C', () => {
+    expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)).toContain(`El depósito sigue guardado. ${SOLOS_C}</p>`)
+  })
+  it('el aviso del pago de C sigue igual', () => {
+    const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago' })), A({ estado: 'fotos_entrada' }), 'inquilino', { prueba: false, video: false, red: true })!
+    expect(al.hecho).toBe('800 USDC de prueba guardados en una cuenta segura de la red de prueba.')
+  })
+  it('sin dos personas, contrato y «En curso» no cambian', () => {
+    const k = renderToStaticMarkup(<ContratoDoc a={A({ dosPersonas: false })} completo />), e = renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso', dosPersonas: false })} rol="inquilino" />)
+    expect(k).toContain('Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.')
+    expect(e).toContain('El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.')
+    for (const h of [k, e]) expect(h).not.toContain('Lockumi maneja en su servidor')
+  })
+  it('sin «LEGAL: revisar» en esas dos líneas ni en el aviso del pago de C', async () => {
+    const det = (await import('../../screens/Detalle.tsx?raw')).default as string, ct = (await import('../../screens/ContratoDoc.tsx?raw')).default as string
+    const al = (await import('../../alertas.ts?raw')).default as string
+    const cerca = (src: string, ancla: string, n = 3) => { const i = src.indexOf(ancla); expect(i).toBeGreaterThan(-1); return src.slice(0, i).split('\n').slice(-n).join('\n') + src.slice(i).split('\n')[0] }
+    expect(cerca(det, 'TEXTO_SOLOS_DOS}', 2)).not.toMatch(/LEGAL: revisar/)
+    expect(cerca(ct, '${TEXTO_SOLOS_DOS}', 4)).not.toMatch(/LEGAL: revisar/)
+    expect(cerca(al, 'hecho: esDosPersonas(ahora)', 1)).not.toMatch(/LEGAL: revisar/)
   })
 })

@@ -56,6 +56,8 @@ export const TEXTO_RECLAMO_DOS = 'En esta versión, la app no aplica ninguna pro
 // Legal, 25/10, 2:53 a. m., aprobado a las 3:16 a. m. (pago de C: el depósito de dos personas solo lo firma la cuenta Lockumi, Cavos)
 export const TEXTO_PAGO_DOS = 'Tu cuenta Lockumi te pedirá confirmar el pago en la red de prueba. Son USDC de prueba, sin valor.'
 // Legal, 25/10, 3:16 a. m.: va después de TEXTO_PAGO_DOS. En C no se dice que nadie puede sacar el depósito solo.
+// Aprobado por Legal (25/10, 3:34 a. m.) · contrato y «En curso» de C: quién maneja las cuentas y cuándo reparte el servidor.
+export const TEXTO_SOLOS_DOS = 'Ni el dueño ni el inquilino pueden tomarlo solos. Lockumi maneja en su servidor la cuenta que libera el depósito y la cuenta mediadora, y el servidor solo reparte cuando las dos partes aceptan el mismo reparto.'
 export const TEXTO_ESCROW_DOS = 'El depósito queda guardado en una cuenta de garantía (escrow) de Trustless Work en la red de prueba, y se libera según las reglas de los Términos (cláusulas 5 y 6).'
 // C: «Qué sigue» del reclamo; la propuesta automática solo se aplica si las dos partes la aceptan (Legal, 25/10, 2:53 a. m.; aprobado a las 3:16 a. m.)
 export const SIGUE_RECLAMO_DOS = { inquilino: 'Si no aceptas todo, verás una propuesta automática (simulación), que solo se aplica si las dos partes la aceptan. Si no hay acuerdo, pasa a la Mediación Lockumi (demo).',

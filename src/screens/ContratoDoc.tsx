@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { modoPrueba, modoDe, deDosPersonas } from '../servidor/config'
-import { TEXTO_GUARDA_DOS } from '../prueba/dosPersonas'
+import { TEXTO_GUARDA_DOS, TEXTO_SOLOS_DOS } from '../prueba/dosPersonas'
 import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
 import { DUENO_PRUEBA } from './Real'
@@ -37,9 +37,8 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       {/* Texto que ya mostraba la app en «El contrato». */}
       {/* LEGAL: revisado (24/10) */}
       <p className="ct__texto">El depósito queda guardado hasta el final. {deDosPersonas(a)
-        // LEGAL: revisar · alquiler con otra persona: el reparto lo ejecuta la cuenta que resuelve disputas (persona mediadora).
-        // C (Legal, 25/10, 3:16 a. m.): sin «Ni el dueño ni el inquilino pueden tomarlo solos».
-        ? 'Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.'
+        // C: aprobado por Legal (25/10, 3:34 a. m.): su texto y, después, quién ejecuta el reparto.
+        ? `${TEXTO_SOLOS_DOS} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`
         : 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.'}</p>
     </section>
 

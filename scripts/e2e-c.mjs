@@ -54,6 +54,7 @@ async function destinoSimulado() {
     if (t === 'lk_contratos' && m === 'PATCH') { const cond = p.liquidacion_tx === 'is.null' ? ' and liquidacion_tx is null' : p.liquidacion_tx?.startsWith('eq.') ? ` and liquidacion_tx = '${p.liquidacion_tx.slice(3).replace(/'/g, '')}'` : ''
       const ks = Object.keys(b); const rows = await q(null, `update public.lk_contratos set ${ks.map((k, i) => `${k} = $${i + 2}`).join(', ')} where id = $1${cond} returning id`, [id, ...ks.map(k => b[k])]); return ok(rows) }
     if (t === 'lk_eventos' && m === 'POST') { await q(null, `insert into public.lk_eventos(contrato_id, texto, tx_hash) values ($1, $2, $3)`, [b.contrato_id, b.texto, b.tx_hash]); return new Response(null, { status: 201 }) }
+    if (t === 'lk_eventos' && m === 'GET' && p.tx_hash) return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and tx_hash = $2`, [id, p.tx_hash.slice(3)]))
     if (t === 'lk_eventos' && m === 'GET') return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and texto = $2`, [id, p.texto.slice(3)]))
     return new Response('ruta no simulada: ' + t, { status: 500 })
   }
@@ -199,6 +200,7 @@ const flujos = {
     if (!REAL) await D.q(null, `update public.lk_contratos set ventana_inicio = now() - interval '2 minutes' where id = $1`, [id]); else await esperarPlazo('silencio-dueno')
     exigir(await dueno.rpc('lk_cerrar_sin_reclamo', { p_contrato: id }), 'no cerró al vencer el plazo')
     const r = await tw(inquilino, { accion: 'devolver-automatico', contrato: id }); paso('silencio-dueno', 'disputa abierta por la plataforma', r.disputaTx); paso('silencio-dueno', 'la cuenta que resuelve disputas devuelve el 100 % al inquilino', r.tx)
+    exigir((await D.leer('lk_eventos', id)).some(e => e.tx_hash === r.tx), 'la firma de la mediadora no quedó en el historial'); paso('silencio-dueno', 'la firma de la mediadora queda en el historial con su hash', r.tx)
     const e = await estado(id); exigir(e.resultado.via === 'automatico' && Number(e.resultado.inquilino) === MONTO, 'el resultado no es 100 % al inquilino'); await capturar('auto', id)
   },
   async mediacion() {   // reclamo → el inquilino rechaza → las dos partes aceptan el mismo reparto → la persona mediadora lo registra → «repartir»
@@ -216,6 +218,7 @@ const flujos = {
     await mediador.rpc('lk_decidir_mediacion', { p_contrato: id, p_monto_dueno: ACORDADO, p_motivo: null }); paso('mediacion', `las dos partes aceptaron ${ACORDADO}/${MONTO - ACORDADO}: la persona mediadora lo registra`)
     const r = await tw(inquilino, { accion: 'repartir', contrato: id }); paso('mediacion', 'disputa abierta por la plataforma', r.disputaTx); paso('mediacion', `«repartir»: ${ACORDADO} USDC al dueño y ${MONTO - ACORDADO} al inquilino (menos 0,3 %)`, r.tx)
     const otra = await tw(dueno, { accion: 'repartir', contrato: id }); exigir(otra.yaExistia && otra.tx === r.tx, 'el segundo «repartir» no fue idempotente'); paso('mediacion', 'un segundo «repartir» no paga dos veces (mismo hash)')
+    exigir((await D.leer('lk_eventos', id)).some(e => e.tx_hash === r.tx), 'la firma de la mediadora no quedó en el historial'); paso('mediacion', 'la firma de la mediadora queda en el historial con su hash', r.tx)
     exigir((await estado(id)).liquidacion_tx === r.tx, 'no guardó el hash en liquidacion_tx'); await capturar('cerrado', id)
   },
   async silencioInquilino() {   // 6.5 c, opción 1 de Legal: el inquilino no responde → mediación «regla no disponible en esta versión (6.5.1 d)», sin pago

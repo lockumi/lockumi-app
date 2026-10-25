@@ -25,7 +25,7 @@ import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
-import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, TEXTO_SOLOS_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -128,8 +128,8 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
 export function EnCurso({ a }: P) {
   return <section className="pila"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
     <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div>
-    {/* LEGAL: revisado (24/10). LEGAL: revisar · C (Legal, 25/10, 3:16 a. m.): se quita «ni el dueño ni el inquilino pueden tomarlo solos» */}
-    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? 'El depósito sigue guardado.' : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
+    {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
+    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
     <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
     <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={() => void acciones.iniciarSalida(a)}>Empezar fotos de salida</button>
   </section>

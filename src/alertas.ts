@@ -130,7 +130,7 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       paso: 'pago', titulo: '¡Depósito guardado!',
       // LEGAL: revisar · texto corto de la red de prueba aprobado por Legal (23 oct 2026)
       // LEGAL: revisado (24/10)
-      // LEGAL: revisar · C (Legal, 25/10, 3:16 a. m.): sin «Ni el dueño ni el inquilino pueden sacarlos solos»
+      // C: aprobado por Legal (25/10, 3:34 a. m.), sin «Ni el dueño ni el inquilino pueden sacarlos solos»
       hecho: esDosPersonas(ahora) ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba.` : c.red ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.` : `El depósito de ${usd(ahora.monto)} quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.`,
       sigue: 'Tomar las fotos de entrada de cada espacio y marcar la lista.',
       linea: { et: 'Ahora:', texto: 'fotos de entrada' },   // LEGAL: revisado el 23/10
