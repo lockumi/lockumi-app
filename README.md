@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (franja de la red de prueba, cambio visible con el OK de Katherine)**
+- Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
+
 **24 de octubre de 2026 (ajustes de Legal de las 11:25 p. m., sin cambios visibles)**
 - Prueba completa (detrás del interruptor): todos los montos dicen «800 USDC de prueba» (también la cabecera y la tarjeta del detalle) y la franja de la red de prueba se ve en todas las pantallas.
 
