@@ -5,7 +5,7 @@
 // el lugar y las fotos no se envían a ningún lado para mostrarlo o imprimirlo.
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { modoPrueba, modoDe } from '../servidor/config'
+import { modoPrueba, modoDe, deDosPersonas } from '../servidor/config'
 import { TEXTO_GUARDA_DOS } from '../prueba/dosPersonas'
 import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
@@ -32,7 +32,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
     <section className="ct__sec"><h3>El depósito</h3>
       {/* Texto que ya mostraba la app en «El contrato». */}
       {/* LEGAL: revisado (24/10) */}
-      <p className="ct__texto">El depósito queda guardado hasta el final. {a.dosPersonas
+      <p className="ct__texto">El depósito queda guardado hasta el final. {deDosPersonas(a)
         // LEGAL: revisar · alquiler con otra persona: el reparto lo ejecuta la cuenta que resuelve disputas (persona mediadora)
         ? 'Ni el dueño ni el inquilino pueden tomarlo solos. Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.'
         : 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.'}</p>
@@ -89,7 +89,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
     {/* LEGAL: revisar. Resumen de las cláusulas 2.5 y 2.6 de los Términos 1.6-demo y de la línea de privacidad aprobada. */}
     <footer className="ct__pie">
       {modoPrueba && <p>Es una prueba en la red de prueba de Stellar, sin dinero real. No reemplaza un contrato de alquiler.</p>}
-      <p>{a.dosPersonas ? TEXTO_GUARDA_DOS : 'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.'}</p>
+      <p>{deDosPersonas(a) ? TEXTO_GUARDA_DOS : 'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.'}</p>
     </footer>
   </article>
 }
