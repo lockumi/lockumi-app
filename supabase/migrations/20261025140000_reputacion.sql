@@ -7,6 +7,7 @@
 --      con versión, fecha y hora y el texto aceptado (Ley 8968; legal/reputacion-textos-para-producto.md, regla 5). Vitrinas opcionales.
 --   1b. Revisiones pedidas (REP-11): acuse con fecha y hora, «En revisión» y respuesta en 5 días hábiles; nota de hasta 300 caracteres.
 --   2. Eventos negativos (dueño: reclamo indebido; inquilino: descuento del depósito) que se borran a los 10 años.
+--   5. Con la reputación encendida, una cuenta sin REP-01 y sin alquileres no entra a un alquiler hasta aceptar REP-01.
 --   3. Eliminar la cuenta (decisión de Katherine, 25/10/2026, 2:11 p. m.): gratis; el perfil deja de mostrarse al instante y todo
 --      se borra en un máximo de 5 días hábiles (lunes a viernes, sin los feriados de Costa Rica).
 --      No hay «Dejar de mostrar»: el perfil solo desaparece al eliminar la cuenta.
@@ -215,7 +216,7 @@ create trigger lk_rep_evento_cuenta before insert on public.lk_reputacion_evento
 
 -- Con un pedido de borrado pendiente, la cuenta no crea ni se une a alquileres nuevos (lk_crear_contrato, lk_crear_contrato_invitando
 -- y lk_aceptar_invitacion agregan participantes). Los alquileres abiertos siguen igual: sus filas ya existen.
--- LEGAL: revisar · ronda 25/10 3:27 · texto literal de Legal (d)
+-- LEGAL: revisado (25/10) · texto literal de Legal (d)
 create or replace function public.lk_sin_alquileres_nuevos_si_borra() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if exists (select 1 from public.lk_solicitudes_borrado where usuario = new.usuario and hecho_en is null) then
@@ -226,6 +227,36 @@ begin
 end $$;
 drop trigger if exists lk_sin_alquileres_nuevos_si_borra on public.lk_participantes;
 create trigger lk_sin_alquileres_nuevos_si_borra before insert on public.lk_participantes for each row execute function public.lk_sin_alquileres_nuevos_si_borra();
+
+-- 5. Cuentas sin REP-01 y sin alquileres (Legal, respuesta a 6c71866, 25/10/2026 3:47 p. m.) ----------------------------------------
+-- Las sesiones son anónimas por aparato (auth.uid()) y no hay fecha de creación de la cuenta que sirva: la regla es «sin aceptación de
+-- REP-01 y sin alquileres» → no entra a un alquiler (crear ni unirse); en la app ve antes la pantalla previa de siempre. Una cuenta
+-- anterior con alquileres sigue igual. Solo rige con la reputación encendida: el día del encendido se inserta UNA fila aquí
+-- (así, aplicar la migración antes no cambia nada para nadie).
+create table if not exists public.lk_reputacion_encendido (
+  id boolean primary key default true check (id),
+  encendido_en timestamptz not null default now()
+);
+alter table public.lk_reputacion_encendido enable row level security;
+revoke all on public.lk_reputacion_encendido from anon, authenticated;
+create or replace function public.lk_sin_perfil_ni_alquileres(p_usuario uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lk_reputacion_encendido)
+     and not exists (select 1 from public.lk_reputacion_aceptaciones where usuario = p_usuario)
+     and not exists (select 1 from public.lk_participantes where usuario = p_usuario)
+$$;
+revoke all on function public.lk_sin_perfil_ni_alquileres(uuid) from public, anon, authenticated;
+-- LEGAL: revisar · ronda 25/10 3:47 · mensaje del servidor (texto propio; en la app se ve antes la pantalla previa de siempre)
+create or replace function public.lk_sin_perfil_tras_encendido() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public.lk_sin_perfil_ni_alquileres(new.usuario) then
+    raise exception 'Para crear o unirte a un alquiler, primero acepta tu perfil de reputación: abre Lockumi y marca las dos casillas de «Antes de crear tu cuenta: tu perfil de reputación».'
+      using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists lk_sin_perfil_tras_encendido on public.lk_participantes;
+create trigger lk_sin_perfil_tras_encendido before insert on public.lk_participantes for each row execute function public.lk_sin_perfil_tras_encendido();
 
 -- Programación con pg_cron si la extensión está instalada; si no, se deja escrito y hay que programarla a mano (docs/reputacion.md).
 do $$ begin

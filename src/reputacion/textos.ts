@@ -42,9 +42,9 @@ export const REP02 = {
   volver: 'Volver',
 }
 
-// LEGAL: revisar · ronda 25/10 3:27 · texto literal de Legal (d): con un pedido de borrado pendiente, al intentar crear o unirse a un alquiler nuevo.
+// LEGAL: revisado (25/10) · texto literal de Legal (d): con un pedido de borrado pendiente, al intentar crear o unirse a un alquiler nuevo.
 export const BLOQUEO_BORRADO = 'Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.'
-// LEGAL: revisar · ronda 25/10 3:27 · nota del perfil cuando la persona pidió una revisión (texto literal de Legal).
+// LEGAL: revisado (25/10) · nota del perfil cuando la persona pidió una revisión (texto literal de Legal).
 export const NOTA_EN_REVISION = 'Pediste una revisión. Mientras la revisamos, tu puntaje público dice «En revisión».'
 
 // LEGAL: revisado (25/10) · REP-06 Vitrinas (casillas opcionales).
@@ -213,7 +213,8 @@ export const UI = {
   pasoDe: (i: number, n: number) => `Paso ${i} de ${n}`,
   datosTitulo: '¿Cómo te verán?',
   nombreVisible: 'Nombre visible',
-  nombreAyuda: 'Tu nombre y la inicial de tu apellido. Por ejemplo: Laura V.',
+  // LEGAL: revisar · ronda 25/10 3:42 · ayuda debajo del nombre visible (texto literal de Legal)
+  nombreAyuda: 'Escribe tu nombre y la inicial de tu apellido, por ejemplo «Ana V.» o «Ana María V.». Así se verá en tu perfil.',
   canton: 'Tu cantón',
   cantonAyuda: 'Mostramos tu cantón, o tu provincia si en tu cantón hay menos de 10 personas. Nunca el barrio ni la dirección.',
   elegirCanton: 'Elige tu cantón',

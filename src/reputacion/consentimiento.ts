@@ -5,7 +5,7 @@
 // el perfil queda fijo y visible y solo desaparece cuando la persona elimina su cuenta (borrado.ts). En la demo, se guarda en este navegador;
 // en el servidor, la tabla de supabase/migrations/20261025140000_reputacion.sql (escrita, no aplicada).
 import { useSyncExternalStore } from 'react'
-import type { Rol } from '../types'
+import type { Alquiler, Rol } from '../types'
 import { provinciaDe } from './cantones'
 import { UI } from './textos'
 import { EDICION_REPUTACION, CLAVE_PREVIA_REPUTACION, claveReputacion } from '../legal/version17'
@@ -19,7 +19,8 @@ export interface EstadoReputacion { nombre?: string; canton?: string; rep01?: Re
 /** Hora de Costa Rica (UTC−6 todo el año), en 12 horas como pide Legal: «3:21 p. m.», «10:05 a. m.», «12:00 p. m.». */
 export function horaCR(iso: string) {
   const d = new Date(Date.parse(iso) - 6 * 3600_000), h = d.getUTCHours()
-  return `${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`
+  // Espacios que no se cortan (U+00A0): «3:21 p. m.» nunca se parte en dos líneas.
+  return `${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, '0')}\u00a0${h < 12 ? 'a.\u00a0m.' : 'p.\u00a0m.'}`
 }
 const registro = (texto: string[], fecha: string): Registro => ({ version: VERSION_TEXTOS, fecha, hora: horaCR(fecha), texto })
 
@@ -83,6 +84,14 @@ export function vincularPrevia(email: string, cuentaNueva: boolean) {
   try { sesion()?.removeItem(PREVIA) } catch { /* nada */ }
   subs.forEach(f => f())
 }
+/** Legal (respuesta a 6c71866, punto 2, 3:47 p. m.): las sesiones del servidor son anónimas por aparato y no tienen fecha de creación de la
+ *  cuenta, así que la regla es: SIN REP-01 y SIN alquileres → antes de crear o unirse a un alquiler, la pantalla previa de siempre. Una
+ *  cuenta anterior con alquileres no tiene perfil y no ve nada nuevo. En el servidor: lk_sin_perfil_ni_alquileres (migración). */
+export function sinPerfilNiAlquileres(email: string, alquileres: readonly Alquiler[]): boolean {
+  if (leer(email).rep01) return false
+  const m = email.trim().toLowerCase()
+  return !alquileres.some(a => [a.duenoEmail, a.inquilinoEmail].some(c => c?.trim().toLowerCase() === m))
+}
 /** Solo al eliminar la cuenta (borrado.ts): borra el perfil, las opciones y el registro de esta cuenta. */
 export function borrarTodo(email: string) { try { localStorage.removeItem(clave(email)) } catch { /* nada que borrar */ } cache.delete(email); subs.forEach(f => f()) }
 
@@ -94,7 +103,8 @@ export function validarNombre(n: string): string | null {
   if (!t) return UI.errNombre
   if (t.length > 30) return UI.errNombreLargo
   // Legal (revisión del PR #26 y ronda del 25/10): el nombre (también compuesto, «Ana María V.») y SOLO la inicial del apellido;
-  // nunca un apellido completo al final («Ana María Vargas» no). Hasta dos nombres antes de la inicial.
-  return /^\p{L}[\p{L}'-]*(?: \p{L}[\p{L}'-]+)? \p{L}\.?$/u.test(t) ? null : UI.errNombre
+  // nunca un apellido completo al final («Ana María Vargas» no). Hasta dos palabras antes de la inicial, y la inicial lleva punto
+  // («Ana R» no; «Ana R.» sí) (Legal, respuesta a 6c71866).
+  return /^\p{L}[\p{L}'-]*(?: \p{L}[\p{L}'-]+)? \p{L}\.$/u.test(t) ? null : UI.errNombre
 }
 export const validarCanton = (c: string): string | null => c && provinciaDe(c) ? null : UI.errCanton

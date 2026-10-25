@@ -97,8 +97,8 @@ No usamos tus datos para publicidad y no los vendemos. Para usar Lockumi, calcul
 ## Perfil de reputación
 Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con tu cuenta. **Cualquier persona en internet** con el enlace puede verlo. Antes de crear tu cuenta te pedimos aceptarlo en una pantalla aparte, con una casilla sin marcar. Si no lo aceptas, puedes no crear tu cuenta, sin costo.
 
-<!-- LEGAL: revisar · ronda 25/10 3:27 · cuentas anteriores a la 1.10-demo (texto literal de Legal) -->
-Si tu cuenta es anterior a la versión 1.10-demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.
+<!-- LEGAL: revisado (25/10) · cuentas anteriores a la 1.10-demo (texto literal de Legal) -->
+Si tu cuenta es anterior a la versión 1.10‑demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.
 - **Datos que se publican:** tu nombre visible, tu papel (dueño o inquilino), tu cantón o provincia, desde cuándo estás en Lockumi, cuántos alquileres cerraste, tus insignias, tu puntaje y la Llave Lockumi si la tienes (siempre desde tu 3.er alquiler cerrado) y, solo en las vitrinas en las que aparezcas, el precio desde el que alquilas o el rango que buscas.
 - **Datos que nunca se publican:** tu dirección, tu barrio, la dirección del inmueble, la distancia, tu teléfono, tu correo, tu cédula, tu billetera, fotos, montos y el detalle de tus reclamos.
 - **Finalidad:** que dueños e inquilinos conozcan el historial de la otra parte en Lockumi. No es una garantía ni una recomendación.

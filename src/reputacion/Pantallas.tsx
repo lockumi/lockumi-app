@@ -7,7 +7,7 @@ import { useAlquileres, store } from '../store'
 import { ir } from '../router'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
   valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
-import { useReputacion, guardarDatos, aceptar, activa, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
+import { useReputacion, guardarDatos, aceptarRep01, sinPerfilNiAlquileres, aceptar, activa, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
@@ -488,6 +488,10 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
+  // Legal (respuesta a 6c71866, punto 2): sin REP-01 y sin alquileres (p. ej. entró por «Ya tengo cuenta: entrar» o por un enlace mágico
+  // en otra pestaña), la pantalla previa de siempre antes de crear o unirse a su primer alquiler.
+  if (!e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)) return <Rep01 no={UI.volver} onNo={() => { location.hash = '/' }}
+    onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01) } catch { /* sin almacenamiento: se queda en la pantalla */ } }} />
   // Cuenta que ya existía (sin REP-01): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
   if (!e.rep01) return <>{children}</>
   if (!e.nombre || !e.canton) return <Datos u={u} e={e} salir={salir} />

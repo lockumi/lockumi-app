@@ -29,7 +29,8 @@ la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
 - **Guarda de encendido (Legal, bloqueo 1):** la fecha vive sola en `src/legal/fecha-reputacion.ts`. `vite.config.ts` usa `guardaEncendido`
   (`src/legal/encendido.ts`): el build falla si `VITE_REPUTACION=1` y la fecha todavía lleva «[». **Al encender**, escribir ahí la fecha real
   con el formato «2 de noviembre de 2026»; con el interruptor encendido, la prueba `ronda-cuentas-anteriores.test.tsx` exige ese formato.
-  Para los builds locales de borrador (capturas y E2E) existe `LOCKUMI_REPUTACION_BORRADOR=1`, que nunca vale con `VERCEL_ENV=production`.
+  Para los builds locales de borrador (capturas y E2E) existe `LOCKUMI_REPUTACION_BORRADOR=1`, que **nunca vale en Vercel** (con `VERCEL` definida: ni producción ni preview;
+  `encendido.ts:10`, 25/10 3:47 p. m.).
 
 ## Flujo
 
@@ -42,13 +43,24 @@ la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
      (`lockumi.reputacion.v1.<correo>`, campo `rep01`) **solo si la cuenta es nueva** (sin `rep01` y sin alquileres con ese correo); en todos los
      casos la borra de la sesión.
    - «Ya tengo cuenta: entrar» lleva al login sin aceptar nada (bandera de sesión `lockumi.reputacion.entrar.v1`, se borra al entrar).
-   - Después falta un último paso: nombre visible (nombre e inicial del apellido) y cantón.
+   - Después falta un último paso: nombre visible y cantón. Nombre: hasta **dos palabras** antes de la inicial del apellido, y la inicial
+     **lleva punto** («Ana V.», «Ana María V.», «Laura Vargas R.»; no «Ana R» ni tres palabras más la inicial). Debajo del campo, en `nota`,
+     la ayuda literal de Legal: «Escribe tu nombre y la inicial de tu apellido, por ejemplo «Ana V.» o «Ana María V.». Así se verá en tu perfil.»
+     (LEGAL: revisar).
+   - Horas: «3:21 p. m.» con espacios que no se cortan (U+00A0) para que nunca se parta en dos líneas (`horaCR`).
 2. **Cuentas anteriores a la 1.10-demo (sin REP-01; Coordinador, 25/10/2026, 3:24 p. m.):** no vuelven a aceptar nada. Siguen usando la app
    igual, sin perfil público, sin bloqueo y sin pantallas ni tarjetas extra (tampoco «Tu perfil en Lockumi» en Inicio). Lo dicen los Términos
    (15.1, última oración) y el Aviso de privacidad (después del primer párrafo de «Perfil de reputación»). Un alquiler entre una cuenta anterior
    y una nueva **no cuenta para ninguna de las dos** (`alquileresDeReputacion` en `puntaje.ts`; en el servidor, `lk_cuenta_para_reputacion` y
    el disparador `lk_rep_evento_cuenta`). Quien tenía perfil y pidió eliminar su cuenta sigue contando para la otra parte (`conPerfil` /
    `con_perfil`). En la demo cada navegador guarda solo lo suyo: el REP-01 de la otra parte se lee de este navegador (las capturas y el E2E lo siembran).
+   **Sin REP-01 y sin alquileres (Legal, 25/10 3:47 p. m.):** como las sesiones del servidor son anónimas por aparato y no hay una fecha de
+   creación de cuenta confiable, la regla no usa fechas: si la cuenta no tiene REP-01 **ni** alquileres (p. ej. entró por «Ya tengo cuenta:
+   entrar» o por un enlace mágico en otra pestaña), antes de «+ Nuevo alquiler» (`/crear`) y de una invitación (`/invitacion`) ve la pantalla
+   previa de siempre (dos casillas sin marcar) y, al aceptar, el paso de nombre y cantón. Una cuenta anterior con alquileres sigue sin perfil y sin
+   pantallas nuevas. Código: `sinPerfilNiAlquileres` (`consentimiento.ts`) y `Pantallas.tsx`. Servidor: `lk_sin_perfil_ni_alquileres` y el disparador
+   `lk_sin_perfil_tras_encendido` en `lk_participantes`, que **solo rigen si existe la fila de `lk_reputacion_encendido`** (se inserta el día del
+   encendido; aplicar la migración antes no cambia nada para nadie). La edición de cada alquiler queda como estaba.
 3. **Con un pedido de borrado pendiente (Legal, d):** «+ Nuevo alquiler» y los enlaces de invitación muestran, con los estilos de siempre:
    «Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.»
    En el servidor, el disparador `lk_sin_alquileres_nuevos_si_borra` en `lk_participantes` rechaza crear o aceptar una invitación con ese texto.
@@ -96,7 +108,9 @@ cerrarlo; sus datos se usan solo para eso, el puntaje no se recalcula y la otra 
 `supabase/migrations/20261025140000_reputacion.sql`: `lk_reputacion_perfiles`, `lk_reputacion_aceptaciones` (REP-01: versión, texto y
 `aceptado_en` con fecha y hora), `lk_reputacion_consentimientos` (solo vitrinas), `lk_reputacion_eventos`, `lk_reputacion_revisiones` (nota ≤ 300),
 `lk_solicitudes_borrado`, y las funciones `lk_pedir_borrado_cuenta` y `lk_borrar_cuentas_pedidas` (también borra lo negativo de más de 10 años).
-pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
+Sección 5: `lk_reputacion_encendido` (una fila = reputación encendida), `lk_sin_perfil_ni_alquileres` y el disparador
+`lk_sin_perfil_tras_encendido`. **Al encender:** `insert into public.lk_reputacion_encendido default values;`.
+pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts` y `reputacion-encendido-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
 
 ## Pruebas
 
@@ -110,14 +124,22 @@ pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.tes
   Con la guarda, el build local de borrador lleva `LOCKUMI_REPUTACION_BORRADOR=1`.
   Dueño = cuenta nueva (REP-01 antes del login → datos → 4,2, sin contar su alquiler con la cuenta anterior → al final elimina su cuenta con un
   alquiler abierto y ya no puede crear alquileres nuevos). Inquilino = cuenta nueva («Ana María M.» → 4,6 → revisión «En revisión» → elimina su
-  cuenta). Cuenta anterior = «Ya tengo cuenta: entrar» → la app de siempre, sin pantallas extra. La prueba se salta sola contra app.lockumi.com.
+  cuenta). Cuenta anterior (con alquileres) = «Ya tengo cuenta: entrar» → la app de siempre, sin pantallas extra. Cuenta sin REP-01 ni
+alquileres → en «Nuevo alquiler», la pantalla previa de siempre. La prueba se salta sola contra app.lockumi.com.
 
 ## Pendientes
 
-**Legal:** aprobó los textos de 6e9210a (marcas cambiadas a «LEGAL: revisado (25/10)»). Solo las líneas nuevas de la ronda del 25/10
-(3:27 p. m.) llevan «LEGAL: revisar · ronda 25/10 3:27».
+**Legal:** aprobó los textos de 6e9210a y los de la ronda de las 3:27 (marcas cambiadas a «LEGAL: revisado (25/10)»; en Términos 15.1 y el
+Aviso, «1.10‑demo» con guion que no se corta, U+2011). Llevan «LEGAL: revisar» solo la ayuda del nombre (`textos.ts`) y el mensaje del
+servidor de la sección 5 de la migración.
+
+**Identidad por aparato (investigación del 25/10, sin cambios de comportamiento):** en el servidor, `auth.uid()` es una sesión anónima por aparato
+(`repositorio.ts:16-21`) y todas las tablas de reputación y de borrado usan ese `usuario uuid`. Por eso el perfil, el bloqueo por borrado
+pendiente, el borrado y la descarga siguen al **aparato**, no a la persona: desde otro aparato se puede crear o unirse a un alquiler pese al
+borrado pendiente, y `lk_borrar_cuentas_pedidas` borra solo la sesión de ese aparato. En la demo, todo vive en el navegador. Arreglo mínimo
+propuesto: identificar a la persona por el correo normalizado (`lk_participantes.email_cavos`, que ya se guarda al crear y al aceptar) en
+los disparadores, el borrado y la descarga; mejor aún, vincular las sesiones anónimas a una identidad verificada (Cavos). Ver el informe.
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
-público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límites conocidos de «cuenta
-nueva»: una cuenta anterior sin alquileres que aceptó la pantalla previa en la misma sesión queda vinculada; una persona nueva que toca «Ya tengo
-cuenta: entrar» (o abre el enlace mágico en otra pestaña) queda sin perfil, como una cuenta anterior (sin datos publicados).
+público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
+anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
 No se implementan (por ahora): perfil solo para registrados, apagar Destacados/Nuevos, retirar un reclamo, espejo del 10 %.
