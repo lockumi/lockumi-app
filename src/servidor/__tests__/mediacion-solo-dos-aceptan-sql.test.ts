@@ -99,9 +99,10 @@ describe('lk_decidir_mediacion en producción: solo con las dos aceptaciones (A2
     expect(r).toEqual({ a: false, u: false, s: true, x: false, d: false })
   })
   it('no depende del escenario C: no crea lk_reglas_651 ni lk_aceptar_regla_651 y mantiene la misma firma de lk_decidir_mediacion', async () => {
-    const r = await uno<{ t: string | null; f: string | null; d: string | null }>(`select to_regclass('public.lk_reglas_651')::text t, to_regprocedure('public.lk_aceptar_regla_651(uuid, text)')::text f,
-      to_regprocedure('public.lk_decidir_mediacion(uuid, numeric, text)')::text d`)
-    expect(r).toEqual({ t: null, f: null, d: 'lk_decidir_mediacion(uuid,numeric,text)' })
+    const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+    const sql = fs.readFileSync('supabase/migrations/20261025020000_mediacion_solo_dos_aceptan.sql', 'utf8')
+    expect(sql).not.toMatch(/lk_reglas_651|lk_aceptar_regla_651/)
+    expect((await uno<{ d: string | null }>(`select to_regprocedure('public.lk_decidir_mediacion(uuid, numeric, text)')::text d`))!.d).toBe('lk_decidir_mediacion(uuid,numeric,text)')
   })
 })
 

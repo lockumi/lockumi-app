@@ -1,4 +1,4 @@
-// Escenario C (preparación, sin encender) · 20261025020000_mediacion_dos_aceptan.sql probada en Postgres (PGlite).
+// Escenario C (preparación, sin encender) · 20261025020000_mediacion_solo_dos_aceptan.sql (master, aplicada) + 20261025030000_regla_651.sql (C) en PGlite.
 // LEGAL: revisar · lk_decidir_mediacion solo cierra un caso si constan las aceptaciones de las dos partes (mismo reparto).
 // Las dos excepciones de Términos 2.2 b) (texto de Legal, 25/10) NO pasan por la mediación: la devolución automática del 100 % (5.3 d)
 // es sin reclamo (lk_cerrar_sin_reclamo + api/_lib/tw.ts «devolver-automatico») y la Regla 6.5.1 se aplica antes, con el reclamo
