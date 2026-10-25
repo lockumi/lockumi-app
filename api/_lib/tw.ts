@@ -23,9 +23,14 @@ export function configuracion(e: Entorno) {
   // Mediador (disputeResolver): por defecto la misma cuenta de la plataforma. TW v1 lo acepta (probado en testnet el 16/10/2026).
   const mediador = e.LOCKUMI_TW_MEDIADOR_PUBLICA?.trim() || plataforma.publicKey()
   if (!G.test(mediador)) throw new ErrorTw(500, 'LOCKUMI_TW_MEDIADOR_PUBLICA no es una cuenta G válida.')
+  // Paso 7 (opción 1): la cuenta que resuelve disputas firma solo la devolución automática del 100 % al inquilino. Su llave vive
+  // solo en el servidor (LOCKUMI_TW_MEDIADOR_SECRET) y tiene que ser la de LOCKUMI_TW_MEDIADOR_PUBLICA.
+  const sm = e.LOCKUMI_TW_MEDIADOR_SECRET?.trim()
+  const mediadorFirma = sm ? Keypair.fromSecret(sm) : null
+  if (mediadorFirma && mediadorFirma.publicKey() !== mediador) throw new ErrorTw(500, 'La llave de la cuenta que resuelve disputas no coincide con LOCKUMI_TW_MEDIADOR_PUBLICA.')
   // TW espera el EMISOR del activo (G…); con el contrato C… responde "Issuer is invalid" (probado en testnet).
   const trustline = (e.TRUSTLESS_WORK_TRUSTLINE || USDC_TESTNET.emisor).trim()
-  return { base, llave: e.TRUSTLESS_WORK_API_KEY!.trim(), plataforma, mediador, trustline,
+  return { base, llave: e.TRUSTLESS_WORK_API_KEY!.trim(), plataforma, mediador, mediadorFirma, trustline,
     supa: { url: e.SUPABASE_URL!.replace(/\/$/, ''), anon: e.SUPABASE_ANON_KEY!, servicio: e.SUPABASE_SERVICE_ROLE_KEY! } }
 }
 type Config = ReturnType<typeof configuracion>
@@ -52,6 +57,13 @@ export function firmarComoPlataforma(c: Config, xdr: string) {
   if (t.source !== c.plataforma.publicKey()) throw new ErrorTw(502, 'La transacción no es de la cuenta de la plataforma.')
   if (!t.operations.length || t.operations.some(o => o.type !== 'invokeHostFunction')) throw new ErrorTw(502, 'La plataforma solo firma llamadas a contratos.')
   t.sign(c.plataforma); return t.toXDR()
+}
+/** Paso 7: la cuenta que resuelve disputas solo firma llamadas a contratos que salen de ella (resolve-dispute que arma TW). */
+export function firmarComoMediador(c: Config, xdr: string) {
+  const t = leerTx(xdr)
+  if (!c.mediadorFirma || t.source !== c.mediadorFirma.publicKey()) throw new ErrorTw(502, 'La transacción no es de la cuenta que resuelve disputas.')
+  if (!t.operations.length || t.operations.some(o => o.type !== 'invokeHostFunction')) throw new ErrorTw(502, 'La cuenta que resuelve disputas solo firma llamadas a contratos.')
+  t.sign(c.mediadorFirma); return t.toXDR()
 }
 const enviar = (c: Config, signedXdr: string, f = fetch) => tw(c, '/helper/send-transaction', { signedXdr }, f)
 
@@ -109,6 +121,16 @@ export function sinDatosPersonales(textos: string[], k: Pick<Contrato, 'direccio
 }
 
 export const APROBADO = 'El dueño aprobó en la cadena devolver el depósito completo'
+export const DEVUELTO_AUTO = 'Devolución automática: la cuenta que resuelve disputas entregó el 100 % del depósito al inquilino'
+/** Paso 7 (Términos 1.7-demo 4.2 e): en la devolución automática el reparto es SIEMPRE el 100 % al inquilino. No recibe montos ni
+ *  destinatarios, así que no se le puede pedir otro reparto. TW exige que la suma sea el saldo del escrow (Resolve Dispute). */
+export function repartoAutomatico(k: Contrato): { address: string; amount: number }[] {
+  return [{ address: cuenta(k, 'inquilino'), amount: Number(k.monto) }]
+}
+async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
+  const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(APROBADO)}&select=texto`, {}, f)
+  return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
+}
 
 // ── Acciones (permitidas y nada más) ──
 export type Pedido =
@@ -117,6 +139,7 @@ export type Pedido =
   | { accion: 'aprobar'; contrato: string }
   | { accion: 'enviar'; contrato: string; paso: 'fondear' | 'aprobar'; signedXdr: string }
   | { accion: 'liberar'; contrato: string }
+  | { accion: 'devolver-automatico'; contrato: string }
 
 export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const c = configuracion(e)
@@ -180,6 +203,22 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       const tx = hashTx(firmada)
       await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC menos la comisión de 0,3 % de Trustless Work)`, tx, f)
       return { tx }
+    }
+    case 'devolver-automatico': { // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño
+      exigir(k.estado === 'cerrado' && k.resultado?.via === 'automatico' && !!k.escrow_contract_id, 409, 'La devolución automática solo corre cuando vence el plazo del dueño sin reclamo.')
+      if (k.liquidacion_tx) return { tx: k.liquidacion_tx, yaExistia: true }
+      exigir(!(await aprobadoPorDueno(c, k.id, f)), 409, 'El dueño ya aprobó la devolución: se libera sin disputa. Vuelve a abrir el alquiler.')
+      exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
+      // Trustless Work: quien resuelve no puede abrir la disputa (Dispute Escrow), así que tienen que ser cuentas distintas.
+      exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
+      const reparto = repartoAutomatico(k)
+      const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: k.escrow_contract_id, signer: P }, f)
+      const abierta = firmarComoPlataforma(c, sinFirmar(d)); await enviar(c, abierta, f)
+      const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: k.escrow_contract_id, disputeResolver: c.mediador, distributions: reparto }, f)
+      const firmada = firmarComoMediador(c, sinFirmar(j)); await enviar(c, firmada, f)
+      const tx = hashTx(firmada)
+      await anotar(c, k.id, { liquidacion_tx: tx }, DEVUELTO_AUTO, tx, f)
+      return { tx, disputaTx: hashTx(abierta) }
     }
   }
   throw new ErrorTw(400, 'Acción no permitida.')

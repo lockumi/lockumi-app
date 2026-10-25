@@ -30,6 +30,10 @@ export const trustless = {
     const tx = await firmarYEnviar(contrato, 'aprobar', unsignedXdr); await recargar(); return tx
   },
   /** Libera el 100 % al inquilino (contrato cerrado sin reclamo y hito aprobado). */
+  /** Paso 7: sin la aprobación del dueño, la devolución automática del 100 % al inquilino (disputa + resolución en el servidor). */
+  async devolverAutomatico(contrato: string): Promise<string> {
+    const { tx } = await llamar<{ tx: string }>({ accion: 'devolver-automatico', contrato }); await recargar(); return tx
+  },
   async liberar(contrato: string): Promise<string> {
     const { tx } = await llamar<{ tx: string }>({ accion: 'liberar', contrato }); await recargar(); return tx
   },

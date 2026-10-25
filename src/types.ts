@@ -85,6 +85,8 @@ export interface Alquiler {
   correos?: Partial<Record<Rol, string>>
   /** Paso 11: avisos ya enviados por correo a cada papel (ids), para no repetirlos. */
   correosEnviados?: Partial<Record<Rol, string[]>>
+  /** Paso 7: alquiler del modo de dos personas (lo marca el servidor compartido). */
+  dosPersonas?: boolean
 }
 export type PasoRed = 'trustline' | 'compra' | 'escrow' | 'deposito' | 'evidencia' | 'aprobacion' | 'liberacion' | 'duenoTrustline' | 'disputa' | 'resolucion'
 export interface RedPrueba { escrow?: string; dueno?: string; inquilino?: string; inquilinoPrueba?: boolean; firma?: 'cavos' | 'freighter'; usdcListo?: boolean; txs: Partial<Record<PasoRed, string>> }

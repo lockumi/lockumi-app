@@ -26,7 +26,17 @@ export function configSolo(e: Entorno) {
   const seed = e.LOCKUMI_DEMO_SEED!.trim()
   if (seed.length < 32) throw new ErrorTw(500, 'LOCKUMI_DEMO_SEED es demasiado corta.')
   const plataforma = Keypair.fromSecret(e.LOCKUMI_TW_PLATAFORMA_SECRET!.trim())
-  return { base, horizon, passphrase, llave: e.TRUSTLESS_WORK_API_KEY!.trim(), seed, plataforma, P: plataforma.publicKey() }
+  // Modo de dos personas (LOCKUMI_DOS_PERSONAS=1): la cuenta de la persona mediadora resuelve los reclamos (disputeResolver), como en
+  // api/_lib/tw.ts. Sin el interruptor, todo sigue igual que hoy: la plataforma es también la que resuelve.
+  let resolvedor = plataforma
+  if (e.LOCKUMI_DOS_PERSONAS === '1') {
+    const pub = e.LOCKUMI_TW_MEDIADOR_PUBLICA?.trim(), sec = e.LOCKUMI_TW_MEDIADOR_SECRET?.trim()
+    if (!pub || !G.test(pub)) throw new ErrorTw(503, 'Falta configurar en el servidor: LOCKUMI_TW_MEDIADOR_PUBLICA (cuenta G de la persona mediadora).')
+    if (!sec) throw new ErrorTw(503, 'Falta configurar en el servidor: LOCKUMI_TW_MEDIADOR_SECRET (la llave de esa misma cuenta).')
+    resolvedor = Keypair.fromSecret(sec)
+    if (resolvedor.publicKey() !== pub) throw new ErrorTw(500, 'La llave de la cuenta que resuelve disputas no coincide con LOCKUMI_TW_MEDIADOR_PUBLICA.')
+  }
+  return { base, horizon, passphrase, llave: e.TRUSTLESS_WORK_API_KEY!.trim(), seed, plataforma, P: plataforma.publicKey(), resolvedor, R: resolvedor.publicKey() }
 }
 export type ConfigSolo = ReturnType<typeof configSolo>
 
@@ -288,7 +298,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       const { r, tx } = await conReintento(() => enFila(c.P, async () => {
         const j = await tw(c, '/deployer/single-release', {
           signer: c.P, ...pub,
-          roles: { approver: dueno, serviceProvider: c.P, platformAddress: c.P, releaseSigner: c.P, disputeResolver: c.P, receiver: p.inquilino },
+          roles: { approver: dueno, serviceProvider: c.P, platformAddress: c.P, releaseSigner: c.P, disputeResolver: c.R, receiver: p.inquilino },
           amount: p.monto, platformFee: 0, trustline: { address: USDC.issuer, symbol: USDC.code },
         }, f)
         const t = leerTx(sinFirmar(j)); exigir(t.source === c.P, 502, 'La transacción no es de la cuenta de la plataforma.')
@@ -369,7 +379,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       const dueno = duenoDe(c, e.engagementId)
       return { tx: await firmarYEnviar(c, dueno, '/escrow/single-release/dispute-escrow', { contractId: p.escrow, signer: dueno.publicKey() }, p.escrow, ['dispute_escrow'], f) }
     }
-    case 'resolver': {    // reparto del reclamo (acuerdo o persona mediadora): resolve_dispute firmado por la plataforma (disputeResolver)
+    case 'resolver': {    // reparto del reclamo (acuerdo o persona mediadora): resolve_dispute firmado por quien resuelve (c.R: la plataforma, o la persona mediadora con LOCKUMI_DOS_PERSONAS=1)
       const e = await leerHasta(c, p.escrow, x => x.flags.disputed || x.flags.resolved, f, 6, opciones.espera); validarEscrow(c, e)
       if (e.flags.resolved) return { yaResuelto: true }
       exigir(e.flags.disputed, 409, 'Este depósito no tiene un reclamo abierto.')
@@ -377,7 +387,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       exigir(typeof p.alDueno === 'number' && Number.isFinite(p.alDueno) && p.alDueno >= 0 && p.alDueno <= saldo && Math.round(p.alDueno * 1e7) === p.alDueno * 1e7, 400, `El monto para el dueño tiene que estar entre 0 y ${saldo} USDC de prueba.`)
       const alInquilino = Math.round((saldo - p.alDueno) * 1e7) / 1e7
       const distributions = [{ address: e.roles.approver, amount: p.alDueno }, { address: e.roles.receiver, amount: alInquilino }].filter(d => d.amount > 0)
-      const tx = await firmarYEnviar(c, c.plataforma, '/escrow/single-release/resolve-dispute', { contractId: p.escrow, disputeResolver: c.P, distributions }, p.escrow, ['resolve_dispute'], f)
+      const tx = await firmarYEnviar(c, c.resolvedor, '/escrow/single-release/resolve-dispute', { contractId: p.escrow, disputeResolver: c.R, distributions }, p.escrow, ['resolve_dispute'], f)
       return { tx, alDueno: p.alDueno, alInquilino }
     }
   }

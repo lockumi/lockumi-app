@@ -1,6 +1,6 @@
 import { pruebaCompleta } from './prueba/interruptor'
 import { terminosActual } from './legal/documentos'
-import { modoServidor, modoSolo, modoPrueba, escrowReal } from './servidor/config'
+import { modoServidor, modoSolo, modoPrueba, escrowReal, dosPersonas } from './servidor/config'
 import { repositorio } from './servidor/repositorio'
 import { useSyncExternalStore } from 'react'
 import type { Acta, Alquiler, Rol } from './types'
@@ -67,9 +67,30 @@ export const store = {
   reiniciar() { datos = semilla(); localStorage.removeItem('lockumi.vista'); guardar() },
   subscribe(f: () => void) { subs.add(f); return () => { subs.delete(f) } },
 }
-export const useAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : store.subscribe, modoServidor ? repositorio.todos : store.todos)
-/** Alquiler por id desde el origen activo (servidor compartido o demo local). */
-export const obtener = (id: string) => modoServidor ? repositorio.obtener(id) : store.obtener(id)
+// Modo de dos personas (VITE_DOS_PERSONAS=1): la lista junta los alquileres de este navegador y los del servidor compartido.
+// El servidor solo se conecta si este aparato ya tiene una sesión (creó o aceptó una invitación) o cuando la crea: quien solo usa
+// el modo de una persona no abre ninguna sesión en el servidor.
+const SESION_SERVIDOR = 'lockumi.sesion-servidor'
+const tieneSesionServidor = () => { try { return !!localStorage.getItem(SESION_SERVIDOR) } catch { return false } }
+const conectores = new Set<() => void>()
+/** Llamar después de crear o aceptar una invitación: conecta el servidor a las pantallas abiertas. */
+export const activarServidor = () => conectores.forEach(f => f())
+let mezcla: { l: Alquiler[]; r: Alquiler[]; v: Alquiler[] } = { l: [], r: [], v: [] }
+const todosMezcla = () => {
+  const l = store.todos(), r = repositorio.todos()
+  if (l !== mezcla.l || r !== mezcla.r) mezcla = { l, r, v: r.length ? [...r, ...l] : l }
+  return mezcla.v
+}
+const subscribeMezcla = (f: () => void) => {
+  const bajaLocal = store.subscribe(f); let bajaServidor: (() => void) | null = null
+  const conectar = () => { if (!bajaServidor) bajaServidor = repositorio.subscribe(f) }
+  if (tieneSesionServidor()) conectar(); conectores.add(conectar)
+  return () => { bajaLocal(); bajaServidor?.(); conectores.delete(conectar) }
+}
+export const useAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : dosPersonas ? subscribeMezcla : store.subscribe,
+  modoServidor ? repositorio.todos : dosPersonas ? todosMezcla : store.todos)
+/** Alquiler por id desde su origen (servidor compartido o este navegador). */
+export const obtener = (id: string) => modoServidor ? repositorio.obtener(id) : (dosPersonas && repositorio.obtener(id)) || store.obtener(id)
 const KV = 'lockumi.vista'
 /** Rol real según el alquiler: quien lo creó es dueño; quien fue invitado, inquilino. */
 export const rolDe = (a: Alquiler, email?: string): Rol => a.miRol ?? (email && email.toLowerCase() === a.inquilinoEmail.toLowerCase() ? 'inquilino' : 'dueno')
