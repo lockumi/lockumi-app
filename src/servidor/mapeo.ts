@@ -36,7 +36,7 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string): 
     id: c.id, direccion: c.direccion, monto: Number(c.monto), moneda: 'USDC', inicio: c.inicio, fin: c.fin, reglas: c.reglas ?? [],
     duenoEmail: p('dueno')?.email_cavos ?? '', inquilinoEmail: p('inquilino')?.email_cavos ?? c.email_inquilino,
     inquilinoUnido: Boolean(p('inquilino')), miRol: mio, cuentas: { dueno: p('dueno')?.direccion_stellar ?? undefined, inquilino: p('inquilino')?.direccion_stellar ?? undefined },
-    estado: c.estado, rendimiento: false, escrowId: c.escrow_contract_id ?? undefined,
+    estado: c.estado, rendimiento: false, dosPersonas: true, escrowId: c.escrow_contract_id ?? undefined,
     contrato: { firmas: firmasDe(f.firmas, 'contrato') }, entrada: acta(f, 'entrada', url) ?? { firmas: {}, cuartos: [] }, salida: acta(f, 'salida', url),
     pago: pagoEv?.creado_en, ventanaInicio: c.ventana_inicio ?? undefined, ventanaSegundos: c.ventana_segundos, diasSimulados: 0,
     reclamo: f.reclamo ? { monto: Number(f.reclamo.monto), motivo: f.reclamo.motivo, fecha: f.reclamo.creado_en, respuesta: f.reclamo.respuesta ?? undefined,

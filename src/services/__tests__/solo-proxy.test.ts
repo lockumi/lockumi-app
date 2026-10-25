@@ -30,7 +30,7 @@ function simular(e: Escrow = escrow(), usdc: string | null = '5') {
     if (url.endsWith('approve-milestone')) return ok({ unsignedTransaction: xdrDe(String(cuerpo!.approver), 'approve_milestone').toXDR() })
     if (url.endsWith('release-funds')) return ok({ unsignedTransaction: xdrDe(P.publicKey(), 'release_funds').toXDR() })
     if (url.endsWith('dispute-escrow')) return ok({ unsignedTransaction: xdrDe(String(cuerpo!.signer), 'dispute_escrow').toXDR() })
-    if (url.endsWith('resolve-dispute')) return ok({ unsignedTransaction: xdrDe(P.publicKey(), 'resolve_dispute').toXDR() })
+    if (url.endsWith('resolve-dispute')) return ok({ unsignedTransaction: xdrDe(String(cuerpo!.disputeResolver), 'resolve_dispute').toXDR() })
     if (url.includes('horizon-testnet.stellar.org/accounts/')) return ok({ id: url.split('/').pop(), sequence: '1', balances: usdc === null ? [] : [{ asset_type: 'credit_alphanum4', asset_code: 'USDC', asset_issuer: USDC.issuer, balance: usdc }] })
     if (url.endsWith('/transactions')) return ok({ hash: 'ab'.repeat(32) })
     return new Response('no', { status: 404 })
@@ -262,5 +262,33 @@ describe('parte 2 · concurrencia (tx_bad_seq)', () => {
     expect(s.llamadas.filter(l => l.url.endsWith('release-funds')).length).toBe(2)   // la transacción se pidió de nuevo
     let n = 0; await expect(conReintento(async () => { n++; throw new Error('otro error') }, 1)).rejects.toThrow('otro error'); expect(n).toBe(1)
     n = 0; await expect(conReintento(async () => { n++; throw new Error('tx_bad_seq') }, 1, 3)).rejects.toThrow(); expect(n).toBe(3)
+  })
+})
+
+describe('modo con dos personas (LOCKUMI_DOS_PERSONAS=1): la persona mediadora resuelve los reclamos', () => {
+  const M = Keypair.random()
+  const ENV2: Entorno = { ...ENV, LOCKUMI_DOS_PERSONAS: '1', LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret() }
+  const enviadas = (s: ReturnType<typeof simular>) => s.llamadas.filter(l => l.url.endsWith('/helper/send-transaction')).map(l => TransactionBuilder.fromXDR(String(l.cuerpo!.signedXdr), Networks.TESTNET) as unknown as { source: string })
+  it('sin el interruptor, todo sigue igual: resuelve la plataforma', () => {
+    expect(configSolo(ENV).R).toBe(P.publicKey())
+    expect(configSolo({ ...ENV, LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret() }).R).toBe(P.publicKey())
+  })
+  it('con el interruptor, la cuenta que resuelve disputas es la de la persona mediadora', () => expect(configSolo(ENV2).R).toBe(M.publicKey()))
+  it('con el interruptor, faltar la cuenta o su llave lo dice claro', () => {
+    expect(() => configSolo({ ...ENV, LOCKUMI_DOS_PERSONAS: '1' })).toThrow(/LOCKUMI_TW_MEDIADOR_PUBLICA/)
+    expect(() => configSolo({ ...ENV, LOCKUMI_DOS_PERSONAS: '1', LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey() })).toThrow(/LOCKUMI_TW_MEDIADOR_SECRET/)
+    expect(() => configSolo({ ...ENV2, LOCKUMI_TW_MEDIADOR_SECRET: Keypair.random().secret() })).toThrow(/no coincide/)
+  })
+  it('el depósito nuevo nombra a la persona mediadora como disputeResolver', async () => {
+    const s = simular(); await atenderSolo(ENV2, { accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 2 } as never, '1.2.3.4', s.f, { espera: 0 })
+    const roles = s.llamadas.find(l => l.url.endsWith('/deployer/single-release'))!.cuerpo!.roles as Record<string, string>
+    expect(roles.disputeResolver).toBe(M.publicKey()); expect(roles.platformAddress).toBe(P.publicKey())
+  })
+  it('el reparto lo firma la persona mediadora', async () => {
+    const e = escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })
+    e.roles.disputeResolver = M.publicKey()
+    const s = simular(e); await atenderSolo(ENV2, { accion: 'resolver', escrow: ESC, alDueno: 0.4 } as never, '1.2.3.4', s.f, { espera: 0 })
+    expect(s.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!.disputeResolver).toBe(M.publicKey())
+    expect(enviadas(s).map(t => t.source)).toEqual([M.publicKey()])
   })
 })

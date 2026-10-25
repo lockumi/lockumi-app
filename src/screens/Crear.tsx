@@ -2,17 +2,17 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 import { DayPicker } from 'react-day-picker'
 import { es } from 'react-day-picker/locale'
 import 'react-day-picker/style.css'
-import { acciones } from '../acciones'
+import { acciones, accionesServidor } from '../acciones'
 import { cuentaPropia } from './Invitacion'
 import { ir } from '../router'
 import type { Usuario } from '../types'
 import { LogoAnimado } from '../LogoAnimado'
-import { modoSolo, modoPrueba, escrowReal } from '../servidor/config'
+import { modoSolo, modoPrueba, escrowReal as escrowRealApp, dosPersonas } from '../servidor/config'
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { SuscripcionB8, RendimientoB13 } from '../prueba/SuscripcionPC'
 import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
-import { store } from '../store'
+import { store, activarServidor } from '../store'
 import { modoServidor } from '../servidor/config'
 /** Primera letra en minúscula, sin tocar el resto («cuenta de Lockumi» conserva la L). */
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
@@ -132,14 +132,17 @@ export function Crear({ u }: { u: Usuario }) {
   const [info, setInfo] = useState<InfoClave | null>(null)
   const [anexo, setAnexo] = useState<ValorAnexo>({ acepta: false, reparaciones: [] })
   const [avisoFin, setAvisoFin] = useState('')
-  useEffect(() => { if (escrowReal) void hayFreighter().then(setFreighter) }, [])
+  // Modo de dos personas (VITE_DOS_PERSONAS=1): «Invitar a la otra persona» crea el alquiler en el servidor; tú quedas como dueño.
+  const [invitar, setInvitar] = useState(false)
+  const escrowReal = escrowRealApp && !invitar, prueba1 = modoPrueba && !invitar
+  useEffect(() => { if (escrowRealApp) void hayFreighter().then(setFreighter) }, [])
   const usar = async (firma: Firma) => {
     setConectando(firma); setErrCuenta('')
     try { const g = await conectar(firma); setPropia({ g, firma, saldo: await saldoPropio(g) }) }
     catch (e) { setErrCuenta(e instanceof Error ? e.message : 'No pudimos conectar tu cuenta. Vuelve a intentarlo.') }
     finally { setConectando(null) }
   }
-  const errores: Errores = modoPrueba ? (() => {
+  const errores: Errores = prueba1 ? (() => {
     const e = validarAlquiler({ ...f, email: 'inquilino@ejemplo.com' }, hoyISO()); delete e.email
     const m = montoNumero(f.monto)
     if (escrowReal && !e.monto && origen === 'lockumi' && !montoValido(m, TOPE_USDC)) e.monto = `Con «USDC de prueba de Lockumi» el depósito es de máximo ${TOPE_USDC} USDC de prueba (no es dinero real). Baja el monto a ${TOPE_USDC} o menos, o elige «Usar mi propio USDC de prueba».`
@@ -166,11 +169,14 @@ export function Crear({ u }: { u: Usuario }) {
     setOcupado(true)
     const m = montoNumero(f.monto)
     try {
-      const r = modoPrueba
+      const r = invitar
+        ? await accionesServidor.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: f.email.trim() }, u.email, await cuentaPropia())
+        : modoPrueba
         ? await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: u.email, ...(escrowReal && origen === 'propia' && propia && { propia: { g: propia.g, firma: propia.firma } }) }, DUENO_PRUEBA)
         : await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: f.email.trim() }, u.email, await cuentaPropia())
       // Prueba completa: registro del Anexo 6-A aceptado al crear (fecha y reparaciones de uso marcadas).
-      if (pruebaCompleta() && !modoServidor) store.cambiar(r.id, x => { x.anexo = registroAnexo(reparacionesDe(anexo)) }, 'Anexo 6-A aceptado')
+      if (invitar) activarServidor()
+      if (pruebaCompleta() && !modoServidor && !invitar) store.cambiar(r.id, x => { x.anexo = registroAnexo(reparacionesDe(anexo)) }, 'Anexo 6-A aceptado')
       avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))
       ir('/alquiler/' + r.id)
     } catch (e) { setOcupado(false); setErrSrv(e instanceof Error ? e.message : 'No pudimos crear el alquiler. Intenta de nuevo.') }
@@ -193,10 +199,15 @@ export function Crear({ u }: { u: Usuario }) {
 
     {/* Parte 4 (todavía no activa): tú eres el inquilino y el dueño es de prueba. «Soy dueño» e «Invitar» llegan después. */}
     {modoPrueba && <section className="glass na-p4" aria-label="Tu papel en esta prueba">
-      <div className="roles roles--ancho" role="group" aria-label="Tu papel"><button type="button" aria-pressed="true">Soy inquilino</button><button type="button" aria-pressed="false" disabled title="Pronto">Soy dueño</button></div>
+      <div className="roles roles--ancho" role="group" aria-label="Tu papel"><button type="button" aria-pressed={!invitar} onClick={dosPersonas ? () => setInvitar(false) : undefined}>Soy inquilino</button><button type="button" aria-pressed={invitar} disabled={!dosPersonas} title={dosPersonas ? undefined : 'Pronto'} onClick={() => setInvitar(true)}>Soy dueño</button></div>
       <div className="na-modo">
+        {dosPersonas ? <>
+          <button type="button" aria-pressed={!invitar} className={'na-modo__op' + (!invitar ? ' is-sel' : '')} onClick={() => setInvitar(false)}><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span>{!invitar && <span className="na-marca"><Ico n="check" /></span>}</button>
+          <button type="button" aria-pressed={invitar} className={'na-modo__op' + (invitar ? ' is-sel' : '')} onClick={() => setInvitar(true)}><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span>{invitar && <span className="na-marca"><Ico n="check" /></span>}</button>
+        </> : <>
         <div className="na-modo__op is-sel"><span className="na-modo__ico na-modo__ico--salvia"><Ico n="llave" /></span><span className="na-modo__txt">Simular con dueño de prueba</span><span className="na-marca"><Ico n="check" /></span></div>
         <div className="na-modo__op is-off" aria-disabled="true"><span className="na-modo__ico"><Ico n="enviar" /></span><span className="na-modo__txt">Invitar a la otra persona</span><span className="na-pronto">Pronto</span></div>
+        </>}
       </div>
     </section>}
 
@@ -261,7 +272,7 @@ export function Crear({ u }: { u: Usuario }) {
           <button type="button" className="na-mas" aria-label="Agregar regla" onClick={agregar}><Ico n="mas" /></button></div>
       </section>
 
-      {!modoPrueba && <section className="na-sec"><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
+      {!prueba1 && <section className="na-sec"><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
         <input id="f-email" type="email" value={f.email} onChange={e => poner('email', e.target.value)} onBlur={tocar('email')} placeholder="inquilino@correo.com" autoComplete="off" aria-invalid={!!ver('email')} aria-describedby={ver('email') ? 'f-email-err' : undefined} />
         {ver('email') && <small id="f-email-err" className="campo__error" role="alert">{ver('email')}</small>}</label></section>}
 
@@ -269,9 +280,9 @@ export function Crear({ u }: { u: Usuario }) {
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
       {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}
       {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
-      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta)}>{ocupado ? 'Creando…' : modoPrueba ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
+      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta)}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisar. Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
-      {modoPrueba ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
+      {prueba1 ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
         : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}
     </form>
 
