@@ -12,7 +12,7 @@ export const APROBADO_DUENO = 'El dueño aprobó en la cadena devolver el depós
 export const esDosPersonas = (a: Pick<Alquiler, 'dosPersonas'>) => pruebaCompleta() && a.dosPersonas === true
 
 // LEGAL: revisar · 6.5 a) y 5.3 d) (sección E) en la pantalla del dueño
-export const TEXTO_AUTO_DUENO = 'Si no apruebas ni reclamas antes de que venza tu plazo, el depósito se devuelve automáticamente: el 100 % al inquilino. No la decide una persona ni pasa a la Mediación Lockumi (demo).'
+export const TEXTO_AUTO_DUENO = 'Si no apruebas ni reclamas antes de que venza tu plazo, el depósito se devuelve automáticamente: el 100 % al inquilino, menos el 0,3 % de comisión de la red de prueba de Trustless Work. No la decide una persona ni pasa a la Mediación Lockumi (demo).'
 // LEGAL: revisar · 6.5 a) en la pantalla del inquilino
 export const TEXTO_AUTO_INQUILINO = 'Si el dueño no aprueba ni reclama antes de que venza su plazo, se te devuelve automáticamente el 100 % del depósito de prueba, menos el 0,3 % de comisión de la red de prueba de Trustless Work. No lo decide una persona.'
 // LEGAL: revisar · 5.3 d) (sección E), al terminar

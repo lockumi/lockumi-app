@@ -31,7 +31,7 @@ describe('paso 7 · monto real que recibe el inquilino', () => {
     expect(notaComisionAuto(800)).toBe('Llegaron 797,60 USDC de prueba: la red de prueba de Trustless Work descuenta el 0,3 % (2,40 USDC de prueba). El dueño y Lockumi no reciben nada.')
   })
   it('textos con la comisión y la 4.2 e) de Legal', () => {
-    expect(TEXTO_AUTO_INQUILINO).toContain('menos el 0,3 % de comisión de la red de prueba de Trustless Work')
+    for (const t of [TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO]) expect(t).toContain('menos el 0,3 % de comisión de la red de prueba de Trustless Work')
     expect(TEXTO_CERRADO_AUTO).toContain('menos el 0,3 % de comisión de la red de prueba de Trustless Work')
     expect(TERMINOS_42E).toContain('…entrega al inquilino el 100 % del saldo del depósito, menos solo la comisión de la red de prueba de Trustless Work. No puede entregar nada al dueño ni a Lockumi.'.slice(1))
   })
