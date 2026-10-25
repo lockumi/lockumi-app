@@ -9,6 +9,9 @@ import { modoPrueba } from '../servidor/config'
 import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
 import { DUENO_PRUEBA } from './Real'
+import { pruebaCompleta } from '../prueba/interruptor'
+import { versionAlquiler } from '../prueba/version'
+import { rutaTerminos } from '../legal/documentos'
 
 const ROLES: Rol[] = ['dueno', 'inquilino']
 const parte = (a: Alquiler, r: Rol) => r === 'dueno' ? (modoPrueba ? DUENO_PRUEBA : a.duenoEmail) : a.inquilinoEmail
@@ -57,6 +60,8 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       <h2 id={impresion ? undefined : 'ct-titulo'} className="ct__titulo">Contrato</h2>
       <p className="ct__estado"><span className={'ct__sello' + (firmado ? ' ct__sello--ok' : '')}>{firmado ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
         <span className="ct__ref">Referencia {a.id.slice(0, 8).toUpperCase()}</span></p>
+      {/* Paso 16: versión de los Términos de este alquiler (solo con el interruptor encendido). LEGAL: revisar */}
+      {pruebaCompleta() && <p className="ct__version">Términos y condiciones: <a href={rutaTerminos(versionAlquiler(a))} target="_blank" rel="noopener">versión {versionAlquiler(a)}</a></p>}
     </header>
 
     <section className="ct__sec"><h3>El alquiler</h3>

@@ -73,6 +73,8 @@ export interface Alquiler {
   /** Entrega registrada (fotos de salida confirmadas) y «Recibí la casa» del dueño. */
   entrega?: string; recibido?: string
   avisos?: Aviso[]
+  /** Paso 16: versión de los Términos del alquiler (sin dato: 1.6-demo) y aceptación de cada parte para pasar a la 1.7-demo. */
+  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string }
   /** Correos que escribió quien prueba para recibir los avisos (opcional). */
   correos?: Partial<Record<Rol, string>>
 }

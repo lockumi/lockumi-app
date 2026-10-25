@@ -905,3 +905,7 @@ html.sin-scroll{overflow:hidden}
 /* El botón en espera no usa [disabled] (aria-disabled): sin hover terracota mientras espera. */
 .envio .boton.envio__boton:hover{filter:none}
 .envio--t1 .boton.envio__boton:hover{background:var(--estado-curso-fondo)}.envio--t2 .boton.envio__boton:hover{background:var(--salvia)}.envio--t3 .boton.envio__boton:hover{background:var(--exito)}
+
+/* Paso 16: versión de los Términos en el contrato (solo con la prueba completa) */
+.ct__version{margin:6px 0 0;font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
+.ct__version a{color:inherit;text-decoration:underline}

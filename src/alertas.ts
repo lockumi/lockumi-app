@@ -1,4 +1,4 @@
-import { pruebaCompleta } from './prueba/interruptor'
+import { reglas17 } from './prueba/version'
 // Avisos emergentes después de cada paso del flujo: confirman qué pasó y dicen qué sigue.
 // Aviso v2 (toast): pila de hasta 3, el más nuevo al frente. Las pantallas llaman a `avisar`; <Alertas /> (en App) los muestra con <Tostada />.
 // Los textos con sentido legal están marcados con `// LEGAL: revisar` (pendientes de revisión de Legal).
@@ -147,7 +147,7 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       sigue: 'Tomar una foto de cada espacio, marcar la lista y confirmar.',
       linea: { et: 'Ahora:', texto: 'una foto de cada espacio' },   // LEGAL: revisado (24/10)
     }
-    case 'ventana_reclamo': if (pruebaCompleta()) return {   // LEGAL: revisar · prueba completa (B.4)
+    case 'ventana_reclamo': if (reglas17(ahora)) return {   // LEGAL: revisar · prueba completa (B.4)
       paso: 'salida-confirmada', titulo: 'Fotos de salida confirmadas',
       hecho: 'Los dos confirmaron las fotos de salida. Quedó registrada la entrega de la casa.',
       sigue: 'El plazo de 7 días naturales del dueño para reclamar empieza cuando toque «Recibí la casa» o, si no lo toca, 2 días después de la entrega.',
@@ -211,7 +211,7 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
   const f = firmas[ahora.estado as keyof typeof firmas]
   if (f) for (const p of ['inquilino', 'dueno'] as const) if (!f[1][p] && f[2][p]) return alertaFirma(f[0], p, rol, c)
   // Solo red de prueba: se adelantó el plazo para reclamos.
-  if (pruebaCompleta() && ahora.estado === 'ventana_reclamo' && ahora.diasSimulados > antes.diasSimulados) return {   // LEGAL: revisar · simulador de días
+  if (reglas17(ahora) && ahora.estado === 'ventana_reclamo' && ahora.diasSimulados > antes.diasSimulados) return {   // LEGAL: revisar · simulador de días
     paso: 'adelantar', titulo: 'Reloj de la demo adelantado',
     hecho: `Solo en la red de prueba: el reloj de la demo avanzó ${ahora.diasSimulados - antes.diasSimulados === 1 ? '1 día' : `${ahora.diasSimulados - antes.diasSimulados} días`}.`,
     linea: { et: 'Solo en la prueba:', texto: 'reloj de la demo adelantado' },   // LEGAL: revisar · prueba completa

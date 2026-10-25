@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import type { Alquiler } from '../../types'
 vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
 const { turno } = await import('../../flujo')
-const a = (estado: Alquiler['estado']) => ({ estado, contrato: { firmas: {} }, entrada: { firmas: {} } }) as unknown as Alquiler
+const a = (estado: Alquiler['estado']) => ({ estado, terminos: { version: '1.7-demo' }, contrato: { firmas: {} }, entrada: { firmas: {} } }) as unknown as Alquiler
 describe('turno con la prueba completa', () => {
   it('reclamo: responder rubro por rubro; si no hay acuerdo, propuesta automática y luego la mediación (demo)', () => {
     expect(turno(a('reclamo'), 'inquilino')).toEqual({ tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: 'Si no aceptas todo, verás una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' })

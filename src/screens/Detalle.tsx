@@ -22,6 +22,8 @@ import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alert
 import { EsperaPago } from '../EsperaPago'
 import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
+import { reglas17, puedeCambiarVersion } from '../prueba/version'
+import { CambioVersion } from '../prueba/CambioVersion'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -35,7 +37,7 @@ const Espera = ({ texto }: { texto: string }) => <div className="espera" role="s
 
 function Contrato({ a, rol }: P) {
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
-  if (pruebaCompleta() && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
+  if (reglas17(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
     return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
   return <div className="pila">
     <ContratoDoc a={a} />
@@ -314,9 +316,9 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
-    en_curso: pruebaCompleta() ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
-    ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
-    reclamo: pruebaCompleta() ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
+    en_curso: reglas17(a) ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
+    ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
+    reclamo: reglas17(a) ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>
@@ -342,6 +344,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
         </section>
         {escrowReal && <UltimoComprobante a={a} />}
         <div className="glass glass--fuerte tarjeta">{panel}</div>
+        {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
       <aside className="detalle__lado pila">
         {a.estado !== 'firmas' && escritorio && <ContratoCompacto a={a} como="tarjeta" />}

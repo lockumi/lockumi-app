@@ -4,10 +4,11 @@ import { useEffect } from 'react'
 import { store, ahoraDe } from '../store'
 import { modoServidor } from '../servidor/config'
 import { pruebaCompleta } from './interruptor'
+import { reglas17 } from './version'
 import { sincronizar, pendiente } from './dueno'
 
 export function sincronizarTodos() {
-  for (const a of store.todos()) if (pendiente(a, ahoraDe(a))) store.cambiar(a.id, x => { sincronizar(x, ahoraDe(x)) })
+  for (const a of store.todos()) if (reglas17(a) && pendiente(a, ahoraDe(a))) store.cambiar(a.id, x => { sincronizar(x, ahoraDe(x)) })
 }
 export function useSincronizarPrueba() {
   useEffect(() => {
