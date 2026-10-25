@@ -20,6 +20,8 @@ import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba } from '..
 import { adelantoPermitido } from '../../api/_lib/red'
 import { avisar, quitarAvisos, alertaPorCambio, alertaErrorRed, ERROR_RED, instantanea, type Instantanea } from '../alertas'
 import { EsperaPago } from '../EsperaPago'
+import { pruebaCompleta } from '../prueba/interruptor'
+import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
 type P = { a: Alquiler; rol: Rol }
@@ -43,6 +45,9 @@ const NOTA_TIEMPO = <p className="nota">En la red de prueba esto tarda entre 20 
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 function Contrato({ a, rol }: P) {
+  // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
+  if (pruebaCompleta() && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
+    return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
   return <div className="pila">
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}

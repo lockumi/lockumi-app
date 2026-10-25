@@ -1,0 +1,6 @@
+/* Prueba completa (detrás del interruptor: va en el CSS de la app, pero sus clases solo las usan las pantallas nuevas). Paleta de la marca: #FFB08A → #FF6B35 (hover #E8531F),
+   texto café #3D2A22. Nunca texto blanco sobre naranja. */
+.boton--pc{background:linear-gradient(135deg,#FFB08A,var(--coral));color:var(--cafe);box-shadow:0 6px 16px rgba(255,107,53,.22)}
+.boton--pc:hover{background:linear-gradient(135deg,#FFB08A,#E8531F)}
+.anexo__b{border:0;padding:0;margin:0;display:grid;gap:8px}
+.cuadro-real{border:1.5px dashed var(--borde);border-radius:var(--r-campo);padding:var(--s4);background:var(--alterna)}

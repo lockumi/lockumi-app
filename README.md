@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (PR 3, sin cambios visibles)**
+- Interruptor de la prueba completa (apagado en producción), Regla de propuesta automática opcional al firmar y Anexo 6-A al crear el alquiler. Solo se ven en builds con `VITE_PRUEBA_COMPLETA=1`. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+
 **24 de octubre de 2026 (PR 2, sin cambios visibles)**
 - Base de la prueba completa: plazos con feriados de Costa Rica, precios de referencia, textos de avisos y propuesta automática simulada. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 

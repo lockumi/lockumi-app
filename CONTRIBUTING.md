@@ -79,6 +79,8 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Primero el commit de pruebas (`test: …`) y después el de código (`feat: …`).
 - Todo lo visible de la 1.7-demo va detrás de `VITE_PRUEBA_COMPLETA` (apagado en producción) hasta el PR 10.
 - Textos de Legal con `// LEGAL: revisado (24/10)`; textos propios con `// LEGAL: revisar`.
+- Para ver las pantallas nuevas en local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 npm run dev`. En pruebas: `vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')`.
+- Colores nuevos solo en `src/prueba/prueba.css` (texto café sobre el degradado #FFB08A → #FF6B35; nunca texto blanco sobre naranja). Sin animaciones ni ilustraciones.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios
