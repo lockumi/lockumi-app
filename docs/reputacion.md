@@ -115,7 +115,7 @@ No insertar la fila de encendido hasta que la app escriba lk_reputacion_aceptaci
 Sección 6 (persona por correo, Legal 25/10 4:01 p. m.): `lk_aceptar_reputacion`, `lk_mis_datos_reputacion` y (4:22 p. m.) `lk_necesita_rep01`;
 ver «Persona por correo» y «Correo verificado» abajo. Desde las 4:23 p. m.: `lk_correos_verificados` + `lk_registrar_correo_verificado` (solo
 `service_role`) y columna `correo` en perfiles, consentimientos, eventos y revisiones (borrado y descarga por correo).
-pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`, `reputacion-encendido-sql.test.ts`, `reputacion-persona-sql.test.ts` y `reputacion-verificacion-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
+pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`, `reputacion-encendido-sql.test.ts`, `reputacion-persona-sql.test.ts`, `reputacion-verificacion-sql.test.ts`, `reputacion-lecturas-sql.test.ts` y `reputacion-ataques-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
 
 ## Pruebas
 
@@ -136,13 +136,16 @@ alquileres → en «Nuevo alquiler», la pantalla previa de siempre. La prueba s
 
 **Legal:** aprobó los textos de 6e9210a y los de la ronda de las 3:27 (marcas cambiadas a «LEGAL: revisado (25/10)»; en Términos 15.1 y el
 Aviso, «1.10‑demo» con guion que no se corta, U+2011). El 25/10 a las 4:23 p. m. aprobó los de la ronda de las 4:01 (marcas «revisado»;
-SQL «falta el texto» con su texto nuevo) y la línea de Privacidad de la persona por correo (publicada, con «solicitudes»). Llevan
-«LEGAL: revisar · ronda 25/10 4:23» solo `UI.errBorrado` (`textos.ts`) y `NO_SE_PUDO_VERIFICAR` (`api/_lib/cavos-token.ts`, la app no lo muestra).
+SQL «falta el texto» con su texto nuevo) y la línea de Privacidad de la persona por correo (publicada, con «solicitudes»). A las 4:41 p. m.
+aprobó `UI.errBorrado` (texto nuevo con «solicitud») y `NO_SE_PUDO_VERIFICAR` (marcas «revisado · ronda 4:41»). Llevan
+«LEGAL: revisar · ronda 25/10 4:45» los dos textos nuevos de esta ronda: el error del disparador `lk_participante_correo_verificado` (migración,
+solo con la reputación encendida) y `DEMASIADOS_INTENTOS` (`api/_lib/cavos-token.ts`, respuesta 429; la app no lo muestra).
 
 **Persona por correo (Legal, 25/10/2026 4:01 p. m.; implementado en la migración, NO aplicada):** `auth.uid()` es una sesión anónima por
 aparato (`repositorio.ts:16-21`). La persona es su correo normalizado (`trim` + minúsculas), tomado SOLO de lo que la app guarda con la
 sesión de Cavos: `lk_participantes.email_cavos`, `lk_reputacion_aceptaciones.correo` y `auth.users.email` (nunca un correo escrito a mano,
-como `lk_contratos.email_inquilino`). Funciones: `lk_correos_de`, `lk_uids_de_correo`, `lk_uids_de_persona`, `lk_correo_de_sesion` (el correo
+como `lk_contratos.email_inquilino`). **Desde la revisión de 96e931b (4:45 p. m.) solo cuenta `lk_correos_verificados`** (ver «Ataque con
+email_cavos» abajo). Funciones: `lk_correos_de`, `lk_uids_de_correo`, `lk_uids_de_persona`, `lk_correo_de_sesion` (el correo
 que manda la app tiene que estar ya vinculado a la sesión). Con eso: el bloqueo por borrado pendiente y la regla «sin REP-01 y sin alquileres»
 miran el correo de la fila nueva de `lk_participantes`; `lk_pedir_borrado_cuenta(p_correo)` deja un pedido por cada sesión de la persona y
 borra lo de todas (con un alquiler abierto en cualquiera, nada hasta que se cierra); `lk_borrar_cuentas_pedidas` borra lo de reputación de
@@ -157,12 +160,16 @@ entregó el proveedor al iniciar sesión (en `sessionStorage`, `cavos-kit:token:
 (`https://enclave.cavos.xyz`, llaves en `https://enclave.cavos.xyz/.well-known/jwks.json`; https://docs.cavos.xyz/docs/auth). La app
 (`src/reputacion/verificacion.ts`) lo lee con `authCavos()` y lo manda una vez por correo a `POST /api/verificar-correo` con su sesión de
 Supabase. `api/_lib/cavos-token.ts` valida con WebCrypto: firma con el JWKS del emisor (RS256 Google/Apple, ES256 enclave; `none`/HS256 nunca),
-emisor, audiencia (`CAVOS_AUDIENCIAS`), `exp`/`nbf` (±60 s), correo (`email_verified` en Google/Apple) y, solo entonces, llama
-`lk_registrar_correo_verificado(uid, correo, método)` con la clave de servicio. Hasta entonces el servidor RECHAZA (cierre por defecto):
+emisor, audiencia POR EMISOR (`CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL`), `exp`/`nbf` (±60 s), `iat` de 5 minutos o menos,
+el prefijo del App ID en el `nonce` (Google/Apple, `CAVOS_APP_ID`), correo (`email_verified` en Google/Apple; `false` se rechaza con cualquier
+emisor) y, solo entonces, llama `lk_registrar_correo_verificado(uid, correo, método, huella)` con la clave de servicio (huella = SHA-256 del
+token; un token se usa UNA vez). Hasta entonces el servidor RECHAZA (cierre por defecto):
 `lk_mis_datos_reputacion`, `lk_pedir_borrado_cuenta`, `lk_aceptar_reputacion` y `lk_necesita_rep01` solo aceptan un correo de
 `lk_correos_verificados` para ESA sesión; un `email_cavos` sin verificar no usa la aceptación de otra persona (regla del encendido).
-**Antes de usarlo:** poner en Vercel `CAVOS_AUDIENCIAS` (lista separada por comas) con el `aud` real de los tokens de Lockumi (client id de
-Google de Cavos, el de Apple y el del enclave): sacarlo de un token real; sin esa variable la función responde 503 y no se verifica nada.
+**Antes de usarlo (no lo hacemos nosotros, Vercel sin tocar):** poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE` y `CAVOS_AUD_EMAIL` (cada una,
+lista separada por comas) con el `aud` real de cada emisor, sacado de un token real, y `CAVOS_APP_ID` (el mismo valor público que
+`VITE_CAVOS_APP_ID`). Sin ninguna audiencia la función responde 503; sin la de un emisor, ese emisor no se verifica; sin `CAVOS_APP_ID`, Google
+y Apple no se verifican.
 Además `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (ya usadas por `/api/tw`).
 
 **Dos correos en un aparato (Legal, 4:23 p. m.):** cada fila de reputación lleva su `correo`; borrar y descargar filtran por CORREO
@@ -171,15 +178,80 @@ pendiente de A no bloquea a B, no oculta su perfil y un alquiler abierto de B no
 
 **Límites cerrados:** (1) correo verificado contra el token de Cavos (arriba); (4) la pantalla previa en otro aparato pregunta al servidor
 (`lk_necesita_rep01`; mientras tanto «Cargando…»; si falla, se muestra); (5) «Eliminar mi cuenta» manda `lk_pedir_borrado_cuenta` con el correo
-de la sesión de Cavos y, si falla, no borra nada en este aparato y muestra `UI.errBorrado`.
-**Límites que quedan:** (a) el token vive en `sessionStorage`: en una pestaña nueva no hay token y, si esa sesión de Supabase no se verificó
+de la sesión de Cavos y, si falla, no borra nada en este aparato y muestra `UI.errBorrado`; **(5/g, 4:41 p. m.) lecturas por el correo
+verificado ACTIVO:** las políticas RLS de lectura de las seis tablas son `usuario = auth.uid() and lk_fila_de_mi_correo(correo)` y las
+funciones (`lk_mis_datos_reputacion`, `lk_necesita_rep01`, `lk_pedir_borrado_cuenta`, `lk_aceptar_reputacion`) solo aceptan
+`lk_correo_activo(auth.uid())`, el ÚLTIMO correo que esa sesión verificó. Cambiar de persona en el aparato = volver a entrar = verificar ese
+correo (la app vuelve a verificar al cambiar de correo, `verificacion.ts`). Prueba: `reputacion-lecturas-sql.test.ts` (A y B en el mismo
+aparato: ninguno ve filas del otro).
+
+**Ataque con email_cavos (Legal, revisión de 96e931b, 4:45 p. m., BLOQUEANTE 1; migración NO aplicada):** una sesión atacante podía crear
+un alquiler `en_curso` con `email_cavos` = correo de la víctima: bloqueaba su borrado para siempre (fecha nula) y metía filas en su descarga.
+Ahora la persona sale SOLO de `lk_correos_verificados`: `lk_correos_de`, `lk_uids_de_correo`, `lk_persona_tiene_alquiler_abierto`,
+`lk_rep_fila_correo` (el correo de la fila) y `lk_rep01_pendiente` ignoran un `email_cavos` que esa sesión no verificó. Además, con la
+reputación ENCENDIDA (fila en `lk_reputacion_encendido`), el disparador `lk_participante_correo_verificado` (BEFORE INSERT en
+`lk_participantes`) exige que `p_email_cavos` esté verificado para `auth.uid()`; si no: «No pudimos confirmar el correo de tu cuenta. Sal de
+Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.». Prueba: `reputacion-ataques-sql.test.ts` (reproduce el ataque).
+**Escenario C (PR #22):** `lk_crear_contrato`, `lk_crear_contrato_invitando` y `lk_aceptar_invitacion` (producción) NO se reescriben: el
+disparador las cubre a las tres porque las tres insertan en `lk_participantes` con `usuario = auth.uid()`. Con la reputación apagada no cambia
+nada para C (compatibilidad). Encendida, crear o aceptar exige que la sesión haya verificado su correo, cosa que hace la puerta de reputación
+justo después del login (`Pantallas.tsx`, `useRep01Servidor` → `asegurarCorreo`). Si PR #22 redefine esas funciones, el disparador sigue
+valiendo. Riesgo: si al encender una sesión no verificó en los 5 minutos del login, no puede crear ni aceptar hasta volver a entrar (el texto
+lo dice).
+
+**Reuso del token (Legal, 4:45 p. m., BLOQUEANTE 2):** `iat` de 5 minutos o menos (como exige el enclave de Cavos); la huella SHA-256 del token
+va a `lk_tokens_usados` (sin acceso de la app) y la segunda vez se rechaza (409 → 403), aunque sea otra sesión; la app no reenvía un token que
+ya mandó. Audiencias separadas por emisor. Llaves del JWKS solo con `use = "sig"` y el `alg` del emisor (los tres JWKS publican `use` y `alg`).
+Un `kid` desconocido vuelve a leer el JWKS como mucho una vez por minuto. Límite de intentos en `/api/verificar-correo`
+(`lk_intento_verificacion`, compartido entre instancias): 5 cada 10 minutos por sesión y 30 cada 10 minutos por IP (se guarda la huella de la
+IP, nunca la IP); si se pasa: 429 con `DEMASIADOS_INTENTOS` y no se lee el JWKS; si la base no responde, 503 (cierre por defecto).
+`search_path = ''` también en `lk_de_la_persona`, `lk_pascua`, `lk_es_feriado_cr` y `lk_fecha_limite_borrado`.
+
+**Cuánto dura cada token (para el `iat` de 5 minutos):**
+- Google (id_token de «Sign in with Google»): 1 hora. «It is one hour for the ID token obtained from Sign In With Google»
+  (https://developers.google.com/identity/gsi/web/reference/js-reference, campo `exp`).
+- Apple (identity token): Apple solo dice que hay que comprobar que no pasó `exp`
+  (https://developer.apple.com/documentation/signinwithapple/verifying-a-user). Observado por terceros: `exp - iat` = 10 minutos
+  (https://blog.curtisherbert.com/so-theyve-signed-in-with-apple-now-what/). No es documentación de Apple.
+- Cavos, código por correo: el CÓDIGO vence a los 5 minutos y admite 3 intentos (https://docs.cavos.xyz/docs/auth). La duración del JWT del
+  enclave NO está documentada: hay que medir `exp - iat` en un token real (lista de abajo).
+Con cualquiera de los tres, Lockumi solo acepta el token en sus primeros 5 minutos (y una sola vez).
+
+**El nonce NO se verifica del todo (riesgo residual aceptado para la demo):** Cavos arma el nonce de Google/Apple como
+`<app id>.<BASE64URL(SHA-256(secreto del login))>` (https://docs.cavos.xyz/llms-full.txt; `@cavos/kit` 0.4.2,
+`dist/chunk-GD4BWPID.mjs:94-101` y `dist/chunk-7PFB7IVG.mjs:423`). El servidor exige el prefijo `CAVOS_APP_ID.` (el token salió de un login de
+Lockumi) pero NO puede comprobar la parte del secreto, que queda en el cliente. El nonce del código por correo no lleva App ID (el kit manda
+solo el hash del secreto), así que en ese emisor no se comprueba nada del nonce. Un token robado en sus primeros 5 minutos y antes de que la app
+lo use serviría una vez.
+
+**¿Lockumi tiene un `aud` propio con Cavos? NO (investigado 25/10, 4:45–5:00 p. m.):** con el login alojado de Cavos (el que usa Lockumi:
+`oauthUrl` del kit va a `/api/oauth/v2/{google|apple}` de Cavos con `app_id`), el cliente OAuth de Google/Apple es el de Cavos, compartido por
+todas sus apps: «Register your OAuth client ID … The enclave then accepts tokens minted for your client instead of only Cavos's»
+(https://docs.cavos.xyz/docs/hardware-isolated-recovery), y eso es solo para quien trae su propio login. El código por correo tampoco tiene un
+client id por app. Entonces un token de Google/Apple de OTRA app de Cavos tiene el mismo `aud`; lo que lo separa es el App ID del nonce (arriba).
+**Por eso borrar y descargar necesitan un segundo factor** (código que el servidor manda a ese correo): diseño abajo, SIN programar su pantalla.
+
+**Segundo factor para «Eliminar mi cuenta» y «Descargar mis datos» (diseño para aprobar, NO programado):** imágenes antes/después en
+`prueba-completa/capturas/paso19-reputacion/segundo-factor/` (ver su `cambios.md`). Un paso por pantalla: (1) la pantalla de siempre con su
+botón; (2) «Te enviamos un código» al correo de la cuenta (6 dígitos, vale 10 minutos, 5 intentos), con «Reenviar código» (tras 60 s) y
+«Volver»; (3) al confirmar, lo de siempre (pedido enviado / descarga). Servidor: `lk_pedir_codigo(p_correo, p_accion)` (solo el correo
+activo; guarda la huella del código; correo con Resend, como REP-12) y `lk_pedir_borrado_cuenta` / `lk_mis_datos_reputacion` con
+`p_codigo`. Estimación: 1 a 1,5 días de una persona (RPC y correo ~0,5 d, pantallas ~0,25 d, pruebas SQL/API/E2E ~0,5 d, textos con Legal).
+**Límites que quedan** (la (g) quedó cerrada a las 4:41 p. m.)**:** (a) el token vive en `sessionStorage`: en una pestaña nueva no hay token y, si esa sesión de Supabase no se verificó
 antes, el servidor rechaza hasta volver a entrar. (b) El código por correo: si el JWT del enclave no trae `email`, no se verifica (cierre por
-defecto); confirmarlo con un token real. (c) El `aud` no está documentado por Cavos: `CAVOS_AUDIENCIAS` sale de un token real. (d) El servidor
-no puede comprobar el `nonce` (lo ata al secreto del login, que queda en el cliente): un token robado y vigente serviría para verificar ese
-correo hasta que vence. (e) El login simulado (`modoReal` apagado) no tiene token: en modo servidor sin Cavos real todo se rechaza. (f) Filas
-sin correo (anteriores a esta ronda) en una sesión con dos correos no se borran con ninguno de los dos. (g) Las políticas RLS de lectura siguen
-por sesión (`usuario = auth.uid()`): en un aparato compartido, las dos personas pueden leer las filas de esa sesión. (2) Una sesión sin
+defecto); confirmarlo con un token real. (c) El `aud` no está documentado por Cavos: cada `CAVOS_AUD_*` sale de un token real, y no es
+propio de Lockumi (segundo factor, arriba). (d) El servidor no puede comprobar la parte secreta del `nonce`: un token robado en sus primeros
+5 minutos, antes de que la app lo use, serviría UNA vez. (e) El login simulado (`modoReal` apagado) no tiene token: en modo servidor sin Cavos real todo se rechaza. (f) Filas
+sin correo (anteriores a esta ronda) en una sesión con dos correos no se borran con ninguno de los dos. (g) Cerrada (lecturas por el correo
+activo). (h) Con un token ya usado (p. ej. al recargar), la app no vuelve a verificar: el servidor usa lo que esa sesión ya verificó. (2) Una sesión sin
 alquileres ni aceptación no tiene correo conocido hasta que se verifica.
+**Antes de encender (lista):**
+- Con un token REAL del código por correo de Cavos: confirmar que trae `email`. Si no lo trae, ese método de entrada NO puede aceptar
+  REP-01 (el servidor no tiene correo que verificar). Medir también su `exp - iat` y anotarlo arriba.
+- Con tokens reales de Google y Apple: confirmar el formato del `nonce` (`<app id>.<hash>`) y el `aud` de cada emisor.
+- Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros).
+- Decidir el segundo factor (imágenes en `segundo-factor/`) antes de dejar borrar y descargar en producción.
+
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
 anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
