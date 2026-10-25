@@ -2,6 +2,9 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## PR 5 · paso 9 (24 oct 2026): reclamo por rubros, propuesta automática simulada y regla del silencio, sin cambios visibles
+- Detrás de `VITE_PRUEBA_COMPLETA`. Lógica pura en `src/prueba/reclamos.ts`, acciones `reclamarRubros`, `responderRubros`, `votarPropuesta` y `aplicarSilencio`, pantallas en `src/prueba/ReclamoPC.tsx`. Ver docs/prueba-completa.md.
+
 ## PR 4 (24 oct 2026): flujo del dueño, avisos 1/4/6, contador B.9 y simulador de días, sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. Ver docs/prueba-completa.md.
 

@@ -51,3 +51,11 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. «Todo bien, devolver» (en el aviso o en la pantalla) **abre la confirmación** B.4; «Sí, devolver todo» devuelve todo ya (`via: 'devuelto'`). Al vencer sin reclamo se devuelve todo (`via: 'automatico'`).
 6. **Simulador de días** (solo red de prueba): «Avanzar 1 día» e «Ir al final del plazo». Adelanta el reloj de la demo del alquiler (`diasSimulados`); los avisos de esos días salen en ese momento. La app los entrega cada 30 s y cada vez que cambia algo, mientras está abierta (`useSincronizarPrueba` en `App.tsx`).
 - `useProceso` (botones de red con avance y error) se movió sin cambios a `src/proceso.tsx`.
+
+## Reclamo por rubros, propuesta y silencio (PR 5, paso 9)
+1. En el plazo, «Reclamar» abre el **formulario por rubros** (`FormRubros`): rubro de la tabla de precios (u «Otro rubro»), cantidad, motivo de la lista cerrada (6.2), espacio del acta de entrada, descripción, fotos de salida (o una de ejemplo en la demo) y factura opcional. Muestra el cálculo de cada rubro, si faltan pruebas (6.4.1) y el total (nunca más que el depósito).
+2. «Enviar reclamo» → `acciones.reclamarRubros`: primero la disputa en la cuenta segura, después `nuevoReclamo` (estado `reclamo`, `entregado` = ahora). El aviso del día 1 sale en ese momento y empieza el plazo de 7 días naturales del inquilino (con domingos y feriados).
+3. El inquilino ve el contador B.9, los rubros con fotos de antes y después, y responde **rubro por rubro** (acepta, o no acepta con una factura o cotización opcional de un comercio inscrito). Abrir la pantalla cuenta como apertura (`pantallaAbierta`).
+4. Si acepta todo → reparto por lo reclamado (`via: 'acuerdo'`). Si no → **propuesta automática simulada** (B.6, sin inteligencia artificial; con cotización más baja usa el punto medio). Se aplica solo si **los dos** la aceptan; si uno no, pasa a la Mediación Lockumi (demo).
+5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
+6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
