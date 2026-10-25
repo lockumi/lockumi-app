@@ -2,7 +2,7 @@
 // (lunes a viernes, sin los feriados de Costa Rica). Al eliminarla, el perfil de reputación desaparece.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { feriadosCR, esDiaHabilCR, fechaLimiteBorrado, pedirBorrado, solicitudBorrado, ejecutarBorrados, perfilDisponible, DIAS_HABILES_BORRADO } from '../borrado'
-import { guardarDatos, aceptar, leer, activa } from '../consentimiento'
+import { guardarDatos, aceptarRep01, leer, aceptoRep01 } from '../consentimiento'
 
 const E = 'demo@lockumi.com'
 beforeEach(() => { const m = new Map<string, string>()
@@ -48,15 +48,15 @@ describe('pedir el borrado (demo en este navegador)', () => {
     expect(solicitudBorrado(E)).toEqual(s)
   })
   it('desde el pedido, el perfil de reputación ya no se muestra', () => {
-    guardarDatos(E, 'Laura V.', 'Escazú'); aceptar(E, 'dueno', 'perfil', ['a', 'b'])
+    guardarDatos(E, 'Laura V.', 'Escazú'); aceptarRep01(E, ['a', 'b'])
     expect(perfilDisponible(E)).toBe(true)
     pedirBorrado(E, '2026-10-25T20:00:00Z'); expect(perfilDisponible(E)).toBe(false)
   })
   it('el borrado programado elimina los datos de reputación antes del límite y deja constancia', () => {
-    guardarDatos(E, 'Laura V.', 'Escazú'); aceptar(E, 'dueno', 'perfil', ['a', 'b'])
+    guardarDatos(E, 'Laura V.', 'Escazú'); aceptarRep01(E, ['a', 'b'])
     pedirBorrado(E, '2026-10-25T20:00:00Z')
     expect(ejecutarBorrados(Date.parse('2026-10-25T20:30:00Z'))).toEqual([E])
-    expect(leer(E).nombre).toBeUndefined(); expect(activa(leer(E), 'dueno', 'perfil')).toBe(false)
+    expect(leer(E).nombre).toBeUndefined(); expect(aceptoRep01(E)).toBe(false)
     expect(solicitudBorrado(E)?.hecho).toBe('2026-10-25T20:30:00.000Z')
     expect(ejecutarBorrados(Date.parse('2026-10-26T20:30:00Z'))).toEqual([])   // no se repite
   })

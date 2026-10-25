@@ -1,45 +1,52 @@
-// Paso 19 · Registro de consentimientos (C.1 y C.8): una casilla por opción y por papel, sin marcar, con versión, fecha y texto.
+// Paso 19 · Registro de consentimientos (legal/reputacion-textos-para-producto.md, regla 5 y REP-01): una sola aceptación, en una pantalla
+// previa a crear la cuenta, con versión, fecha, hora y texto (Ley 8968). Las vitrinas (REP-06) son casillas opcionales por papel.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as modulo from '../consentimiento'
-import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo, aceptoReputacion } from '../consentimiento'
+import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo, aceptarRep01, aceptoRep01, perfilCompleto,
+  aceptarPrevia, previa, vincularPrevia } from '../consentimiento'
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
 beforeEach(() => { const m = new Map<string, string>()
-  vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() }) })
-
-describe('consentimientos', () => {
-  it('todo empieza apagado, para los dos papeles', () => {
-    const s = leer(E)
-    for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['perfil', 'destacados', 'nuevos'] as const) expect(activa(s, rol, o)).toBe(false)
+  vi.describe('REP-01: aceptación previa a crear la cuenta', () => {
+  it('todo empieza sin aceptar', () => {
+    expect(aceptoRep01(E)).toBe(false); expect(previa()).toBeNull()
+    for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['destacados', 'nuevos'] as const) expect(activa(leer(E), rol, o)).toBe(false)
   })
-  it('el perfil de dueño y el de inquilino tienen casillas separadas', () => {
-    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
-    expect(activa(leer(E), 'dueno', 'perfil')).toBe(true); expect(activa(leer(E), 'inquilino', 'perfil')).toBe(false)
+  it('guarda la versión, la fecha, la hora (Costa Rica) y el texto aceptado', () => {
+    aceptarRep01(E, ['Entiendo…', 'Confirmo que soy mayor de 18 años.'], F)
+    expect(leer(E).rep01).toEqual({ version: VERSION_TEXTOS, fecha: F, hora: '10:00', texto: ['Entiendo…', 'Confirmo que soy mayor de 18 años.'] })
+    expect(aceptoRep01(E)).toBe(true)
   })
-  it('guarda la versión, la fecha y el texto aceptado', () => {
-    aceptar(E, 'inquilino', 'perfil', ['Confirmo…', 'Entiendo…'], F)
-    expect(leer(E).roles.inquilino.perfil).toEqual({ version: VERSION_TEXTOS, fecha: F, texto: ['Confirmo…', 'Entiendo…'] })
+  it('antes de tener cuenta se guarda en este navegador y se pasa a la cuenta al entrar (una sola vez)', () => {
+    aceptarPrevia(['Entiendo…', 'Confirmo…'], F); expect(previa()?.hora).toBe('10:00')
+    vincularPrevia(E); expect(aceptoRep01(E)).toBe(true); expect(leer(E).rep01?.fecha).toBe(F); expect(previa()).toBeNull()
+    vincularPrevia('otra@x.cr'); expect(aceptoRep01('otra@x.cr')).toBe(false)
   })
-  it('no se puede activar Destacados ni Nuevos sin el perfil público', () => {
-    for (const o of ['destacados', 'nuevos'] as const) expect(() => aceptar(E, 'dueno', o, ['x'], F)).toThrow()
+  it('una cuenta que ya aceptó no cambia su registro', () => {
+    aceptarRep01(E, ['a'], F); aceptarPrevia(['b'], '2026-11-17T16:00:00.000Z'); vincularPrevia(E)
+    expect(leer(E).rep01?.texto).toEqual(['a'])
   })
-  it('no hay opción «Mostrar mi puntaje» (se muestra siempre desde el 3.er alquiler cerrado)', () => {
-    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
+  it('el perfil queda completo con REP-01, el nombre visible y el cantón', () => {
+    aceptarRep01(E, ['a'], F); expect(perfilCompleto(E)).toBe(false)
+    guardarDatos(E, 'Laura V.', 'Escazú'); expect(perfilCompleto(E)).toBe(true)
+  })
+  it('las vitrinas son opcionales, por papel, y necesitan REP-01', () => {
+    expect(() => aceptar(E, 'dueno', 'destacados', ['x'], F)).toThrow()
+    aceptarRep01(E, ['a'], F); aceptar(E, 'dueno', 'destacados', ['x'], F)
+    expect(activa(leer(E), 'dueno', 'destacados')).toBe(true); expect(activa(leer(E), 'inquilino', 'destacados')).toBe(false)
     expect(() => aceptar(E, 'dueno', 'puntaje' as never, ['x'], F)).toThrow()
   })
-  it('OBLIGATORIA (decisión de Katherine, 2:24 p. m.): para usar Lockumi hacen falta nombre, cantón y la aceptación de los DOS papeles', () => {
-    expect(aceptoReputacion(E)).toBe(false)
-    guardarDatos(E, 'Laura V.', 'Escazú'); expect(aceptoReputacion(E)).toBe(false)
-    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F); expect(aceptoReputacion(E)).toBe(false)
-    aceptar(E, 'inquilino', 'perfil', ['a', 'b'], F); expect(aceptoReputacion(E)).toBe(true)
-    borrarTodo(E); expect(aceptoReputacion(E)).toBe(false)
-  })
-  it('no hay «Dejar de mostrar»: el perfil queda fijo y solo desaparece al eliminar la cuenta (decisión del 25/10/2026)', () => {
-    expect(Object.keys(modulo).filter(k => /dejar|retirar|ocultar/i.test(k))).toEqual([])
-    guardarDatos(E, 'Laura V.', 'Escazú'); aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
+  it('no hay «Dejar de mostrar» ni «Mostrar mi puntaje»: el perfil queda fijo y solo desaparece al eliminar la cuenta', () => {
+    expect(Object.keys(modulo).filter(k => /dejar|retirar|ocultar|mostrar/i.test(k))).toEqual([])
+    guardarDatos(E, 'Laura V.', 'Escazú'); aceptarRep01(E, ['a'], F)
     borrarTodo(E); expect(leer(E)).toEqual({ roles: { dueno: {}, inquilino: {} } })
   })
   it('se guarda por cuenta (sin importar mayúsculas)', () => {
+    guardarDatos(E, 'Laura V.', 'Escazú'); expect(leer('demo@lockumi.com').canton).toBe('Escazú'); expect(leer('otra@x.cr').canton).toBeUndefined()
+  })
+})
+
+da por cuenta (sin importar mayúsculas)', () => {
     guardarDatos(E, 'Laura V.', 'Escazú'); expect(leer('demo@lockumi.com').canton).toBe('Escazú'); expect(leer('otra@x.cr').canton).toBeUndefined()
   })
 })
