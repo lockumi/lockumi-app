@@ -77,3 +77,5 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   casilla dentro de cada función nueva. Un alquiler firmado sigue con su versión salvo que los dos acepten.
 - **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b): primero el párrafo exacto de Legal y, después, sin cambios, la b) de antes (registro en la red de prueba, «simulados», «Nada de esto tiene efecto legal»; Legal, 25/10, 1:24 a. m.)
   (fase 2, la mediación no decide, excepciones 5.3 d y 6.5.1). Sin dos personas (A y B), la b) no cambia. Prueba: `escenario-c.test.ts`.
+
+- **Regla 6.5.1 en dos personas (C), opción 1 de Legal (25/10, 1:50 a. m.):** el texto de 6.4.1 y 6.5.1 no cambia, pero en los alquileres de dos personas la regla nunca se aplica sola por ahora: si el inquilino no responde, el servidor pasa el caso a la mediación con el motivo «pruebas incompletas (6.4.1)», sin tope ni recorte del 30 % y sin pago parcial. Solo pagan el acuerdo, la mediación con las dos aceptaciones y la devolución del 100 % si el dueño no reclama (`20261025040000_silencio_dos_personas.sql`, `/api/tw` «repartir»).

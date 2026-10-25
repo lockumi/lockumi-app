@@ -7,6 +7,7 @@ import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 import type { Alquiler, Foto, Rol } from '../types'
 import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS } from './config'
 import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
+import type { Aceptacion } from './aceptaciones'
 
 export class ErrorServidor extends Error {}
 let cliente: Promise<SupabaseClient> | null = null
@@ -135,6 +136,12 @@ export const servidor = {
   abrirAvisoReclamo: (id: string) => tras(rpc('lk_abrir_aviso_reclamo', { p_contrato: id })),
   /** 6.5 c: vencido el plazo del inquilino sin respuesta, el servidor pasa el caso a la mediación (en dos personas la 6.5.1 no se aplica sola). */
   aplicarSilencio: (id: string) => tras(rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
+  /** PR #22: lo que aceptó cada parte en la mediación (RLS: solo los participantes del alquiler). */
+  async aceptaciones(id: string): Promise<Aceptacion[]> {
+    await sesion(); const { data, error } = await (await supabase()).from('lk_aceptaciones_mediacion').select('rol, monto_dueno, aceptado_en').eq('contrato_id', id)
+    if (error) throw new ErrorServidor(mensajeServidor(error))
+    return ((data ?? []) as { rol: Rol; monto_dueno: string | number; aceptado_en: string }[]).map(f => ({ rol: f.rol, montoDueno: Number(f.monto_dueno), fecha: f.aceptado_en }))
+  },
   esMediador: () => rpc<boolean>('lk_es_mediador', {}),
   registrarLiquidacion: (id: string, tx: string) => tras(rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }

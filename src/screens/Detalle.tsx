@@ -8,6 +8,7 @@ import { abreviar } from '../services/billetera'
 import { PagoReal, CierreReal, Comprobantes, Cuentas, UltimoComprobante, DetalleSolo, VerTx } from './Real'
 import { esHash } from '../services/comprobantes'
 import { servidor } from '../servidor/repositorio'
+import { estadoAceptaciones, type Aceptacion } from '../servidor/aceptaciones'
 import { modoReal } from '../services/auth'
 import { NOMBRE_ROL, type Alquiler, type Rol, type Foto, type Usuario } from '../types'
 import { fotoEjemplo } from '../demoFotos'
@@ -204,7 +205,7 @@ function Evidencia({ a }: { a: Alquiler }) {
 function Reclamo({ a, rol }: P) {
   const { solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal, servidor: modoServidor } = modoDe(a)
   const r = a.reclamo!; const p = useProceso()
-  // B2 (dos personas): el inquilino deja registro de que abrió el reclamo (6.5 b) y, vencido su plazo, el servidor aplica 6.5 c / 6.5.1.
+  // B2 (dos personas): el inquilino deja registro de que abrió el reclamo (6.5 b) y, vencido su plazo, el servidor lo pasa a la mediación (6.5 c; en dos personas la 6.5.1 no se aplica sola).
   useEffect(() => { if (!modoServidor) return
     void (async () => { try { if (rol === 'inquilino') await acciones.abrirAvisoReclamo!(a); await acciones.aplicarSilencio!(a) } catch { /* se reintenta al volver a abrir */ } })()
   }, [modoServidor, rol, a.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -229,8 +230,12 @@ function Mediacion({ a, rol }: P) {
   const [mediador, setMediador] = useState(!modoServidor)
   useEffect(() => { if (modoServidor) servidor.esMediador().then(setMediador).catch(() => {}) }, [modoServidor])
   const decidir = () => p.correr(av => acciones.decidir(a, aDueno, undefined, av))
-  const [aceptado, setAceptado] = useState<number | null>(null)
-  const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); setAceptado(aDueno) })
+  // PR #22 (dos personas): estado de lo que aceptó cada parte; se relee cada 8 s, como el resto del alquiler.
+  const [filas, setFilas] = useState<Aceptacion[]>([])
+  const leer = () => servidor.aceptaciones(a.id).then(setFilas).catch(() => {})
+  useEffect(() => { if (!modoServidor || mediador) return; void leer(); const t = setInterval(() => void leer(), 8000); return () => clearInterval(t) }, [modoServidor, mediador, a.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const est = estadoAceptaciones(rol, filas, a.monto)
+  const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
   return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
@@ -245,7 +250,7 @@ function Mediacion({ a, rol }: P) {
       <label className="campo"><span>Reparto que aceptas: {usd(aDueno)} para el dueño · {usd(a.monto - aDueno)} para el inquilino</span>
         <input type="range" min={0} max={r.monto} step={0.01} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
       <button type="button" className="boton boton--primario boton--ancho" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto(rol === 'dueno' ? 'Acepto este reparto (dueño)' : 'Acepto este reparto (inquilino)')}</button>
-      {aceptado !== null && <p className="nota" role="status">Aceptaste {usd(aceptado)} para el dueño. Se cierra cuando la otra parte acepte el mismo reparto.</p>}
+      <p className="nota" role="status">{est.mia !== null ? `Aceptaste ${usd(est.mia)} para el dueño. ` : ''}{est.texto}</p>
       {p.error}</div>}
     {mediador && (!panel ? <button type="button" className={modoVideo ? 'boton boton--primario boton--ancho boton--grande' : 'enlace'} onClick={() => setPanel(true)}>{modoServidor ? 'Registrar el acuerdo' : modoVideo ? 'Resolver el reclamo (simulación)' : 'Demo: registrar el acuerdo'}</button>
       : <div className="mediador pila"><label className="campo"><span>Para el dueño: {usd(aDueno)} · para el inquilino: {usd(a.monto - aDueno)}</span>
