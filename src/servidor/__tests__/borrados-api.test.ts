@@ -16,11 +16,12 @@ function falso(respuestas: Record<string, unknown>, fallar: string[] = []) {
 
 describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arreglos 5 y 6)', () => {
   it('borra los correos de invitaciones vencidas, las fotos del bucket lk-fotos y marca la mediación como borrada', async () => {
-    const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
+    const f = falso({ '/rpc/lk_vencimientos': { automatico: 1, regla_651: 0, mediacion: 1 }, '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
     const r = await ejecutarBorrados(ENV, f)
-    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [] })
+    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, regla_651: 0, mediacion: 1 } })
     const llamadas = f.mock.calls.map(([u, i]) => [u.replace(URL_SB, ''), i.method, i.body ? JSON.parse(String(i.body)) : null])
     expect(llamadas).toEqual([
+      ['/rest/v1/rpc/lk_vencimientos', 'POST', {}],
       ['/rest/v1/rpc/lk_borrar_invitaciones_vencidas', 'POST', {}],
       ['/rest/v1/rpc/lk_mediacion_por_borrar', 'POST', { p_dias: 30 }],
       ['/storage/v1/object/lk-fotos', 'DELETE', { prefixes: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }],
@@ -32,8 +33,17 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
   })
   it('si Storage falla, no marca ese caso como borrado (se reintenta en la próxima corrida)', async () => {
     const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 0, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg'] }], '/rpc/lk_marcar_mediacion_borrada': true }, ['/storage/v1/object/lk-fotos'])
-    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 0, mediaciones: 0, fallidos: ['c1'] })
+    expect(await ejecutarBorrados(ENV, f)).toMatchObject({ invitaciones: 0, mediaciones: 0, fallidos: ['c1'] })
     expect(f.mock.calls.some(([u]) => u.endsWith('lk_marcar_mediacion_borrada'))).toBe(false)
+  })
+  it('B2 · si lk_vencimientos falla (migración del escenario C sin aplicar), los borrados siguen y se informa vencimientos: null', async () => {
+    const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 1, '/rpc/lk_mediacion_por_borrar': [] }, ['/rpc/lk_vencimientos'])
+    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null })
+  })
+  it('B2 · vercel.json programa /api/borrados una vez al día', async () => {
+    const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+    const v = JSON.parse(fs.readFileSync('vercel.json', 'utf8')) as { crons?: { path: string; schedule: string }[] }
+    expect(v.crons).toEqual([{ path: '/api/borrados', schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/) }])
   })
   it('sin las variables de Supabase no hace nada y lo explica; solo corre con CRON_SECRET', async () => {
     await expect(ejecutarBorrados({}, falso({}))).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY/)
