@@ -1,7 +1,7 @@
 // Correos de la prueba completa (invitación y avisos de los días 1, 4 y 6), con Resend desde invitaciones@lockumi.com.
 // El servidor NO acepta texto libre: arma el correo con los textos de api/_lib/avisos.ts y solo recibe datos validados.
 // Sin dirección ni nombre del lugar, sin fotos; con un enlace a la app. RESEND_API_KEY solo vive en el servidor y nunca se devuelve.
-import { PLANTILLAS, RUBROS_VALIDOS, textoAviso, botonesAviso, type Plantilla, type DatosAviso } from './avisos.js'
+import { PLANTILLAS, RUBROS_VALIDOS, textoAviso, botonesAviso, segunRegla, type Plantilla, type DatosAviso } from './avisos.js'
 
 export class ErrorCorreo extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
 const exigir = (ok: unknown, estado: number, m: string): void => { if (!ok) throw new ErrorCorreo(estado, m) }
@@ -12,13 +12,29 @@ const NOMBRE = /^[\p{L} .'-]{1,60}$/u
 /** Orígenes permitidos para el enlace a la app: app.lockumi.com (red de prueba, paso 11), las vistas previas y la app local. */
 export const origenPermitido = (o: string) => o === 'https://app.lockumi.com' || /^https:\/\/lockumi-app-demo-[a-z0-9-]+\.vercel\.app$/.test(o) || /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/.test(o)
 
-export interface PedidoCorreo { tipo: 'aviso' | 'invitacion'; para: string; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
+export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'baja'; para: string; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
 
 // LEGAL: revisado (24/10) · pie común (LEGAL-correos-2104.md, punto 3)
 export const PIE = 'Lockumi · Demo en la red de prueba de Stellar, sin dinero real. Nada de lo que pasa en esta demo tiene efecto legal. Este es un aviso del servicio, no publicidad. Lockumi nunca te pedirá por correo tu contraseña, tu frase secreta ni tus claves. Esta dirección no recibe respuestas; para consultas: business.applockumi@gmail.com.'
 // LEGAL: revisado (24/10) · invitación, arriba del botón
 export const textoInvitacion = (nombre: string, rol: 'dueno' | 'inquilino') =>
   `Recibes este correo porque ${nombre} escribió tu correo para invitarte como ${rol === 'dueno' ? 'dueño' : 'inquilino'} a un alquiler de ejemplo en la demo de Lockumi. Usamos tu correo solo para esta invitación y para los avisos de ese alquiler. Si no quieres participar, ignora este correo: el enlace vence en 7 días. Puedes pedir que borremos tu correo cuando quieras.`
+
+// LEGAL: revisado (24/10, 11:29 p. m.) · pie solo de los avisos (no de la invitación)
+export const PIE_BAJA = 'Para dejar de recibir estos avisos, desmarca la casilla en la app; seguirás viéndolos dentro de la app.'
+// LEGAL: revisado (24/10, 11:29 p. m.) · correo del reclamo, según lo registrado al firmar (regla aceptada o no)
+export const RECLAMO_CON_REGLA = 'Si no respondes a tiempo y abriste al menos un aviso, se aplicará la propuesta automática (máximo el 30 % del depósito de prueba, solo con pruebas completas).'
+export const RECLAMO_SIN_REGLA = 'Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo).'
+
+// Bajas: al desmarcar la casilla, la app avisa al servidor y este deja de enviar avisos de ese alquiler a ese correo.
+// En memoria por instancia (la red de prueba no tiene base de datos); la app además deja de pedir envíos. En el paso 16 se guarda en Supabase.
+const bajas = new Set<string>()
+const claveBaja = (para: string, alquiler: string) => `${para.trim().toLowerCase()}|${alquiler}`
+export function darDeBaja(p: { tipo?: string; para?: unknown; alquiler?: unknown }) {
+  exigir(p && p.tipo === 'baja' && typeof p.para === 'string' && EMAIL.test(p.para.trim()) && typeof p.alquiler === 'string' && ID.test(p.alquiler), 400, 'Pedido de baja inválido.')
+  bajas.add(claveBaja(p.para as string, p.alquiler as string)); return { baja: true as const }
+}
+export const deBaja = (para: string, alquiler: string) => bajas.has(claveBaja(para, alquiler))
 
 const num = (n: unknown, max = 50_000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max
 /** Valida el pedido; devuelve el pedido limpio. */
@@ -51,7 +67,9 @@ export function armar(p: PedidoCorreo, origen: string) {
   } else {
     // LEGAL: revisado (24/10) · LEGAL-correos-2104.md, punto 3: en el correo, «depósito» pasa a «depósito de prueba»
     const c = textoAviso(p.plantilla!, p.datos!), dp = (x: string) => x.replace(/depósito(?! de prueba)/g, 'depósito de prueba')
-    asunto = dp(c.asunto); cuerpo = dp(c.texto)
+    // Reclamo (día 1): la frase final depende de lo registrado al firmar (Legal 24/10, 11:29 p. m.).
+    const texto = p.plantilla === 'reclamo-1' ? c.texto.replace(segunRegla(!!p.datos!.regla), p.datos!.regla ? RECLAMO_CON_REGLA : RECLAMO_SIN_REGLA) : c.texto
+    asunto = dp(c.asunto); cuerpo = dp(texto)
     botones = botonesAviso(p.plantilla!).map(b => ({ texto: b.texto, url: `${base}?aviso=${p.plantilla}&canal=correo${b.accion === 'confirmar-devolver' ? '&confirmar=devolver' : ''}` }))
   }
   // Paso 11: paleta del logo (#FF6B35, #E8531F, #FFB08A sobre crema #FFF5EE, texto café #3D2A22); nunca texto blanco sobre naranja.
@@ -62,9 +80,9 @@ export function armar(p: PedidoCorreo, origen: string) {
 <h1 style="font-size:20px;margin:0 0 12px;color:#3D2A22">${esc(asunto)}</h1>
 <p style="font-size:15px;line-height:1.5">${esc(cuerpo)}</p>
 ${botones.map(b => `<p><a href="${esc(b.url)}" style="display:inline-block;background:#FF6B35;color:#3D2A22;font-weight:bold;padding:10px 16px;border-radius:8px;border:1px solid #E8531F;text-decoration:none">${esc(b.texto)}</a></p>`).join('\n')}
-${p.tipo === 'aviso' ? '<p style="font-size:13px;color:#7A5446">Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.</p>' : ''}
+${p.tipo === 'aviso' ? `<p style="font-size:13px;color:#7A5446">Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.</p>\n<p style="font-size:13px;color:#3D2A22">${esc(PIE_BAJA)}</p>` : ''}
 <hr style="border:none;border-top:1px solid #FFB08A;margin:20px 0"><p style="font-size:12px;color:#7A5446;line-height:1.5">${esc(PIE)} <a href="${esc(origen)}/privacidad" style="color:#E8531F">Privacidad</a></p></body></html>`
-  const texto = `${demo}\n\n${asunto}\n\n${cuerpo}\n\n${botones.map(b => `${b.texto}: ${b.url}`).join('\n')}\n\n${PIE} Privacidad: ${origen}/privacidad`
+  const texto = `${demo}\n\n${asunto}\n\n${cuerpo}\n\n${botones.map(b => `${b.texto}: ${b.url}`).join('\n')}\n\n${p.tipo === 'aviso' ? PIE_BAJA + '\n\n' : ''}${PIE} Privacidad: ${origen}/privacidad`
   return { asunto, html, texto }
 }
 
@@ -76,9 +94,11 @@ export function limite(clave: string, max: number, ahora = Date.now()) {
   v.push(ahora); usos.set(clave, v)
 }
 
-export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch) {
-  const p = validar(pedido)
+export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch): Promise<{ enviado: true; id?: string } | { baja: true }> {
   exigir(origenPermitido(origen), 403, 'Los correos solo salen desde la vista previa de la prueba.')
+  if (pedido?.tipo === 'baja') return darDeBaja(pedido)
+  const p = validar(pedido)
+  exigir(p.tipo !== 'aviso' || !deBaja(p.para, p.alquiler), 409, 'Desmarcaste la casilla de avisos por correo para este alquiler: ya no te enviamos correos. Los avisos siguen en la app; si quieres recibirlos otra vez, marca la casilla.')
   const llave = env.RESEND_API_KEY?.trim()
   exigir(llave, 503, 'El correo no está configurado en este servidor. Los avisos siguen en la app.')
   limite('ip:' + ip, 40); limite('para:' + p.para.toLowerCase(), 15)

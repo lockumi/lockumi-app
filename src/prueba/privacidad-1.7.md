@@ -16,25 +16,25 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 <!-- LEGAL: revisado (24/10) · ronda 9b (quién firma: ver Términos 5.3) -->
 - **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Si usas Freighter, las transacciones de tu billetera las confirmas tú en la extensión. Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba. Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
 - **Alquiler simulado:** el lugar (la dirección del inmueble) que escribes, el monto, las fechas, las reglas, las firmas con fecha y hora, el inventario de entrada y de salida, el reclamo simulado y el historial de eventos.
-- **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. En la fase 1, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. En la fase 2, cuando esté disponible, las fotos reducidas sí se guardarán en Supabase (ver abajo).
+- **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. En la fase 1, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. En la fase 2, las fotos reducidas sí se guardan en Supabase (ver abajo).
 - **Aceptaciones:** la versión y la fecha en que aceptaste estos textos, guardadas en tu navegador y en tu perfil.
 - **Datos técnicos:** datos que se guardan en tu navegador para mantener la sesión y, en la fase 2, un identificador de sesión anónima.
 - **Invitaciones y avisos por correo:** el correo de la persona que invitas y su papel en el alquiler simulado.
 - **USDC de prueba que te da Lockumi, sin valor:** si eliges esa opción, registramos qué cuenta de inquilino de prueba de Lockumi se asignó a tu alquiler simulado, el monto y la fecha. Esos tokens no se envían a tu billetera.
 No pedimos datos sensibles. **No subas fotos de personas ni de documentos.**
 
-## Fase 2 (cuando esté disponible): dos personas reales
-Cuando esté disponible, dos personas podrán simular juntas un alquiler, cada una con su cuenta. En ese caso:
-- Usaremos **Supabase** con una sesión anónima. El alquiler simulado y las fotos reducidas **sí se guardarán allí**, las fotos en un **almacenamiento privado en Estados Unidos**, al que se accede con enlaces temporales.
-- **La otra parte del alquiler simulado verá** tu correo, tus firmas, el inventario con las fotos, el reclamo con su respuesta y el historial de ese alquiler. No verá tu llave privada ni tus otros alquileres.
-- Si se rechaza un reclamo, también podrá verlo la persona mediadora de la demo.
+## Fase 2: dos personas reales
+Dos personas pueden simular juntas un alquiler, cada una con su cuenta. En ese caso:
+- Usamos **Supabase** con una sesión anónima. El alquiler simulado y las fotos reducidas **sí se guardan allí**, las fotos en un **almacenamiento privado en Estados Unidos**, al que se accede con enlaces temporales.
+- **La otra parte del alquiler simulado ve** tu correo, tus firmas, el inventario con las fotos, el reclamo con su respuesta y el historial de ese alquiler. No ve tu llave privada ni tus otros alquileres.
+- Si se rechaza un reclamo, también puede verlo la persona mediadora de la demo.
 
-## Invitar a otra persona (fase 2, cuando se active)
-**Fase 2, cuando se active: esto todavía no está disponible.** Hoy la app no envía invitaciones. Cuando se active, aplicará lo siguiente:
+## Invitar a otra persona y avisos por correo
+Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuenta. Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.
 - Puedes invitar a otra persona a un alquiler simulado escribiendo su correo. **Al invitarla, declaras que esa persona sabe que la invitas y que acepta recibir el correo de Lockumi.** No invites a nadie sin avisarle antes.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
 - Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, el papel de la persona invitada (dueño o inquilino), un resumen del alquiler simulado (monto y fechas) y el enlace para unirse. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
-- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades.
+- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 - **El enlace de invitación vence a los 7 días.** El correo de la persona invitada se guarda mientras exista el alquiler simulado de la demo. La persona invitada puede pedir que lo borremos en cualquier momento escribiendo a business.applockumi@gmail.com.
 - Resend guarda un registro de cada correo enviado (destinatario, asunto, contenido y estado de entrega). Según Resend, en sus planes estándar conserva esos datos durante 30 días (https://resend.com/security/gdpr).
 
