@@ -59,3 +59,10 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 4. Si acepta todo → reparto por lo reclamado (`via: 'acuerdo'`). Si no → **propuesta automática simulada** (B.6, sin inteligencia artificial; con cotización más baja usa el punto medio). Se aplica solo si **los dos** la aceptan; si uno no, pasa a la Mediación Lockumi (demo).
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
+
+## Mediación Lockumi (demo) y «Resolver el reclamo (simulación)» (PR 6, paso 10)
+1. Al no haber acuerdo (propuesta rechazada o silencio sin la regla), el alquiler queda en `mediacion` y se ve `MediacionPC`.
+2. **B.7:** texto, recuadro [SERVICIO REAL] y casilla «Entiendo esto…». «Pedir mediación» guarda `reclamo.mediacion = { estado: 'pedida', fecha }` y muestra el plazo de 3 días hábiles (`sumarHabiles`). Si ya hay 10 casos pedidos en mediación, queda `sin-cupo` y se ve la **B.12**. «Prefiero no usarla» guarda `no-usar`. En la demo nadie del equipo atiende el caso (6.8 b).
+3. **B.14:** el reparto se elige con «Resolver el reclamo (simulación)»: dueño entre 0 y lo reclamado, el inquilino recibe el resto (la suma es el depósito). Confirmación «¿Resolver el reclamo así?» → `acciones.resolverSimulacion` (una sola vez) → `cerrado`, `via: 'simulacion'` y el aviso «Reclamo resuelto (simulación)» con el comprobante.
+4. **6.3 f:** se muestra cuánto es la parte no reclamada y que se libera al cerrar el reclamo (la cuenta segura no permite liberar por partes).
+5. «Otras vías (fuera de la app)»: conciliación o mediación en un centro autorizado, arbitraje si los dos lo firman, tribunales.

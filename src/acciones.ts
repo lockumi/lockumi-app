@@ -12,6 +12,7 @@ import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
 import { pruebaCompleta } from './prueba/interruptor'
 import { registrarEntrega, finVentana } from './prueba/dueno'
+import { repartoValido } from './prueba/mediacion'
 import { nuevoReclamo, responderRubros as responderLocal, votarPropuesta as votarLocal, silencio } from './prueba/reclamos'
 
 type Etapa = 'contrato' | 'entrada' | 'salida'
@@ -29,6 +30,8 @@ export interface Acciones {
   responderRubros?(a: Alquiler, resp: Record<string, RespuestaRubro>, avance?: Avance): Promise<void>
   votarPropuesta?(a: Alquiler, rol: Rol, si: boolean, avance?: Avance): Promise<void>
   aplicarSilencio?(a: Alquiler, avance?: Avance): Promise<void>
+  /** Prueba completa (6.8 b, B.14): el reparto se elige con «Resolver el reclamo (simulación)». */
+  resolverSimulacion?(a: Alquiler, alDueno: number, avance?: Avance): Promise<void>
   marcar(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle'): Promise<void>
   nota(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, nota: string): Promise<void>
   agregarFoto(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, f: Foto): Promise<void>
@@ -172,6 +175,14 @@ const local: Acciones = {
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'propuesta', fecha: iso(y) }
       // LEGAL: revisar · historial
       y.historial.push({ fecha: iso(y), texto: `Se aplicó la propuesta automática (Regla 6.5.1): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+  }),
+  resolverSimulacion: (a, alDueno, avance = nada) => paso(a, 'reparto', async x => {
+    if (x.estado !== 'mediacion') return
+    if (!repartoValido(x, alDueno)) throw new Error('El dueño no puede recibir más de lo que reclamó.')   // LEGAL: revisar
+    const r = await escrow.resolver(x, alDueno, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => { if (y.estado !== 'mediacion') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'simulacion', fecha: iso(y) }
+      // LEGAL: revisado (24/10, v4) · B.14 (título del aviso del resultado)
+      y.historial.push({ fecha: iso(y), texto: `Reclamo resuelto (simulación): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
   }),
   decidir: (a, aDueno, _motivo, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'mediacion') return

@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (PR 6, paso 10, sin cambios visibles)**
+- Mediación Lockumi (demo) de la prueba completa (detrás del interruptor): pedirla con la B.7 (cupo de 10, B.12 sin cupo), «Resolver el reclamo (simulación)» con confirmación y aviso del resultado (B.14), la parte no reclamada (6.3 f) y «Otras vías (fuera de la app)». Nadie del equipo atiende casos en la demo. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+
 **24 de octubre de 2026 (PR 5, paso 9, sin cambios visibles)**
 - Reclamo por rubros de la prueba completa (detrás del interruptor): monto por rubro con motivo, fotos y factura o precio de referencia; respuesta del inquilino por rubro con cotización; propuesta automática simulada (sin inteligencia artificial) que solo se aplica si los dos aceptan; regla del silencio (6.5 c). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
