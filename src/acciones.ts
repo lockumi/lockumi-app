@@ -23,7 +23,7 @@ export { plazoMs, textoPlazo } from './flujo'   // viven en flujo.ts (puro) para
 
 
 export interface Acciones {
-  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' } }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
+  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' }; /** paso16-unido: declaración de quien invita (solo al invitar) */ declaracion?: string }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
   firmar(a: Alquiler, etapa: Etapa, rol: Rol): Promise<void>
   /** Prueba completa (B.4): devolver todo el depósito ahora, después de la confirmación. */
   devolverTodo?(a: Alquiler, avance?: Avance): Promise<void>
