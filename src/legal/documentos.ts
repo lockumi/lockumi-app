@@ -51,6 +51,8 @@ export const docTerminos = (version: string): DocLegal => version === DOCS_17.te
 /** Ruta de los Términos de una versión: la vigente en /terminos; la 1.6-demo, con el interruptor encendido, en /terminos-1-6. */
 export const rutaTerminos = (version: string) => version === terminosActual().version ? '/terminos' : '/terminos-1-6'
 export const TERMINOS = DOCS.terminos
+/** Paso 11 + paso 16: la Privacidad vigente (1.7-demo con el interruptor) sale de un solo archivo, `v17/privacidad.md`. */
+export const privacidadVigente = (): DocLegal | undefined => privacidadActual()
 export const PRIVACIDAD = DOCS.privacidad as DocLegal | undefined
 export const hayPrivacidad = !!PRIVACIDAD
 
