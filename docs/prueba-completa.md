@@ -60,6 +60,10 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
 
+## Suscripción (B.8) y rendimiento (B.13) (PR 8, paso 15)
+1. En «Crear alquiler», antes del Anexo 6-A: la B.8 con el texto «En la demo, la app es gratis…» y el cuadro del servicio real con las dos autorizaciones que se pedirían (sin casillas).
+2. Debajo, la B.13 plegada: «Rendimiento del depósito: función en estudio», etiquetas «Función en estudio» y «Simulación», el texto de Legal, enlace a la cláusula 10 y [Entendido] (cierra el bloque).
+
 ## Mediación Lockumi (demo) y «Resolver el reclamo (simulación)» (PR 6, paso 10)
 1. Al no haber acuerdo (propuesta rechazada o silencio sin la regla), el alquiler queda en `mediacion` y se ve `MediacionPC`.
 2. **B.7:** texto, recuadro [SERVICIO REAL] y casilla «Entiendo esto…». «Pedir mediación» guarda `reclamo.mediacion = { estado: 'pedida', fecha }` y muestra el plazo de 3 días hábiles (`sumarHabiles`). Si ya hay 10 casos pedidos en mediación, queda `sin-cupo` y se ve la **B.12**. «Prefiero no usarla» guarda `no-usar`. En la demo nadie del equipo atiende el caso (6.8 b).
