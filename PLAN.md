@@ -2,7 +2,7 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
-## Sin pantalla de volver a aceptar (24 oct 2026, pedido de Katherine, 10:03 p. m.) — PR abierto, se publica con el OK de Legal
+## Sin pantalla de volver a aceptar (24 oct 2026, pedido de Katherine, 10:03 p. m.) — publicado con el OK de Katherine (10:27 p. m.)
 - Con la sesión abierta se entra directo, aunque la versión aceptada sea anterior. `src/legal/Reaceptacion.tsx` queda sin uso (se conserva con sus pruebas). Entrar sigue pidiendo la casilla y guarda 1.6-demo.
 - Propuesta de Legal (10:05 p. m.), **solo imágenes, sin programar** (`capturas/sin-reaceptacion/aviso.jpg` y `linea-boton.jpg`): a) aviso que se puede cerrar la primera vez que entra quien aceptó 1.5; b) línea «Al continuar, aceptas los Términos 1.6-demo y el Aviso de privacidad.» sobre el botón de crear o firmar un alquiler.
 
@@ -12,6 +12,9 @@
 - **No es retroactiva:** los alquileres firmados con 1.6 siguen con las reglas de la 1.6 (sin propuesta automática, sin suscripción y sin avisos de los días 1, 4 y 6), salvo que **las dos partes** acepten la 1.7.
 - **La versión se ve en el contrato de cada alquiler** (la que rige ese alquiler).
 - Cambia lo planeado antes: el PR 10 suponía volver a aceptar con la pantalla (`Reaceptacion.tsx`); ya no.
+
+## E2E automática (24 oct 2026)
+- Playwright + workflow post-despliegue, cada 6 h y a pedido; E2E.md en la rama e2e-resultados. Ver docs/e2e.md.
 
 ## PR 3 (24 oct 2026): interruptor, Regla de propuesta automática (B.1) y Anexo 6-A (B.5), sin cambios visibles
 - Todo detrás de `VITE_PRUEBA_COMPLETA` (apagado). Ver docs/prueba-completa.md.

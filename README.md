@@ -267,8 +267,11 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
-**24 de octubre de 2026 (sin pantalla de volver a aceptar; se publica con el OK de Legal)**
+**24 de octubre de 2026 (sin pantalla de volver a aceptar; publicado con el OK de Katherine, sin cambios en el diseño)**
 - Con la sesión abierta entras directo a la app, aunque hayas aceptado una versión anterior. Los Términos 1.6-demo siguen en su enlace y una cuenta nueva los acepta en «Entrar». Ver [docs/reaceptacion.md](docs/reaceptacion.md).
+
+**24 de octubre de 2026 (E2E automática, sin cambios visibles)**
+- Suite E2E con Playwright que corre después de cada despliegue a producción, a pedido y cada 6 horas. Ver [docs/e2e.md](docs/e2e.md).
 
 **24 de octubre de 2026 (PR 3, sin cambios visibles)**
 - Interruptor de la prueba completa (apagado en producción), Regla de propuesta automática opcional al firmar y Anexo 6-A al crear el alquiler. Solo se ven en builds con `VITE_PRUEBA_COMPLETA=1`. Ver [docs/prueba-completa.md](docs/prueba-completa.md).

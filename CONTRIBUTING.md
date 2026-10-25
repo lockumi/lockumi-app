@@ -81,6 +81,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Textos de Legal con `// LEGAL: revisado (24/10)`; textos propios con `// LEGAL: revisar`.
 - Para ver las pantallas nuevas en local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 npm run dev`. En pruebas: `vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')`.
 - Colores nuevos solo en `src/prueba/prueba.css` (texto café sobre el degradado #FFB08A → #FF6B35; nunca texto blanco sobre naranja). Sin animaciones ni ilustraciones.
+- E2E: `npm run e2e` (Playwright, `e2e/*.e2e.ts`; ver `docs/e2e.md`). Los archivos E2E no terminan en `.spec`/`.test` para que vitest no los tome.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

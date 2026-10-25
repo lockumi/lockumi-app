@@ -7,3 +7,7 @@ test-results
 .env
 .env.local
 .env.*.local
+playwright-report/
+test-results/
+capturas/
+E2E.md

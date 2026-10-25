@@ -1,0 +1,81 @@
+name: E2E producción
+
+# Corre DESPUÉS de cada despliegue a Production (no bloquea despliegues), a pedido y cada 6 horas.
+# Vercel en este repo informa con estados de commit («Vercel»), no con GitHub Deployments: por eso también `status`
+# (estado «Vercel» = success en un commit de master = despliegue de Production terminado). `deployment_status` queda por si se activa.
+on:
+  deployment_status:
+  status:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: URL a probar
+        default: https://app.lockumi.com
+      resolver:
+        description: "disputeResolver esperado: plataforma (fase 1) o mediador (modo de dos personas, PR 9)"
+        default: plataforma
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write   # solo para subir E2E.md a la rama e2e-resultados (nunca a master)
+
+concurrency:
+  group: e2e-produccion
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    if: >-
+      (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && startsWith(github.event.deployment.environment, 'Production')) ||
+      (github.event_name == 'status' && github.event.context == 'Vercel' && github.event.state == 'success' && contains(github.event.branches.*.name, 'master')) ||
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE: ${{ inputs.base || 'https://app.lockumi.com' }}
+      E2E_RESOLVER: ${{ inputs.resolver || 'plataforma' }}
+      # Clave PÚBLICA del mediador (no es secreta, pero se guarda como secreto para no fijarla en el repo). Sin ella, el resumen lo dice.
+      E2E_MEDIADOR_PUBLICA: ${{ secrets.LOCKUMI_TW_MEDIADOR_PUBLICA }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright (workers en paralelo, dos papeles)
+        run: npx playwright test -c e2e
+      - name: Resumen (E2E.md y resumen del job)
+        if: always()
+        run: node e2e/resumen.mjs "$E2E_BASE" "${{ github.event_name }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas
+          path: capturas/
+          retention-days: 14
+      # E2E.md va a la rama e2e-resultados (no a master): no dispara un despliegue de producción.
+      # vercel.json apaga los despliegues de esa rama y el mensaje lleva [skip ci] para no correr CI.
+      - name: Subir E2E.md a la rama e2e-resultados
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          cp E2E.md /tmp/E2E.md
+          git config user.name "Lockumi"
+          git config user.email "business.applockumi@gmail.com"
+          git fetch origin e2e-resultados || true
+          if git rev-parse --verify -q origin/e2e-resultados; then git switch -C e2e-resultados origin/e2e-resultados; else git switch --orphan e2e-resultados; git rm -rq --cached . || true; fi
+          git clean -fdxq -e node_modules
+          cp /tmp/E2E.md E2E.md
+          git add E2E.md
+          git commit -qm "e2e: resultados $(TZ=America/Costa_Rica date '+%Y-%m-%d %H:%M') (hora de Costa Rica) [skip ci]" || echo "sin cambios"
+          git push origin e2e-resultados
