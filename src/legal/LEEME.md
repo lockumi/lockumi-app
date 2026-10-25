@@ -75,5 +75,5 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   (la de la 1.8 y la 1.9 se pone el día en que se enciendan). `{{edicion}}` sale de la versión vigente.
 - Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: aviso que no bloquea en «Tus alquileres» y una
   casilla dentro de cada función nueva. Un alquiler firmado sigue con su versión salvo que los dos acepten.
-- **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b)
+- **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b): primero el párrafo exacto de Legal y, después, sin cambios, la b) de antes (registro en la red de prueba, «simulados», «Nada de esto tiene efecto legal»; Legal, 25/10, 1:24 a. m.)
   (fase 2, la mediación no decide, excepciones 5.3 d y 6.5.1). Sin dos personas (A y B), la b) no cambia. Prueba: `escenario-c.test.ts`.
