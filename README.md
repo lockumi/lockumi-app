@@ -44,7 +44,7 @@ Esta guía describe lo que hace hoy https://app.lockumi.com (código de `master`
 
 Pasos en https://app.lockumi.com:
 
-1. **Entrar sin billetera.** Toca "Entrar", marca "Acepto los Términos y condiciones" (y el consentimiento de privacidad, si aparece) y elige "Continuar con Google", "Continuar con Apple" o "Continuar con tu correo" (Cavos). No necesitas instalar una billetera ni guardar frases semilla. Freighter es opcional: solo sirve si quieres depositar USDC de prueba desde tu propia cuenta. Los textos legales vigentes son los **Términos y el Aviso de privacidad 1.6-demo (24 de octubre de 2026)**; son de demo y están pendientes de revisión por abogado. Si aceptaste una versión anterior, las casillas vuelven a salir sin marcar; y si ya tenías la sesión abierta, aparece la pantalla «Actualizamos los Términos y el Aviso de privacidad» con las dos casillas sin marcar y el botón «Aceptar y seguir» (sin «Salir»). Bajo el título «El depósito de tu alquiler, protegido» va la nota «Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.»
+1. **Entrar sin billetera.** Toca "Entrar", marca "Acepto los Términos y condiciones" (y el consentimiento de privacidad, si aparece) y elige "Continuar con Google", "Continuar con Apple" o "Continuar con tu correo" (Cavos). No necesitas instalar una billetera ni guardar frases semilla. Freighter es opcional: solo sirve si quieres depositar USDC de prueba desde tu propia cuenta. Los textos legales vigentes son los **Términos y el Aviso de privacidad 1.6-demo (24 de octubre de 2026)**; son de demo y están pendientes de revisión por abogado. Si aceptaste una versión anterior, las casillas de «Entrar» vuelven a salir sin marcar; si ya tenías la sesión abierta, entras directo a la app (la pantalla para volver a aceptar se desactivó el 24/10 a pedido de Katherine). Bajo el título «El depósito de tu alquiler, protegido» va la nota «Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.»
 2. **Contrato y reglas.** Toca "+ Nuevo alquiler" (pantalla «Nuevo alquiler») y completa:
    - **Lugar.** Se queda en tu navegador; a la red solo va una huella de las fotos.
    - **USDC de prueba.** Elige de dónde salen:
@@ -270,6 +270,9 @@ Cada cambio publicado en app.lockumi.com queda en `master` con esta documentaci�
 **24 de octubre de 2026 (PR 4, sin cambios visibles)**
 - Flujo del dueño de la prueba completa (detrás del interruptor): «Recibí la casa», inicio automático a los 2 días, plazo con domingos y feriados, avisos en la app días 1, 4 y 6, «Todo bien, devolver» con confirmación y simulador de días. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
+**24 de octubre de 2026 (sin pantalla de volver a aceptar; publicado con el OK de Katherine, sin cambios en el diseño)**
+- Con la sesión abierta entras directo a la app, aunque hayas aceptado una versión anterior. Los Términos 1.6-demo siguen en su enlace y una cuenta nueva los acepta en «Entrar». Ver [docs/reaceptacion.md](docs/reaceptacion.md).
+
 **24 de octubre de 2026 (E2E automática, sin cambios visibles)**
 - Suite E2E con Playwright que corre después de cada despliegue a producción, a pedido y cada 6 horas. Ver [docs/e2e.md](docs/e2e.md).
 
@@ -281,7 +284,7 @@ Cada cambio publicado en app.lockumi.com queda en `master` con esta documentaci�
 
 **24 de octubre de 2026 (PR 1, contrato compacto y textos 1.6-demo)**
 - Términos y Aviso de privacidad **1.6-demo** (rondas 9, 9b y 9c de Legal): contrato compacto, quién firma cada paso, 6.3 f) y el botón «Resolver el reclamo (simulación)».
-- **Pantalla para volver a aceptar con la sesión abierta** (`src/legal/Reaceptacion.tsx`, ver [docs/reaceptacion.md](docs/reaceptacion.md)).
+- **Pantalla para volver a aceptar con la sesión abierta** (`src/legal/Reaceptacion.tsx`, ver [docs/reaceptacion.md](docs/reaceptacion.md)). Desactivada el 24/10.
 - Casilla de privacidad: «la dirección de mi billetera **o de mi cuenta de prueba**».
 - Entrar: nota de Legal bajo el título.
 

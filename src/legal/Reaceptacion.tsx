@@ -1,3 +1,4 @@
+// SIN USO desde el 24/10/2026 (pedido de Katherine): App.tsx ya no muestra esta pantalla. Se conserva para el PR 10 (ver PLAN.md).
 // Volver a aceptar con la sesión abierta (spec docs/reaceptacion.md, 19e8a44). Sale al abrir la app con sesión si la aceptación
 // guardada de los Términos o del Aviso de privacidad no es la versión vigente (misma comparación exacta que «Entrar»).
 // Bloquea: sin la barra de arriba ni «Salir». Al aceptar, sigue a la pantalla que se estaba abriendo (no cambia la ruta).
