@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { DOCS, PRIVACIDAD, fechaLegible } from './documentos'
+import { docs, fechaLegible } from './documentos'
 
 /** Página de un texto legal (/terminos, /privacidad…). Se ve con o sin sesión. */
 export function PaginaLegal({ slug }: { slug: string }) {
-  const d = slug === 'privacidad' ? PRIVACIDAD : DOCS[slug]   // paso 11: la 1.7-demo con el interruptor
+  const d = docs()[slug]
   useEffect(() => { document.title = d ? `${d.titulo} · Lockumi` : 'Lockumi'; window.scrollTo(0, 0) }, [d])
   if (!d) return <main id="contenido" tabIndex={-1} className="cont legal"><p>Esta página no existe.</p><p><a href="/">Volver a Lockumi</a></p></main>
   const f = fechaLegible(d.fecha)

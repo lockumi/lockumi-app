@@ -1,4 +1,5 @@
 import type { AceptacionLegal, Usuario } from '../types'
+import { V17, EDICION_V17 } from './version17'
 
 /** Dos aceptaciones separadas y obligatorias, cada una con su versión y fecha (ISO 8601):
  *  - terminos:   "Acepto los Términos y condiciones"            → localStorage `lockumi.terminos.aceptacion`
@@ -34,7 +35,7 @@ export function leerAceptacion(c: ClaveLegal): AceptacionLegal | null {
 export const aceptoVersion = (c: ClaveLegal, version: string) => leerAceptacion(c)?.version === version
 
 export function guardarAceptacion(c: ClaveLegal, version: string, ahora = new Date()): AceptacionLegal {
-  const a: AceptacionLegal = { version, fecha: ahora.toISOString() }
+  const a: AceptacionLegal = { version, fecha: ahora.toISOString(), ...(version === V17 && { edicion: EDICION_V17 }) }
   localStorage.setItem(K_ACEPTACION[c], JSON.stringify(a)); return a
 }
 export const borrarAceptacion = (c: ClaveLegal) => localStorage.removeItem(K_ACEPTACION[c])

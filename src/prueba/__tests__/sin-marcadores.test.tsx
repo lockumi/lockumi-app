@@ -6,6 +6,7 @@ import type { Alquiler } from '../../types'
 import { ReclamoPC } from '../ReclamoPC'
 import { MediacionPC } from '../MediacionPC'
 import { ReglaPropuesta, ROTULO_REGLA } from '../Regla'
+import { PaginaLegal } from '../../legal/PaginaLegal'
 
 const MARCADOR = /\[(?:REGI[OÓ]N|PENDIENTE|CONFIRMAR|ABIERTO|SERVICIO REAL)[^\]]*\]|\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{2,}:[^\]]*\]|\bABIERTO\b/
 const T = '2026-10-24T18:00:00.000Z'
@@ -26,9 +27,13 @@ describe('sin marcadores visibles (interruptor encendido)', () => {
     ['reclamo por rubros', () => renderToStaticMarkup(<ReclamoPC a={alq({ reclamo: { ...rec, respuestas: undefined } })} rol="inquilino" />)],
     ['B.7 mediación', () => renderToStaticMarkup(<MediacionPC a={alq({ estado: 'mediacion', reclamo: { ...rec, propuesta: { alDueno: 60, fecha: T, inquilino: 'no' } } })} rol="inquilino" />)],
     ['B.14 mediación pedida', () => renderToStaticMarkup(<MediacionPC a={alq({ estado: 'mediacion', reclamo: { ...rec, mediacion: { estado: 'pedida', fecha: T } } })} rol="dueno" />)],
+    ['/terminos (1.7-demo)', () => renderToStaticMarkup(<PaginaLegal slug="terminos" />)],
+    ['/privacidad (1.7-demo)', () => renderToStaticMarkup(<PaginaLegal slug="privacidad" />)],
     ['B.1 regla', () => renderToStaticMarkup(<ReglaPropuesta onListo={() => {}} />) + ROTULO_REGLA],
   ]
-  for (const [n, f] of pantallas) it(n, () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const h = f().replace(/<[^>]+>/g, ' '); expect(h.match(MARCADOR)?.[0] ?? null).toBeNull() })
+  for (const [n, f] of pantallas) it(n, () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const h = f().replace(/<[^>]+>/g, ' '); expect(h.match(MARCADOR)?.[0] ?? null).toBeNull()
+    // Paso 16: las notas internas para Legal (<!-- LEGAL: … -->) nunca se ven, ni dentro de un párrafo.
+    expect(h).not.toMatch(/&lt;!--|LEGAL:/) })
   it('ningún texto del código de la app (fuera de comentarios y pruebas) tiene marcadores', async () => {
     const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readdirSync(r: URL, o: { recursive: true }): string[]; readFileSync(r: URL, c: 'utf8'): string }
     const malos: string[] = []

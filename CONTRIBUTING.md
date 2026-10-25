@@ -87,13 +87,13 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Reclamos (PR 5): la lógica va en `src/prueba/reclamos.ts` (funciones puras que se prueban sin pantalla); las acciones primero llaman a la cuenta segura (`escrow`) y después cambian el estado, y usan `paso()` para que un doble toque no repita nada.
 - Franja de la red de prueba: su texto es `AVISO_RED` en `src/ui.tsx`; cambiarlo es un cambio visible y necesita el OK de Katherine.
 
-- Modo de dos personas (paso 7): las banderas de cada alquiler salen de `modoDe(a)` (`src/servidor/config.ts`); para saber si un alquiler es de dos personas usa `deDosPersonas(a)` (no `a.dosPersonas` solo: con el interruptor apagado debe verse igual que hoy). Para ver el modo en local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 VITE_DOS_PERSONAS=1 VITE_SUPABASE_URL=http://localhost:54321 VITE_SUPABASE_ANON_KEY=falsa`.
-- Antes de publicar algo detrás de un interruptor: build de master y de la rama con `VITE_TRUSTLESS=1` (sin nada más), capturas fijas de 11 pantallas (13 con las 2 de dos personas) y comparar: deben ser iguales.
 - Montos: con la prueba completa, usa siempre `usd()` (da «N USDC de prueba»); no formatees montos a mano en pantallas nuevas.
 - Suscripción y rendimiento (PR 8): la B.8 no lleva casillas (en la demo no se autoriza nada) y la B.13 nunca lleva tasas, porcentajes, montos, fechas, «gana», «Activar», «Avisarme» ni «Próximamente» (lo revisa `suscripcion-rendimiento.test.tsx`).
 - Sin marcadores visibles: ningún texto de la app puede tener «[REGIÓN…]», «[PENDIENTE…]», «[CONFIRMAR]», «ABIERTO» ni «[ALGO: …]» (lo revisa `src/prueba/__tests__/sin-marcadores.test.tsx`). Los pendientes van en comentarios `// LEGAL: revisar`.
 - Aviso de 5 días y fotos (PR 7): el aviso B.3 sale de `debidos`/`sincronizar` (no se crea a mano) y la fecha y hora de las fotos siempre se muestran en hora de Costa Rica con `fechaHoraCR`; nunca se guarda ni se muestra la ubicación.
 - Mediación (PR 6): en la demo no hay persona mediadora; todo reparto va por `acciones.resolverSimulacion` con confirmación (B.14) y nunca da al dueño más de lo reclamado.
+- Términos 1.7-demo (paso 16): las reglas nuevas se piden con `reglas17(a)` de `src/prueba/version.ts` (interruptor encendido **y** alquiler en la 1.7-demo), nunca solo con `pruebaCompleta()`; así un alquiler de la 1.6-demo no cambia de reglas. Los textos legales vigentes salen de `docs()`, `terminosActual()` y `privacidadActual()` (`src/legal/documentos.ts`). No uses `Reaceptacion.tsx`.
+- Consentimientos (paso 16): cada función que trata datos nuevos pide su casilla sin marcar en el momento de usarla y la registra con `registrarConsentimiento` (`src/prueba/consentimientos.ts`). Datos de la mediación: se borran a los 30 días del cierre (`src/prueba/borrado.ts`, lo aplica `sincronizarTodos`).
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

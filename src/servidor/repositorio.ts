@@ -105,9 +105,10 @@ async function subirFoto(id: string, etapa: 'entrada' | 'salida' | 'reclamo', cu
 
 const tras = async <T>(p: Promise<T>) => { const r = await p; await recargar(); return r }
 export const servidor = {
-  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string }, email: string, cuenta?: string) {
-    const r = await rpc<{ id: string; token: string }>('lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
-      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS })
+  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string }, email: string, cuenta?: string) {
+    // paso16-unido: al invitar, el servidor guarda la declaración (quién, cuándo y el texto) en la misma transacción.
+    const r = await rpc<{ id: string; token: string }>(d.declaracion ? 'lk_crear_contrato_invitando' : 'lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
+      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS, ...(d.declaracion && { p_declaracion: d.declaracion }) })
     guardarInvitacion(r.id, r.token); await recargar(); return { id: r.id, link: linkInvitacion(r.id, r.token) }
   },
   async nuevaInvitacion(id: string) { const t = await rpc<string>('lk_nueva_invitacion', { p_contrato: id }); guardarInvitacion(id, t); await recargar(); return linkInvitacion(id, t) },

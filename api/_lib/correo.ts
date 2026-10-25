@@ -5,6 +5,7 @@ import { PLANTILLAS, RUBROS_VALIDOS, textoAviso, botonesAviso, segunRegla, type 
 
 export class ErrorCorreo extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
 const exigir = (ok: unknown, estado: number, m: string): void => { if (!ok) throw new ErrorCorreo(estado, m) }
+import { servicio, rpc } from './supabase.js'
 export const REMITENTE = 'Lockumi <invitaciones@lockumi.com>'
 const EMAIL = /^[^\s@<>"',;]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/i
 const ID = /^[a-z0-9-]{2,40}$/i
@@ -44,6 +45,23 @@ export function registrarConsentimiento(p: { tipo?: string; para?: unknown; alqu
 export const tieneConsentimiento = (para: string, alquiler: string) => consentimientos.has(claveConsentimiento(para, alquiler))
 /** Solo para pruebas: simula un reinicio del servidor (memoria vacía). */
 export const olvidarConsentimientos = () => consentimientos.clear()
+
+// paso16-unido (Legal, 25/10, arreglo 5): un solo correo de invitación por alquiler, sin recordatorios. Con Supabase (clave de
+// servicio) se registra en lk_correos_invitacion, que además exige la declaración de quien invita y que el correo sea el escrito
+// en el alquiler. Sin Supabase, en memoria (y la clave de idempotencia de Resend es por alquiler).
+const invitacionesEnviadas = new Set<string>()
+export const olvidarInvitaciones = () => invitacionesEnviadas.clear()
+const YA_INVITADO = 'Ya enviamos el correo de invitación de este alquiler. No enviamos recordatorios.'
+async function registrarInvitacion(env: Record<string, string | undefined>, p: PedidoCorreo, f: typeof fetch) {
+  const s = servicio(env)
+  if (s) {
+    let ok = false
+    try { ok = await rpc<boolean>(s, 'lk_registrar_correo_invitacion', { p_contrato: p.alquiler, p_para: p.para }, f) } catch { throw new ErrorCorreo(502, 'No pudimos enviar el correo ahora. Comparte el enlace para unirse desde la app.') }
+    exigir(ok, 409, YA_INVITADO); return
+  }
+  exigir(!invitacionesEnviadas.has(p.alquiler), 409, YA_INVITADO)
+  invitacionesEnviadas.add(p.alquiler)
+}
 
 const num = (n: unknown, max = 50_000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max
 /** Valida el pedido; devuelve el pedido limpio. */
@@ -112,8 +130,9 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
   const llave = env.RESEND_API_KEY?.trim()
   exigir(llave, 503, 'El correo no está configurado en este servidor. Los avisos siguen en la app.')
   limite('ip:' + ip, 40); limite('para:' + p.para.toLowerCase(), 15)
+  if (p.tipo === 'invitacion') await registrarInvitacion(env, p, f)
   const c = armar(p, origen)
-  const clave = p.tipo === 'invitacion' ? `inv:${p.alquiler}:${p.para}` : `aviso:${p.alquiler}:${p.plantilla}:${p.para}`
+  const clave = p.tipo === 'invitacion' ? `inv:${p.alquiler}` : `aviso:${p.alquiler}:${p.plantilla}:${p.para}`
   const r = await f('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': clave.slice(0, 256) },

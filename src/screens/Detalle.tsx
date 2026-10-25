@@ -22,12 +22,14 @@ import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alert
 import { EsperaPago } from '../EsperaPago'
 import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
-import { Expediente } from '../prueba/Expediente'
+import { reglas17, puedeCambiarVersion } from '../prueba/version'
+import { CambioVersion } from '../prueba/CambioVersion'
 import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, montoPrueba, recibeInquilino, notaComisionAuto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
-import { MediacionPC, ResueltoSimulacion } from '../prueba/MediacionPC'
+import { MediacionPC, ResueltoSimulacion, GuardarDatosMediacion } from '../prueba/MediacionPC'
+import { Expediente } from '../prueba/Expediente'
 import { AvisoSalida } from '../prueba/AvisoSalida'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
@@ -38,7 +40,7 @@ const Espera = ({ texto }: { texto: string }) => <div className="espera" role="s
 function Contrato({ a, rol }: P) {
   const { prueba: modoPrueba } = modoDe(a)
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
-  if (pruebaCompleta() && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
+  if (reglas17(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
     return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
   return <div className="pila">
     <ContratoDoc a={a} />
@@ -294,6 +296,7 @@ function Cerrado({ a, rol }: P) {
       : <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
+    {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}
     {pruebaCompleta() && !!a.reclamo && <Expediente a={a} />}{/* paso 14 · B.11 */}{/* solo con la prueba completa (interruptor encendido) */}
     {auto2 && <p className="nota">{notaComisionAuto(r.inquilino)}</p>}{/* LEGAL: revisar */}
@@ -331,9 +334,9 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
-    en_curso: pruebaCompleta() ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
-    ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
-    reclamo: pruebaCompleta() && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: pruebaCompleta() && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
+    en_curso: reglas17(a) ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
+    ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
+    reclamo: reglas17(a) && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>
@@ -359,6 +362,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
         </section>
         {escrowReal && <UltimoComprobante a={a} />}
         <div className="glass glass--fuerte tarjeta">{panel}</div>
+        {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
       <aside className="detalle__lado pila">
         {a.estado !== 'firmas' && escritorio && <ContratoCompacto a={a} como="tarjeta" />}
