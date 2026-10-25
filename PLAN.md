@@ -2,6 +2,9 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## PR 1 (24 oct 2026): contrato compacto + 1.6-demo + volver a aceptar
+- Sale a app.lockumi.com con la pantalla para volver a aceptar dentro de la sesión (regla de Legal: toda versión nueva sale con ella). Sin funciones de la 1.7-demo.
+
 ## Estado actual (20 oct 2026)
 
 - **Repositorio (23 oct 2026):** el repositorio de la app pasó a la organización de GitHub **`lockumi`**: https://github.com/lockumi/lockumi-app (público, rama por defecto `master`). Los enlaces y el `git` de la dirección anterior (`businessapplockumi-crypto/lockumi-app`) redirigen a la nueva. El repositorio de la landing, `lockumi-landing`, **sigue privado en `businessapplockumi-crypto`** y no se mueve. El CI volvió a verde el 23 oct: faltaba en `package-lock.json` la entrada opcional `typescript@5.9.3` que exige `npm ci` con npm 10 (Node 22).

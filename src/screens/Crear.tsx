@@ -48,7 +48,7 @@ const deTexto = (t: string) => {
 const INICIAL_SEMANA = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
 
 /** Hoja con <dialog> nativo: en celular entra desde abajo; en escritorio (ancla) se abre como ventanita junto al campo. */
-function Hoja({ id, titulo, abierta, onCerrar, ancla, alDerecha, children }: { id: string; titulo: string; abierta: boolean; onCerrar: () => void; ancla?: RefObject<HTMLElement | null>; alDerecha?: boolean; children: ReactNode }) {
+export function Hoja({ id, titulo, abierta, onCerrar, ancla, alDerecha, children }: { id: string; titulo: string; abierta: boolean; onCerrar: () => void; ancla?: RefObject<HTMLElement | null>; alDerecha?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const d = ref.current; if (!d) return

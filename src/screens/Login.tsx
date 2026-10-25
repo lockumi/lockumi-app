@@ -88,6 +88,9 @@ export function Entrando() {
 /** Texto aprobado por Legal (23 oct 2026): el mismo del aviso `ingreso-fallo`. */
 const ERROR_INGRESO = alertaIngresoFallo()
 
+// LEGAL: revisado (24/10) · dos-personas-textos.md, D: nota visible bajo el título (Ley 7472, art. 37)
+export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.'
+
 export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void }) {
   const [abierta, setAbierta] = useState(false)
   // Dos casillas obligatorias y separadas: Términos, y Aviso de privacidad con transferencia de datos.
@@ -116,6 +119,7 @@ export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario)
     <h1 className="marca-c" aria-label="Lockumi"><span dangerouslySetInnerHTML={{ __html: WORDMARK_SVG }} /></h1>
     <LogoAnimado className="entrada-app__arte marca-c__arte" />
     <h2 className="entrada-app__titulo">El depósito de tu alquiler, protegido</h2>
+    <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
     <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
       <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>
     <div className="casillas-legales">

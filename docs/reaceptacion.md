@@ -1,6 +1,6 @@
-# Nueva aceptación con la sesión abierta (propuesta, sin código)
+# Nueva aceptación con la sesión abierta
 
-Estado: **solo imagen v2** (con los 3 ajustes de Legal del 24/10), esperando el OK de Katherine
+Estado (24/10/2026, 9:20 p. m. CR): **programada en el PR 1** (`src/legal/Reaceptacion.tsx`, conexión en `App.tsx`, pruebas en `src/legal/__tests__/reaceptacion.test.tsx`). En vez de la casita animada se usa solo el logo estático (`/img/logo-lockumi.svg`), por la decisión de Katherine de no usar ilustraciones. Antes: **solo imagen v2** (con los 3 ajustes de Legal del 24/10), esperando el OK de Katherine
 (`/workspace/lockumi/diseno/envio/contrato-compacto/reaceptacion.jpg`; la v1 quedó en `reaceptacion-v1.jpg`). Legal aprobó la idea. Debe salir **junto con 1.6-demo**: sin esto,
 quien ya tiene la sesión abierta nunca vuelve a ver «Entrar» (`App.tsx:39`) y no acepta la nueva versión.
 

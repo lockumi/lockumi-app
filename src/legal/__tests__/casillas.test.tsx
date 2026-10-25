@@ -90,7 +90,7 @@ describe('textos legales', () => {
   })
   it('el consentimiento de privacidad es un texto fijo de la app', () => {
     const c = CONSENTIMIENTO_PRIVACIDAD
-    expect(c.antes + c.enlace + c.despues).toBe('Acepto el Aviso de privacidad de la app y autorizo que Lockumi trate mis datos y los transfiera a Supabase, Vercel, Cavos y Trustless Work, dentro y fuera de Costa Rica, para usar la demo. Entiendo que la demo funciona en la red de prueba de Stellar, con tokens sin valor y sin dinero real, y que la dirección de mi billetera, los montos y las fechas quedan registrados en esa red, que es pública y no se puede borrar.')
+    expect(c.antes + c.enlace + c.despues).toBe('Acepto el Aviso de privacidad de la app y autorizo que Lockumi trate mis datos y los transfiera a Supabase, Vercel, Cavos y Trustless Work, dentro y fuera de Costa Rica, para usar la demo. Entiendo que la demo funciona en la red de prueba de Stellar, con tokens sin valor y sin dinero real, y que la dirección de mi billetera o de mi cuenta de prueba, los montos y las fechas quedan registrados en esa red, que es pública y no se puede borrar.')
   })
   it('una aceptación de la versión 1.3-demo no cuenta: las casillas salen sin marcar', () => {
     guardarAceptacion('terminos', '1.3-demo'); guardarAceptacion('privacidad', '1.3-demo')
