@@ -32,6 +32,6 @@ Comprobación pública (sin credenciales), por ejemplo: `https://cloudflare-dns.
 Ninguna de las dos está en Production. Nunca se escriben sus valores en el repositorio ni en la documentación.
 
 ## Pendiente para activar la Parte 4
-- Decidir el borrado automático del correo de la persona invitada (ver `cambios-1.5-vs-1.4.md` de Legal).
+- **paso16-unido (25/10):** un solo correo de invitación por alquiler, sin recordatorios (`lk_registrar_correo_invitacion`; sin Supabase, en memoria y con clave de idempotencia `inv:<alquiler>`), y el correo de la persona invitada se borra si no se une en 7 días (`lk_borrar_invitaciones_vencidas`, desde `GET /api/borrados`). Ver `docs/prueba-completa.md`, «Borrados en Supabase». Falta aplicar la migración y poner `CRON_SECRET`.
 - Pasar a producción las variables del servidor compartido y de Resend, y activar la Parte 4 en la app.
 - Actualizar el README (guía para jueces y «Cambios publicados») en el mismo trabajo.

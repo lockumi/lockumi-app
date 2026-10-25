@@ -261,7 +261,7 @@ Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de d
 
 Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `master`.
 
-- **Paso 16 · Términos y Privacidad 1.7-demo** (rama `paso16-terminos-17`, sin publicar; espera el OK de Katherine porque es un cambio visible): textos de Legal en `/terminos` y `/privacidad` (la 1.6-demo sigue en `/terminos-1-6` y `/privacidad-1-6`); cada alquiler guarda su versión y la muestra en el contrato; los firmados con la 1.6-demo siguen con sus reglas salvo que los dos acepten pasar a la 1.7-demo; casilla sin marcar para la mediación dentro de la B.7 (con registro); los datos de la mediación se borran 30 días después de cerrar el caso. Sin pantalla de volver a aceptar: el login se ve igual. Un commit aparte enciende el interruptor (`.env.production`). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+- **Paso 16 · Términos y Privacidad 1.7-demo, una sola versión** (rama `paso16-unido`, unida con los pasos 7 y 11, sin publicar; espera el OK de Katherine porque es un cambio visible): textos de Legal en `/terminos` y `/privacidad` que describen solo lo encendido (dos personas con `VITE_DOS_PERSONAS`, correos con `VITE_CORREOS=1`); la 1.6-demo sigue en `/terminos-1-6` y `/privacidad-1-6`. Cada alquiler guarda su versión y fecha y el contrato muestra cuándo la aceptó cada parte. En un solo aparato la B.7 es solo el aviso de simulación (sin casilla); con otra persona, casilla y registro. Los datos de la mediación se borran 30 días después de cerrar el caso salvo «Guardar los datos de la mediación». Invitación con declaración, un solo correo y borrado del correo a los 7 días (migración pendiente de aplicar). Un commit aparte enciende el interruptor (`.env.production`). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 - **Formulario «Nuevo alquiler» de una pregunta por pantalla** (en desarrollo; no publicado). Hoy «Nuevo alquiler» sigue siendo la pantalla de siempre.
 
 ## Cambios publicados
@@ -363,6 +363,8 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 | `LOCKUMI_TW_PLATAFORMA_SECRET` | Servidor | Clave secreta de la cuenta de la plataforma (platformAddress, serviceProvider, releaseSigner y disputeResolver). |
 | `LOCKUMI_DEMO_SEED` | Servidor | Semilla (32 caracteres o más) de la que se derivan las cuentas del dueño de prueba y del inquilino de prueba. |
 | `RESEND_API_KEY` | Servidor | Llave de Resend para el correo de invitación (Parte 4). En Vercel solo en **Preview**, marcada como sensible. **Próximamente**; no se usa en app.lockumi.com. |
+| `VITE_CORREOS` | Cliente | `1` enciende los avisos y la invitación por correo dentro de la prueba completa (y su texto en Términos y Privacidad). Sin definir: apagado. |
+| `CRON_SECRET` | Servidor | Protege `GET /api/borrados` (borrado de correos de invitación vencidos y de los datos de la mediación a los 30 días). **Pendiente**; sin él la ruta responde 401. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LOCKUMI_TW_MEDIADOR_PUBLICA`, `TRUSTLESS_WORK_BASE_URL`, `TRUSTLESS_WORK_TRUSTLINE` | Cliente / Servidor | Para la versión con servidor compartido y dos personas (`api/tw.ts`). **Próximamente**; no se usan en app.lockumi.com. `SUPABASE_SERVICE_ROLE_KEY` está en Vercel solo en **Preview**, marcada como sensible. |
 
 ## Stack

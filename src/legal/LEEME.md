@@ -61,3 +61,10 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 
 - **Al unir con la rama del paso 11 (`wt-paso11`, todavía no está en origin):** la Privacidad 1.7-demo es del paso 11 (`src/prueba/privacidad-1.7.md`: «fase 2» y correos). El paso 16 solo toca la **versión y la parte de la mediación**: al unir, queda un solo archivo, el del paso 11, con la frase de la mediación («Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso…», de `v17/privacidad.md`, línea 76) y la fecha de la versión que decida Legal (paso 11 dice 24 oct; paso 16, 25 oct). En `documentos.ts`, `privacidadActual()` del paso 16 debe devolver la `privacidadVigente()` del paso 11, y se borra `v17/privacidad.md`. El paso 16 no usa `Reaceptacion.tsx` (el comentario del paso 11 que lo menciona se cambia al unir).
 - **Antes de encender el interruptor (Legal, 11:51 p. m.):** el consentimiento de los correos tiene que guardarse en el servidor y quedar permanente en Supabase. Hoy `consentimientoCorreo` lo guarda solo en el alquiler del navegador; falta la tabla `lk_…` y su migración (no se aplicó: el `SUPABASE_ACCESS_TOKEN` de la máquina da 401). Por eso el commit que enciende el interruptor no se publica todavía.
+
+## 1.7-demo única y condicional (paso16-unido)
+- Archivos: `v17/terminos.md` y `v17/privacidad.md`. Versión y fecha salen de `version17.ts` con `{{edicion}}` (no se escriben a mano).
+- **Bloques:** `<!-- si: dos-personas -->` … `<!-- fin -->` y `<!-- si no: correos -->` … `<!-- fin -->` (se pueden anidar), cada marca en su propia línea.
+- **En línea:** `{{correos: y avisos por correo}}` (sale solo si está encendido) y `{{!dos-personas:texto}}` (solo si está apagado). El espacio después de «:» cuenta: si la frase empieza con espacio, se escribe.
+- Interruptores: `dos-personas` (modo de dos personas) y `correos` (`VITE_CORREOS=1`). Un nombre desconocido o un bloque sin cerrar hace fallar el build y los tests (`condicional.ts`).
+- Las notas `<!-- LEGAL: revisar … -->` en su propia línea no se publican.
