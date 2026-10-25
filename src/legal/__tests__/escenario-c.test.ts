@@ -29,6 +29,24 @@ describe('2.2 b) y Privacidad C: nadie decide el reparto en la mediación', () =
   })
 })
 
+// LEGAL: revisar · 2.2 b) de C, texto exacto de Legal (25/10, 1:16 a. m.)
+const B22_C = 'b) En la fase 2, se aplica el reparto que las dos partes acepten en la mediación (cláusula 6). La mediación no decide por ustedes: si no hay acuerdo, el depósito sigue retenido hasta que lo haya o hasta que lo resuelva un centro de conciliación o un tribunal. Hay dos excepciones: la devolución automática del 100 % al inquilino (cláusula 5.3 d) y la Regla de propuesta automática (cláusula 6.5.1), si la aceptaron aparte al firmar.'
+describe('2.2 b) de C (texto exacto de Legal)', () => {
+  it.each([{ dos: true, correos: true }, { dos: true, correos: false }])('con dos personas, 2.2 b) es exactamente el texto de Legal (%o)', c => {
+    const { t } = encender(c)
+    expect(t).toContain(B22_C)
+    const b = t.slice(t.indexOf('b) En la fase 2'), t.indexOf('c) No hay rendimiento')).trim()
+    expect(b).toBe(B22_C)
+    expect(t).not.toContain('b) El depósito, la aprobación, la liberación')
+  })
+  it.each([{ dos: false, correos: false }, { dos: false, correos: true }])('sin dos personas (A y B), 2.2 b) no cambia (%o)', c => {
+    const { t } = encender(c)
+    expect(t).toContain('b) El depósito, la aprobación, la liberación, el reclamo y el reparto del reclamo sí se registran en la red de prueba.')
+    expect(t).toContain('En la demo, el reparto de un reclamo se elige con un botón (cláusula 6.7). Nada de esto tiene efecto legal.')
+    expect(t).not.toContain('La mediación no decide por ustedes')
+  })
+})
+
 describe('una versión por escenario, cada una con su fecha', () => {
   it('A → 1.7-demo, B (correos) → 1.8-demo, C (correos + dos personas) → 1.9-demo', () => {
     expect(versionVigente({ 'dos-personas': false, correos: false })).toBe('1.7-demo')
