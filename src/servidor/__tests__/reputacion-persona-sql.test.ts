@@ -27,7 +27,7 @@ const conPerfil = async (u: string) => {
 }
 const evento = (u: string, rol: string, c: string) => db.query(`insert into public.lk_reputacion_eventos(usuario, rol, contrato_id, tipo, valor, ocurrio_en) values ($1, $2, $3, 'descuento_deposito', 3, now())`, [u, rol, c])
 const revision = (u: string, c: string) => db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, limite) values ($1, 'inquilino', $2, 'Está mal', now())`, [u, c])
-const BORRADO = /Pediste eliminar tu cuenta/, SIN_PERFIL = /primero acepta tu perfil de reputación/, OTRO_CORREO = /no es el de tu cuenta/
+const BORRADO = /Pediste eliminar tu cuenta/, SIN_PERFIL = /Antes de crear un alquiler o unirte a uno, acepta tu perfil de reputación en la app\. No tiene ningún costo\./, OTRO_CORREO = /no es el de tu cuenta/
 
 beforeAll(async () => {
   db = new PGlite(); await db.exec(PRELUDIO)
@@ -102,7 +102,7 @@ describe('el borrado llega a TODAS las sesiones con ese correo', () => {
 describe('descargar mis datos: desde el servidor, de todas las sesiones con ese correo', () => {
   it('junta lo de los dos aparatos, filtra por papel y no trae nada de otras personas', async () => {
     const c1 = await contrato(), c2 = await contrato(), A = await aparato(), B = await aparato(), OTRA = await aparato()
-    await entrar(c1, 'dueno', A, 'datos@ejemplo.com'); await entrar(c2, 'inquilino', B, 'datos@ejemplo.com'); await entrar(c1, 'inquilino', OTRA, 'otra@ejemplo.com')
+    await entrar(c1, 'dueno', A, 'datos@ejemplo.com'); await entrar(c2, 'inquilino', B, 'datos@ejemplo.com'); await entrar(c1, 'inquilino', OTRA, 'otra@ejemplo.com'); await entrar(c2, 'dueno', OTRA, 'otra@ejemplo.com')   // los dos alquileres cuentan: B tiene perfil por su correo (lo aceptó en A)
     await conPerfil(A); await conPerfil(OTRA); await evento(A, 'dueno', c1); await evento(B, 'inquilino', c2); await revision(B, c2); await evento(OTRA, 'inquilino', c1)
     await como(B)
     type D = { correo: string; cuentas: number; perfiles: unknown[]; aceptaciones: unknown[]; vitrinas: unknown[]; eventos: { rol: string }[]; revisiones: unknown[]; solicitudes_borrado: unknown[] }
@@ -117,13 +117,41 @@ describe('descargar mis datos: desde el servidor, de todas las sesiones con ese 
 })
 
 describe('regla «sin REP-01 y sin alquileres» por correo (con la reputación encendida)', () => {
-  it('persona nueva: bloqueada en el aparato A y también en el B; con alquileres o REP-01 en otro aparato, entra', async () => {
-    const conAlq = await aparato(), conRep = await aparato('rep@ejemplo.com'); await entrar(await contrato(), 'dueno', conAlq, 'alquileres@ejemplo.com'); await conPerfil(conRep)
+  let conAlq = '', conRep = ''
+  beforeAll(async () => {
+    conAlq = await aparato(); conRep = await aparato('rep@ejemplo.com')
+    await entrar(await contrato(), 'dueno', conAlq, 'alquileres@ejemplo.com'); await conPerfil(conRep)
     await db.query('insert into public.lk_reputacion_encendido default values')
+  })
+  it('persona nueva sin REP-01: bloqueada en el aparato A y también en el B', async () => {
     const A = await aparato(), B = await aparato()
     for (const u of [A, B]) await expect(entrar(await contrato('firmas'), 'dueno', u, 'nueva@ejemplo.com')).rejects.toThrow(SIN_PERFIL)
-    await entrar(await contrato('firmas'), 'dueno', B, ' Alquileres@Ejemplo.com ')   // ya tiene alquileres en otro aparato
-    await entrar(await contrato('firmas'), 'inquilino', A, 'rep@ejemplo.com')        // aceptó REP-01 en otro aparato (sesión con ese correo)
     expect((await uno<{ v: boolean }>(`select public.lk_sin_perfil_ni_alquileres($1, 'nueva@ejemplo.com') v`, [B])).v).toBe(true)
+  })
+  it('RIESGO (a): una cuenta nueva que aceptó REP-01 (lk_aceptar_reputacion, por correo normalizado) entra, en ese aparato y en otro', async () => {
+    const A = await aparato(), B = await aparato()
+    await como(A); expect((await uno<{ ok: boolean }>(`select public.lk_aceptar_reputacion(' Nueva.Acepto@Ejemplo.COM ', '1.10-demo', '{a,b}') ok`)).ok).toBe(true)
+    await db.query(`select public.lk_aceptar_reputacion('nueva.acepto@ejemplo.com', 'otra', '{c}')`); await como(null)   // la segunda no cambia nada
+    expect(await uno('select correo, version, texto from public.lk_reputacion_aceptaciones where usuario = $1', [A])).toEqual({ correo: 'nueva.acepto@ejemplo.com', version: '1.10-demo', texto: ['a', 'b'] })
+    await entrar(await contrato('firmas'), 'dueno', A, 'nueva.acepto@ejemplo.com')
+    await entrar(await contrato('firmas'), 'inquilino', B, ' NUEVA.ACEPTO@ejemplo.com')   // segundo aparato, sin aceptación propia
+  })
+  it('RIESGO (b): una cuenta con alquileres que entra desde un segundo aparato no se bloquea', async () => {
+    const B = await aparato()
+    await entrar(await contrato('firmas'), 'dueno', B, ' Alquileres@Ejemplo.com ')
+  })
+  it('aceptó REP-01 en otro aparato (sesión con ese correo): entra', async () => {
+    await entrar(await contrato('firmas'), 'inquilino', await aparato(), 'rep@ejemplo.com')
+    expect(conRep).not.toBe('')
+  })
+  it('lk_aceptar_reputacion: sin sesión, sin correo válido o sin texto, error que dice cómo seguir; con un borrado pendiente no guarda', async () => {
+    const A = await aparato()
+    await como(null); await expect(db.query(`select public.lk_aceptar_reputacion('x@ejemplo.com', 'v', '{a}')`)).rejects.toThrow(/Entra a tu cuenta para aceptar/)
+    await como(A)
+    await expect(db.query(`select public.lk_aceptar_reputacion('no-es-correo', 'v', '{a}')`)).rejects.toThrow(/vuelve a entrar con tu correo y acepta de nuevo/)
+    await expect(db.query(`select public.lk_aceptar_reputacion('x@ejemplo.com', 'v', '{}')`)).rejects.toThrow(/acepta de nuevo tu perfil/)
+    await como(conAlq); await db.query(`select public.lk_pedir_borrado_cuenta('alquileres@ejemplo.com')`)
+    await como(A); expect((await uno<{ ok: boolean }>(`select public.lk_aceptar_reputacion('alquileres@ejemplo.com', 'v', '{a}') ok`)).ok).toBe(false)
+    await como(null); expect(await cuantos('public.lk_reputacion_aceptaciones', [A])).toBe(0)
   })
 })

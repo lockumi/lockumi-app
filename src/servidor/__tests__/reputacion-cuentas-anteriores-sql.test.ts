@@ -6,9 +6,9 @@ import { PGlite } from '@electric-sql/pglite'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create table auth.users (id uuid primary key);
+  create schema auth; create table auth.users (id uuid primary key, email text);
   create table public.lk_contratos (id uuid primary key, estado text not null, actualizado_en timestamptz not null default now());
-  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null);
+  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null, email_cavos text);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;`
 const u = (n: number) => `00000000-0000-4000-8000-00000000000${n}`, k = (n: number) => `00000000-0000-4000-9000-00000000000${n}`
 const NUEVA1 = u(1), NUEVA2 = u(2), VIEJA = u(3), BORRA = u(4)

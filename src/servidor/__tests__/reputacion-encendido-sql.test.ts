@@ -6,9 +6,9 @@ import { PGlite } from '@electric-sql/pglite'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create table auth.users (id uuid primary key);
+  create schema auth; create table auth.users (id uuid primary key, email text);
   create table public.lk_contratos (id uuid primary key, estado text not null, actualizado_en timestamptz not null default now());
-  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null);
+  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null, email_cavos text);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;`
 const u = (n: number) => `00000000-0000-4000-8000-00000000000${n}`, k = (n: number) => `00000000-0000-4000-9000-00000000000${n}`
 const VIEJA = u(1), NUEVA_SIN = u(2), NUEVA_CON = u(3), OTRA_CON = u(4)
@@ -34,7 +34,7 @@ describe('sin REP-01 y sin alquileres', () => {
   it('encendida: sin REP-01 ni alquileres no crea ni se une; con alquileres o con REP-01, sí', async () => {
     await db.query('insert into public.lk_reputacion_encendido default values')
     await contrato(k(2))
-    for (const rol of ['dueno', 'inquilino']) await expect(entrar(k(2), rol, NUEVA_SIN)).rejects.toThrow(/primero acepta tu perfil de reputación/)
+    for (const rol of ['dueno', 'inquilino']) await expect(entrar(k(2), rol, NUEVA_SIN)).rejects.toThrow(/Antes de crear un alquiler o unirte a uno, acepta tu perfil de reputación en la app/)
     await entrar(k(2), 'dueno', VIEJA); await entrar(k(2), 'inquilino', NUEVA_CON)
     expect((await uno<{ v: boolean }>('select public.lk_sin_perfil_ni_alquileres($1) v', [NUEVA_SIN])).v).toBe(true)
     expect((await uno<{ v: boolean }>('select public.lk_sin_perfil_ni_alquileres($1) v', [VIEJA])).v).toBe(false)

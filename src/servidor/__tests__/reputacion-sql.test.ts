@@ -6,9 +6,9 @@ import { fechaLimiteBorrado } from '../../reputacion/borrado'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create table auth.users (id uuid primary key);
+  create schema auth; create table auth.users (id uuid primary key, email text);
   create table public.lk_contratos (id uuid primary key, estado text not null, actualizado_en timestamptz not null default now());
-  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null);
+  create table public.lk_participantes (contrato_id uuid not null, rol text not null, usuario uuid not null, email_cavos text);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;`
 const A = '00000000-0000-4000-8000-000000000001', B = '00000000-0000-4000-8000-000000000002', C = '00000000-0000-4000-8000-000000000003'
 let db: PGlite
