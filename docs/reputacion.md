@@ -112,8 +112,10 @@ Sección 5: `lk_reputacion_encendido` (una fila = reputación encendida), `lk_si
 No insertar la fila de encendido hasta que la app escriba lk_reputacion_aceptaciones por correo.
 (Esta línea se queda hasta verificar esa escritura —`lk_aceptar_reputacion`, que la app llama en modo servidor— en una corrida real en modo servidor.)
 **Al encender** (solo después de eso): `insert into public.lk_reputacion_encendido default values;`.
-Sección 6 (persona por correo, Legal 25/10 4:01 p. m.): `lk_aceptar_reputacion` y `lk_mis_datos_reputacion`; ver «Persona por correo» abajo.
-pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`, `reputacion-encendido-sql.test.ts` y `reputacion-persona-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
+Sección 6 (persona por correo, Legal 25/10 4:01 p. m.): `lk_aceptar_reputacion`, `lk_mis_datos_reputacion` y (4:22 p. m.) `lk_necesita_rep01`;
+ver «Persona por correo» y «Correo verificado» abajo. Desde las 4:23 p. m.: `lk_correos_verificados` + `lk_registrar_correo_verificado` (solo
+`service_role`) y columna `correo` en perfiles, consentimientos, eventos y revisiones (borrado y descarga por correo).
+pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`, `reputacion-encendido-sql.test.ts`, `reputacion-persona-sql.test.ts` y `reputacion-verificacion-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
 
 ## Pruebas
 
@@ -133,8 +135,9 @@ alquileres → en «Nuevo alquiler», la pantalla previa de siempre. La prueba s
 ## Pendientes
 
 **Legal:** aprobó los textos de 6e9210a y los de la ronda de las 3:27 (marcas cambiadas a «LEGAL: revisado (25/10)»; en Términos 15.1 y el
-Aviso, «1.10‑demo» con guion que no se corta, U+2011). Llevan «LEGAL: revisar» solo la ayuda del nombre (`textos.ts`) y el mensaje del
-servidor de la sección 5 de la migración.
+Aviso, «1.10‑demo» con guion que no se corta, U+2011). El 25/10 a las 4:23 p. m. aprobó los de la ronda de las 4:01 (marcas «revisado»;
+SQL «falta el texto» con su texto nuevo) y la línea de Privacidad de la persona por correo (publicada, con «solicitudes»). Llevan
+«LEGAL: revisar · ronda 25/10 4:23» solo `UI.errBorrado` (`textos.ts`) y `NO_SE_PUDO_VERIFICAR` (`api/_lib/cavos-token.ts`, la app no lo muestra).
 
 **Persona por correo (Legal, 25/10/2026 4:01 p. m.; implementado en la migración, NO aplicada):** `auth.uid()` es una sesión anónima por
 aparato (`repositorio.ts:16-21`). La persona es su correo normalizado (`trim` + minúsculas), tomado SOLO de lo que la app guarda con la
@@ -145,14 +148,38 @@ miran el correo de la fila nueva de `lk_participantes`; `lk_pedir_borrado_cuenta
 borra lo de todas (con un alquiler abierto en cualquiera, nada hasta que se cierra); `lk_borrar_cuentas_pedidas` borra lo de reputación de
 todas sus sesiones y la cuenta de las que no tienen otro correo, y deja la constancia sin correo; `lk_mis_datos_reputacion(p_correo, p_rol)` da
 la descarga de todas sus sesiones (la app la usa en modo servidor: `datosDeDescarga` en `Pantallas.tsx`; en la demo local, igual que antes);
-`lk_aceptar_reputacion` guarda REP-01 por correo (la app la llama en modo servidor: `subirAceptacion`). **Límites:** (1) `email_cavos` y el
-correo de `lk_aceptar_reputacion` los manda la app; el servidor no verifica el token de Cavos, así que quien manipule la app podría vincular
-su sesión a un correo ajeno (ya pasaba con `lk_crear_contrato`; con esta ronda alcanza también la descarga y el borrado de ese correo):
-antes de aplicar la migración, verificar el correo en el servidor (token de Cavos) o aceptar el riesgo por escrito. (2) Una sesión sin
-alquileres ni aceptación no tiene correo conocido hasta su primer contrato o su aceptación. (3) Un aparato compartido por dos correos une
-sus sesiones: el borrado de uno borra también lo de reputación de esa sesión compartida (no su cuenta). (4) En la app, la pantalla previa
-sigue mirando la aceptación guardada en este navegador: en un segundo aparato sin alquileres, la persona vuelve a ver la pantalla previa
-(el servidor no la bloquea). (5) Pedir el borrado en el servidor desde la app sigue pendiente (la app borra en este navegador).
+`lk_aceptar_reputacion` guarda REP-01 por correo (la app la llama en modo servidor: `subirAceptacion`).
+
+**Correo verificado (Legal, 25/10/2026 4:23 p. m.: bloqueante; implementado, migración NO aplicada, Vercel sin tocar):** el login no
+cambia. El kit de Cavos (`@cavos/kit` 0.4.2, `CavosAuth.getAuthToken()`, `node_modules/@cavos/kit/dist/index.d.ts`) ya guarda el token que
+entregó el proveedor al iniciar sesión (en `sessionStorage`, `cavos-kit:token:<appId>`): el id_token de Google (`iss`
+`https://accounts.google.com`) o de Apple (`https://appleid.apple.com`), o el JWT del enclave de Cavos para el código por correo
+(`https://enclave.cavos.xyz`, llaves en `https://enclave.cavos.xyz/.well-known/jwks.json`; https://docs.cavos.xyz/docs/auth). La app
+(`src/reputacion/verificacion.ts`) lo lee con `authCavos()` y lo manda una vez por correo a `POST /api/verificar-correo` con su sesión de
+Supabase. `api/_lib/cavos-token.ts` valida con WebCrypto: firma con el JWKS del emisor (RS256 Google/Apple, ES256 enclave; `none`/HS256 nunca),
+emisor, audiencia (`CAVOS_AUDIENCIAS`), `exp`/`nbf` (±60 s), correo (`email_verified` en Google/Apple) y, solo entonces, llama
+`lk_registrar_correo_verificado(uid, correo, método)` con la clave de servicio. Hasta entonces el servidor RECHAZA (cierre por defecto):
+`lk_mis_datos_reputacion`, `lk_pedir_borrado_cuenta`, `lk_aceptar_reputacion` y `lk_necesita_rep01` solo aceptan un correo de
+`lk_correos_verificados` para ESA sesión; un `email_cavos` sin verificar no usa la aceptación de otra persona (regla del encendido).
+**Antes de usarlo:** poner en Vercel `CAVOS_AUDIENCIAS` (lista separada por comas) con el `aud` real de los tokens de Lockumi (client id de
+Google de Cavos, el de Apple y el del enclave): sacarlo de un token real; sin esa variable la función responde 503 y no se verifica nada.
+Además `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (ya usadas por `/api/tw`).
+
+**Dos correos en un aparato (Legal, 4:23 p. m.):** cada fila de reputación lleva su `correo`; borrar y descargar filtran por CORREO
+(`lk_de_la_persona`), nunca por la sesión compartida. La cuenta (`auth.users`) solo se borra si la sesión no tiene otro correo. El pedido
+pendiente de A no bloquea a B, no oculta su perfil y un alquiler abierto de B no frena el borrado de A.
+
+**Límites cerrados:** (1) correo verificado contra el token de Cavos (arriba); (4) la pantalla previa en otro aparato pregunta al servidor
+(`lk_necesita_rep01`; mientras tanto «Cargando…»; si falla, se muestra); (5) «Eliminar mi cuenta» manda `lk_pedir_borrado_cuenta` con el correo
+de la sesión de Cavos y, si falla, no borra nada en este aparato y muestra `UI.errBorrado`.
+**Límites que quedan:** (a) el token vive en `sessionStorage`: en una pestaña nueva no hay token y, si esa sesión de Supabase no se verificó
+antes, el servidor rechaza hasta volver a entrar. (b) El código por correo: si el JWT del enclave no trae `email`, no se verifica (cierre por
+defecto); confirmarlo con un token real. (c) El `aud` no está documentado por Cavos: `CAVOS_AUDIENCIAS` sale de un token real. (d) El servidor
+no puede comprobar el `nonce` (lo ata al secreto del login, que queda en el cliente): un token robado y vigente serviría para verificar ese
+correo hasta que vence. (e) El login simulado (`modoReal` apagado) no tiene token: en modo servidor sin Cavos real todo se rechaza. (f) Filas
+sin correo (anteriores a esta ronda) en una sesión con dos correos no se borran con ninguno de los dos. (g) Las políticas RLS de lectura siguen
+por sesión (`usuario = auth.uid()`): en un aparato compartido, las dos personas pueden leer las filas de esa sesión. (2) Una sesión sin
+alquileres ni aceptación no tiene correo conocido hasta que se verifica.
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
 anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
