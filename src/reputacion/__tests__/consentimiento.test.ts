@@ -1,7 +1,7 @@
 // Paso 19 · Registro de consentimientos (C.1 y C.8): una casilla por opción y por papel, sin marcar, con versión, fecha y texto.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as modulo from '../consentimiento'
-import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo } from '../consentimiento'
+import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo, aceptoReputacion } from '../consentimiento'
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
 beforeEach(() => { const m = new Map<string, string>()
@@ -10,7 +10,7 @@ beforeEach(() => { const m = new Map<string, string>()
 describe('consentimientos', () => {
   it('todo empieza apagado, para los dos papeles', () => {
     const s = leer(E)
-    for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['perfil', 'destacados', 'nuevos', 'puntaje'] as const) expect(activa(s, rol, o)).toBe(false)
+    for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['perfil', 'destacados', 'nuevos'] as const) expect(activa(s, rol, o)).toBe(false)
   })
   it('el perfil de dueño y el de inquilino tienen casillas separadas', () => {
     aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
@@ -20,8 +20,19 @@ describe('consentimientos', () => {
     aceptar(E, 'inquilino', 'perfil', ['Confirmo…', 'Entiendo…'], F)
     expect(leer(E).roles.inquilino.perfil).toEqual({ version: VERSION_TEXTOS, fecha: F, texto: ['Confirmo…', 'Entiendo…'] })
   })
-  it('no se puede activar Destacados, Nuevos ni el puntaje sin el perfil público', () => {
-    for (const o of ['destacados', 'nuevos', 'puntaje'] as const) expect(() => aceptar(E, 'dueno', o, ['x'], F)).toThrow()
+  it('no se puede activar Destacados ni Nuevos sin el perfil público', () => {
+    for (const o of ['destacados', 'nuevos'] as const) expect(() => aceptar(E, 'dueno', o, ['x'], F)).toThrow()
+  })
+  it('no hay opción «Mostrar mi puntaje» (se muestra siempre desde el 3.er alquiler cerrado)', () => {
+    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F)
+    expect(() => aceptar(E, 'dueno', 'puntaje' as never, ['x'], F)).toThrow()
+  })
+  it('OBLIGATORIA (decisión de Katherine, 2:24 p. m.): para usar Lockumi hacen falta nombre, cantón y la aceptación de los DOS papeles', () => {
+    expect(aceptoReputacion(E)).toBe(false)
+    guardarDatos(E, 'Laura V.', 'Escazú'); expect(aceptoReputacion(E)).toBe(false)
+    aceptar(E, 'dueno', 'perfil', ['a', 'b'], F); expect(aceptoReputacion(E)).toBe(false)
+    aceptar(E, 'inquilino', 'perfil', ['a', 'b'], F); expect(aceptoReputacion(E)).toBe(true)
+    borrarTodo(E); expect(aceptoReputacion(E)).toBe(false)
   })
   it('no hay «Dejar de mostrar»: el perfil queda fijo y solo desaparece al eliminar la cuenta (decisión del 25/10/2026)', () => {
     expect(Object.keys(modulo).filter(k => /dejar|retirar|ocultar/i.test(k))).toEqual([])

@@ -1,7 +1,7 @@
 // Paso 19 · Puntaje de reputación (sección C.3 de legal/reputacion-textos.md) como funciones puras. Escritas ANTES del código (TDD).
 import { describe, it, expect } from 'vitest'
 import type { Alquiler, Resultado } from '../../types'
-import { cuentaParaPuntaje, fraccionDescontada, valorDelAlquiler, calcularPuntaje, formatoPuntaje, lineaPublica, insignias, tieneLlave,
+import { cuentaParaPuntaje, fraccionDescontada, valorDelAlquiler, calcularPuntaje, formatoPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave,
   zonaVitrina, ordenarVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, UMBRAL_CASI_TODO, fraccionReclamoDevuelta, reclamoIndebido, eventoNegativo } from '../puntaje'
 
 const DIA = 86_400_000, AHORA = Date.parse('2026-11-16T16:00:00Z')
@@ -76,21 +76,28 @@ describe('calcularPuntaje', () => {
   })
 })
 
-describe('lo que se muestra en público (sin frases negativas)', () => {
+describe('lo que se muestra en público: el puntaje SIEMPRE desde el 3.er alquiler cerrado (decisión de Katherine, 25/10/2026, 2:24 p. m.)', () => {
   it('formato con coma decimal', () => { expect(formatoPuntaje(4.8)).toBe('4,8'); expect(formatoPuntaje(5)).toBe('5,0') })
-  it('antes de 3 alquileres: «Nuevo en Lockumi», en singular o plural', () => {
-    expect(lineaPublica({ cerrados: 0, valor: null, enRevision: false }, true)).toBe('Nuevo en Lockumi · 0 alquileres cerrados')
-    expect(lineaPublica({ cerrados: 1, valor: null, enRevision: false }, true)).toBe('Nuevo en Lockumi · 1 alquiler cerrado')
+  it('con 0, 1 o 2 alquileres cerrados el puntaje NO se muestra: estado neutro «Nuevo en Lockumi»', () => {
+    expect(lineaPublica({ cerrados: 0, valor: null, enRevision: false })).toBe('Nuevo en Lockumi · 0 alquileres cerrados')
+    expect(lineaPublica({ cerrados: 1, valor: null, enRevision: false })).toBe('Nuevo en Lockumi · 1 alquiler cerrado')
+    expect(lineaPublica({ cerrados: 2, valor: 4.2, enRevision: false })).toBe('Nuevo en Lockumi · 2 alquileres cerrados')
+    for (const n of [0, 1, 2]) expect(puntajeVisible({ cerrados: n, valor: 5, enRevision: false })).toBe(false)
   })
-  it('con un reclamo abierto: «En revisión»', () => { expect(lineaPublica({ cerrados: 5, valor: 4.9, enRevision: true }, true)).toBe('En revisión') })
-  it('un puntaje menor a 3,0 se ve igual que quien eligió no mostrar su puntaje', () => {
-    const bajo = lineaPublica({ cerrados: 7, valor: 2.4, enRevision: false }, true), oculto = lineaPublica({ cerrados: 7, valor: 4.9, enRevision: false }, false)
-    expect(bajo).toBe('7 alquileres cerrados en Lockumi'); expect(oculto).toBe(bajo)
+  it('con 3 o más se muestra siempre, sin opción para ocultarlo', () => {
+    expect(lineaPublica({ cerrados: 3, valor: 5, enRevision: false })).toBe('5,0 de 5')
+    expect(lineaPublica({ cerrados: 14, valor: 4.8, enRevision: false })).toBe('4,8 de 5')
+    expect(puntajeVisible({ cerrados: 3, valor: 5, enRevision: false })).toBe(true)
   })
-  it('D1 y D6 de Legal: la línea sin puntaje dice «{t} alquileres cerrados en Lockumi»', () => {
-    expect(lineaPublica({ cerrados: 14, valor: 4.8, enRevision: false }, false)).toBe('14 alquileres cerrados en Lockumi')
+  it('también un puntaje bajo se muestra (ocultarlo delataría a quien lo tiene; D7 de Legal)', () => {
+    expect(lineaPublica({ cerrados: 7, valor: 2.4, enRevision: false })).toBe('2,4 de 5')
+    expect(puntajeVisible({ cerrados: 7, valor: 2.4, enRevision: false })).toBe(true)
   })
-  it('con 3 o más y «Mostrar mi puntaje»: el puntaje', () => { expect(lineaPublica({ cerrados: 4, valor: 4.8, enRevision: false }, true)).toBe('4,8 de 5') })
+  it('con un reclamo abierto: «En revisión»', () => { expect(lineaPublica({ cerrados: 5, valor: 4.9, enRevision: true })).toBe('En revisión') })
+  it('el cálculo de punta a punta: 2 cerrados no muestra número; el 3.º sí', () => {
+    expect(puntajeVisible(calcularPuntaje([alq(), alq()], 'inquilino', AHORA))).toBe(false)
+    expect(puntajeVisible(calcularPuntaje([alq(), alq(), alq()], 'inquilino', AHORA))).toBe(true)
+  })
 })
 
 describe('insignias (C.7): solo positivas', () => {
@@ -187,8 +194,13 @@ describe('reclamo justo e indebido (decisión del 25/10/2026)', () => {
     expect(reclamoIndebido(cerrado(400, 0, 'simulacion'), AHORA)).toBe(false)
     expect(reclamoIndebido(alq({ resultado: res(0, 800, 'acuerdo') }), AHORA)).toBe(false)   // sin reclamo
   })
+  it('el umbral «casi todo» es la PROPUESTA de Legal (C.3.1): 90 % de lo reclamado', () => { expect(UMBRAL_CASI_TODO).toBe(0.9) })
+  it('ejemplo de Legal (C.3): depósito 800, reclamo 300; devueltos los 300 → 3,1; devueltos 270 → 3,3; el dueño recibe 45 → no cuenta', () => {
+    expect(formatoPuntaje(valorDelAlquiler(cerrado(300, 0, 'mediacion'), 'dueno', AHORA))).toBe('3,1')
+    expect(formatoPuntaje(valorDelAlquiler(cerrado(300, 30, 'acuerdo'), 'dueno', AHORA))).toBe('3,3')
+    expect(valorDelAlquiler(cerrado(300, 45, 'mediacion'), 'dueno', AHORA)).toBe(5)
+  })
   it('borde del umbral «casi todo»: justo en el umbral cuenta; un poco menos, no', () => {
-    expect(UMBRAL_CASI_TODO).toBeGreaterThan(0.5); expect(UMBRAL_CASI_TODO).toBeLessThanOrEqual(1)
     const enUmbral = 400 * (1 - UMBRAL_CASI_TODO)   // al dueño le queda solo lo que permite el umbral
     expect(fraccionReclamoDevuelta(cerrado(400, enUmbral, 'mediacion'))).toBeCloseTo(UMBRAL_CASI_TODO)
     expect(reclamoIndebido(cerrado(400, enUmbral, 'mediacion'), AHORA)).toBe(true)
