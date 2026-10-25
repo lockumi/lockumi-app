@@ -60,7 +60,7 @@ async function destinoSimulado() {
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
-    migraciones: async () => ({ m030: true, m040: true }), limpiar: async () => 0 }
+    migraciones: async () => ({ m030: true, m040: true, m050: true }), limpiar: async () => 0 }
 }
 async function destinoReal() {
   const { createClient } = await import('@supabase/supabase-js')
@@ -80,7 +80,7 @@ async function destinoReal() {
   return { nombre: url.includes('sddgjnuvxzkrhhuczuly') ? 'Supabase de PRODUCCIÓN (datos de prueba marcados)' : 'Supabase ' + new URL(url).host, cuenta, rest: fetch,
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
-    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0') }),
+    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0') }),
     limpiar: async () => {
       const r = await rest(`lk_contratos?direccion=like.${encodeURIComponent('E2E-C %')}&select=id`); const ids = r.ok ? (await r.json()).map(x => x.id) : []
       for (const id of ids) await rest(`lk_contratos?id=eq.${id}`, { method: 'DELETE' })
@@ -127,7 +127,8 @@ const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
 const tw = (cta, pedido) => enFila(() => atender(env, pedido, 'Bearer ' + cta.token, fTw))
 const mig = await D.migraciones()
-log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'}`)
+log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'}`)
+if (!mig.m050) { log('✘ falta la migración 20261025050000 (Términos por alquiler) en el destino: sin ella no se puede crear ni unirse'); process.exit(1) }
 
 const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await D.cuenta()]
 await D.hacerMediador(mediador.uid)
@@ -236,7 +237,7 @@ const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destin
 writeFileSync(SALIDA + '/estado.json', JSON.stringify(est, null, 2))
 writeFileSync(SALIDA + '/capa-capturas.json', JSON.stringify(capa, (k, v) => v instanceof Date ? v.toISOString() : v, 2))
 if (REAL) { writeFileSync(SALIDA + '/sesiones.json', JSON.stringify({ dueno: dueno.sesion, inquilino: inquilino.sesion })); chmodSync(SALIDA + '/sesiones.json', 0o600) }   // solo para las capturas; vencen solas
-const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}`,
+const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}`,
   `- Resultado: ${fallas.length ? fallas.length + ' fallas' : 'todo en verde'}${omitidos.length ? ` · ${omitidos.length} omitido(s)` : ''}`, '', '| Alquiler | Paso | Transacción |', '|---|---|---|',
   ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o)].join('\n')
 writeFileSync(SALIDA + '/informe.md', md + '\n')
