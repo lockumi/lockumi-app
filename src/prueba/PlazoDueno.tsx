@@ -11,6 +11,7 @@ import { fechaHoraCR } from '../../api/_lib/plazos'
 import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { textoContador, textoRecibir, CONFIRMAR_DEVOLVER, botonRecibir, botonDevolver, recibirCasa, inicioAuto, finVentana, vencido, simularDias } from './dueno'
 import { AvisosApp } from './AvisosApp'
+import { AvisosCorreo } from './AvisosCorreo'
 
 const cr = (t: number) => `${fechaHoraCR(t)}, hora de Costa Rica`
 
@@ -57,6 +58,7 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
   return <section className="pila plazo-dueno">
     {cuerpo}
     <AvisosApp a={a} rol={rol} onAccion={acc => acc === 'confirmar-devolver' ? (setForm(false), setConfirmar(true)) : irA()} />
+    <AvisosCorreo a={a} rol={rol} />{/* paso 11 */}
     {adelantoPermitido() && !termino && <section className="pila simulador" aria-labelledby="t-simulador">
       {/* LEGAL: revisar · simulador de días (aprobado: los avisos salen al adelantar) */}
       <h3 id="t-simulador">Simulador de días (solo red de prueba)</h3>
