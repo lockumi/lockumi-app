@@ -85,10 +85,14 @@ export function turno(a: Alquiler, yo: Rol): { tu: string; otra: string; sigue: 
       return yo === 'dueno'
       ? { tu: 'Si encontraste un daño, puedes reclamar. Si todo está bien, no hagas nada.', otra: 'El inquilino espera.', sigue: `Si no reclamas, después de ${textoPlazo(a)} el depósito se devuelve al inquilino.` }   // LEGAL: revisado (24/10)
       : { tu: 'No tienes que hacer nada.', otra: 'El dueño puede reclamar si encontró un daño.', sigue: `Si no hay reclamo, después de ${textoPlazo(a)} se te devuelve el depósito.` }   // LEGAL: revisado (24/10)
-    case 'reclamo': return yo === 'inquilino'
+    case 'reclamo': if (pruebaCompleta()) return yo === 'inquilino'   // LEGAL: revisar · prueba completa (6.4.4, 6.7)
+      ? { tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: 'Si no aceptas todo, verás una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
+      : { tu: 'No tienes que hacer nada por ahora.', otra: 'El inquilino tiene que responder tu reclamo.', sigue: 'Si no acepta todo, verán una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
+      return yo === 'inquilino'
       ? { tu: 'Responde el reclamo: acéptalo o recházalo.', otra: 'El dueño espera tu respuesta.', sigue: 'Si lo rechazas, una persona mediadora les ayuda a buscar un acuerdo.' } // LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide
       : { tu: 'No tienes que hacer nada por ahora.', otra: 'El inquilino tiene que responder tu reclamo.', sigue: 'Si lo rechaza, una persona mediadora les ayuda a buscar un acuerdo.' } // LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide
-    case 'mediacion': return { tu: 'No tienes que hacer nada.', otra: 'Una persona mediadora está revisando las fotos.', sigue: 'La persona mediadora les ayuda a acordar cómo se reparte el depósito.' } // LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide
+    case 'mediacion': if (pruebaCompleta()) return { tu: 'Puedes pedir la Mediación Lockumi (demo) o resolver el reclamo con el botón de simulación.', otra: 'No hubo acuerdo.', sigue: 'El depósito de prueba sigue bloqueado hasta que se resuelva el reclamo.' }   // LEGAL: revisar · prueba completa (6.3 f, 6.8 b)
+      return { tu: 'No tienes que hacer nada.', otra: 'Una persona mediadora está revisando las fotos.', sigue: 'La persona mediadora les ayuda a acordar cómo se reparte el depósito.' } // LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide
     case 'cerrado': return { tu: 'Listo. No tienes nada pendiente.', otra: 'Listo.', sigue: 'El alquiler terminó.' }
   }
 }
