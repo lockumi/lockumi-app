@@ -11,7 +11,7 @@ export function Expediente({ a }: { a: Alquiler }) {
     <p>{AVISO_EXPEDIENTE}</p>{/* LEGAL: revisar · B.11 */}
     <p className="nota">Cada página lleva la marca «{MARCA_EXPEDIENTE}». No incluye correos, teléfonos, identificaciones ni la dirección.</p>
     <div className="expediente__botones">
-      <button type="button" className="boton boton--pc" onClick={() => { descargarExpediente(a, ahoraDe(a)); setPaso('listo') }}>Descargar</button>
+      <button type="button" className="boton boton--pc" onClick={() => { void descargarExpediente(a, ahoraDe(a)).finally(() => setPaso('listo')) }}>Descargar</button>
       <button type="button" className="boton boton--secundario" onClick={() => setPaso('boton')}>Cancelar</button>
     </div></div>
   return <div className="pila">
