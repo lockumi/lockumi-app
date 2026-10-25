@@ -47,6 +47,17 @@ Solo agrega (3 tablas y 9 funciones nuevas, permisos y RLS de esas tablas). No c
 - Funciones: `lk_sumar_habiles`, `lk_guardar_consentimiento_correo` (authenticated), `lk_mediacion_vencimientos`, `lk_correos_por_estado`, `lk_correos_pendientes`, `lk_correo_reservar`, `lk_correo_marcar`, `lk_correo_abierto`, `lk_correo_cuenta_registrado` (solo service_role).
 - Aplicada en producción (sddgjnuvxzkrhhuczuly) el 25/10/2026, 4:25 p. m. (hora de Costa Rica), y vuelta a aplicar a las 4:31 p. m. (corrección del día 4/6). `lk_correos_por_estado` quedó reemplazada por `20261025100000_c_recordatorios_hacia_atras.sql` (abajo). `waitlist` (2 filas) y `waitlist_intentos` (1 fila) quedaron iguales (misma huella md5 antes y después).
 
+## Estado de la ronda de Legal 25/10 (5:00 y 5:09 p. m.)
+
+Prioridad del Coordinador (5:29 p. m.): primero lo que cambia el funcionamiento. Todo quedó en esta misma ronda (commit 0498407 y siguiente):
+
+- **Funcionamiento:** recordatorios hacia atrás (abajo, aplicado en producción); vencimiento de la mediación con `CORREOS_C` apagado (arriba, «Cuándo se envían»); en C no hay «propuesta automática» en ningún correo ni pantalla (prueba en `src/prueba/__tests__/c-textos-legal.test.tsx`).
+- **Textos de las 5:00 p. m.:** línea del plazo de la mediación (P-05), «solicitud» en la Privacidad, «el dueño» en COR-C-00.
+- **Segunda parte (ya hecha, se puede revisar aparte):** hora en 12 h y montos con 2 decimales; guarda de todas las marcas; Privacidad :51 y :52; `SIGUE_RECLAMO_DOS` literal; historial de `api/_lib/tw.ts` («de prueba» y 2 decimales); COR-C-03 registra la apertura solo con el botón (`POST`); comentario de la línea 1 de la migración 090000.
+- **Legal, 5:31 p. m.:** con las tres correcciones de funcionamiento (recordatorios hacia atrás con los textos aprobados de 02/d4, 02/d6 y 04/d6; vencimiento sin `CORREOS_C`; sin «propuesta automática», `SIGUE_RECLAMO_DOS` literal) aprueba las demás marcas de C tal como están. Quitar las marcas, `FECHA_V19`, el merge y las variables de Vercel van en un paso aparte, con el OK explícito de Katherine.
+- **Para una ronda después de publicar:** vencimiento de la mediación cada hora (Vercel Hobby solo permite un cron diario; hace falta Pro o un cron externo).
+- **Abierto para Legal:** texto de la página del enlace de COR-C-03; «(red de prueba)» en el historial de la disputa (`api/_lib/tw.ts`); con 2 decimales un reparto puede sumar 0,01 de más o de menos en pantalla (4,99 + 14,96 + 0,06 = 20,01 sobre 20,00).
+
 ## Recordatorios hacia atrás: `supabase/migrations/20261025100000_c_recordatorios_hacia_atras.sql`
 
 Legal 25/10/2026, 5:09 p. m. (bloqueante): los recordatorios se cuentan **hacia atrás desde el vencimiento real** `{vence}` (con domingos y feriados, `lk_fin_plazo`), no desde el inicio. Solo reemplaza `lk_correos_por_estado` (`create or replace`, misma firma y permisos); no toca tablas ni datos. **Aplicada en producción el 25/10/2026 a las 5:25 p. m. (hora de Costa Rica)**, en una transacción; waitlist (2 filas) y waitlist_intentos (1 fila) con la misma huella antes y después, permisos iguales (postgres y service_role). No se registró en `supabase_migrations.schema_migrations` (igual que 20261025090000), porque solo se autorizó reemplazar la función.

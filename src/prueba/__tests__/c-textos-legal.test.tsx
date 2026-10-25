@@ -195,3 +195,14 @@ describe('8) Legal 3:34: contrato y «En curso» de C con el texto de Legal; el 
     expect(cerca(al, 'hecho: esDosPersonas(ahora)', 1)).not.toMatch(/LEGAL: revisar/)
   })
 })
+
+describe('C sin «propuesta automática» (Coordinador 25/10, 5:29 p. m.)', () => {
+  it('ningún correo de C ni el «Qué sigue» de C la mencionan', async () => {
+    const { TEXTOS } = await import('../../../api/_lib/textos-correos')
+    const d = { deposito: 2, reclamado: 0.5, vence: Date.parse('2026-10-29T15:00:00Z'), dueno: 0.5, inquilino: 1.5, pedidoEn: 0, eliminadoEn: 0, limite: 0 }
+    for (const [k, t] of Object.entries(TEXTOS)) for (const auto of [false, true]) for (const motivo of ['rechazo', 'silencio'] as const)
+      expect(`${k} ${t.asunto({ ...d, auto, motivo })} ${t.cuerpo({ ...d, auto, motivo })}`).not.toMatch(/propuesta automática/i)
+    const { SIGUE_RECLAMO_DOS } = await import('../dosPersonas')
+    expect(Object.values(SIGUE_RECLAMO_DOS).join(' ')).not.toMatch(/propuesta automática/i)
+  })
+})
