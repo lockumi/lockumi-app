@@ -108,9 +108,12 @@ cerrarlo; sus datos se usan solo para eso, el puntaje no se recalcula y la otra 
 `supabase/migrations/20261025140000_reputacion.sql`: `lk_reputacion_perfiles`, `lk_reputacion_aceptaciones` (REP-01: versión, texto y
 `aceptado_en` con fecha y hora), `lk_reputacion_consentimientos` (solo vitrinas), `lk_reputacion_eventos`, `lk_reputacion_revisiones` (nota ≤ 300),
 `lk_solicitudes_borrado`, y las funciones `lk_pedir_borrado_cuenta` y `lk_borrar_cuentas_pedidas` (también borra lo negativo de más de 10 años).
-Sección 5: `lk_reputacion_encendido` (una fila = reputación encendida), `lk_sin_perfil_ni_alquileres` y el disparador
-`lk_sin_perfil_tras_encendido`. **Al encender:** `insert into public.lk_reputacion_encendido default values;`.
-pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts` y `reputacion-encendido-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
+Sección 5: `lk_reputacion_encendido` (una fila = reputación encendida), `lk_sin_perfil_ni_alquileres` y el disparador `lk_sin_perfil_tras_encendido`.
+No insertar la fila de encendido hasta que la app escriba lk_reputacion_aceptaciones por correo.
+(Esta línea se queda hasta verificar esa escritura —`lk_aceptar_reputacion`, que la app llama en modo servidor— en una corrida real en modo servidor.)
+**Al encender** (solo después de eso): `insert into public.lk_reputacion_encendido default values;`.
+Sección 6 (persona por correo, Legal 25/10 4:01 p. m.): `lk_aceptar_reputacion` y `lk_mis_datos_reputacion`; ver «Persona por correo» abajo.
+pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.test.ts`, `reputacion-encendido-sql.test.ts` y `reputacion-persona-sql.test.ts`). Antes de aplicarla: OK de Legal y de Katherine.
 
 ## Pruebas
 
@@ -133,12 +136,23 @@ alquileres → en «Nuevo alquiler», la pantalla previa de siempre. La prueba s
 Aviso, «1.10‑demo» con guion que no se corta, U+2011). Llevan «LEGAL: revisar» solo la ayuda del nombre (`textos.ts`) y el mensaje del
 servidor de la sección 5 de la migración.
 
-**Identidad por aparato (investigación del 25/10, sin cambios de comportamiento):** en el servidor, `auth.uid()` es una sesión anónima por aparato
-(`repositorio.ts:16-21`) y todas las tablas de reputación y de borrado usan ese `usuario uuid`. Por eso el perfil, el bloqueo por borrado
-pendiente, el borrado y la descarga siguen al **aparato**, no a la persona: desde otro aparato se puede crear o unirse a un alquiler pese al
-borrado pendiente, y `lk_borrar_cuentas_pedidas` borra solo la sesión de ese aparato. En la demo, todo vive en el navegador. Arreglo mínimo
-propuesto: identificar a la persona por el correo normalizado (`lk_participantes.email_cavos`, que ya se guarda al crear y al aceptar) en
-los disparadores, el borrado y la descarga; mejor aún, vincular las sesiones anónimas a una identidad verificada (Cavos). Ver el informe.
+**Persona por correo (Legal, 25/10/2026 4:01 p. m.; implementado en la migración, NO aplicada):** `auth.uid()` es una sesión anónima por
+aparato (`repositorio.ts:16-21`). La persona es su correo normalizado (`trim` + minúsculas), tomado SOLO de lo que la app guarda con la
+sesión de Cavos: `lk_participantes.email_cavos`, `lk_reputacion_aceptaciones.correo` y `auth.users.email` (nunca un correo escrito a mano,
+como `lk_contratos.email_inquilino`). Funciones: `lk_correos_de`, `lk_uids_de_correo`, `lk_uids_de_persona`, `lk_correo_de_sesion` (el correo
+que manda la app tiene que estar ya vinculado a la sesión). Con eso: el bloqueo por borrado pendiente y la regla «sin REP-01 y sin alquileres»
+miran el correo de la fila nueva de `lk_participantes`; `lk_pedir_borrado_cuenta(p_correo)` deja un pedido por cada sesión de la persona y
+borra lo de todas (con un alquiler abierto en cualquiera, nada hasta que se cierra); `lk_borrar_cuentas_pedidas` borra lo de reputación de
+todas sus sesiones y la cuenta de las que no tienen otro correo, y deja la constancia sin correo; `lk_mis_datos_reputacion(p_correo, p_rol)` da
+la descarga de todas sus sesiones (la app la usa en modo servidor: `datosDeDescarga` en `Pantallas.tsx`; en la demo local, igual que antes);
+`lk_aceptar_reputacion` guarda REP-01 por correo (la app la llama en modo servidor: `subirAceptacion`). **Límites:** (1) `email_cavos` y el
+correo de `lk_aceptar_reputacion` los manda la app; el servidor no verifica el token de Cavos, así que quien manipule la app podría vincular
+su sesión a un correo ajeno (ya pasaba con `lk_crear_contrato`; con esta ronda alcanza también la descarga y el borrado de ese correo):
+antes de aplicar la migración, verificar el correo en el servidor (token de Cavos) o aceptar el riesgo por escrito. (2) Una sesión sin
+alquileres ni aceptación no tiene correo conocido hasta su primer contrato o su aceptación. (3) Un aparato compartido por dos correos une
+sus sesiones: el borrado de uno borra también lo de reputación de esa sesión compartida (no su cuenta). (4) En la app, la pantalla previa
+sigue mirando la aceptación guardada en este navegador: en un segundo aparato sin alquileres, la persona vuelve a ver la pantalla previa
+(el servidor no la bloquea). (5) Pedir el borrado en el servidor desde la app sigue pendiente (la app borra en este navegador).
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
 anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
