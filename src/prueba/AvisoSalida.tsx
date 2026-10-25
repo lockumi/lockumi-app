@@ -21,7 +21,7 @@ export function AvisoSalida({ a, rol }: { a: Alquiler; rol: Rol }) {
       <h3 id="t-aviso-salida">Aviso en la app: 5 días antes de la salida</h3>
       <details className="aviso-app" onToggle={e => { if ((e.target as HTMLDetailsElement).open) abrir() }}>
         <summary><strong>5 días antes de la salida</strong> · {v.asunto}{!v.abierto && <span className="chip chip--coral">Nuevo</span>}</summary>
-        <p>{v.texto.replace(' ver las reglas.', '')} <a href="#/terminos">Ver las reglas (Anexo 6-A)</a>.</p>
+        <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <span key={i}><a href="#/terminos">ver las reglas</a>{t}</span>)}</p>
         <h4>Tus fotos de entrada</h4>
         {a.entrada.cuartos.map((c, i) => <div key={i} className="pila"><strong>{c.nombre}</strong><FotoLista fotos={c.fotos} vacio="Sin fotos de entrada de este espacio." /></div>)}
         {/* LEGAL: revisar · registro visible en el detalle del caso */}
