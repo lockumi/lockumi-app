@@ -26,13 +26,13 @@ const B68_DOS = 'En los alquileres simulados con otra persona, si los dos lo pid
 const INVITADA_7 = 'Si la persona invitada no se une en 7 días, borramos su correo.'
 // Sección B y E de legal/dos-personas-textos.md (texto exacto de Legal)
 const DOS_TERMINOS = [
-  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. En el alquiler con otra persona, quien lo crea es el dueño e invita al inquilino con un enlace.',
+  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. En el alquiler con otra persona, quien lo crea es el dueño e invita al inquilino con un enlace. El enlace vence a los 7 días si la persona no se une.',
   'En esta fase, el alquiler simulado y las fotos reducidas se guardan en Supabase, en un almacenamiento privado en Estados Unidos.',
   'En la fase 2 no hay dueño de prueba: el dueño firma con su propia billetera, y Lockumi no guarda su llave.',
   'En la fase 1, el dueño es la cuenta de prueba de Lockumi, así que Lockumi firma esa aprobación. En la fase 2, el dueño la firma con su propia billetera.',
   'Aprobación de la devolución: en la fase 1, Lockumi la firma con la cuenta del dueño de prueba (4.2 a). En la fase 2, la firma el dueño con su billetera.',
   'En la fase 2, la liberación necesita la aprobación del dueño. Si el dueño no aprueba ni reclama dentro de su plazo (cláusula 6.5 a), la devolución es automática: el sistema de Lockumi abre una disputa en la red de prueba solo para poder devolver el depósito, y otra cuenta de Lockumi, la que resuelve disputas, entrega el 100 % al inquilino. Ninguna persona decide ese reparto, no pasa a mediación y no puede entregar nada al dueño ni a Lockumi.',
-  'En la fase 2, si el plazo vence sin reclamo y el dueño no aprobó, la devolución del 100 % al inquilino es automática (cláusula 5.3 d). No la decide una persona ni pasa a la Mediación Lockumi (demo).',
+  'En la fase 2, si el plazo vence sin reclamo y el dueño no aprobó, la devolución del 100 % al inquilino es automática (cláusula 5.3 d). Puede tardar hasta 24 horas después de que vence el plazo. No la decide una persona ni pasa a la Mediación Lockumi (demo).',
   'Mientras Lockumi tenga el rol de resolver disputas, la cuenta de plataforma no puede abrir una disputa en el contrato digital, salvo la disputa automática de la cláusula 5.3 d), que abre otra cuenta de Lockumi solo para devolver el 100 % al inquilino.',
   TERMINOS_42E,
   'En la fase 2, se aplica el reparto que las dos partes acepten en la mediación (cláusula 6).',

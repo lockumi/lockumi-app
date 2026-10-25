@@ -205,7 +205,7 @@ async function liberarTodo(c: Config, k: Contrato, f = fetch) {
   const j = await tw(c, '/escrow/single-release/release-funds', { contractId: k.escrow_contract_id, releaseSigner: c.plataforma.publicKey() }, f)
   const firmada = firmarComoPlataforma(c, sinFirmar(j)); await enviar(c, firmada, f)
   const tx = hashTx(firmada)
-  await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC menos la comisión de 0,3 % de Trustless Work)`, tx, f)
+  await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)`, tx, f)
   return tx
 }
 /** lk_cerrar_aprobado (service_role): true si cerró el caso por la aprobación del dueño. */

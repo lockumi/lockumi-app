@@ -44,11 +44,11 @@ Dos personas pueden simular juntas un alquiler, cada una con su cuenta. En ese c
 ## Invitar a otra persona{{correos: y avisos por correo}}
 <!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: sección partida según los interruptores; la frase de los 7 días es de Legal (25/10, arreglo 5) -->
 Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuenta.{{correos: Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.}}
-- Puedes invitar a otra persona a un alquiler simulado escribiendo su correo. **Al invitarla, declaras que esa persona sabe que la invitas{{correos: y que acepta recibir el correo de Lockumi}}.** Guardamos esa declaración: quién la hizo, cuándo y con qué texto. No invites a nadie sin avisarle antes.
+- Puedes invitar a otra persona a un alquiler simulado escribiendo su correo. **Al invitarla, declaras que esa persona sabe que la invitas{{correos: y que acepta recibir el correo de invitación de Lockumi}}.** Guardamos esa declaración: quién la hizo, cuándo y con qué texto. No invites a nadie sin avisarle antes.
 <!-- si: correos -->
 - Le enviamos **un solo correo de invitación**, sin recordatorios.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
-- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, el papel de la persona invitada (dueño o inquilino), un resumen del alquiler simulado (monto y fechas) y el enlace para unirse. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
+- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, que la invitan como inquilino, un resumen del alquiler simulado (monto y fechas) y el enlace para unirse. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
 - Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 <!-- fin -->
 <!-- si no: correos -->

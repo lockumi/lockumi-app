@@ -37,11 +37,10 @@ export const TERMINOS_42E = 'En la devolución automática de la cláusula 5.3 d
 export const TEXTO_INVITACION_VENCE = 'El link sirve una sola vez y vence en 7 días.'
 // LEGAL: revisado (25/10, lista de Legal) · pie del contrato en un alquiler con otra persona (no se guarda solo en el navegador)
 export const TEXTO_GUARDA_DOS = 'Este contrato se guarda en Supabase, el proveedor de Lockumi, en Estados Unidos, para que lo vean las dos personas. Las fotos reducidas se guardan en un almacenamiento privado.'
-// LEGAL: revisar · texto de Legal (revision-marcas-pr22.md) salvo el momento de la entrega: el servidor libera todo al inquilino
-// en cuanto el dueño aprueba (6.5 a), por eso «ahora» en vez de «cuando termine tu plazo de reclamos».
-export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Después ya no podrás reclamar en la app. Se le entrega ahora, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
-// LEGAL: revisar · ídem (después de aprobar; se ve mientras la red confirma la entrega)
-export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app. El depósito se le entrega al inquilino ahora, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
+// LEGAL: revisado (25/10, 4:33 a. m., Legal) · «Todo bien, devolver»: el servidor libera al aprobar (6.5 a)
+export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Después ya no podrás reclamar en la app. Se le entrega en cuanto la red de prueba lo confirme, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
+// LEGAL: revisado (25/10, 4:33 a. m., Legal) · después de aprobar (se ve mientras la red confirma la entrega)
+export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app. El depósito se le entrega al inquilino en cuanto la red de prueba lo confirme, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
 
 // PR #22 (d) · cierre de la mediación con las dos aceptaciones (lk_aceptar_acuerdo_mediacion, resultado.cierre = 'dos_aceptan').
 // Legal: aprobado (25/10, 3:16 a. m.) · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)

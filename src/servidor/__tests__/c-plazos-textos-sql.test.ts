@@ -161,3 +161,22 @@ describe('9) eventos del historial con «USDC de prueba»', () => {
     expect((await eventos(med)).at(-1)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino (aceptado por las dos partes) · Daño parcial')
   })
 })
+
+describe('5) Legal 4:33: vencido el plazo, no hay reclamo nuevo aunque el cron todavía no haya liberado', () => {
+  const MSJ = 'El plazo para reclamar ya terminó. El depósito se le devuelve al inquilino.'
+  it('inicio automático (2 días después de la entrega): vencido y sin cron, rechaza y no toca nada', async () => {
+    const id = await entregado(); await fotoReclamo(id); await atrasar(id, 10)
+    await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow(MSJ)
+    expect((await fila(id)).estado).toBe('ventana_reclamo')
+    expect((await uno<{ n: number }>('select count(*)::int n from public.lk_reclamos where contrato_id = $1', [id]))!.n).toBe(0)
+  })
+  it('inicio en «Recibí la casa»: vencido, rechaza con el mismo mensaje', async () => {
+    const id = await entregado(); await fotoReclamo(id)
+    await db.query(`update public.lk_contratos set ventana_inicio = now() - interval '9 days', entregado_en = now() - interval '9 days' where id = $1`, [id])
+    await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow(MSJ)
+  })
+  it('si el caso ya no está en el plazo (p. ej. cerrado), sigue el mensaje de antes', async () => {
+    const id = await entregado(); await fotoReclamo(id); await db.query(`update public.lk_contratos set estado = 'cerrado' where id = $1`, [id])
+    await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow(/^El plazo para reclamar ya terminó\.$/)
+  })
+})
