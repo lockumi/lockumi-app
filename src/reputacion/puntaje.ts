@@ -3,6 +3,8 @@
 //  - Solo cuenta en contra un reclamo que terminó con un DESCUENTO del depósito (aceptado por el inquilino, por la Regla 6.5.1 o por
 //    acuerdo en la mediación), en proporción a lo descontado. El descuento lo paga el inquilino: al dueño no le baja.
 //  - Sin otro plazo de conservación: se usan todos los alquileres cerrados que sigan en la app (se borran solo al borrar la cuenta).
+//    Única excepción, que impone la ley y no Lockumi (Ley 8968, art. 6.1; legal/reputacion-textos.md, sección E, medida a): un descuento
+//    del depósito deja de contar 10 años después de que ocurrió.
 //  - Nunca un ranking: la vitrina se ordena por cantón y precio; el puntaje no cambia el orden.
 import type { Acta, Alquiler, Rol } from '../types'
 
@@ -13,6 +15,8 @@ export const MINIMO_POR_CANTON = 10
 /** Debajo de este puntaje, el perfil se ve igual que el de quien eligió no mostrar su puntaje. */
 export const PUNTAJE_MINIMO_VISIBLE = 3
 const DIA = 86_400_000
+/** Ley 8968, art. 6.1: un descuento del depósito deja de contar 10 años después de que ocurrió. */
+export const TOPE_LEGAL_DIAS = 3653
 
 export interface Puntaje { cerrados: number; valor: number | null; enRevision: boolean }
 
@@ -20,25 +24,26 @@ export interface Puntaje { cerrados: number; valor: number | null; enRevision: b
 export const cuentaParaPuntaje = (a: Alquiler): boolean => a.estado === 'cerrado' && !!a.resultado && a.resultado.via !== 'simulacion'
 
 /** Parte del depósito que se descontó (0 a 1). 0 si el reclamo se cerró sin descontar nada o si no hubo reclamo. */
-export function fraccionDescontada(a: Alquiler): number {
+export function fraccionDescontada(a: Alquiler, ahora = Date.now()): number {
   const r = a.resultado
   if (!r || !cuentaParaPuntaje(a)) return 0
+  if (ahora - Date.parse(r.fecha) > TOPE_LEGAL_DIAS * DIA) return 0
   if (r.via !== 'acuerdo' && r.via !== 'propuesta' && r.via !== 'mediacion') return 0
   const dueno = Math.max(0, Number(r.dueno) || 0), inquilino = Math.max(0, Number(r.inquilino) || 0), total = dueno + inquilino
   return total > 0 ? Math.min(1, dueno / total) : 0
 }
 
 /** Valor de un alquiler cerrado (0 a 5). Cada uno vale 5,0; para el inquilino baja en proporción a lo descontado. */
-export const valorDelAlquiler = (a: Alquiler, rol: Rol): number => rol === 'inquilino' ? 5 * (1 - fraccionDescontada(a)) : 5
+export const valorDelAlquiler = (a: Alquiler, rol: Rol, ahora = Date.now()): number => rol === 'inquilino' ? 5 * (1 - fraccionDescontada(a, ahora)) : 5
 
 const redondear1 = (x: number) => Math.round(x * 10 + 1e-9) / 10
 
 /** Puntaje de una persona en un papel, con sus alquileres de ese papel. */
-export function calcularPuntaje(alquileres: Alquiler[], rol: Rol): Puntaje {
+export function calcularPuntaje(alquileres: Alquiler[], rol: Rol, ahora = Date.now()): Puntaje {
   const cerrados = alquileres.filter(cuentaParaPuntaje)
   const enRevision = alquileres.some(a => a.estado === 'reclamo' || a.estado === 'mediacion')
   const valor = cerrados.length >= MINIMO_PARA_PUNTAJE
-    ? Math.max(0, Math.min(5, redondear1(cerrados.reduce((s, a) => s + valorDelAlquiler(a, rol), 0) / cerrados.length))) : null
+    ? Math.max(0, Math.min(5, redondear1(cerrados.reduce((s, a) => s + valorDelAlquiler(a, rol, ahora), 0) / cerrados.length))) : null
   return { cerrados: cerrados.length, valor, enRevision }
 }
 
@@ -49,7 +54,7 @@ export const alquileresCerrados = (n: number) => n === 1 ? '1 alquiler cerrado' 
 export function lineaPublica(p: Puntaje, mostrarPuntaje: boolean): string {
   if (p.cerrados < MINIMO_PARA_PUNTAJE) return `Nuevo en Lockumi · ${alquileresCerrados(p.cerrados)}`
   if (p.enRevision) return 'En revisión'
-  if (!mostrarPuntaje || p.valor === null || p.valor < PUNTAJE_MINIMO_VISIBLE) return `Alquileres cerrados en Lockumi: ${p.cerrados}`
+  if (!mostrarPuntaje || p.valor === null || p.valor < PUNTAJE_MINIMO_VISIBLE) return `${p.cerrados} alquileres cerrados en Lockumi`
   return `${formatoPuntaje(p.valor)} de 5`
 }
 /** ¿Se puede mostrar el número del puntaje (anillo)? Mismas reglas que lineaPublica. */
@@ -74,10 +79,10 @@ export function insignias(alquileres: Alquiler[], rol: Rol): Insignia[] {
 /** Llave Lockumi (C.7): 10 o más alquileres cerrados, puntaje de 4,8 o más, ningún descuento del depósito en los últimos 12 meses y
  *  fotos de entrada y salida completas en todos sus alquileres cerrados. */
 export function tieneLlave(alquileres: Alquiler[], rol: Rol, ahora: number): boolean {
-  const cerrados = alquileres.filter(cuentaParaPuntaje), p = calcularPuntaje(alquileres, rol)
+  const cerrados = alquileres.filter(cuentaParaPuntaje), p = calcularPuntaje(alquileres, rol, ahora)
   if (cerrados.length < 10 || p.valor === null || p.valor < 4.8) return false
   const reciente = (a: Alquiler) => ahora - Date.parse(a.resultado!.fecha) <= 365 * DIA
-  if (cerrados.some(a => reciente(a) && fraccionDescontada(a) > 0)) return false
+  if (cerrados.some(a => reciente(a) && fraccionDescontada(a, ahora) > 0)) return false
   return cerrados.every(a => conFotos(a.entrada) && conFotos(a.salida))
 }
 
