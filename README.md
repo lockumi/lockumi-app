@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (PR 2, sin cambios visibles)**
+- Base de la prueba completa: plazos con feriados de Costa Rica, precios de referencia, textos de avisos y propuesta automática simulada. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+
 **24 de octubre de 2026 (PR 1, contrato compacto y textos 1.6-demo)**
 - Términos y Aviso de privacidad **1.6-demo** (rondas 9, 9b y 9c de Legal): contrato compacto, quién firma cada paso, 6.3 f) y el botón «Resolver el reclamo (simulación)».
 - **Pantalla para volver a aceptar con la sesión abierta** (`src/legal/Reaceptacion.tsx`, ver [docs/reaceptacion.md](docs/reaceptacion.md)).

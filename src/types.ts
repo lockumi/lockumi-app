@@ -10,8 +10,51 @@ export interface Foto { id?: string; ruta?: string; huellaGuardada?: string; src
 export type EstadoItem = 'bien' | 'detalle' | null
 export interface Cuarto { nombre: string; items: { texto: string; estado: EstadoItem }[]; fotos: Foto[]; nota: string }
 export interface Acta { cuartos: Cuarto[]; firmas: Partial<Record<Rol, string>> }
-export interface Reclamo { monto: number; motivo: string; fotos: Foto[]; fecha: string; respuesta?: 'aceptado' | 'rechazado' }
-export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion'; fecha: string }
+/** Rubro de un reclamo (Términos 1.7-demo, 6.4): un daño o faltante con su motivo, fotos y factura o precio de referencia. */
+export interface Rubro {
+  id: string
+  /** Índice en la tabla de precios de referencia (src/prueba/precios.ts) o -1 si no hay precio de referencia. */
+  ref: number; cantidad: number
+  /** Motivo de la lista cerrada de la 6.2 (a–f). */
+  motivo: 'dano' | 'faltante' | 'limpieza' | 'reparacion' | 'alquiler' | 'servicios'
+  descripcion: string
+  /** Espacio del acta de entrada con la foto de antes. */
+  cuarto: number
+  fotos: Foto[]
+  /** Factura del dueño (USDC de prueba), opcional si hay precio de referencia. */
+  factura?: { monto: number; foto?: Foto }
+}
+/** Respuesta del inquilino a un rubro: acepta, o lo rechaza con una factura o una cotización (6.4.4). */
+export interface RespuestaRubro { acepta: boolean; soporte?: { tipo: 'factura' | 'cotizacion'; monto: number; comercio: string; foto?: Foto } }
+/** Aceptación de un reparto (propuesta automática o acuerdo de la Mediación Lockumi (demo)). */
+export interface AceptacionReparto { alDueno: number; dueno?: 'si' | 'no'; inquilino?: 'si' | 'no'; fecha: string }
+export interface Reclamo {
+  monto: number; motivo: string; fotos: Foto[]; fecha: string; respuesta?: 'aceptado' | 'rechazado'
+  /** Prueba completa: reclamo por rubros. */
+  rubros?: Rubro[]
+  /** Cuándo el aviso del reclamo se entregó al inquilino en la app (empieza su plazo de 7 días, 6.5 b). */
+  entregado?: string
+  /** Primera vez que el inquilino abrió la pantalla del reclamo (cuenta como apertura, B.2 v4). */
+  pantallaAbierta?: string
+  respuestas?: Record<string, RespuestaRubro>
+  /** Propuesta automática (simulación) cuando el inquilino rechaza todo o una parte. */
+  propuesta?: AceptacionReparto
+  /** Mediación Lockumi (demo): pedida, rechazada o sin cupo; y el acuerdo propuesto con el botón de simulación. */
+  mediacion?: { estado: 'pedida' | 'no-usar' | 'sin-cupo'; fecha: string; acuerdo?: AceptacionReparto }
+}
+/** Aviso en la app (días 1, 4 y 6) con su registro de entrega y de apertura; y el correo, si se escribió una dirección. */
+export interface Aviso {
+  id: string; para: Rol; dia: number | 'reparacion'
+  asunto: string; texto: string
+  /** Hora de la app (con los días simulados) en que se entregó, y hora real del aparato. */
+  entregado: string; entregadoReal: string
+  /** Apertura por canal: en la app y por el enlace del correo (fecha y hora de la app, ISO). */
+  abierto?: string; abiertoCorreo?: string
+  correo?: 'enviado' | 'error' | 'sin-correo'
+}
+/** Regla de propuesta automática (6.5.1, B.1): registro de la decisión del inquilino al firmar. */
+export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string }
+export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto'; fecha: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
   /** Solo con servidor: mi rol según la sesión, si el inquilino ya aceptó y las cuentas G… declaradas. */
@@ -24,6 +67,14 @@ export interface Alquiler {
   reclamo?: Reclamo; resultado?: Resultado
   /** Fase 1 (testnet real, una sola persona): cuenta segura (C…), cuentas G… y hashes de cada paso en la red de prueba. */
   red?: RedPrueba
+  /** Prueba completa (Términos 1.7-demo). */
+  regla?: RegistroRegla
+  anexo?: { acepta: string; reparaciones: string[] }
+  /** Entrega registrada (fotos de salida confirmadas) y «Recibí la casa» del dueño. */
+  entrega?: string; recibido?: string
+  avisos?: Aviso[]
+  /** Correos que escribió quien prueba para recibir los avisos (opcional). */
+  correos?: Partial<Record<Rol, string>>
 }
 export type PasoRed = 'trustline' | 'compra' | 'escrow' | 'deposito' | 'evidencia' | 'aprobacion' | 'liberacion' | 'duenoTrustline' | 'disputa' | 'resolucion'
 export interface RedPrueba { escrow?: string; dueno?: string; inquilino?: string; inquilinoPrueba?: boolean; firma?: 'cavos' | 'freighter'; usdcListo?: boolean; txs: Partial<Record<PasoRed, string>> }

@@ -75,6 +75,12 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 3. Agrega el caso a `src/services/__tests__/estados.test.ts`.
 4. **No inventes colores.** Los tonos de cada grupo están en las variables `--estado-<grupo>-{fondo,borde,texto,sello}` al final de `src/index.css` y solo reutilizan valores que ya existían más arriba en ese archivo. La prueba falla si aparece un HEX nuevo. Si hace falta un grupo nuevo, usa tonos existentes y revisa el contraste del texto (mínimo 4,5:1).
 
+## Prueba completa por bloques (`docs/prueba-completa.md`, `docs/despliegue.md`)
+- Primero el commit de pruebas (`test: …`) y después el de código (`feat: …`).
+- Todo lo visible de la 1.7-demo va detrás de `VITE_PRUEBA_COMPLETA` (apagado en producción) hasta el PR 10.
+- Textos de Legal con `// LEGAL: revisado (24/10)`; textos propios con `// LEGAL: revisar`.
+- Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
+
 ## Proponer cambios
 
 1. Abre un *issue* con el problema o la idea, o comenta en uno existente.
