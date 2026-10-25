@@ -2,6 +2,17 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Sin pantalla de volver a aceptar (24 oct 2026, pedido de Katherine, 10:03 p. m.) — PR abierto, se publica con el OK de Legal
+- Con la sesión abierta se entra directo, aunque la versión aceptada sea anterior. `src/legal/Reaceptacion.tsx` queda sin uso (se conserva con sus pruebas). Entrar sigue pidiendo la casilla y guarda 1.6-demo.
+- Propuesta de Legal (10:05 p. m.), **solo imágenes, sin programar** (`capturas/sin-reaceptacion/aviso.jpg` y `linea-boton.jpg`): a) aviso que se puede cerrar la primera vez que entra quien aceptó 1.5; b) línea «Al continuar, aceptas los Términos 1.6-demo y el Aviso de privacidad.» sobre el botón de crear o firmar un alquiler.
+
+## PR 10 (plan, sin programar): 1.7-demo con la regla nueva de Legal (24 oct, 10:05 p. m.)
+- **Sin pantalla que bloquee.** En su lugar, el mismo aviso que se puede cerrar y la misma línea sobre el botón de crear o firmar, con 1.7-demo.
+- **Consentimiento de privacidad en el momento de usar cada función**, con casilla sin marcar: una para los correos y otra para la mediación. Sin esa casilla, la función no se usa (no se envían correos; no se abre la mediación).
+- **No es retroactiva:** los alquileres firmados con 1.6 siguen con las reglas de la 1.6 (sin propuesta automática, sin suscripción y sin avisos de los días 1, 4 y 6), salvo que **las dos partes** acepten la 1.7.
+- **La versión se ve en el contrato de cada alquiler** (la que rige ese alquiler).
+- Cambia lo planeado antes: el PR 10 suponía volver a aceptar con la pantalla (`Reaceptacion.tsx`); ya no.
+
 ## PR 3 (24 oct 2026): interruptor, Regla de propuesta automática (B.1) y Anexo 6-A (B.5), sin cambios visibles
 - Todo detrás de `VITE_PRUEBA_COMPLETA` (apagado). Ver docs/prueba-completa.md.
 
@@ -44,7 +55,7 @@
   - [ ] *(recomendado, no bloquea)* Katherine pone en el panel de Cavos (app → Approvals) límites de **0** para XLM y USDC y «Over the limit» = *Ask the user*, para que ningún pago de la billetera se firme sin preguntar.
   - [ ] Legal revisa los textos que todavía dicen que el usuario firma con su billetera sin decir «si usas tu propia billetera» (lista en `docs/alertas.md`, «Legal, ronda 6»), por ejemplo Términos 3.1.
   - [ ] La landing (`index.html:148`) sigue sin cambios hasta el OK de Katherine. Texto de Legal: «Si no hay un reclamo con pruebas, después de 7 días se te devuelve tu depósito.»
-  - [ ] **Nueva aceptación con la sesión abierta** (propuesta en `docs/reaceptacion.md`, imagen `reaceptacion.jpg`): necesita el OK de Katherine y debe salir junto con 1.6-demo; si no, quien ya tiene la sesión abierta no acepta la nueva versión.
+  - [x] ~~**Nueva aceptación con la sesión abierta**~~: salió en el PR 1 y se **desactiva** a pedido de Katherine (24/10, ver `docs/reaceptacion.md`).
 - **BLOQUEO: modo de dos personas (Supabase, `modoTrustless`).** Desde la ronda 9b, 5.3 c) ya cubre la aprobación con la billetera del dueño (`trustless.ts:28-30`). No activarlo hasta que Legal reescriba **5.3 e) y 2.2 b) para la fase 2**: ahí la disputa la abriría la billetera del dueño real, no la cuenta del dueño de prueba. La liberación sí la firma el servidor.
 - **Decisión de Katherine (dinero real), Términos 6.3 f):** mientras hay un reclamo, todo el depósito queda bloqueado (escrow *single-release*). Opciones: varias liberaciones (3–5 h de tiempo real / 16–24 h para una persona) o mantener el texto. Antes, preguntarle a Trustless Work si un hito agregado después puede usar el saldo ya depositado (ver `docs/alertas.md`, «Legal, ronda 9b»).
 - **RIESGO DE PRODUCTO:** hoy, en producción, el inquilino elige el reparto con un botón y Lockumi lo ejecuta en la red de prueba. Está informado en Términos 6.7, pero **no puede llegar a dinero real**: en un servicio real, sin acuerdo, el depósito queda bloqueado (ver `docs/alertas.md`, «Legal, ronda 9b»).
