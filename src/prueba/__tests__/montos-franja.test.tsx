@@ -26,3 +26,12 @@ describe('franja de la red de prueba', () => {
     expect(renderToStaticMarkup(<Fondo><p>x</p></Fondo>)).not.toContain('aviso-red')
   })
 })
+
+describe('cabecera del contrato (barra) con el interruptor', () => {
+  it('encendido: el monto no se corta con «…» (la línea puede bajar)', async () => {
+    const fs = await import(['node', 'fs'].join(':'))
+    const tsx = fs.readFileSync('src/screens/ContratoCompacto.tsx', 'utf8'), css = fs.readFileSync('src/index.css', 'utf8')
+    expect(tsx).toMatch(/cc-barra__txt' \+ \(pruebaCompleta\(\) \? ' cc-barra__txt--ajusta'/)
+    expect(css).toMatch(/\.cc-barra__txt--ajusta strong\{white-space:normal\}/)
+  })
+})
