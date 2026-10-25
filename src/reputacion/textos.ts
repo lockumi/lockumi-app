@@ -32,6 +32,13 @@ export const REP01 = {
   continuar: 'Continuar', noCrear: 'No crear mi cuenta',
 }
 
+// LEGAL: revisado (25/10) · textos literales de Legal (revisión de c887895). Pantalla previa para una cuenta que YA EXISTE, sin REP-01 y
+// sin alquileres, antes de /crear o /invitacion: la casilla, su texto y el perfil de ejemplo son los de REP-01; cambian solo estos.
+export const REP01_EXISTENTE = {
+  titulo: 'Antes de crear un alquiler o unirte a uno',
+  noAcuerdo: 'Si no lo aceptas, puedes seguir usando tu cuenta, pero no podrás crear alquileres ni unirte a ellos.',
+}
+
 // LEGAL: revisado (25/10) · REP-02 Hoja «Ver un ejemplo de perfil».
 export const REP02 = {
   titulo: 'Así se ve un perfil público', ejemplo: 'Ejemplo', nombre: 'Ana M.', papel: 'Inquilina', canton: 'Cantón: Heredia', desde: 'En Lockumi desde marzo de 2026',
@@ -213,16 +220,21 @@ export const UI = {
   pasoDe: (i: number, n: number) => `Paso ${i} de ${n}`,
   datosTitulo: '¿Cómo te verán?',
   nombreVisible: 'Nombre visible',
-  // LEGAL: revisar · ronda 25/10 3:42 · ayuda debajo del nombre visible (texto literal de Legal)
+  // LEGAL: revisado (25/10) · ayuda debajo del nombre visible (texto literal de Legal)
   nombreAyuda: 'Escribe tu nombre y la inicial de tu apellido, por ejemplo «Ana V.» o «Ana María V.». Así se verá en tu perfil.',
   canton: 'Tu cantón',
   cantonAyuda: 'Mostramos tu cantón, o tu provincia si en tu cantón hay menos de 10 personas. Nunca el barrio ni la dirección.',
   elegirCanton: 'Elige tu cantón',
   continuar: 'Continuar', volver: 'Volver', ahoraNo: 'Ahora no', listo: 'Listo',
-  errNombre: 'Escribe tu nombre y la inicial de tu apellido, por ejemplo «Laura V.».',
-  errNombreLargo: 'Usa solo tu nombre y la inicial del apellido, por ejemplo «Laura V.». Máximo 30 letras.',
+  // LEGAL: revisado (25/10) · textos literales de Legal (revisión de c887895)
+  errNombre: 'Escribe tu nombre y la inicial de tu apellido con punto, por ejemplo «Ana V.» o «Ana María V.».',
+  errNombreLargo: 'Usa solo tu nombre y la inicial de tu apellido, por ejemplo «Ana V.». Máximo 30 letras.',
   errCanton: 'Elige tu cantón en la lista. Está ordenada por provincia.',
   errRep01: 'Marca las dos casillas para continuar. Si no estás de acuerdo, toca «No crear mi cuenta».',
+  // LEGAL: revisado (25/10) · cuenta que ya existe: solo la primera oración de errRep01 (revisión de c887895)
+  errRep01Existente: 'Marca las dos casillas para continuar.',
+  // LEGAL: revisar · ronda 25/10 4:01 · si falla «Descargar mis datos» en modo servidor (texto propio)
+  errDescarga: 'No pudimos descargar tus datos. Revisa tu conexión y vuelve a tocar «Descargar mis datos».',
   errCasilla: 'Para aparecer, marca la casilla. Si prefieres no aparecer, toca «Ahora no».',
   activar: 'Activar',
   opcion: { destacados: 'Destacados', nuevos: 'Nuevos en Lockumi' } as Record<'destacados' | 'nuevos', string>,

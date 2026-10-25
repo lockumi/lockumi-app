@@ -14,7 +14,10 @@ import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
 import { pedirBorrado, ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, type Solicitud } from './borrado'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
-import { REP01, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
+import type { Registro } from './consentimiento'
+import { conServidor } from '../servidor/config'
+import { servidor } from '../servidor/repositorio'
+import { REP01, REP01_EXISTENTE, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
 // ——— Piezas ———
@@ -169,7 +172,10 @@ const lista = (xs: string[]) => <ul>{xs.map((t, k) => <li key={k}><Md t={t} /></
 // Dos casillas sin marcar (REP-01 y REP-01b); [Continuar] desactivado hasta marcar las dos. Se guarda versión, fecha, hora y texto.
 /** Texto exacto que la persona aceptó (va al registro del consentimiento). */
 export const TEXTO_REP01 = [REP01.titulo, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad]
-export function Rep01({ aviso, onAceptar, onNo, no, extra, pie }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode }) {
+/** Lo mismo para una cuenta que ya existe (Legal, revisión de c887895): cambian el título y la nota. */
+export const TEXTO_REP01_EXISTENTE = [REP01_EXISTENTE.titulo, ...TEXTO_REP01.slice(1)]
+export function Rep01({ aviso, onAceptar, onNo, no, extra, pie, titulo = REP01.titulo, noAcuerdo = REP01.noAcuerdo, falta = UI.errRep01 }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode
+  titulo?: string; noAcuerdo?: string; falta?: string }) {
   const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
   const atras = <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setVista('rep01')}>{REP02.volver}</button></div>
   if (vista === 'ejemplo') return <Ejemplo02 atras={atras} />
@@ -178,20 +184,20 @@ export function Rep01({ aviso, onAceptar, onNo, no, extra, pie }: { aviso?: Reac
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     {aviso}
     <section className="glass tarjeta rp-perfil" aria-labelledby="rp-rep01"><Banda mini /><div className="rp-perfil__cuerpo">
-      <h1 id="rp-rep01" className="h2">{REP01.titulo}</h1>
+      <h1 id="rp-rep01" className="h2">{titulo}</h1>
       <div className="rp-texto" style={{ marginTop: 10 }}><h2 className="h3">{REP01.subtitulo}</h2><p><Md t={REP01.intro} /></p>{lista(REP01.puntos)}</div>
       <ul className="rp-enlaces" style={{ marginTop: 6 }}>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('ejemplo')}>{REP01.enlaces.ejemplo}<Icono n="der" /></button></li>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('calculo')}>{REP01.enlaces.calculo}<Icono n="der" /></button></li>
         <li><a href="#/privacidad">{REP01.enlaces.privacidad}<Icono n="der" /></a></li></ul>
-      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{REP01.titulo}</legend>
+      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{titulo}</legend>
         <label className="check"><input type="checkbox" checked={casilla} onChange={ev => setCasilla(ev.target.checked)} /><span>{REP01.casilla}</span></label>
         <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={edad} onChange={ev => setEdad(ev.target.checked)} /><span>{REP01.edad}</span></label>
       </fieldset>
-      <p className="nota" style={{ marginTop: 10 }}>{REP01.noAcuerdo}</p>
+      <p className="nota" style={{ marginTop: 10 }}>{noAcuerdo}</p>
       <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" disabled={!listas} aria-describedby={listas ? undefined : 'rp-rep01-falta'} onClick={onAceptar}>{REP01.continuar}</button>
         <button type="button" className="boton boton--secundario" onClick={onNo}>{no}</button></div>
-      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{UI.errRep01}</p>}
+      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{falta}</p>}
       {extra}{pie}
     </div></section>
   </main>
@@ -340,6 +346,20 @@ export function datosParaDescargar(u: Usuario, todos: Alquiler[], roles: Rol[] =
   return { cuenta: u.email, nombreVisible: e.nombre ?? null, canton: e.canton ?? null, aceptacion: e.rep01 ?? null, revisiones: revisiones(u.email),
     papeles: Object.fromEntries(roles.map(r => [r, papel(r)])) }
 }
+/** «Descargar mis datos» (Legal, 25/10 4:01 p. m., condición 3): en modo servidor, del SERVIDOR (lk_mis_datos_reputacion: todas las
+ *  sesiones con el correo de la cuenta), más lo que guarda este aparato; si el servidor falla, falla (no se baja un archivo incompleto).
+ *  En la demo local sin servidor, igual que antes. */
+export async function datosDeDescarga(u: Usuario, todos: Alquiler[], rol?: Rol) {
+  const local = datosParaDescargar(u, todos, rol ? [rol] : undefined)
+  if (!conServidor) return local
+  return { ...await servidor.datosReputacion(u.email, rol) as object, enEsteAparato: local }
+}
+/** RIESGO de Legal (revisión de c887895): en modo servidor, la aceptación de REP-01 se escribe también en el servidor por el correo de la
+ *  cuenta (lk_aceptar_reputacion), para que la fila de encendido no bloquee a quien ya aceptó. Idempotente: se reintenta en cada carga. */
+export async function subirAceptacion(email: string, rep01: Registro | undefined) {
+  if (!conServidor || !rep01) return false
+  return await servidor.aceptarReputacion(email, rep01.version, rep01.texto)
+}
 function bajar(datos: unknown, nombre: string) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }))
   const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
@@ -349,7 +369,8 @@ function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
   const p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol)
   const filas = cerrados.map(a => ({ alquiler: a.direccion, cerrado: a.resultado!.fecha, descuento: Math.round(fraccionDescontada(a, ahora) * 100),
     reclamoDevuelto: rol === 'dueno' ? Math.round(fraccionReclamoDevuelta(a) * 100) : undefined, vale: valorDelAlquiler(a, rol, ahora) }))
-  const descargar = () => bajar(datosParaDescargar(u, todos, [rol]), `lockumi-reputacion-${rol}.json`)
+  const [errDescarga, setErrDescarga] = useState<string | null>(null)
+  const descargar = () => { setErrDescarga(null); datosDeDescarga(u, todos, rol).then(d => bajar(d, `lockumi-reputacion-${rol}.json`), () => setErrDescarga(UI.errDescarga)) }
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver a={`#/perfil/${rol}`} t="← Tu perfil" />
     <section className="glass tarjeta"><h1 className="h2">{MIS_DATOS.titulo}</h1><p className="nota" style={{ marginTop: 6 }}><Papel rol={rol} /></p>
@@ -366,6 +387,7 @@ function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
     <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={descargar}>{MIS_DATOS.descargar}</button>
       <a className="boton boton--secundario" href="#/perfil/calculo/corregir">{MIS_DATOS.corregir}</a>
       <a className="boton boton--secundario" href="#/perfil/eliminar">{MIS_DATOS.eliminar}</a></div>
+    {errDescarga && <p className="error" role="alert" style={{ marginTop: 8 }}>{errDescarga}</p>}
   </main>
 }
 
@@ -437,6 +459,8 @@ function BorradoEnCurso({ s }: { s: Solicitud }) {
 function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => void }) {
   const todos = useAlquileres(), s = solicitudBorrado(u.email), abiertos = abiertosDe(todos, u.email).length > 0
   const pedir = () => { const ahora = Date.now(); pedirBorrado(u.email, ahora, todos); ejecutarBorrados(ahora, todos); ir('/perfil/eliminar/listo') }
+  const [errDescarga, setErrDescarga] = useState<string | null>(null)
+  const descargar = () => { setErrDescarga(null); datosDeDescarga(u, todos).then(d => bajar(d, 'lockumi-reputacion.json'), () => setErrDescarga(UI.errDescarga)) }
   if (s && (paso === 'listo' || !s.hecho)) {
     if (s.hecho || s.limite) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
       <section className="glass tarjeta" role="status"><h1 className="h2">{s.hecho ? ELIMINAR.listo : ELIMINAR_UI.enCurso}</h1><PlazoBorrado s={s} />
@@ -455,9 +479,10 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
     <section className="glass tarjeta rp-texto"><h1 className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.intro}</p><ul>{ELIMINAR.puntos.map((t, k) => <li key={k}>{t}</li>)}</ul>
       <p className="nota">{ELIMINAR.correo}</p>
       <div className="rp-acciones">
-        <button type="button" className="boton boton--secundario" onClick={() => bajar(datosParaDescargar(u, todos), 'lockumi-reputacion.json')}>{ELIMINAR.descargar}</button>
+        <button type="button" className="boton boton--secundario" onClick={descargar}>{ELIMINAR.descargar}</button>
         <button type="button" className="boton rp-peligro" onClick={() => { if (abiertos) ir('/perfil/eliminar/confirmar'); else pedir() }}>{ELIMINAR.si}</button>
-        <a className="boton boton--secundario" href="#/perfil">{ELIMINAR.no}</a></div></section>
+        <a className="boton boton--secundario" href="#/perfil">{ELIMINAR.no}</a></div>
+      {errDescarga && <p className="error" role="alert" style={{ marginTop: 8 }}>{errDescarga}</p>}</section>
   </main>
 }
 
@@ -478,6 +503,7 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // Legal (regla 2): la aceptación previa de esta sesión solo pasa a una cuenta recién creada (sin alquileres en Lockumi).
   useState(() => { try { olvidarEntrar(); const m = u.email.toLowerCase(); vincularPrevia(u.email, !store.todos().some(x => [x.duenoEmail, x.inquilinoEmail].some(c => c?.toLowerCase() === m))) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email)
+  useEffect(() => { subirAceptacion(u.email, e.rep01).catch(() => { /* se reintenta en la próxima carga; el servidor explica qué hacer si bloquea */ }) }, [u.email, e.rep01])
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -490,8 +516,10 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
   // Legal (respuesta a 6c71866, punto 2): sin REP-01 y sin alquileres (p. ej. entró por «Ya tengo cuenta: entrar» o por un enlace mágico
   // en otra pestaña), la pantalla previa de siempre antes de crear o unirse a su primer alquiler.
+  // Textos literales de Legal (revisión de c887895): título, nota, «Volver» y solo la primera oración del error; el resto es REP-01.
   if (!e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)) return <Rep01 no={UI.volver} onNo={() => { location.hash = '/' }}
-    onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01) } catch { /* sin almacenamiento: se queda en la pantalla */ } }} />
+    titulo={REP01_EXISTENTE.titulo} noAcuerdo={REP01_EXISTENTE.noAcuerdo} falta={UI.errRep01Existente}
+    onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01_EXISTENTE) } catch { /* sin almacenamiento: se queda en la pantalla */ } }} />
   // Cuenta que ya existía (sin REP-01): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
   if (!e.rep01) return <>{children}</>
   if (!e.nombre || !e.canton) return <Datos u={u} e={e} salir={salir} />

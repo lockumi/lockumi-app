@@ -114,6 +114,9 @@ export const servidor = {
   async nuevaInvitacion(id: string) { const t = await rpc<string>('lk_nueva_invitacion', { p_contrato: id }); guardarInvitacion(id, t); await recargar(); return linkInvitacion(id, t) },
   verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
   aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string) => tras(rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
+  // Paso 19 · reputación por la persona (Legal, 25/10/2026): el correo es el de la sesión de Cavos (el mismo que p_email_cavos).
+  datosReputacion: (email: string, rol?: 'dueno' | 'inquilino') => rpc<Record<string, unknown>>('lk_mis_datos_reputacion', { p_correo: email, p_rol: rol ?? null }),
+  aceptarReputacion: (email: string, version: string, texto: string[]) => rpc<boolean>('lk_aceptar_reputacion', { p_correo: email, p_version: version, p_texto: texto }),
   actualizarCuenta: (id: string, cuenta: string) => tras(rpc('lk_actualizar_direccion', { p_contrato: id, p_direccion_stellar: cuenta })),
   firmar: (id: string, etapa: 'contrato' | 'entrada' | 'salida') => tras(rpc<string>('lk_firmar', { p_contrato: id, p_etapa: etapa })),
   marcar: (id: string, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle') => tras(rpc('lk_editar_item', { p_contrato: id, p_etapa: etapa, p_cuarto: cuarto, p_item: item, p_estado: estado })),

@@ -142,10 +142,10 @@ describe('Legal: la 1.10-demo solo la guardan las cuentas nuevas (desde la panta
 })
 
 describe('Legal: textos literales', () => {
-  it('Términos 15.1 y Aviso: las cuentas anteriores a la 1.10-demo no tienen perfil (LEGAL: revisado (25/10); guion U+2011 que no se corta)', async () => {
+  it('Términos 15.1 y Aviso: las cuentas anteriores a la 1.10-demo no tienen perfil (LEGAL: revisado (25/10); guion U+2011 y espacio U+00A0 tras «versión»: «versión 1.10‑demo» nunca se corta)', async () => {
     const t = await legal('terminos.md'), p = await legal('privacidad.md')
-    const T = 'Las cuentas creadas antes de la versión 1.10\u2011demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.'
-    const P = 'Si tu cuenta es anterior a la versión 1.10\u2011demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.'
+    const T = 'Las cuentas creadas antes de la versión\u00a01.10\u2011demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.'
+    const P = 'Si tu cuenta es anterior a la versión\u00a01.10\u2011demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.'
     expect(t.split('\n').find(l => l.startsWith('15.1 '))!.endsWith(T)).toBe(true)
     const sec = p.slice(p.indexOf('## Perfil de reputación')).split('\n').filter(l => l.trim() && !l.startsWith('<!--'))
     expect(sec[1]!.startsWith('Usar Lockumi incluye un perfil de reputación')).toBe(true); expect(sec[2]).toBe(P)
@@ -182,8 +182,8 @@ describe('Legal: textos literales', () => {
   })
   it('se quitan las marcas «LEGAL: revisar» que Legal aprobó', async () => {
     for (const f of ['src/reputacion/textos.ts', 'src/reputacion/entrada-textos.ts', 'src/reputacion/puntaje.ts', 'supabase/migrations/20261025140000_reputacion.sql']) {
-      // Siguen «LEGAL: revisar» solo los textos nuevos de la ronda de las 3:42/3:47 (ayuda del nombre y mensaje del servidor).
-      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !/ronda 25\/10 3:4[27]/.test(l))
+      // Siguen «LEGAL: revisar» solo los textos propios nuevos de las rondas de las 3:42/3:47 y de las 4:01 (persona por correo).
+      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !/ronda 25\/10 (3:4[27]|4:01)/.test(l))
       expect(nuevas, f).toEqual([]) }
     // correo.ts: solo el bloque de REP-12 es del paso 19 (las demás marcas son de otros pasos).
     const rep12 = (await leerArchivo('api/_lib/correo.ts')).split('\n').filter(l => /n\.º|Legal exige|líneas públicas del puntaje/.test(l))

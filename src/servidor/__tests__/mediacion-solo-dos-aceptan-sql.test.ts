@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create table auth.users (id uuid primary key);   -- paso 19: la migración de reputación referencia auth.users
+  create schema auth; create table auth.users (id uuid primary key, email text);   -- paso 19: la migración de reputación referencia auth.users
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean, file_size_limit int, allowed_mime_types text[]);

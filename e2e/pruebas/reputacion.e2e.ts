@@ -113,7 +113,11 @@ test.describe('reputación con dos cuentas (local, nunca producción)', () => {
     await sin.getByRole('button', { name: 'Ya tengo cuenta: entrar' }).click()
     await sin.evaluate(({ SIN, v16 }) => localStorage.setItem('lockumi.usuario', JSON.stringify({ email: SIN, nombre: 'Ejemplo', metodo: 'correo', terminos: v16, privacidad: v16 })), { SIN, v16 })
     await sin.reload(); await sin.goto('/#/crear')
-    await expect(sin.getByRole('heading', { name: 'Antes de crear tu cuenta: tu perfil de reputación' })).toBeVisible()
+    // Legal, revisión de c887895: cuenta que ya existe → título, nota, «Volver» y la primera oración del error.
+    await expect(sin.getByRole('heading', { name: 'Antes de crear un alquiler o unirte a uno' })).toBeVisible()
+    await expect(sin.getByText('Si no lo aceptas, puedes seguir usando tu cuenta, pero no podrás crear alquileres ni unirte a ellos.')).toBeVisible()
+    await expect(sin.getByText('Marca las dos casillas para continuar.', { exact: true })).toBeVisible()
+    await expect(sin.getByRole('button', { name: 'Volver', exact: true })).toBeVisible()
     await expect(sin.getByRole('checkbox')).toHaveCount(2); for (const c of await sin.getByRole('checkbox').all()) await expect(c).not.toBeChecked()
     // Puntajes.
     await dueno.goto('/#/perfil/dueno'); await expect(dueno.getByText('4,2 de 5').first()).toBeVisible()          // solo le bajó el reclamo indebido (no el de la cuenta anterior)

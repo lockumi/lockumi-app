@@ -30,11 +30,11 @@ describe('Legal (1): nombre visible', () => {
     for (const n of ['Ana V.', 'Ana R.', 'Ana María V.', 'Laura Vargas R.', 'José-Luis P.']) expect(validarNombre(n), n).toBeNull()
     for (const n of ['Ana R', 'María José R', 'Ana María José V.', 'Laura Vargas Rojas R.', 'Ana María Vargas', 'Ana', 'Ana María Vargas Rojas']) expect(validarNombre(n), n).not.toBeNull()
   })
-  it('texto de ayuda literal debajo del campo (estilo «nota» de siempre), marcado LEGAL: revisar', async () => {
+  it('texto de ayuda literal debajo del campo (estilo «nota» de siempre), marcado LEGAL: revisado (25/10)', async () => {
     const AYUDA = 'Escribe tu nombre y la inicial de tu apellido, por ejemplo «Ana V.» o «Ana María V.». Así se verá en tu perfil.'
     const { UI } = await import('../textos'); expect(UI.nombreAyuda).toBe(AYUDA)
     const l = (await leerArchivo('src/reputacion/textos.ts')).split('\n'), i = l.findIndex(x => x.includes('nombreAyuda:'))
-    expect(l[i - 1]).toContain('LEGAL: revisar')
+    expect(l[i - 1]).toContain('LEGAL: revisado (25/10)')
     const { aceptarRep01 } = await import('../consentimiento'); aceptarRep01(VIEJA.email, ['x'])
     expect(await pantalla(VIEJA, '/')).toContain(`<p id="rp-n-a" class="nota">${AYUDA.replace(/«/g, '«')}</p>`)
   })
@@ -45,7 +45,13 @@ describe('Legal (2): sin REP-01 y sin alquileres → la pantalla previa antes de
   it('sin REP-01 ni alquileres: la pantalla previa de siempre (dos casillas sin marcar) en «Nuevo alquiler» y en la invitación; el resto igual', async () => {
     for (const r of ['/crear', '/invitacion/00000000-0000-4000-8000-000000000999/abc']) {
       const h = await pantalla(NUEVA, r), t = texto(h)
-      expect(t, r).toContain('Antes de crear tu cuenta: tu perfil de reputación'); expect(h, r).not.toContain('PANTALLA-DE-SIEMPRE')
+      // Legal, revisión de c887895: título, nota, «Volver» y solo la primera oración del error; la casilla y su texto son los de REP-01.
+      expect(h, r).toContain('<h1 id="rp-rep01" class="h2">Antes de crear un alquiler o unirte a uno</h1>'); expect(h, r).not.toContain('PANTALLA-DE-SIEMPRE')
+      expect(t, r).toContain('Si no lo aceptas, puedes seguir usando tu cuenta, pero no podrás crear alquileres ni unirte a ellos.')
+      expect(h, r).toContain('<p id="rp-rep01-falta" class="nota" style="margin-top:8px">Marca las dos casillas para continuar.</p>')
+      expect(h, r).toMatch(/<button type="button" class="boton boton--secundario">Volver<\/button>/)
+      for (const x of ['Antes de crear tu cuenta', 'puedes no crear tu cuenta', 'No crear mi cuenta']) expect(t, r).not.toContain(x)
+      const { REP01 } = await import('../textos'); expect(t, r).toContain(REP01.casilla.slice(0, 60)); expect(t, r).toContain(REP01.edad)
       expect((h.match(/type="checkbox"/g) ?? []).length, r).toBe(2); expect(h, r).not.toMatch(/checked=""/)
       expect(t, r).not.toContain('Ya tengo cuenta: entrar')
     }
@@ -79,8 +85,8 @@ describe('Arreglos 3:47 p. m.', () => {
     expect(horaCR('2026-10-25T21:21:00Z')).toBe('3:21\u00a0p.\u00a0m.'); expect(horaCR('2026-10-25T06:05:00Z')).toBe('12:05\u00a0a.\u00a0m.')
     expect(horaCR('2026-10-25T18:00:00Z')).toBe('12:00\u00a0p.\u00a0m.')
   })
-  it('las dos líneas nuevas de Legal usan el guion que no se corta (U+2011) en «1.10‑demo»', async () => {
-    for (const [f, x] of [['terminos.md', 'Las cuentas creadas antes de la versión 1.10\u2011demo no tienen'], ['privacidad.md', 'Si tu cuenta es anterior a la versión 1.10\u2011demo, no tienes']])
+  it('las dos líneas nuevas de Legal usan el guion que no se corta (U+2011) en «1.10‑demo» y un espacio que no se corta (U+00A0) tras «versión» (revisión de c887895)', async () => {
+    for (const [f, x] of [['terminos.md', 'Las cuentas creadas antes de la versión\u00a01.10\u2011demo no tienen'], ['privacidad.md', 'Si tu cuenta es anterior a la versión\u00a01.10\u2011demo, no tienes']])
       expect(await leerArchivo('src/legal/v17/' + f), f).toContain(x)
   })
   it('las marcas de la ronda de las 3:27 ya dicen «LEGAL: revisado (25/10)»', async () => {
@@ -102,5 +108,16 @@ describe('Legal (3): un alquiler cuenta solo si cuenta para las dos cuentas', ()
   })
   it('el perfil usa las dos cuentas (Pantallas.tsx → alquileresDeReputacion con tienePerfilReputacion)', async () => {
     expect(await leerArchivo('src/reputacion/Pantallas.tsx')).toContain('alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion)')
+  })
+})
+
+describe('Legal, revisión de c887895: textos literales', () => {
+  it('errores del nombre visible y mensaje del servidor', async () => {
+    const { UI } = await import('../textos')
+    expect(UI.errNombre).toBe('Escribe tu nombre y la inicial de tu apellido con punto, por ejemplo «Ana V.» o «Ana María V.».')
+    expect(UI.errNombreLargo).toBe('Usa solo tu nombre y la inicial de tu apellido, por ejemplo «Ana V.». Máximo 30 letras.')
+    const sql = await leerArchivo('supabase/migrations/20261025140000_reputacion.sql')
+    expect(sql).toContain(`raise exception 'Antes de crear un alquiler o unirte a uno, acepta tu perfil de reputación en la app. No tiene ningún costo.'`)
+    const { validarNombre } = await import('../consentimiento'); expect(validarNombre('Ana')).toBe(UI.errNombre)
   })
 })
