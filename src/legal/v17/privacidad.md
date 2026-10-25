@@ -68,7 +68,7 @@ Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la a
 - Los avisos solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
 - Es un **correo transaccional, sin publicidad**. Los avisos de plazos y de reclamos no incluyen la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
-<!-- LEGAL: revisar · 1.9-demo (escenario C, 25/10): avisos de mediación y cierre, y correos de servicio de la cuenta (COR-C-08 y COR-C-09, sin casilla) -->
+<!-- LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · 1.9-demo (escenario C, 25/10): avisos de mediación y cierre, y correos de servicio de la cuenta (COR-C-08 y COR-C-09, sin casilla) -->
 - Usamos ese correo solo para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos). No lo agregamos a ninguna lista ni te enviamos novedades.
 - Resend guarda un registro de cada correo enviado (destinatario, asunto, contenido y estado de entrega). Según Resend, en sus planes estándar conserva esos datos durante 30 días (https://resend.com/security/gdpr).
 

@@ -8,6 +8,7 @@
 //   * el build de producción falla (guardaCorreos en vite.config.ts, VERCEL_ENV=production).
 // Para aprobar un texto: Legal lo confirma, se cambia `legal: 'revisar'` por `legal: 'revisado'` y el comentario por «LEGAL: revisado (fecha)».
 import { fechaHoraCR, fechaCR, horaCR } from './plazos.js'
+import { repartoCentimos } from './centimos.js'
 
 // LEGAL: revisado (25/10, lista de Legal) · nota de demo arriba del texto
 export const DEMO = 'Demo en la red de prueba: sin dinero real.'
@@ -62,9 +63,11 @@ export interface Plantilla {
 }
 const m = (n?: number) => usdc(n ?? 0)
 const f = (t?: number) => fechaHora(t ?? 0)
-const reparto = (d: DatosCorreo) => `${m(d.dueno)} al dueño y ${m(d.inquilino)} al inquilino`
-const llegan = (d: DatosCorreo) => `Llegan ${m(llega(d.dueno ?? 0))} al dueño y ${m(llega(d.inquilino ?? 0))} al inquilino`
-const comision = (d: DatosCorreo) => m(r7((d.dueno ?? 0) + (d.inquilino ?? 0) - llega(d.dueno ?? 0) - llega(d.inquilino ?? 0)))
+// En céntimos: las partes mostradas suman exactamente el depósito (api/_lib/centimos.ts)
+const rc = (d: DatosCorreo) => repartoCentimos(d.dueno ?? 0, d.inquilino ?? 0)
+const reparto = (d: DatosCorreo) => `${m(rc(d).dueno)} al dueño y ${m(rc(d).inquilino)} al inquilino`
+const llegan = (d: DatosCorreo) => `Llegan ${m(rc(d).llegaDueno)} al dueño y ${m(rc(d).llegaInquilino)} al inquilino`
+const comision = (d: DatosCorreo) => m(rc(d).comision)
 const REVISAR_Y_RECLAMAR = [{ texto: 'Revisar y reclamar', destino: 'alquiler' as const }, { texto: 'Todo bien, devolver', destino: 'devolver' as const }]
 
 /** Plantillas de C por clave «COR-C-0x/variante». Cada una con su marca de Legal en el comentario de arriba. */
@@ -77,12 +80,12 @@ export const TEXTOS: Record<string, Plantilla> = {
   'COR-C-01/inquilino': { id: 'COR-C-01', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el alquiler', destino: 'alquiler' }],
     asunto: () => 'Empezó el plazo del dueño para revisar la casa',
     cuerpo: d => `${d.auto ? 'Pasaron 2 días desde la entrega registrada.' : 'El dueño confirmó que recibió la casa.'} Empezó su plazo de 7 días naturales para revisar la casa y, si hace falta, reclamar de tu depósito de prueba de ${m(d.deposito)}. Vence el ${f(d.vence)}. Solo puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si reclama, verás el reclamo en la app y tendrás 7 días naturales para responder. Si el dueño no aprueba ni reclama antes de que venza su plazo, se te devuelve automáticamente el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work. Puede tardar hasta 24 horas después de que vence el plazo. No lo decide una persona. Por ahora no tienes que hacer nada.` },
-  // LEGAL: revisar · COR-C-02 día 4 (dueño): texto aprobado de dueno-4 (avisos.ts:35) + frase de C; se cuenta hacia atrás desde {vence} (P-03)
-  'COR-C-02/d4': { id: 'COR-C-02', legal: 'revisar', baja: true, nota: 'confirmar', botones: REVISAR_Y_RECLAMAR,
+  // LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · COR-C-02 día 4 (dueño): texto aprobado de dueno-4 (avisos.ts:35) + frase de C; se cuenta hacia atrás desde {vence} (P-03)
+  'COR-C-02/d4': { id: 'COR-C-02', legal: 'revisado', baja: true, nota: 'confirmar', botones: REVISAR_Y_RECLAMAR,
     asunto: () => 'Te quedan 3 días para revisar y reclamar',
     cuerpo: d => `Te quedan 3 días para revisar y reclamar. Vence el ${f(d.vence)}. Después, el depósito de prueba se devuelve completo al inquilino. La devolución es automática, menos el 0,3 % de comisión de Trustless Work, y puede tardar hasta 24 horas después de que vence el plazo.` },
-  // LEGAL: revisar · COR-C-02 día 6 (dueño): texto aprobado de dueno-6 (avisos.ts:36) + frase de C; el día antes de {vence} (P-03)
-  'COR-C-02/d6': { id: 'COR-C-02', legal: 'revisar', baja: true, nota: 'confirmar', botones: REVISAR_Y_RECLAMAR,
+  // LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · COR-C-02 día 6 (dueño): texto aprobado de dueno-6 (avisos.ts:36) + frase de C; el día antes de {vence} (P-03)
+  'COR-C-02/d6': { id: 'COR-C-02', legal: 'revisado', baja: true, nota: 'confirmar', botones: REVISAR_Y_RECLAMAR,
     asunto: () => 'Último aviso: tu plazo para reclamar vence mañana',
     cuerpo: d => `Último aviso: tu plazo para reclamar vence mañana, ${f(d.vence)}. Si no reclamas, el depósito de prueba se devuelve completo al inquilino. La devolución es automática, menos el 0,3 % de comisión de Trustless Work, y puede tardar hasta 24 horas después de que vence el plazo.` },
   // LEGAL: revisado (25/10) · COR-C-03 aviso del reclamo al inquilino. Sin «por: {rubros}»: C guarda un motivo de texto libre, no rubros, y los correos no llevan texto libre.
@@ -93,8 +96,8 @@ export const TEXTOS: Record<string, Plantilla> = {
   'COR-C-04/d4': { id: 'COR-C-04', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Responder', destino: 'reclamo' }],
     asunto: d => `Te quedan 3 días para responder el reclamo de ${m(d.reclamado)}`,
     cuerpo: d => `Te quedan 3 días para responder el reclamo de ${m(d.reclamado)} sobre tu depósito de prueba de ${m(d.deposito)}. Vence el ${f(d.vence)}. Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. El silencio no significa que aceptes el reclamo.` },
-  // LEGAL: revisar · COR-C-04 día 6 (inquilino): texto aprobado de reclamo-6 + frase de C; el día antes de {vence} (P-03)
-  'COR-C-04/d6': { id: 'COR-C-04', legal: 'revisar', baja: true, nota: 'uno', botones: [{ texto: 'Responder ahora', destino: 'reclamo' }],
+  // LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · COR-C-04 día 6 (inquilino): texto aprobado de reclamo-6 + frase de C; el día antes de {vence} (P-03)
+  'COR-C-04/d6': { id: 'COR-C-04', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Responder ahora', destino: 'reclamo' }],
     asunto: () => 'Último aviso: tu plazo vence mañana',
     cuerpo: d => `Último aviso: tu plazo vence mañana, ${f(d.vence)}. Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. El silencio no significa que aceptes el reclamo.${d.abierto ? ' La app registra que abriste el reclamo.' : ''} Siempre puedes ir a los tribunales.` },
   // LEGAL: revisado (25/10) · COR-C-05 paso a la mediación, versión para las partes (la frase del plazo de 3 días hábiles es P-06)
@@ -113,8 +116,8 @@ export const TEXTOS: Record<string, Plantilla> = {
   'COR-C-05/recordatorio-mediacion': { id: 'COR-C-05', legal: 'revisado', baja: false, nota: 'uno', botones: [{ texto: 'Abrir el caso', destino: 'alquiler' }],
     asunto: () => 'Mañana vence el plazo de un caso de la Mediación Lockumi (demo)',
     cuerpo: d => `El plazo de 3 días hábiles de un caso de la Mediación Lockumi (demo) vence mañana, ${f(d.vence)}. Reclamado: ${m(d.reclamado)} de un depósito de prueba de ${m(d.deposito)}. Recuerda: no decides por las partes, y lo que veas en este caso es confidencial.` },
-  // LEGAL: revisar · COR-C-06 resultado de la mediación (incluye la frase del borrado a los 30 días; P-09: frase completa de la Privacidad, Legal 25/10 5:09 p. m.)
-  'COR-C-06/partes': { id: 'COR-C-06', legal: 'revisar', baja: true, nota: 'uno', botones: [{ texto: 'Ver el resultado', destino: 'alquiler' }],
+  // LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · COR-C-06 resultado de la mediación (incluye la frase del borrado a los 30 días; P-09: frase completa de la Privacidad, Legal 25/10 5:09 p. m.)
+  'COR-C-06/partes': { id: 'COR-C-06', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el resultado', destino: 'alquiler' }],
     asunto: () => 'Se registró el acuerdo de la Mediación Lockumi (demo)',
     cuerpo: d => `Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de ${m(d.deposito)}, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto: ${reparto(d)}, cada monto menos el 0,3 % de comisión de Trustless Work. ${llegan(d)}; Trustless Work descuenta ${comision(d)}, y Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.` },
   // LEGAL: revisado (25/10) · COR-C-06 «sin acuerdo» (P-06, texto provisional de Producto): venció el plazo de la mediación

@@ -8,7 +8,7 @@ import { V17, FECHA_V17 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
 // LEGAL: revisado (25/10, lista de Legal) · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
-// 1.9-demo: FECHA_V19 es PROVISIONAL. Paso obligatorio al encender C (encendido-lista.md): poner aquí la fecha real del encendido.
+// 1.9-demo: FECHA_V19 es la fecha real del encendido de C en app.lockumi.com (25/10/2026, encendido con el OK de Katherine y de Legal, 5:31 p. m.).
 // LEGAL: revisado (25/10, lista de Legal)
 export const FECHA_V19 = '25 de octubre de 2026'
 /** 1.8-demo (B, solo correos): fecha provisional de B. En C (B se enciende junto con C) se muestra FECHA_V19: ver casillaDeFuncion. */

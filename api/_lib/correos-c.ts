@@ -161,7 +161,7 @@ export async function enviarCorreoCuenta(env: Env, p: { correo: 'COR-C-08' | 'CO
   return { clave, plantilla, id: r.id ?? null, yaEnviado: r.motivo === 'ya-enviado' }
 }
 
-// LEGAL: revisar · página del enlace de COR-C-03 (texto nuevo, Legal 25/10 5:09 p. m., punto 4: la apertura se registra solo al tocar el botón)
+// LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · página del enlace de COR-C-03 (texto nuevo, Legal 25/10 5:09 p. m., punto 4: la apertura se registra solo al tocar el botón)
 export const PAGINA_ABRIR = {
   titulo: 'Aviso de reclamo · Lockumi (demo)',
   texto: 'Para ver el reclamo en la app, toca el botón. Al tocarlo, queda registrado que abriste el aviso.',

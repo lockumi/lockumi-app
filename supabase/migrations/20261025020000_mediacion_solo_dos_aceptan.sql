@@ -2,7 +2,7 @@
 -- 20261024120000: la persona mediadora cerraba sola el caso) por la que solo cierra con las aceptaciones de las dos partes
 -- con el mismo reparto. No depende del escenario C (la Regla 6.5.1 y su tabla quedan en la migración de C) y no cambia nada
 -- visible: hoy app.lockumi.com corre en un solo aparato y no llama a estas funciones.
--- LEGAL: revisar · la persona mediadora no decide: sin las dos aceptaciones el caso sigue abierto y el depósito retenido
+-- LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · la persona mediadora no decide: sin las dos aceptaciones el caso sigue abierto y el depósito retenido
 -- (Términos 2.2 b y 6.8). La devolución automática del 100 % (5.3 d) y la Regla 6.5.1 no pasan por aquí.
 -- Misma firma de lk_decidir_mediacion; no edita migraciones anteriores. Se aplica dentro de una transacción.
 
@@ -15,7 +15,7 @@ create table if not exists public.lk_aceptaciones_mediacion (
   primary key (contrato_id, rol)
 );
 
--- LEGAL: revisar · cada parte acepta un reparto; puede cambiarlo mientras el caso siga en la mediación.
+-- LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · cada parte acepta un reparto; puede cambiarlo mientras el caso siga en la mediación.
 create or replace function public.lk_aceptar_acuerdo_mediacion(p_contrato uuid, p_monto_dueno numeric) returns void
 language plpgsql security definer set search_path = public as $$
 declare r text := public.lk_exigir_rol(p_contrato); c public.lk_contratos; m numeric;

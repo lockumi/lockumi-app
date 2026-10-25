@@ -33,15 +33,8 @@ describe('marcas «LEGAL: revisar» visibles', () => {
     expect(() => revisarBuildCorreos({ VERCEL_ENV: 'preview' }, una)).not.toThrow()
     expect(() => revisarBuildCorreos({ VERCEL_ENV: 'production' }, una)).toThrow(/LEGAL: revisar/)
   })
-  it('en el repositorio: las marcas que quedan son solo las que Legal todavía no confirmó', async () => {
-    const m = marcasPorRevisar(await repo()).map(x => x.replace(/:\d+$/, ''))
-    expect([...new Set(m)].sort()).toEqual([
-      'api/_lib/correos-c.ts',                                        // página del enlace de COR-C-03 (texto nuevo)
-      'api/_lib/textos-correos.ts',                                   // COR-C-02 d4/d6, COR-C-04 d6, COR-C-06 partes
-      'src/legal/v17/privacidad.md',                                  // 1.9-demo
-      'supabase/migrations/20261025010000_paso16_unido.sql',
-      'supabase/migrations/20261025020000_mediacion_solo_dos_aceptan.sql',
-    ])
-    expect(m.filter(x => x === 'api/_lib/textos-correos.ts')).toHaveLength(4)
+  it('en el repositorio no queda ninguna marca (OK de Legal para publicar C, 25/10, 5:31 p. m.)', async () => {
+    expect(marcasPorRevisar(await repo())).toEqual([])
   })
+
 })

@@ -33,7 +33,8 @@ describe('1) marcas: las 109 OK se quitan; solo quedan las de textos nuevos', ()
     const CORREOS_C = ['api/_lib/textos-correos.ts', 'api/_lib/correos-c.ts', 'api/_lib/guarda-correos.ts', 'src/prueba/AvisosCorreo.tsx', 'src/legal/v17/privacidad.md']
     expect(hallados.filter(h => !CORREOS_C.includes(h.split(':')[0]))).toEqual(['src/alertas.ts:5'])
     // Legal 25/10, 5:09 p. m.: la casilla de C (AvisosCorreo.tsx) ya está revisada; queda solo la línea de la Privacidad 1.9-demo.
-    expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toEqual(['src/legal/v17/privacidad.md:71'])
+    // Legal 25/10, 5:31 p. m.: OK para publicar C; ya no queda ninguna marca en src/legal ni src/prueba.
+    expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toEqual([])
   })
 })
 

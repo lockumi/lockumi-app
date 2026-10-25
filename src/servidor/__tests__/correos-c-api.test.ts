@@ -1,6 +1,7 @@
 // Escenario C · puertas del envío: POST /api/correo { tipo: 'avisos' } (solo una persona del alquiler), la corrida diaria
 // (api/_lib/borrados.ts) solo envía con CORREOS_C=1, y P-05 (texto literal de la espera de la mediación).
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { TEXTOS } from '../../../api/_lib/textos-correos'
 import { atenderAvisos } from '../../../api/_lib/correos-c'
 import { ejecutarBorrados } from '../../../api/_lib/borrados'
 import { ESPERA_MEDIACION_C } from '../../screens/Detalle'
@@ -16,6 +17,9 @@ const falso = (participa: boolean, sesion = true) => { const urls: string[] = []
     if (url.includes('/rpc/')) return Response.json(0)
     return new Response('no', { status: 404 }) })
   return { f: f as unknown as typeof fetch, urls } }
+
+// Desde el OK de Legal (25/10, 5:31 p. m.) no queda ningún texto por revisar: la guarda se prueba con una plantilla marcada a mano.
+beforeEach(() => { TEXTOS['COR-C-02/d4'].legal = 'revisar' }); afterEach(() => { TEXTOS['COR-C-02/d4'].legal = 'revisado' })
 
 describe('POST /api/correo { tipo: avisos }', () => {
   it('apagado (sin CORREOS_C=1) no envía nada, pero SÍ revisa el plazo de la mediación de ese alquiler (Legal 25/10, punto 3)', async () => {

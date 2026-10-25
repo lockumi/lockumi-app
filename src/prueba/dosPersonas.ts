@@ -4,6 +4,7 @@
 // mediadora (api/_lib/tw.ts, acción «devolver-automatico»).
 import type { Alquiler } from '../types'
 import { pruebaCompleta } from './interruptor'
+import { repartoCentimos } from '../../api/_lib/centimos'
 
 /** Mismo texto que api/_lib/tw.ts APROBADO (sin importar el SDK de Stellar en el navegador). */
 export const APROBADO_DUENO = 'El dueño aprobó en la cadena devolver el depósito completo'
@@ -29,7 +30,7 @@ export const montoPrueba = (n: number) => `${fmt(n)} USDC de prueba`
 export const recibeInquilino = (monto: number) => Math.round(monto * (1 - COMISION_TW) * 1e7) / 1e7
 // LEGAL: revisado (25/10, lista de Legal) · nota bajo los montos al terminar (devolución automática)
 export const notaComisionAuto = (monto: number) =>
-  `Llegaron ${montoPrueba(recibeInquilino(monto))}: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(Math.round((monto - recibeInquilino(monto)) * 1e7) / 1e7)}). El dueño y Lockumi no reciben nada.`
+  `Llegaron ${montoPrueba(repartoCentimos(0, monto).llegaInquilino)}: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(repartoCentimos(0, monto).comision)}). El dueño y Lockumi no reciben nada.`
 // LEGAL: revisado (25/10, lista de Legal) · Términos 1.7-demo, 4.2 e) (texto de Legal del 24/10, 11:29 p. m.; se publica en el paso 16)
 export const TERMINOS_42E = 'En la devolución automática de la cláusula 5.3 d), la cuenta de Lockumi que resuelve disputas entrega al inquilino el 100 % del saldo del depósito, menos solo la comisión de la red de prueba de Trustless Work. No puede entregar nada al dueño ni a Lockumi.'
 
@@ -46,9 +47,8 @@ export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa y ya no 
 // PR #22 (d) · cierre de la mediación con las dos aceptaciones (lk_aceptar_acuerdo_mediacion, resultado.cierre = 'dos_aceptan').
 // Legal: aprobado (25/10, 3:16 a. m.) · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)
 export const TEXTO_ACEPTARON_DOS = 'Lo aceptaron las dos partes.'
-const redondo = (n: number) => Math.round(n * 1e7) / 1e7
-export const notaComisionReparto = (inquilino: number, dueno: number) =>
-  `Llegaron ${montoPrueba(recibeInquilino(inquilino))} al inquilino y ${montoPrueba(recibeInquilino(dueno))} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(redondo(inquilino + dueno - recibeInquilino(inquilino) - recibeInquilino(dueno)))}). Lockumi no recibe nada.`
+export const notaComisionReparto = (inquilino: number, dueno: number) => { const r = repartoCentimos(dueno, inquilino)
+  return `Llegaron ${montoPrueba(r.llegaInquilino)} al inquilino y ${montoPrueba(r.llegaDueno)} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(r.comision)}). Lockumi no recibe nada.` }
 
 // Legal, 25/10, 2:53 a. m.: en C la Regla 6.5.1 no se ofrece al firmar (Términos 1.9-demo, 6.5.1 d). Nota sin casilla. Aprobado el 25/10, 3:16 a. m.
 export const TITULO_RECLAMO_DOS = 'Si hay un reclamo'

@@ -1,7 +1,7 @@
 // Escenario C · envío de COR-C-01 a COR-C-09 desde el servidor (api/_lib/correos-c.ts), con Supabase y Resend simulados.
 // Una sola vez por evento (reserva + clave de idempotencia), la casilla manda (salvo 08 y 09), la persona mediadora recibe su
 // versión, y la REGLA DURA: ningún texto «LEGAL: revisar» sale en un correo real (envío y build de producción fallan).
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { TEXTOS, textosPorRevisar, PIE, PIE_BAJA, DEMO, NOTA_CONFIRMAR, usdc, llega } from '../../../api/_lib/textos-correos'
 import { procesarCorreos, enviarCorreoCuenta, abrirCorreo, revisarTextos, borradorPermitido, armarC, plantillaDe, BUZON_PRUEBA, sha256 } from '../../../api/_lib/correos-c'
 import { guardaCorreos } from '../../../api/_lib/guarda-correos'
@@ -58,11 +58,14 @@ describe('textos (api/_lib/textos-correos.ts): un solo archivo, con la marca de 
   it('montos de prueba menos el 0,3 % de Trustless Work', () => {
     expect(usdc(20)).toBe('20,00 USDC de prueba'); expect(usdc(0.5)).toBe('0,50 USDC de prueba'); expect(llega(20)).toBe(19.94)
     expect(TEXTOS['COR-C-07/devuelto'].cuerpo({ deposito: 20 })).toContain('llegan 19,94 USDC de prueba')
-    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 20, dueno: 5, inquilino: 15 })).toContain('Llegan 4,99 USDC de prueba al dueño y 14,96 USDC de prueba al inquilino; Trustless Work descuenta 0,06 USDC de prueba')   // 2 decimales (Legal 25/10, punto 8)
+    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 20, dueno: 5, inquilino: 15 })).toContain('Llegan 4,99 USDC de prueba al dueño y 14,96 USDC de prueba al inquilino; Trustless Work descuenta 0,05 USDC de prueba')   // 2 decimales en céntimos: 4,99 + 14,96 + 0,05 = 20,00
   })
 })
 
 describe('REGLA DURA · nada «LEGAL: revisar» sale en un correo real', () => {
+  // Desde el OK de Legal (25/10, 5:31 p. m.) no queda ningún texto por revisar: la guarda se prueba con una plantilla marcada a mano.
+  beforeEach(() => { TEXTOS['COR-C-02/d4'].legal = 'revisar' }); afterEach(() => { TEXTOS['COR-C-02/d4'].legal = 'revisado' })
+  it('ningún texto queda por revisar en el código (Legal 25/10, 5:31 p. m.)', () => { TEXTOS['COR-C-02/d4'].legal = 'revisado'; expect(textosPorRevisar()).toEqual([]) })
   it('con textos por revisar, enviar falla (cron, /api/correo y correos de cuenta), sin llamar a Resend', async () => {
     expect(textosPorRevisar().length).toBeGreaterThan(0)
     expect(() => revisarTextos(BASE)).toThrow(/LEGAL: revisar/)

@@ -62,7 +62,7 @@ begin
               and not exists (select 1 from public.lk_participantes p where p.contrato_id = c.id and p.rol = 'inquilino')
             for update loop
     update public.lk_contratos set email_inquilino = null, invitacion_hash = null where id = v.id;
-    -- LEGAL: revisar · historial (texto propio, Privacidad 1.7-demo: «Si la persona invitada no se une en 7 días, borramos su correo.»)
+    -- LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · historial (texto propio, Privacidad 1.7-demo: «Si la persona invitada no se une en 7 días, borramos su correo.»)
     perform public.lk_evento(v.id, 'La persona invitada no se unió en 7 días. Se borró su correo.');
     n := n + 1;
   end loop;
