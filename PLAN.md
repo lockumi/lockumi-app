@@ -2,12 +2,6 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
-## Pasos 14, 11 y 7 publicados detrás de sus interruptores (25 oct 2026), sin cambios visibles
-- Con el OK de Katherine (25/10, 12:04 a. m.). Orden 14 → 11 → 7, cada uno con `git merge --no-ff`, rebasado sobre master, CI verde, comparación píxel a píxel (11 pantallas; con el paso 7, 13) y E2E post-despliegue en verde.
-- **Paso 14 (#16):** «Descargar el expediente (demo)» en PDF con el aviso de la B.11. Detrás de `VITE_PRUEBA_COMPLETA`.
-- **Paso 11 (#17):** avisos por correo con la casilla sin marcar; el servidor guarda el consentimiento (en memoria hasta conectar Supabase) y sin él no envía. Privacidad 1.7-demo solo detrás del interruptor; la 1.6 no cambia.
-- **Paso 7 (#18):** modo de dos personas detrás de `VITE_DOS_PERSONAS` (apagado en producción, sin `VITE_SUPABASE_*`). Invitación de 7 días. Devolución automática del 100 % al inquilino (menos 0,3 % de Trustless Work). Ver docs/prueba-completa.md.
-
 ## Franja: texto nuevo (publicado con el OK de Katherine)
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
 
@@ -35,6 +29,14 @@
 ## Sin pantalla de volver a aceptar (24 oct 2026, pedido de Katherine, 10:03 p. m.) — publicado con el OK de Katherine (10:27 p. m.)
 - Con la sesión abierta se entra directo, aunque la versión aceptada sea anterior. `src/legal/Reaceptacion.tsx` queda sin uso (se conserva con sus pruebas). Entrar sigue pidiendo la casilla y guarda 1.6-demo.
 - Propuesta de Legal (10:05 p. m.), **solo imágenes, sin programar** (`capturas/sin-reaceptacion/aviso.jpg` y `linea-boton.jpg`): a) aviso que se puede cerrar la primera vez que entra quien aceptó 1.5; b) línea «Al continuar, aceptas los Términos 1.6-demo y el Aviso de privacidad.» sobre el botón de crear o firmar un alquiler.
+
+## Paso 16 (25 oct 2026, rama `paso16-terminos-17`, sin publicar): Términos y Privacidad 1.7-demo
+- Textos de Legal (`legal/prueba-completa-textos.md` A.1–A.8 y la frase de 30 días de Privacidad) en `src/legal/v17/`. Con el interruptor encendido, `/terminos` y `/privacidad` muestran la 1.7-demo; la 1.6-demo queda en `/terminos-1-6` y `/privacidad-1-6`.
+- **Sin pantalla de volver a aceptar** (no se usa `Reaceptacion.tsx`): el login se ve igual; solo cambia el texto detrás de los enlaces.
+- Cada alquiler guarda `terminos.version` (los nuevos, la 1.7-demo) y el contrato la muestra. Los de la 1.6-demo siguen con sus reglas (`reglas17(a)` es falso) salvo que **los dos** acepten pasar a la 1.7-demo (tarjeta «Términos de este alquiler», solo antes de la salida).
+- Mediación: casilla sin marcar dentro de la B.7 y registro (`consentimientos`: cuenta, alquiler, versión, texto y fecha). Gancho `consentimientoCorreo` para el paso 11.
+- Borrado: los datos de una mediación (fotos, motivos, descripciones y soportes) se borran 30 días después de cerrar el caso, salvo que una parte pida guardarlos (`guardarMediacion`); quedan los montos y el resultado.
+- Encendido: commit aparte con `.env.production` (`VITE_PRUEBA_COMPLETA=1`). Volver atrás: revertir ese commit.
 
 ## PR 10 (plan, sin programar): 1.7-demo con la regla nueva de Legal (24 oct, 10:05 p. m.)
 - **Sin pantalla que bloquee.** En su lugar, el mismo aviso que se puede cerrar y la misma línea sobre el botón de crear o firmar, con 1.7-demo.

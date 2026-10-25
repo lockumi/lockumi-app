@@ -14,13 +14,28 @@ import { esHash } from '../services/comprobantes'
 import { VerTx } from '../screens/Real'
 import { pedirMediacion, noUsarMediacion, plazoMediacion, repartoValido, textoConfirmar, textoResultado, textoNoReclamado } from './mediacion'
 import { AvisosApp } from './AvisosApp'
+import { registrarConsentimiento, CASILLA_MEDIACION } from './consentimientos'
+import { deDosPersonas } from '../servidor/config'
+import { versionAlquiler, V17 } from './version'
+import { pasoPorMediacion, datosMediacion, guardarMediacion, textoGuardar, DIAS_BORRADO } from './borrado'
 
 const u = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
 const r2 = (n: number) => Math.round(n * 100) / 100
 
-function B7({ a }: { a: Alquiler }) {
+/** paso16-unido (Legal, 25/10, arreglo 2): B.7 en un solo aparato. Es solo la simulación: sin casilla ni «Pedir mediación», y
+ *  ninguna persona del equipo interviene (6.8 b). La B.7 con la casilla de la sección C queda para los alquileres con otra persona. */
+function B7UnAparato() {
+  // LEGAL: revisado (25/10, 12:05 a. m.) · B.7 en un solo aparato, texto exacto de Legal
+  return <section className="pila mediacion-b7" aria-labelledby="t-b7">
+    <h3 id="t-b7">Mediación Lockumi (demo)</h3>
+    <p><strong>Mediación Lockumi (demo):</strong> es una simulación. El reparto se elige con el botón «Resolver el reclamo (simulación)» y solo se hace si los dos lo aceptan. <strong>No tiene efecto legal, no es una mediación según la Ley 7727 y no tiene costo.</strong> Si no hay acuerdo, el monto sigue guardado y pueden ir a los tribunales.</p>
+    <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la mediación tendría un costo, que se informaría antes de firmar.</div>{/* LEGAL: revisar · se quitó el marcador [PENDIENTE] (Katherine, 24/10) */}
+  </section>
+}
+function B7({ a, rol }: { a: Alquiler; rol: Rol }) {
   const [ok, setOk] = useState(false); const m = a.reclamo!.mediacion
-  const pedir = () => store.cambiar(a.id, x => { pedirMediacion(x, store.todos(), ahoraDe(x)) })
+  // Paso 16: el consentimiento queda registrado en el momento de usar la mediación (casilla de la B.7).
+  const pedir = () => store.cambiar(a.id, x => { registrarConsentimiento(x, 'mediacion', rol, CASILLA_MEDIACION, ahoraDe(x)); pedirMediacion(x, store.todos(), ahoraDe(x)) })
   if (m?.estado === 'sin-cupo') return <section className="pila aviso-app" aria-labelledby="t-sin-cupo">
     {/* LEGAL: revisado (24/10, v3) · B.12 */}
     <h3 id="t-sin-cupo">Mediación Lockumi (demo) sin cupo</h3>
@@ -38,7 +53,7 @@ function B7({ a }: { a: Alquiler }) {
     <p>Una persona del equipo de Lockumi les ayuda a buscar un acuerdo. <strong>No decide por ustedes.</strong> No es mediadora certificada ni neutral: es parte de Lockumi. Lockumi no gana nada con el resultado del reclamo. En el servicio con dinero real, quien pagaría la suscripción sería el inquilino. Esto es una demo: <strong>no tiene efecto legal, no es una mediación según la Ley 7727 y no tiene costo.</strong> El reparto solo se hace si los dos lo aceptan. Si no hay acuerdo, el monto sigue guardado y pueden ir a los tribunales. Respondemos en un plazo de 3 días hábiles (máximo 10 casos en la demo).</p>
     <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la mediación tendría un costo, que se informaría antes de firmar.</div>{/* LEGAL: revisar · se quitó el marcador [PENDIENTE] (Katherine, 24/10) */}
     <p className="nota">En la demo: simulación, no se cobra.</p>
-    <label className="casilla"><input type="checkbox" checked={ok} onChange={e => setOk(e.target.checked)} /> Entiendo esto y quiero usar la Mediación Lockumi (demo).</label>
+    <label className="casilla"><input type="checkbox" checked={ok} onChange={e => setOk(e.target.checked)} /> {CASILLA_MEDIACION}</label>
     <div className="fila-botones"><button type="button" className="boton boton--pc" disabled={!ok} onClick={pedir}>Pedir mediación</button>
       <button type="button" className="boton boton--secundario" onClick={() => store.cambiar(a.id, x => noUsarMediacion(x, ahoraDe(x)))}>Prefiero no usarla</button></div>
   </section>
@@ -70,7 +85,7 @@ export function MediacionPC({ a, rol }: { a: Alquiler; rol: Rol }) {
     {/* LEGAL: revisar · título y resumen (texto propio) */}
     <div className="cab"><h2>Sin acuerdo: reclamo de {u(rec.monto)}</h2><Simulado texto="Mediación y reparto simulados" /></div>
     {rec.propuesta && <p className="nota">Propuesta automática (simulación): dueño {u(rec.propuesta.alDueno)} · inquilino {u(r2(a.monto - rec.propuesta.alDueno))}. No hubo acuerdo.</p>}
-    <B7 a={a} />
+    {deDosPersonas(a) ? <B7 a={a} rol={rol} /> : <B7UnAparato />}
     <B14 a={a} />
     {/* LEGAL: revisado (24/10) · B.7, tarjetas */}
     <section className="pila" aria-labelledby="t-vias"><h3 id="t-vias">Otras vías (fuera de la app)</h3>
@@ -88,4 +103,19 @@ export function ResueltoSimulacion({ a }: { a: Alquiler }) {
   // LEGAL: revisado (24/10, v4) · B.14 (aviso del resultado)
   return <div className="pila aviso-app"><h3>Reclamo resuelto (simulación)</h3><p>{textoResultado(r.dueno, r.inquilino)}</p>
     {esHash(h) && <VerTx h={h} />}</div>
+}
+
+/** paso16-unido (arreglo 3): en «Terminado», una parte puede pedir que se guarden los datos de la mediación para un reclamo fuera
+ *  de la app (si no, se borran 30 días después de cerrar el caso). Queda en el historial. */
+export function GuardarDatosMediacion({ a, rol }: { a: Alquiler; rol: Rol }) {
+  if (versionAlquiler(a) !== V17 || deDosPersonas(a) || !pasoPorMediacion(a)) return null   // con otra persona: lo hace el servidor
+  const d = datosMediacion(a)
+  if (d.borrado) return null
+  // LEGAL: revisar · texto propio basado en la Privacidad 1.7-demo (conservación); la línea del historial es de Legal
+  if (d.guardar) return <p className="nota" role="status">{textoGuardar(d.guardar.por)}</p>
+  return <section className="pila guardar-mediacion" aria-labelledby="t-guardar-med">
+    <h3 id="t-guardar-med">Datos de la mediación</h3>
+    <p className="nota">Las fotos, las descripciones y los mensajes de la Mediación Lockumi (demo) se borran {DIAS_BORRADO} días después de cerrar el caso. Se conservan los montos y el resultado. Si los necesitas para un reclamo fuera de la app, pide que los guardemos.</p>
+    <button type="button" className="boton boton--secundario boton--ancho" onClick={() => store.cambiar(a.id, x => guardarMediacion(x, rol, ahoraDe(x)))}>Guardar los datos de la mediación</button>
+  </section>
 }

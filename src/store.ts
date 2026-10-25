@@ -1,3 +1,6 @@
+import { pruebaCompleta } from './prueba/interruptor'
+import { terminosActual } from './legal/documentos'
+import { edicionDe } from './prueba/version'
 import { modoServidor, modoSolo, modoPrueba, escrowReal, dosPersonas } from './servidor/config'
 import { repositorio } from './servidor/repositorio'
 import { useSyncExternalStore } from 'react'
@@ -48,7 +51,7 @@ export const store = {
   fresco: (id: string) => { recargar(); return datos.find(a => a.id === id) },
   sinEspacio: () => avisoEspacio,
   crear(a: Pick<Alquiler,'direccion'|'monto'|'inicio'|'fin'|'reglas'|'duenoEmail'|'inquilinoEmail'>) {
-    const n: Alquiler = { ...a, moneda: escrowReal ? 'USDC' : 'USD', id: escrowReal ? crypto.randomUUID() : 'a' + Date.now().toString(36), estado:'firmas', rendimiento:false, contrato:{ firmas:{} }, entrada: actaVacia(), diasSimulados: 0,
+    const n: Alquiler = { ...a, moneda: escrowReal ? 'USDC' : 'USD', id: escrowReal ? crypto.randomUUID() : 'a' + Date.now().toString(36), estado:'firmas', rendimiento:false, contrato:{ firmas:{} }, entrada: actaVacia(), diasSimulados: 0, ...(pruebaCompleta() ? { terminos: { version: terminosActual().version, ...edicionDe(terminosActual().version) } } : {}),
       historial:[{fecha:ahoraReal(),texto:'Alquiler creado'}] }
     recargar(); datos = [n, ...datos]; guardar(); return n
   },

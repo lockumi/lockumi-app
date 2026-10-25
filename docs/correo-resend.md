@@ -31,14 +31,7 @@ Comprobación pública (sin credenciales), por ejemplo: `https://cloudflare-dns.
 
 Ninguna de las dos está en Production. Nunca se escriben sus valores en el repositorio ni en la documentación.
 
-## Prueba real del correo (después de desplegar, en una vista previa)
-`RESEND_API_KEY` está solo en Preview, así que la prueba se hace contra la URL de una vista previa (`https://lockumi-app-demo-….vercel.app`), nunca contra app.lockumi.com. Solo a la casilla de pruebas **lockumi@mail.grokbot.com** (nunca a personas reales):
-1. Guardar el consentimiento: `POST /api/correo` con `{"tipo":"consentimiento","para":"lockumi@mail.grokbot.com","alquiler":"prueba-correo","acepta":true}` y el encabezado `Origin` de la vista previa.
-2. Enviar un aviso de prueba a la misma casilla y el mismo `alquiler` (`tipo: "aviso"`, `consentimiento: true`, una `plantilla` y sus `datos` de `api/_lib/avisos.ts`). Como el consentimiento vive en memoria del servidor, los dos pedidos deben llegar a la misma instancia (enviarlos seguidos); si el aviso responde que falta el consentimiento, repetir el paso 1.
-3. Revisar en la casilla: remitente invitaciones@lockumi.com, asunto y texto de `api/_lib/avisos.ts`, pie común y pie para darse de baja, enlace a la app, sin dirección ni fotos.
-4. Desmarcar (`acepta: false`) y comprobar que un nuevo aviso responde con error y no llega.
-
 ## Pendiente para activar la Parte 4
-- Decidir el borrado automático del correo de la persona invitada (ver `cambios-1.5-vs-1.4.md` de Legal).
+- **paso16-unido (25/10):** un solo correo de invitación por alquiler, sin recordatorios (`lk_registrar_correo_invitacion`; sin Supabase, en memoria y con clave de idempotencia `inv:<alquiler>`), y el correo de la persona invitada se borra si no se une en 7 días (`lk_borrar_invitaciones_vencidas`, desde `GET /api/borrados`). Ver `docs/prueba-completa.md`, «Borrados en Supabase». Falta aplicar la migración y poner `CRON_SECRET`.
 - Pasar a producción las variables del servidor compartido y de Resend, y activar la Parte 4 en la app.
 - Actualizar el README (guía para jueces y «Cambios publicados») en el mismo trabajo.

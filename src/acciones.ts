@@ -10,6 +10,7 @@ import type { Alquiler, Foto, Rol, Rubro, RespuestaRubro } from './types'
 import { modoServidor, modoSolo, modoDe } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
+import { reglas17 } from './prueba/version'
 import { pruebaCompleta } from './prueba/interruptor'
 import { APROBADO_DUENO } from './prueba/dosPersonas'
 import { registrarEntrega, finVentana } from './prueba/dueno'
@@ -22,7 +23,7 @@ export { plazoMs, textoPlazo } from './flujo'   // viven en flujo.ts (puro) para
 
 
 export interface Acciones {
-  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' } }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
+  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' }; /** paso16-unido: declaración de quien invita (solo al invitar) */ declaracion?: string }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
   firmar(a: Alquiler, etapa: Etapa, rol: Rol): Promise<void>
   /** Prueba completa (B.4): devolver todo el depósito ahora, después de la confirmación. */
   devolverTodo?(a: Alquiler, avance?: Avance): Promise<void>
@@ -76,7 +77,7 @@ const local: Acciones = {
       if (!ambos(obj.firmas)) return
       if (etapa === 'contrato') { x.estado = 'pendiente_pago'; x.historial.push({ fecha: cuando, texto: 'Contrato firmado por los dos' }) }
       else if (etapa === 'entrada') { x.estado = 'en_curso'; x.historial.push({ fecha: cuando, texto: 'Fotos de entrada confirmadas por los dos' }) }
-      else if (pruebaCompleta()) registrarEntrega(x, cuando)   // prueba completa: el plazo del dueño empieza con «Recibí la casa» o a los 2 días
+      else if (reglas17(x)) registrarEntrega(x, cuando)   // prueba completa: el plazo del dueño empieza con «Recibí la casa» o a los 2 días
       else { x.estado = 'ventana_reclamo'; x.ventanaInicio = cuando; x.historial.push({ fecha: cuando, texto: `Fotos de salida confirmadas. Empiezan los ${textoPlazo(x)} para reclamos` }) }   // LEGAL: revisado (24/10) · {plazo} real
     })
   },
@@ -119,7 +120,7 @@ const local: Acciones = {
     }),
   // Sin reclamos al terminar el plazo: el dueño (de prueba) aprueba y Lockumi devuelve el depósito al inquilino.
   cerrarSinReclamo: (a, avance = nada) => modoSolo ? Promise.resolve() : paso(a, 'devolucion', async x => {
-    if (x.estado !== 'ventana_reclamo' || x.reclamo || !x.ventanaInicio || ahoraDe(x) < (pruebaCompleta() ? finVentana(x) ?? Infinity : +new Date(x.ventanaInicio) + plazoMs(x))) return
+    if (x.estado !== 'ventana_reclamo' || x.reclamo || !x.ventanaInicio || ahoraDe(x) < (reglas17(x) ? finVentana(x) ?? Infinity : +new Date(x.ventanaInicio) + plazoMs(x))) return
     const r = await escrow.devolver(x, guardarEn(a.id), avance)
     store.cambiar(a.id, y => {
       if (y.estado !== 'ventana_reclamo' || y.reclamo) return
