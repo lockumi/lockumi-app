@@ -70,7 +70,7 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   return { correo, metodo }
 }
 
-// LEGAL: revisar · ronda 25/10 4:23 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
+// LEGAL: revisado (25/10) · ronda 4:41 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
 export const NO_SE_PUDO_VERIFICAR = 'No pudimos confirmar el correo de tu cuenta. Sal de Lockumi y vuelve a entrar con tu correo.'
 
 /** POST /api/verificar-correo: sesión de Supabase (Bearer) + { token } de Cavos → registra (sesión, correo) con la clave de servicio. */

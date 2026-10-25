@@ -11,23 +11,24 @@ import { authCavos } from '../services/auth'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
 
 const normalizar = (c: string) => c.trim().toLowerCase()
-const verificados = new Map<string, Promise<boolean>>()
-/** Verifica una vez por correo (y por carga de la app). Nunca lanza: si no se pudo, el servidor rechaza después con un texto que dice
- *  cómo seguir («Sal de Lockumi, vuelve a entrar con tu correo…»). */
+/** El último correo verificado en esta carga de la app. El servidor lee solo por el correo verificado ACTIVO de la sesión (el último
+ *  que verificó; Legal, 25/10/2026, 4:41 p. m.), así que si la persona del aparato cambia, se vuelve a verificar. */
+let activo: { c: string; p: Promise<boolean> } | null = null
+/** Verifica una vez por correo activo (y por carga de la app). Nunca lanza: si no se pudo, el servidor rechaza después con un texto que
+ *  dice cómo seguir («Sal de Lockumi, vuelve a entrar con tu correo…»). */
 export function asegurarCorreo(email: string): Promise<boolean> {
   const c = normalizar(email)
   if (!conServidor) return Promise.resolve(true)
-  let p = verificados.get(c)
-  if (!p) {
-    p = (async () => {
-      const token = (await authCavos())?.getAuthToken()
-      if (!token) return false
-      const r = await servidor.verificarCorreo(token)
-      return normalizar(r.correo) === c
-    })().catch(() => false)
-    p.then(ok => { if (!ok) verificados.delete(c) })   // se reintenta la próxima vez (p. ej. después de volver a entrar)
-    verificados.set(c, p)
-  }
+  if (activo?.c === c) return activo.p
+  const p = (async () => {
+    const token = (await authCavos())?.getAuthToken()
+    if (!token) return false
+    const r = await servidor.verificarCorreo(token)
+    return normalizar(r.correo) === c
+  })().catch(() => false)
+  const yo = { c, p }
+  activo = yo
+  p.then(ok => { if (!ok && activo === yo) activo = null })   // se reintenta la próxima vez (p. ej. después de volver a entrar)
   return p
 }
 

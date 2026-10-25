@@ -74,19 +74,15 @@ create table if not exists public.lk_reputacion_revisiones (
 alter table public.lk_reputacion_aceptaciones enable row level security;
 alter table public.lk_reputacion_revisiones enable row level security;
 drop policy if exists lk_rep_acept_propia on public.lk_reputacion_aceptaciones;
-create policy lk_rep_acept_propia on public.lk_reputacion_aceptaciones for select using (usuario = auth.uid());
 drop policy if exists lk_rep_rev_propias on public.lk_reputacion_revisiones;
-create policy lk_rep_rev_propias on public.lk_reputacion_revisiones for select using (usuario = auth.uid());
 alter table public.lk_reputacion_perfiles enable row level security;
 alter table public.lk_reputacion_consentimientos enable row level security;
 alter table public.lk_reputacion_eventos enable row level security;
 -- Cada persona lee lo suyo (C.5.2 «Ver mis datos de reputación»). Lo público se sirve por funciones, no por tablas.
+-- Las políticas de lectura (por sesión Y por su correo verificado activo) se crean más abajo, después de lk_fila_de_mi_correo.
 drop policy if exists lk_rep_perfil_propio on public.lk_reputacion_perfiles;
-create policy lk_rep_perfil_propio on public.lk_reputacion_perfiles for select using (usuario = auth.uid());
 drop policy if exists lk_rep_consent_propio on public.lk_reputacion_consentimientos;
-create policy lk_rep_consent_propio on public.lk_reputacion_consentimientos for select using (usuario = auth.uid());
 drop policy if exists lk_rep_eventos_propios on public.lk_reputacion_eventos;
-create policy lk_rep_eventos_propios on public.lk_reputacion_eventos for select using (usuario = auth.uid());
 
 -- 3. Eliminar la cuenta en un máximo de 5 días hábiles -------------------------------------------------------------------
 create table if not exists public.lk_solicitudes_borrado (
@@ -104,7 +100,6 @@ create table if not exists public.lk_solicitudes_borrado (
 create unique index if not exists lk_solicitudes_borrado_pendiente on public.lk_solicitudes_borrado (usuario, correo) where hecho_en is null;
 alter table public.lk_solicitudes_borrado enable row level security;
 drop policy if exists lk_borrado_propio on public.lk_solicitudes_borrado;
-create policy lk_borrado_propio on public.lk_solicitudes_borrado for select using (usuario = auth.uid());
 
 -- La persona = el correo que Cavos ya autenticó (Legal, 25/10/2026, 4:01 p. m.) -------------------------------------------------
 -- auth.uid() es una sesión anónima POR APARATO (src/servidor/repositorio.ts). La persona es su correo, normalizado (trim + minúsculas),
@@ -132,8 +127,9 @@ begin
   if p_usuario is null or c is null or c !~* '^[^\s@]+@[^\s@]+\.[^\s@]{2,}$' then
     raise exception 'Correo o sesión inválidos: no se registra nada.' using errcode = '22023';   -- solo lo ve api/verificar-correo.ts
   end if;
-  insert into public.lk_correos_verificados(usuario, correo, metodo) values (p_usuario, c, p_metodo)
-  on conflict (usuario, correo) do update set metodo = excluded.metodo, verificado_en = now();
+  -- clock_timestamp(): la hora real de esta verificación (lk_correo_activo toma la última; now() sería la de la transacción).
+  insert into public.lk_correos_verificados(usuario, correo, metodo, verificado_en) values (p_usuario, c, p_metodo, clock_timestamp())
+  on conflict (usuario, correo) do update set metodo = excluded.metodo, verificado_en = excluded.verificado_en;
   return true;
 end $$;
 revoke all on function public.lk_registrar_correo_verificado(uuid, text, text) from public, anon, authenticated;
@@ -174,15 +170,22 @@ create or replace function public.lk_de_la_persona(p_fila_usuario uuid, p_fila_c
 language sql immutable as $$
   select coalesce(p_fila_correo = p_correo, false) or (p_fila_correo is null and p_fila_usuario = any(p_exclusivos))
 $$;
--- El correo con el que la app dice que entró la persona, solo si el servidor lo VERIFICÓ para ESTA sesión (lk_correos_verificados).
--- Sin correo: el único verificado de la sesión. Si no hay ninguno verificado (o el pedido no coincide), se rechaza.
+-- El correo con el que la app dice que entró la persona, solo si es el correo verificado ACTIVO de ESTA sesión (lk_correo_activo).
+-- Sin correo: el activo. Si no hay ninguno verificado (o el pedido no es el activo, p. ej. el de la otra persona del aparato), se rechaza.
+-- El correo verificado ACTIVO de una sesión (Legal, 25/10/2026, 4:41 p. m., límite (g)): el ÚLTIMO que api/verificar-correo.ts
+-- verificó para ella, es decir, el de quien entró con Cavos por última vez en ese aparato (cada entrada vuelve a verificar y pone
+-- verificado_en = now()). Con dos correos en un aparato, A y B nunca están activos a la vez: para leer lo de B hay que presentar un
+-- token de Cavos válido de B. null si la sesión no tiene ninguno verificado.
+create or replace function public.lk_correo_activo(p_usuario uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select correo from public.lk_correos_verificados where usuario = p_usuario order by verificado_en desc, correo limit 1
+$$;
 create or replace function public.lk_correo_de_sesion(p_usuario uuid, p_correo text) returns text
 language plpgsql stable security definer set search_path = public as $$
-declare c text := public.lk_normalizar_correo(p_correo); vs text[];
+declare c text := public.lk_normalizar_correo(p_correo); a text := public.lk_correo_activo(p_usuario);
 begin
-  vs := array(select correo from public.lk_correos_verificados where usuario = p_usuario);
-  if c is null and cardinality(vs) = 1 then c := vs[1]; end if;
-  if c is null or not (c = any(vs)) then
+  if c is null then c := a; end if;
+  if c is null or c is distinct from a then
     -- LEGAL: revisado (25/10) · mensaje del servidor
     raise exception 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.' using errcode = '28000';
   end if;
@@ -196,6 +199,25 @@ revoke all on function public.lk_correo_de_sesion(uuid, text) from public, anon,
 revoke all on function public.lk_correo_verificado(uuid, text) from public, anon, authenticated;
 revoke all on function public.lk_uids_exclusivos(uuid[], text) from public, anon, authenticated;
 revoke all on function public.lk_de_la_persona(uuid, text, text, uuid[]) from public, anon, authenticated;
+revoke all on function public.lk_correo_activo(uuid) from public, anon, authenticated;
+
+-- LECTURAS por el correo verificado de la sesión (Legal, 25/10/2026, 4:41 p. m., límite (g) de docs/reputacion.md) -------------------
+-- ¿Esta fila (de esta sesión) es del correo verificado ACTIVO de la sesión? Sin correo verificado: nada (cierre por defecto).
+-- Filas sin correo (anteriores): solo si la sesión no tiene otro correo (lk_uids_exclusivos); en un aparato con dos correos, ninguna.
+-- Solo mira la sesión que llama (auth.uid()) y no devuelve correos: se puede dar a authenticated para usarla en las políticas.
+create or replace function public.lk_fila_de_mi_correo(p_correo text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(a is not null and (p_correo = a or (p_correo is null and auth.uid() = any(public.lk_uids_exclusivos(array[auth.uid()], a)))), false)
+  from (select public.lk_correo_activo(auth.uid()) a) s
+$$;
+revoke all on function public.lk_fila_de_mi_correo(text) from public, anon;
+grant execute on function public.lk_fila_de_mi_correo(text) to authenticated;
+create policy lk_rep_acept_propia on public.lk_reputacion_aceptaciones for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
+create policy lk_rep_rev_propias on public.lk_reputacion_revisiones for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
+create policy lk_rep_perfil_propio on public.lk_reputacion_perfiles for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
+create policy lk_rep_consent_propio on public.lk_reputacion_consentimientos for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
+create policy lk_rep_eventos_propios on public.lk_reputacion_eventos for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
+create policy lk_borrado_propio on public.lk_solicitudes_borrado for select to authenticated using (usuario = auth.uid() and public.lk_fila_de_mi_correo(correo));
 
 -- Domingo de Pascua (Meeus/Jones/Butcher), igual que src/reputacion/borrado.ts.
 create or replace function public.lk_pascua(y int) returns date language plpgsql immutable as $$
@@ -443,7 +465,7 @@ begin
   if coalesce(btrim(p_version), '') = '' or coalesce(cardinality(p_texto), 0) = 0 then
     raise exception 'No pudimos guardar tu aceptación. Vuelve a abrir Lockumi y acepta de nuevo tu perfil de reputación.' using errcode = '22023';
   end if;
-  if not public.lk_correo_verificado(u, c) then          -- verificado contra el token de Cavos (api/verificar-correo.ts)
+  if c is distinct from public.lk_correo_activo(u) then   -- el correo verificado activo de la sesión (api/verificar-correo.ts)
     raise exception 'No pudimos leer el correo de tu cuenta. Sal de Lockumi, vuelve a entrar con tu correo y acepta de nuevo.' using errcode = '28000';
   end if;
   if exists (select 1 from public.lk_solicitudes_borrado where hecho_en is null and correo = c) then return false; end if;
