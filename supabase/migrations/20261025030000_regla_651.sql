@@ -11,13 +11,14 @@ create table if not exists public.lk_reglas_651 (
   aceptada_en timestamptz not null default now()
 );
 
--- LEGAL: revisar · la Regla 6.5.1 se acepta por separado, solo el inquilino y solo antes de firmar el contrato.
+-- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 7 · la Regla 6.5.1 se acepta por separado, solo el inquilino y solo antes de firmar el contrato.
 create or replace function public.lk_aceptar_regla_651(p_contrato uuid, p_version text) returns void
 language plpgsql security definer set search_path = public as $$
 declare c public.lk_contratos;
 begin
   perform public.lk_exigir_rol(p_contrato, 'inquilino');
   select * into c from public.lk_contratos where id = p_contrato;
+  -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 7 (no se ve en la app: 050000 reemplaza esta función)
   if c.estado <> 'firmas' then raise exception 'La Regla de propuesta automática (6.5.1) solo se acepta al firmar el contrato.' using errcode = '55000'; end if;
   insert into public.lk_reglas_651(contrato_id, usuario, version) values (p_contrato, auth.uid(), p_version)
   on conflict (contrato_id) do update set usuario = excluded.usuario, version = excluded.version, aceptada_en = now();

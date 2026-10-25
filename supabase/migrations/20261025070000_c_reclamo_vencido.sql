@@ -12,12 +12,12 @@ begin
   if c.estado <> 'ventana_reclamo' then raise exception 'El plazo para reclamar ya terminó.' using errcode = '55000'; end if;
   -- Vencido el plazo, aunque el cron todavía no haya devuelto el depósito (hasta 24 h).
   if now() > public.lk_fin_plazo(public.lk_inicio_plazo(c), c.ventana_segundos) then
-    -- LEGAL: revisar · error (texto propio; se ve en el formulario del reclamo si el dueño lo envía después del fin del plazo)
-    raise exception 'El plazo para reclamar ya terminó. El depósito se le devuelve al inquilino.' using errcode = '55000'; end if;
+    -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 1 (se ve en el formulario del reclamo si el dueño lo envía después del fin del plazo)
+    raise exception 'El plazo para reclamar ya terminó y ya no puedes reclamar en la app. El depósito se le devuelve al inquilino; puede tardar hasta 24 horas. Fuera de la app, aplica la cláusula 6.5 d).' using errcode = '55000'; end if;
   -- 6.5 a): después de «Todo bien, devolver» (aprobado en la cadena) el dueño ya no puede reclamar en la app.
-  -- LEGAL: revisar · error (texto propio con la frase de TEXTO_APROBADO_DOS)
+  -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 2
   if exists (select 1 from public.lk_eventos where contrato_id = p_contrato and texto = 'El dueño aprobó en la cadena devolver el depósito completo') then
-    raise exception 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app.' using errcode = '55000'; end if;
+    raise exception 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app. Fuera de la app, aplica la cláusula 6.5 d).' using errcode = '55000'; end if;
   if p_monto <= 0 or p_monto > c.monto then raise exception 'El monto tiene que ser mayor que cero y no más que el depósito.' using errcode = '22023'; end if;
   if not exists (select 1 from public.lk_fotos where contrato_id = p_contrato and etapa = 'reclamo') then
     raise exception 'Agrega al menos una foto del daño.' using errcode = '22023'; end if;

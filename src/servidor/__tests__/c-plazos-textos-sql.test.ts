@@ -163,7 +163,7 @@ describe('9) eventos del historial con «USDC de prueba»', () => {
 })
 
 describe('5) Legal 4:33: vencido el plazo, no hay reclamo nuevo aunque el cron todavía no haya liberado', () => {
-  const MSJ = 'El plazo para reclamar ya terminó. El depósito se le devuelve al inquilino.'
+  const MSJ = 'El plazo para reclamar ya terminó y ya no puedes reclamar en la app. El depósito se le devuelve al inquilino; puede tardar hasta 24 horas. Fuera de la app, aplica la cláusula 6.5 d).'
   it('inicio automático (2 días después de la entrega): vencido y sin cron, rechaza y no toca nada', async () => {
     const id = await entregado(); await fotoReclamo(id); await atrasar(id, 10)
     await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow(MSJ)
@@ -178,5 +178,28 @@ describe('5) Legal 4:33: vencido el plazo, no hay reclamo nuevo aunque el cron t
   it('si el caso ya no está en el plazo (p. ej. cerrado), sigue el mensaje de antes', async () => {
     const id = await entregado(); await fotoReclamo(id); await db.query(`update public.lk_contratos set estado = 'cerrado' where id = $1`, [id])
     await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow(/^El plazo para reclamar ya terminó\.$/)
+  })
+})
+
+describe('Legal 25/10, 4:56 a. m.: textos finales de los errores del servidor', () => {
+  const cr = (ms: number) => new Date(ms).toLocaleDateString('es-CR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Costa_Rica' }).replace(/\./g, '')
+  it('lk_fecha_cr escribe la fecha como la app («26 oct 2026»), en hora de Costa Rica, los 12 meses', async () => {
+    const casos = Array.from({ length: 12 }, (_, m) => new Date(Date.UTC(2026, m, 26, 16)).toISOString()).concat(['2026-10-27T05:30:00Z', '2026-12-31T23:59:00Z', '2027-01-01T06:00:00Z'])
+    for (const c of casos) expect((await uno<{ f: string }>('select public.lk_fecha_cr($1::timestamptz) f', [c]))!.f).toBe(cr(+new Date(c)))
+  })
+  it('3) «Recibí la casa» con el plazo ya empezado: dice cuándo empezó y cuándo termina (fechas del servidor)', async () => {
+    const id = await entregado(); await atrasar(id, 3)
+    const inicio = +new Date((await fila(id)).entregado_en!) + 2 * DIA_MS, fin = await finPlazo(new Date(inicio).toISOString(), SEMANA)
+    await como(DUENO); await expect(db.query('select public.lk_recibi_casa($1)', [id])).rejects.toThrow(`Tu plazo para reclamar ya empezó el ${cr(inicio)} y termina el ${cr(fin)}.`)
+    const id2 = await entregado(); await db.query('select public.lk_recibi_casa($1)', [id2])
+    const v = +new Date((await fila(id2)).ventana_inicio!)
+    await expect(db.query('select public.lk_recibi_casa($1)', [id2])).rejects.toThrow(`Tu plazo para reclamar ya empezó el ${cr(v)} y termina el ${cr(await finPlazo(new Date(v).toISOString(), SEMANA))}.`)
+  })
+  it('1) plazo vencido y 2) después de aprobar: los textos de Legal', async () => {
+    const id = await entregado(); await fotoReclamo(id); await atrasar(id, 10)
+    await como(DUENO); await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id])).rejects.toThrow('El plazo para reclamar ya terminó y ya no puedes reclamar en la app. El depósito se le devuelve al inquilino; puede tardar hasta 24 horas. Fuera de la app, aplica la cláusula 6.5 d).')
+    const id2 = await entregado(); await fotoReclamo(id2)
+    await db.query(`insert into public.lk_eventos(contrato_id, texto) values ($1, $2)`, [id2, APROBADO])
+    await expect(db.query(`select public.lk_reclamar($1, 30, 'Pared manchada')`, [id2])).rejects.toThrow(/^Ya aprobaste la devolución completa y ya no puedes reclamar en la app\. Fuera de la app, aplica la cláusula 6\.5 d\)\.$/)
   })
 })

@@ -31,6 +31,12 @@ $$;
 create or replace function public.lk_dia_cr(t timestamptz) returns date
 language sql immutable set search_path = public as $$ select ((t at time zone 'UTC') - interval '6 hours')::date $$;
 
+/** Fecha como la muestra la app («26 oct 2026», hora de Costa Rica; igual que toLocaleDateString('es-CR', mes corto) sin puntos). */
+create or replace function public.lk_fecha_cr(t timestamptz) returns text
+language sql immutable set search_path = public as $$
+  select extract(day from d)::int || ' ' || (array['ene','feb','mar','abr','may','jun','jul','ago','sept','oct','nov','dic'])[extract(month from d)::int] || ' ' || extract(year from d)::int
+  from (select public.lk_dia_cr(t) d) s $$;
+
 create or replace function public.lk_fin_plazo(p_inicio timestamptz, p_segundos int) returns timestamptz
 language plpgsql immutable set search_path = public as $$
 declare fin timestamptz := p_inicio + make_interval(secs => p_segundos);
@@ -69,9 +75,10 @@ declare r text := public.lk_exigir_rol(p_contrato, 'dueno'); c public.lk_contrat
 begin
   select * into c from public.lk_contratos where id = p_contrato for update;
   if c.estado <> 'ventana_reclamo' then raise exception 'Este paso ya no está abierto.' using errcode = '55000'; end if;
-  -- LEGAL: revisar · error (texto propio; no se ve en la app: el botón solo aparece antes de que empiece el plazo)
   if c.ventana_inicio is not null or now() >= c.entregado_en + interval '2 days' then
-    raise exception 'Tu plazo para reclamar ya empezó.' using errcode = '55000'; end if;
+    -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 3 (se ve si la pantalla quedó abierta cuando el plazo empezó solo); fechas del servidor
+    raise exception 'Tu plazo para reclamar ya empezó el % y termina el %.', public.lk_fecha_cr(public.lk_inicio_plazo(c)),
+      public.lk_fecha_cr(public.lk_fin_plazo(public.lk_inicio_plazo(c), c.ventana_segundos)) using errcode = '55000'; end if;
   update public.lk_contratos set ventana_inicio = now() where id = p_contrato;
   perform public.lk_evento(p_contrato, format('El dueño tocó «Recibí la casa». Empiezan sus %s días naturales para reclamar', c.ventana_segundos / 86400));
 end $$;
@@ -85,9 +92,9 @@ begin
   if c.estado <> 'ventana_reclamo' or now() > public.lk_fin_plazo(public.lk_inicio_plazo(c), c.ventana_segundos) then
     raise exception 'El plazo para reclamar ya terminó.' using errcode = '55000'; end if;
   -- 6.5 a): después de «Todo bien, devolver» (aprobado en la cadena) el dueño ya no puede reclamar en la app.
-  -- LEGAL: revisar · error (texto propio con la frase de TEXTO_APROBADO_DOS)
+  -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 2
   if exists (select 1 from public.lk_eventos where contrato_id = p_contrato and texto = 'El dueño aprobó en la cadena devolver el depósito completo') then
-    raise exception 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app.' using errcode = '55000'; end if;
+    raise exception 'Ya aprobaste la devolución completa y ya no puedes reclamar en la app. Fuera de la app, aplica la cláusula 6.5 d).' using errcode = '55000'; end if;
   if p_monto <= 0 or p_monto > c.monto then raise exception 'El monto tiene que ser mayor que cero y no más que el depósito.' using errcode = '22023'; end if;
   if not exists (select 1 from public.lk_fotos where contrato_id = p_contrato and etapa = 'reclamo') then
     raise exception 'Agrega al menos una foto del daño.' using errcode = '22023'; end if;

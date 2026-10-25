@@ -25,10 +25,9 @@ describe('1) marcas: las 109 OK se quitan; solo quedan las de textos nuevos', ()
     expect(Object.keys(todos).length).toBeGreaterThan(100)
     const hallados: string[] = []
     for (const [p, src] of Object.entries(todos)) src.split('\n').forEach((l, i) => { if (l.includes('LEGAL: revisar')) hallados.push(`${p.slice(1)}:${i + 1}`) })
-    // alertas.ts:5 explica qué es la marca; el resto son textos nuevos de esta ronda (Legal no los vio).
-    const permitidos = [/^src\/alertas\.ts:5$/, /^src\/prueba\/dosPersonas\.ts:/, /^api\/_lib\/tw\.ts:/, /^src\/servidor\/repositorio\.ts:/]
-    expect(hallados.filter(h => !permitidos.some(r => r.test(h)))).toEqual([])
-    expect(hallados.length).toBeLessThanOrEqual(5)
+    // Legal 25/10, 4:56 a. m.: con los errores del servidor revisados, solo queda alertas.ts:5, que explica qué es la marca
+    // (las migraciones 030000–070000 las vigila c-errores-legal.test.ts).
+    expect(hallados).toEqual(['src/alertas.ts:5'])
   })
 })
 

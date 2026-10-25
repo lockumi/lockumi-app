@@ -24,8 +24,9 @@ describe('Legal 25/10, 4:33 a. m.', () => {
   it('6) «liberar» en el historial: USDC de prueba', async () => {
     expect(await raw('../../../api/_lib/tw.ts')).toContain('Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)')
   })
-  it('5) el rechazo por plazo vencido lleva su marca y está en la lista de errores de Legal', async () => {
+  it('5) el rechazo por plazo vencido está en la lista de errores de Legal (revisado a las 4:56 a. m.)', async () => {
     const m = await raw('../../../supabase/migrations/20261025070000_c_reclamo_vencido.sql')
-    expect(m).toMatch(/-- LEGAL: revisar[^\n]*\n\s*raise exception 'El plazo para reclamar ya terminó\. El depósito se le devuelve al inquilino\.'/)
+    // Legal 4:56 a. m. dio el texto final y quitó la marca (c-errores-legal.test.ts)
+    expect(m).toMatch(/-- LEGAL: revisado \(25\/10, 4:56 a\. m\., Legal\)[^\n]*\n\s*raise exception 'El plazo para reclamar ya terminó y ya no puedes reclamar en la app\./)
   })
 })

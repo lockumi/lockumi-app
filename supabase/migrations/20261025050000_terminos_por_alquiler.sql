@@ -27,10 +27,11 @@ create or replace function public.lk_exigir_version_terminos(p_version text) ret
 language plpgsql immutable set search_path = public as $$
 begin
   if p_version is null or p_version !~ '^1\.[0-9]+-demo$' then
+    -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 5
     raise exception 'Acepta los Términos y el Aviso de privacidad para seguir.' using errcode = '22023'; end if;
 end $$;
 
--- LEGAL: revisar · el dueño acepta los Términos de la versión vigente y el Aviso de privacidad al crear el alquiler.
+-- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 5 · el dueño acepta los Términos de la versión vigente y el Aviso de privacidad al crear el alquiler.
 create or replace function public.lk_crear_contrato_con_terminos(
   p_direccion text, p_monto numeric, p_inicio date, p_fin date, p_reglas text[], p_email_inquilino text,
   p_email_cavos text, p_declaracion text, p_terminos_version text, p_direccion_stellar text default null, p_ventana_segundos int default 604800
@@ -46,7 +47,7 @@ begin
   return r;
 end $$;
 
--- LEGAL: revisar · el inquilino solo se une aceptando los Términos de la versión del alquiler y el Aviso de privacidad.
+-- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 4 · el inquilino solo se une aceptando los Términos de la versión del alquiler y el Aviso de privacidad.
 create or replace function public.lk_aceptar_invitacion_con_terminos(
   p_contrato uuid, p_token text, p_email_cavos text, p_terminos_version text, p_direccion_stellar text default null
 ) returns void language plpgsql security definer set search_path = public as $$
@@ -55,7 +56,8 @@ begin
   perform public.lk_exigir_version_terminos(p_terminos_version);
   select terminos_version into v from public.lk_contratos where id = p_contrato;
   if v is not null and v <> p_terminos_version then
-    raise exception 'Acepta los Términos % de este alquiler para unirte.', v using errcode = '22023'; end if;
+    -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 4
+    raise exception 'Para unirte, acepta los Términos % de este alquiler y el Aviso de privacidad.', v using errcode = '22023'; end if;
   perform public.lk_aceptar_invitacion(p_contrato, p_token, p_email_cavos, p_direccion_stellar);
   insert into public.lk_aceptaciones_terminos(contrato_id, rol, usuario, version) values (p_contrato, 'inquilino', auth.uid(), p_terminos_version)
   on conflict (contrato_id, rol) do update set usuario = excluded.usuario, version = excluded.version, aceptado_en = now();
@@ -71,10 +73,11 @@ grant execute on function public.lk_aceptar_invitacion_con_terminos(uuid, text, 
 -- Legal, 25/10, 2:53 a. m. (Términos 1.9-demo, 6.5.1 d): en la versión con dos personas la Regla de propuesta automática no se
 -- ofrece al firmar. Ningún alquiler del servidor (todos son de dos personas) la guarda como aceptada: la función de 030000 ya no
 -- escribe en lk_reglas_651 y nadie más puede (sin insert para authenticated).
--- LEGAL: revisar
+-- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 6
 create or replace function public.lk_aceptar_regla_651(p_contrato uuid, p_version text) returns void
 language plpgsql security definer set search_path = public as $$
 begin
+  -- LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 6 (no se ve en la app)
   raise exception 'La Regla de propuesta automática no se ofrece en esta versión (6.5.1 d).' using errcode = '55000';
 end $$;
 revoke all on function public.lk_aceptar_regla_651(uuid, text) from public, anon;

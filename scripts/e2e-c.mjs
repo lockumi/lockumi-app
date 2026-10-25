@@ -204,7 +204,7 @@ const flujos = {
     if (!REAL) await D.q(null, `update public.lk_contratos set ventana_inicio = now() - interval '2 minutes' where id = $1`, [id]); else await esperarPlazo('silencio-dueno')
     // 6.5 a) (20261025070000): vencido el plazo, aunque el cron todavía no haya devuelto el depósito, no se puede reclamar
     let tarde = ''; try { await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: 1, p_motivo: 'después del plazo' }) } catch (x) { tarde = x.message }
-    exigir(REAL ? /plazo para reclamar ya terminó/.test(tarde) : tarde === 'El plazo para reclamar ya terminó. El depósito se le devuelve al inquilino.', 'el servidor dejó reclamar con el plazo vencido: ' + (tarde || 'sin error'))
+    exigir(REAL ? /plazo para reclamar ya terminó/.test(tarde) : tarde === 'El plazo para reclamar ya terminó y ya no puedes reclamar en la app. El depósito se le devuelve al inquilino; puede tardar hasta 24 horas. Fuera de la app, aplica la cláusula 6.5 d).', 'el servidor dejó reclamar con el plazo vencido: ' + (tarde || 'sin error'))
     exigir((await estado(id)).estado === 'ventana_reclamo' && !(await D.leer('lk_reclamos', id)).length, 'el reclamo tardío cambió el caso')
     paso('silencio-dueno', 'plazo vencido sin cron: el servidor rechaza el reclamo')
     exigir(await dueno.rpc('lk_cerrar_sin_reclamo', { p_contrato: id }), 'no cerró al vencer el plazo')

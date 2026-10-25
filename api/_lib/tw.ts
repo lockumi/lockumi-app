@@ -55,6 +55,7 @@ export function revisarLlaves(e: Entorno) {
 }
 /** GET /api/tw?revisar=llaves (solo lectura): 200 si está lista, 409 si no; nunca un secreto. */
 export function responderLlaves(e: Entorno, url: string): Response {
+  // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 9 (no se ve en la app: solo operación)
   if (new URL(url).searchParams.get('revisar') !== 'llaves') return Response.json({ error: 'No encontrado.' }, { status: 404 })
   const r = revisarLlaves(e)
   return Response.json(r, { status: r.ok ? 200 : 409, headers: { 'cache-control': 'no-store' } })
@@ -282,6 +283,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       // (releaseSigner) libera en el mismo pedido. Si la red falla, el caso queda cerrado y la app reintenta con «liberar».
       if (!(await cerrarAprobado(c, k.id, f))) return { tx, estado: r.status ?? null }
       try { return { tx, estado: r.status ?? null, liberacion: await liberarTodo(c, k, f) } }
+      // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
       catch { return { tx, estado: r.status ?? null, errorLiberacion: 'La aprobación quedó en la red de prueba, pero todavía no se pudo entregar el depósito. Vuelve a abrir el alquiler para reintentarlo.' } }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
