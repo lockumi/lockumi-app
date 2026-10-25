@@ -85,7 +85,10 @@ describe('lo que se muestra en público (sin frases negativas)', () => {
   it('con un reclamo abierto: «En revisión»', () => { expect(lineaPublica({ cerrados: 5, valor: 4.9, enRevision: true }, true)).toBe('En revisión') })
   it('un puntaje menor a 3,0 se ve igual que quien eligió no mostrar su puntaje', () => {
     const bajo = lineaPublica({ cerrados: 7, valor: 2.4, enRevision: false }, true), oculto = lineaPublica({ cerrados: 7, valor: 4.9, enRevision: false }, false)
-    expect(bajo).toBe('Alquileres cerrados en Lockumi: 7'); expect(oculto).toBe(bajo)
+    expect(bajo).toBe('7 alquileres cerrados en Lockumi'); expect(oculto).toBe(bajo)
+  })
+  it('D1 y D6 de Legal: la línea sin puntaje dice «{t} alquileres cerrados en Lockumi»', () => {
+    expect(lineaPublica({ cerrados: 14, valor: 4.8, enRevision: false }, false)).toBe('14 alquileres cerrados en Lockumi')
   })
   it('con 3 o más y «Mostrar mi puntaje»: el puntaje', () => { expect(lineaPublica({ cerrados: 4, valor: 4.8, enRevision: false }, true)).toBe('4,8 de 5') })
 })
@@ -142,5 +145,19 @@ describe('vitrina: solo el cantón, sin ranking', () => {
   })
   it('si no hay nuevos, los destacados siguen en su orden', () => {
     expect(ordenarVitrina([t('B', 'Escazú', 2, 3), t('A', 'Escazú', 1, 3)]).map(x => x.nombre)).toEqual(['A', 'B'])
+  })
+})
+
+describe('tope de la ley (Ley 8968, art. 6.1; sección E, medida a): un descuento deja de contar 10 años después', () => {
+  const viejo = (d: number) => alq({ resultado: res(800, 0, 'mediacion', d) })
+  it('un descuento de hace menos de 10 años cuenta', () => {
+    expect(calcularPuntaje([viejo(365 * 9), alq(), alq()], 'inquilino', AHORA).valor).toBeCloseTo(3.3)
+  })
+  it('un descuento de hace más de 10 años ya no baja el puntaje (el alquiler vale 5,0)', () => {
+    expect(calcularPuntaje([viejo(3653 + 1), alq(), alq()], 'inquilino', AHORA).valor).toBe(5)
+    expect(valorDelAlquiler(viejo(3653 + 1), 'inquilino', AHORA)).toBe(5)
+  })
+  it('no hay ningún otro plazo: un alquiler sin descuento de hace 12 años sigue contando', () => {
+    expect(calcularPuntaje([alq({ resultado: res(0, 800, 'automatico', 365 * 12) }), alq(), alq()], 'dueno', AHORA).cerrados).toBe(3)
   })
 })
