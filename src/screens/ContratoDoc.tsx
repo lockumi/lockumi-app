@@ -11,7 +11,9 @@ import { NOMBRE_ROL, type Alquiler, type Rol } from '../types'
 import { usd, fecha, fechaHora, Icono } from '../ui'
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
-import { versionAlquiler } from '../prueba/version'
+import { versionAlquiler, V17 } from '../prueba/version'
+import { esDosPersonas } from '../prueba/dosPersonas'
+import { EDICION_V17 } from '../legal/version17'
 import { rutaTerminos } from '../legal/documentos'
 
 const ROLES: Rol[] = ['dueno', 'inquilino']
@@ -65,7 +67,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       <p className="ct__estado"><span className={'ct__sello' + (firmado ? ' ct__sello--ok' : '')}>{firmado ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
         <span className="ct__ref">Referencia {a.id.slice(0, 8).toUpperCase()}</span></p>
       {/* Paso 16: versión de los Términos de este alquiler (solo con el interruptor encendido). LEGAL: revisar */}
-      {pruebaCompleta() && <p className="ct__version">Términos y condiciones: <a href={rutaTerminos(versionAlquiler(a))} target="_blank" rel="noopener">versión {versionAlquiler(a)}</a></p>}
+      {pruebaCompleta() && <LineaVersion a={a} />}
     </header>
 
     <section className="ct__sec"><h3>El alquiler</h3>
@@ -129,4 +131,23 @@ export function ContratoDoc({ a, completo: todo }: { a: Alquiler; completo?: boo
     <p className="nota centro">Se abre la ventana de impresión. Para descargarlo, elige «Guardar como PDF».</p>
     {imprimiendo && createPortal(<div className="impresion"><Documento a={a} impresion /></div>, document.body)}
   </div>
+}
+
+/** Fecha (sin hora) en la hora de Costa Rica, para las aceptaciones del contrato. */
+const fechaCR = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Costa_Rica' }).replace(/\./g, '')
+/** Paso 16 · paso16-unido (Legal, 25/10, arreglos 3 y 4): versión de los Términos del alquiler; en la 1.7-demo, con la fecha única
+ *  y la fecha en que cada parte la aceptó (al firmar, o al aceptar el cambio desde la 1.6-demo). Los alquileres con otra persona
+ *  (servidor) nacen con los Términos 1.7-demo unificados aunque el servidor no guarde la versión. */
+function LineaVersion({ a }: { a: Alquiler }) {
+  const v = esDosPersonas(a) ? V17 : versionAlquiler(a)
+  const enlace = <a href={rutaTerminos(v)} target="_blank" rel="noopener">versión {v === V17 ? EDICION_V17 : v}</a>
+  if (v !== V17) return <p className="ct__version">Términos y condiciones: {enlace}</p>
+  const cuando = (r: Rol) => a.terminos?.acepta?.[r] ?? a.contrato.firmas[r]
+  const [d, i] = [cuando('dueno'), cuando('inquilino')]
+  // LEGAL: revisar · línea de aceptaciones (texto propio, arreglo 3)
+  const acepta = d && i ? `Aceptada por el dueño el ${fechaCR(d)} y por el inquilino el ${fechaCR(i)}.`
+    : d ? `Aceptada por el dueño el ${fechaCR(d)}. Falta la aceptación del inquilino.`
+    : i ? `Aceptada por el inquilino el ${fechaCR(i)}. Falta la aceptación del dueño.`
+    : 'Falta la aceptación del dueño y del inquilino.'
+  return <p className="ct__version">Términos y condiciones: {enlace}<br /><small>{acepta}</small></p>
 }

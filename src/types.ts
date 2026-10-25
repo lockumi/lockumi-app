@@ -1,7 +1,7 @@
 export type Rol = 'dueno' | 'inquilino'
 export type Estado = 'firmas'|'pendiente_pago'|'fotos_entrada'|'en_curso'|'salida'|'ventana_reclamo'|'reclamo'|'mediacion'|'cerrado'
 /** Aceptación de un texto legal: versión aceptada y fecha (ISO 8601). */
-export interface AceptacionLegal { version: string; fecha: string }
+export interface AceptacionLegal { version: string; fecha: string; /** paso16-unido: «1.7-demo · 25 de octubre de 2026» (fecha única) */ edicion?: string }
 export interface Usuario { email: string; nombre: string; metodo: 'correo'|'google'|'apple'; terminos?: AceptacionLegal; privacidad?: AceptacionLegal }
 export interface Evento { fecha: string; texto: string; tx?: string }
 /** Foto con su origen. `tomadaEn`: hora en que se tomó o eligió en la app. `fechaArchivo`: la que trae la imagen (si trae).
@@ -43,6 +43,9 @@ export interface Reclamo {
   mediacion?: { estado: 'pedida' | 'no-usar' | 'sin-cupo'; fecha: string; acuerdo?: AceptacionReparto
     /** Paso 16: cuándo se borraron los datos de la mediación (30 días después del cierre) y si una parte pidió guardarlos. */
     borrado?: string; guardar?: { por: Rol; fecha: string } }
+  /** paso16-unido: borrado a los 30 días y pedido de guardar, para todo caso cerrado en la Mediación Lockumi (demo) (en un solo
+   *  aparato ya no se «pide»: es la simulación). Los de `mediacion` quedan por compatibilidad. */
+  datosMediacion?: { borrado?: string; guardar?: { por: Rol; fecha: string } }
 }
 /** Aviso en la app (días 1, 4 y 6) con su registro de entrega y de apertura; y el correo, si se escribió una dirección. */
 export interface Aviso {
@@ -55,9 +58,9 @@ export interface Aviso {
   correo?: 'enviado' | 'error' | 'sin-correo'
 }
 /** Regla de propuesta automática (6.5.1, B.1): registro de la decisión del inquilino al firmar. */
-export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string }
+export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string; edicion?: string }
 /** Consentimiento en el momento de usar una función (paso 16). */
-export interface Consentimiento { tipo: 'mediacion' | 'correo'; cuenta: string; rol: Rol; alquiler: string; version: string; texto: string; fecha: string }
+export interface Consentimiento { tipo: 'mediacion' | 'correo'; cuenta: string; rol: Rol; alquiler: string; version: string; texto: string; fecha: string; edicion?: string }
 export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
@@ -80,7 +83,7 @@ export interface Alquiler {
   /** Paso 16: consentimientos dados al usar una función (mediación; correos en el paso 11). */
   consentimientos?: Consentimiento[]
   /** Paso 16: versión de los Términos del alquiler (sin dato: 1.6-demo) y aceptación de cada parte para pasar a la 1.7-demo. */
-  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string }
+  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string; /** paso16-unido: versión con su fecha (fecha única) */ edicion?: string }
   /** Correos que escribió quien prueba para recibir los avisos (opcional). */
   correos?: Partial<Record<Rol, string>>
   /** Paso 11: avisos ya enviados por correo a cada papel (ids), para no repetirlos. */

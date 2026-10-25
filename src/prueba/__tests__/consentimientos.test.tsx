@@ -16,16 +16,16 @@ describe('consentimiento al usar la función', () => {
   it('registro de la mediación: cuenta, alquiler, versión del alquiler, texto exacto y fecha', () => {
     const x = alq()
     const c = registrarConsentimiento(x, 'mediacion', 'inquilino', CASILLA_MEDIACION, +new Date(T))
-    expect(c).toEqual({ tipo: 'mediacion', cuenta: 'i@x', rol: 'inquilino', alquiler: 'c1', version: '1.7-demo', texto: CASILLA_MEDIACION, fecha: T })
+    expect(c).toEqual({ tipo: 'mediacion', cuenta: 'i@x', rol: 'inquilino', alquiler: 'c1', version: '1.7-demo', edicion: '1.7-demo · 25 de octubre de 2026', texto: CASILLA_MEDIACION, fecha: T })
     expect(x.consentimientos).toEqual([c])
   })
   it('gancho para los correos (paso 11): mismo registro con tipo «correo»', () => {
     const x = alq(); const c = consentimientoCorreo(x, 'dueno', 'Quiero recibir los avisos por correo.', +new Date(T))
     expect(c.tipo).toBe('correo'); expect(c.cuenta).toBe('d@x'); expect(x.consentimientos).toHaveLength(1)
   })
-  it('B.7: la casilla empieza sin marcar y «Pedir mediación» está inactivo hasta marcarla', () => {
-    vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
-    const h = renderToStaticMarkup(<MediacionPC a={alq()} rol="inquilino" />)
+  it('B.7 con otra persona (paso16-unido: en un solo aparato no hay casilla): empieza sin marcar y «Pedir mediación» está inactivo hasta marcarla', () => {
+    for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'a', VITE_DOS_PERSONAS: '1' })) vi.stubEnv(k, v)
+    const h = renderToStaticMarkup(<MediacionPC a={{ ...alq(), dosPersonas: true }} rol="inquilino" />)
     expect(h).toContain(CASILLA_MEDIACION); expect(h).toMatch(/<input type="checkbox"(?![^>]*checked)[^>]*\/?>/)
     expect(h).toMatch(/<button[^>]*disabled=""[^>]*>Pedir mediación<\/button>/)
   })

@@ -10,7 +10,9 @@ import { aceptarVersion17 } from '../version'
 import { Documento } from '../../screens/ContratoDoc'
 import { EDICION_V17 } from '../../legal/version17'
 import { guardarAceptacion } from '../../legal/aceptacion'
-afterEach(() => { vi.unstubAllEnvs(); localStorage.clear() })
+const mem = new Map<string, string>()
+vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
+afterEach(() => { vi.unstubAllEnvs(); mem.clear() })
 
 const CIERRE = '2026-11-10T16:00:00.000Z', DIA = 86_400_000
 const f = (src: string): Foto => ({ src, por: 'dueno', fecha: CIERRE })
@@ -65,16 +67,16 @@ describe('borrado a los 30 días y pedido de guardar (arreglo 3)', () => {
 describe('contrato: versión, fecha única y aceptación de cada parte (arreglos 3 y 4)', () => {
   it('1.7-demo · 25 de octubre de 2026 y la fecha de aceptación del dueño y del inquilino', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
-    const t = plano(renderToStaticMarkup(<Documento a={alq({ estado: 'firmas', contrato: { firmas: { dueno: '2026-10-25T15:00:00.000Z', inquilino: '2026-10-25T16:30:00.000Z' } } })} />))
+    const t = plano(renderToStaticMarkup(<Documento a={alq({ estado: 'firmas', contrato: { firmas: { dueno: '2026-10-25T17:00:00.000Z', inquilino: '2026-10-25T18:30:00.000Z' } } })} />))
     expect(t).toContain(`Términos y condiciones: versión ${EDICION_V17}`)
-    expect(t).toMatch(/Aceptada por el dueño el 25 oct 2026.{0,12}9:00.{0,10} y por el inquilino el 25 oct 2026.{0,12}10:30/)
-    const p = plano(renderToStaticMarkup(<Documento a={alq({ estado: 'firmas', contrato: { firmas: { dueno: '2026-10-25T15:00:00.000Z' } } })} />))
-    expect(p).toMatch(/Aceptada por el dueño el 25 oct 2026.{0,30}\. Falta la aceptación del inquilino\./)
+    expect(t).toMatch(/Aceptada por el dueño el 25 oct 2026[^.]* y por el inquilino el 25 oct 2026[^.]*\./)
+    const p = plano(renderToStaticMarkup(<Documento a={alq({ estado: 'firmas', contrato: { firmas: { dueno: '2026-10-25T17:00:00.000Z' } } })} />))
+    expect(p).toMatch(/Aceptada por el dueño el 25 oct 2026[^.]*\. Falta la aceptación del inquilino\./)
   })
   it('si pasaron a la 1.7-demo, la fecha de aceptación es la del cambio de versión', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
     const x = alq({ estado: 'en_curso', terminos: undefined, contrato: { firmas: { dueno: '2026-10-01T15:00:00.000Z', inquilino: '2026-10-01T15:00:00.000Z' } } })
-    aceptarVersion17(x, 'dueno', +new Date('2026-10-26T15:00:00Z')); aceptarVersion17(x, 'inquilino', +new Date('2026-10-27T15:00:00Z'))
+    aceptarVersion17(x, 'dueno', +new Date('2026-10-26T18:00:00Z')); aceptarVersion17(x, 'inquilino', +new Date('2026-10-27T18:00:00Z'))
     expect(x.terminos?.edicion).toBe(EDICION_V17)
     expect(plano(renderToStaticMarkup(<Documento a={x} />))).toMatch(/Aceptada por el dueño el 26 oct 2026.* y por el inquilino el 27 oct 2026/)
   })

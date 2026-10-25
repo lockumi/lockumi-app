@@ -28,7 +28,7 @@ import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, montoPrueba,
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
-import { MediacionPC, ResueltoSimulacion } from '../prueba/MediacionPC'
+import { MediacionPC, ResueltoSimulacion, GuardarDatosMediacion } from '../prueba/MediacionPC'
 import { AvisoSalida } from '../prueba/AvisoSalida'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
@@ -295,6 +295,7 @@ function Cerrado({ a, rol }: P) {
       : <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
+    {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}{/* solo con la prueba completa (interruptor encendido) */}
     {auto2 && <p className="nota">{notaComisionAuto(r.inquilino)}</p>}{/* LEGAL: revisar */}
     {escrowReal && !auto2 && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}

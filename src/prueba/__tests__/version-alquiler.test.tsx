@@ -42,12 +42,12 @@ describe('versión de los Términos de cada alquiler', () => {
   it('el contrato muestra la versión con su enlace (solo con el interruptor encendido)', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
     expect(renderToStaticMarkup(<Documento a={alq()} />)).toMatch(/Términos y condiciones: <a href="\/terminos-1-6"[^>]*>versión 1\.6-demo<\/a>/)
-    expect(renderToStaticMarkup(<Documento a={alq({ terminos: { version: V17 } })} />)).toMatch(/Términos y condiciones: <a href="\/terminos"[^>]*>versión 1\.7-demo<\/a>/)
+    expect(renderToStaticMarkup(<Documento a={alq({ terminos: { version: V17 } })} />)).toMatch(/Términos y condiciones: <a href="\/terminos"[^>]*>versión 1\.7-demo · 25 de octubre de 2026<\/a>/)
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '0')
     expect(renderToStaticMarkup(<Documento a={alq()} />)).not.toContain('Términos y condiciones:')
   })
   it('con el interruptor encendido, los alquileres nuevos quedan en la 1.7-demo', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
-    expect(fs.readFileSync('src/store.ts', 'utf8')).toMatch(/pruebaCompleta\(\) \? \{ terminos: \{ version: terminosActual\(\)\.version \} \} : \{\}/)
+    expect(fs.readFileSync('src/store.ts', 'utf8')).toMatch(/pruebaCompleta\(\) \? \{ terminos: \{ version: terminosActual\(\)\.version, \.\.\.edicionDe\(terminosActual\(\)\.version\) \} \} : \{\}/)
   })
 })

@@ -22,12 +22,12 @@ describe('borrado de los datos de la mediación a los 30 días', () => {
     expect(debeBorrarMediacion(alq(), t0 + 30 * DIA - 1)).toBe(false)
     expect(debeBorrarMediacion(alq(), t0 + 30 * DIA)).toBe(true)
   })
-  it('solo si el caso está cerrado y la mediación se usó (pedida)', () => {
+  it('solo si el caso está cerrado y se cerró en la mediación (paso16-unido: la simulación de la B.14 cuenta como mediación)', () => {
     const tarde = t0 + 31 * DIA
     expect(debeBorrarMediacion(alq({ estado: 'mediacion' }), tarde)).toBe(false)
-    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE } }), tarde)).toBe(false)
-    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE, mediacion: { estado: 'no-usar', fecha: CIERRE } } }), tarde)).toBe(false)
-    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE, mediacion: { estado: 'sin-cupo', fecha: CIERRE } } }), tarde)).toBe(false)
+    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE } }), tarde)).toBe(true)
+    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE }, resultado: { dueno: 60, inquilino: 740, via: 'acuerdo', fecha: CIERRE } }), tarde)).toBe(false)
+    expect(debeBorrarMediacion(alq({ reclamo: { monto: 95, motivo: 'x', fotos: [], fecha: CIERRE }, resultado: { dueno: 0, inquilino: 800, via: 'automatico', fecha: CIERRE } }), tarde)).toBe(false)
   })
   it('borra fotos, motivos, descripciones y soportes; conserva montos y resultado; deja registro e historial', () => {
     const x = alq(); borrarMediacion(x, t0 + 30 * DIA)
@@ -36,13 +36,13 @@ describe('borrado de los datos de la mediación a los 30 días', () => {
     expect(r.rubros![0].fotos).toEqual([]); expect(r.rubros![0].descripcion).toBe(''); expect(r.rubros![0].factura).toEqual({ monto: 95 })
     expect(r.respuestas!.r1.soporte).toEqual({ tipo: 'cotizacion', monto: 40, comercio: '' })
     expect(r.monto).toBe(95); expect(x.resultado).toEqual({ dueno: 60, inquilino: 740, via: 'simulacion', fecha: CIERRE })
-    expect(r.mediacion!.borrado).toBe(new Date(t0 + 30 * DIA).toISOString())
+    expect(r.datosMediacion!.borrado).toBe(new Date(t0 + 30 * DIA).toISOString())
     expect(x.historial.at(-1)!.texto).toBe(TEXTO_BORRADO)
     expect(debeBorrarMediacion(x, t0 + 60 * DIA)).toBe(false)
   })
   it('no borra si una de las partes pidió guardarlo para un reclamo fuera de la app', () => {
     const x = alq(); guardarMediacion(x, 'inquilino', t0 + DIA)
-    expect(x.reclamo!.mediacion!.guardar).toEqual({ por: 'inquilino', fecha: new Date(t0 + DIA).toISOString() })
+    expect(x.reclamo!.datosMediacion!.guardar).toEqual({ por: 'inquilino', fecha: new Date(t0 + DIA).toISOString() })
     expect(debeBorrarMediacion(x, t0 + 90 * DIA)).toBe(false)
   })
   it('los alquileres con la 1.6-demo no tienen mediación: no se tocan', () => {
