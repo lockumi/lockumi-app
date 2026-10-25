@@ -1,5 +1,12 @@
 # Nueva aceptación con la sesión abierta
 
+> **DESACTIVADA el 24/10/2026 a pedido de Katherine (10:03 p. m., hora de Costa Rica).** `App.tsx` ya no muestra la pantalla:
+> con la sesión abierta se entra directo aunque la versión aceptada sea anterior (la aceptación guardada no se cambia).
+> El componente `src/legal/Reaceptacion.tsx` queda **sin uso** (se conserva con sus pruebas). Entrar sigue pidiendo la casilla
+> y guarda la versión vigente (1.6-demo). Legal confirmó publicarlo así (10:05 p. m.) y propuso un mínimo que no bloquea,
+> por ahora solo en imágenes: un aviso que se puede cerrar y una línea sobre el botón de crear o firmar (ver PLAN.md).
+> Lo de abajo es la historia de la pantalla.
+
 Estado (24/10/2026, 9:20 p. m. CR): **programada en el PR 1** (`src/legal/Reaceptacion.tsx`, conexión en `App.tsx`, pruebas en `src/legal/__tests__/reaceptacion.test.tsx`). En vez de la casita animada se usa solo el logo estático (`/img/logo-lockumi.svg`), por la decisión de Katherine de no usar ilustraciones. Antes: **solo imagen v2** (con los 3 ajustes de Legal del 24/10), esperando el OK de Katherine
 (`/workspace/lockumi/diseno/envio/contrato-compacto/reaceptacion.jpg`; la v1 quedó en `reaceptacion-v1.jpg`). Legal aprobó la idea. Debe salir **junto con 1.6-demo**: sin esto,
 quien ya tiene la sesión abierta nunca vuelve a ver «Entrar» (`App.tsx:39`) y no acepta la nueva versión.

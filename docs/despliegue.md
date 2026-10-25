@@ -21,7 +21,7 @@ gh pr merge <N> --repo lockumi/lockumi-app --merge --subject "Publicar PR <N>: �
 - El estado «Vercel» del nuevo commit de `master` pasa a `success`.
 - https://app.lockumi.com carga, muestra «El depósito de tu alquiler, protegido» y la nota de Legal debajo.
 - https://app.lockumi.com/terminos muestra la versión esperada (hoy «Versión 1.6-demo · 24 de octubre de 2026»).
-- Una sesión con una versión anterior aceptada muestra la pantalla «Actualizamos los Términos…».
+- Una sesión con una versión anterior aceptada entra directo a la app (sin pantalla «Actualizamos los Términos…», desactivada el 24/10).
 - E2E contra producción: `BASE=https://app.lockumi.com node scripts/e2e-solo.mjs 2` (testnet, tokens sin valor) y la suite de Playwright cuando exista. Resultado en `E2E.md`.
 
 ## Volver atrás (rollback)

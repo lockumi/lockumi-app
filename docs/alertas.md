@@ -336,7 +336,7 @@ Pruebas: `src/__tests__/alertas.test.tsx`, `recorrido.test.tsx`, `src/legal/__te
 - `Detalle.tsx:267` (modo de dos personas): «Si todo está bien, aprueba ahora la devolución. Tu billetera te pedirá confirmar esta aprobación. La liberación del depósito la firma la cuenta de Lockumi.»
 - **BLOQUEO para activar el modo de dos personas:** antes, Legal reescribe Términos 5.3, que hoy dice que la cuenta de Lockumi firma la aprobación. En ese modo la firma la billetera del dueño (`trustless.ts:28-30`). También está en PLAN.md.
 - **Corrección de la ronda 7:** las notas de `Detalle.tsx:158` y `:206` **hoy no se ven en ninguna pantalla**. El alquiler de ejemplo siempre se ve como inquilino (`miRol: 'inquilino'` en `recorrido.ts`; `vistaDe` lo respeta) y no llega al estado «reclamo». Para la imagen `legal-ronda8.jpg` forcé el rol y el estado en una copia aparte, sin subirla.
-- Nueva aceptación con la sesión abierta: propuesta en `docs/reaceptacion.md` (solo imagen; no hay código).
+- Nueva aceptación con la sesión abierta: salió en el PR 1 y se desactivó el 24/10 (ver `docs/reaceptacion.md`).
 
 ## Legal, ronda 9 (24 oct 2026, rama `contrato-compacto`, sin publicar)
 

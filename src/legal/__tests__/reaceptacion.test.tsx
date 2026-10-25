@@ -12,6 +12,7 @@ const { Login, NOTA_TITULO } = await import('../../screens/Login')
 beforeEach(() => mem.clear())
 const u = { email: 'demo@lockumi.com', nombre: 'demo', metodo: 'correo' as const }
 
+// El componente queda SIN USO desde el 24/10 (pedido de Katherine); estas pruebas lo mantienen correcto por si se vuelve a usar.
 describe('volver a aceptar con la sesión abierta (docs/reaceptacion.md)', () => {
   it('las versiones vigentes son 1.6-demo', () => { expect(TERMINOS.version).toBe('1.6-demo'); expect(PRIVACIDAD!.version).toBe('1.6-demo') })
   it('con 1.5-demo guardado en los dos, o sin nada, sale la pantalla', () => {

@@ -5,7 +5,6 @@ import { conAceptacion } from './legal/aceptacion'
 import { rutaLegal } from './legal/documentos'
 import { PaginaLegal } from './legal/PaginaLegal'
 import { Pie } from './legal/Pie'
-import { Reaceptacion, necesitaReaceptar } from './legal/Reaceptacion'
 import { olvidarBilletera } from './services/billetera'
 import { Alertas } from './Alertas'
 import { avisar, alertaIngreso, alertaIngresoFallo } from './alertas'
@@ -32,15 +31,13 @@ export default function App() {
   const skip = <a className="skip" href="#contenido" onClick={e => { e.preventDefault(); document.getElementById('contenido')?.focus() }}>Saltar al contenido</a>
   // Textos legales: /terminos (ruta real, con reescritura en vercel.json) o #/terminos. Se ven con o sin sesión.
   const legal = rutaLegal(location.pathname) ?? rutaLegal(r)
-  // Volver a aceptar con la sesión abierta (docs/reaceptacion.md): si falta la versión vigente, bloquea hasta aceptar.
-  const pide = !!u && necesitaReaceptar()
-  useRecorridoPrimeraVez(pide ? null : u, r)   // se abre solo la primera vez, en Inicio (y espera a que acepte)
+  // Sin pantalla de volver a aceptar (pedido de Katherine, 24/10): con la sesión abierta se entra directo, aunque la versión aceptada sea anterior.
+  useRecorridoPrimeraVez(u, r)   // se abre solo la primera vez, en Inicio
   if (legal) return <Fondo>{skip}<PaginaLegal slug={legal} /><Pie /></Fondo>
   // Si llegó por un link de invitación, se vuelve ahí después de entrar (también tras el regreso de Google o Apple).
   if (!u && r.startsWith('/invitacion/')) sessionStorage.setItem('lockumi.regreso', r)
   if (!u && regreso === 'esperando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
   if (!u) return <Fondo>{skip}<Alertas /><Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} /><Pie /></Fondo>
-  if (pide) return <Fondo>{skip}<Alertas /><Reaceptacion u={u} onListo={setU} /><Pie /></Fondo>
   const m = r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).

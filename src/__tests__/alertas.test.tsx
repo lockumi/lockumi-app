@@ -219,7 +219,7 @@ describe('cada paso del flujo dispara su aviso', () => {
     expect(leer('../screens/Crear.tsx')).toContain("avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))\n      ir('/alquiler/' + r.id)")
     const app = leer('../App.tsx')
     expect(app).toContain('avisar(alertaIngreso(modoReal))'); expect(app).toContain("setRegreso('fallo'); avisar(alertaIngresoFallo())")
-    expect(app.match(/<Alertas \/>/g)).toHaveLength(4)   // Entrar, «Entrando…», volver a aceptar y con sesión
+    expect(app.match(/<Alertas \/>/g)).toHaveLength(3)   // Entrar, «Entrando…» y con sesión (sin pantalla de volver a aceptar desde el 24/10)
   })
 })
 
@@ -289,9 +289,9 @@ describe('error del ingreso escrito en Entrar', () => {
 
 describe('aviso al inicio del orden de Tab', () => {
   const app = leer('../App.tsx')
-  it('<Alertas /> va justo después de «Saltar al contenido» en las cuatro vistas (sin sesión, entrando, volver a aceptar y con sesión)', () => {
+  it('<Alertas /> va justo después de «Saltar al contenido» en las tres vistas (sin sesión, entrando y con sesión)', () => {
     const fondos = app.match(/<Fondo>\{skip\}[\s\S]*?<\/Fondo>/g)!.filter(f => f.includes('<Alertas />'))
-    expect(fondos).toHaveLength(4)
+    expect(fondos).toHaveLength(3)
     for (const f of fondos) expect(f).toMatch(/^<Fondo>\{skip\}\s*<Alertas \/>/)
     expect(app).not.toMatch(/<Pie \/>\s*<Alertas \/>/)
   })
