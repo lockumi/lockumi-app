@@ -14,15 +14,13 @@ import type { Acta, Alquiler, Rol } from '../types'
 export const MINIMO_PARA_PUNTAJE = 3
 /** Vitrinas por cantón solo con 10 personas o más; si no, por provincia. Nunca un área menor que el cantón. */
 export const MINIMO_POR_CANTON = 10
-/** Debajo de este puntaje, el perfil se ve igual que el de quien eligió no mostrar su puntaje. */
-export const PUNTAJE_MINIMO_VISIBLE = 3
 const DIA = 86_400_000
 /** Ley 8968, art. 6.1: lo negativo deja de contar 10 años después de que ocurrió. */
 export const TOPE_LEGAL_DIAS = 3653
-/** Parte de lo reclamado que se devolvió al inquilino desde la que un reclamo es «indebido» («todo o casi todo»).
- *  LEGAL: revisar · PENDIENTE: Legal todavía no definió «casi todo» en legal/reputacion-textos.md. Valor provisional 1 (solo «todo»),
- *  el más prudente: así a ningún dueño le baja el puntaje por un número que nadie decidió. Cambiarlo solo aquí. */
-export const UMBRAL_CASI_TODO = 1
+/** Parte de lo reclamado que se devolvió al inquilino desde la que el reclamo baja el puntaje del dueño («todo o casi todo»).
+ *  LEGAL: revisar · PENDIENTE del OK de Katherine: 90 % es la PROPUESTA de Legal (legal/reputacion-textos.md, C.3.1, 2:15 p. m.),
+ *  sobre el monto reclamado y antes de la comisión. Cambiarlo solo aquí. */
+export const UMBRAL_CASI_TODO = 0.9
 const vigente = (fecha: string, ahora: number) => ahora - Date.parse(fecha) <= TOPE_LEGAL_DIAS * DIA
 
 export interface Puntaje { cerrados: number; valor: number | null; enRevision: boolean }
@@ -78,16 +76,15 @@ export function calcularPuntaje(alquileres: Alquiler[], rol: Rol, ahora = Date.n
 export const formatoPuntaje = (v: number) => v.toFixed(1).replace('.', ',')
 export const alquileresCerrados = (n: number) => n === 1 ? '1 alquiler cerrado' : `${n} alquileres cerrados`
 
-/** Línea pública del perfil o de la tarjeta. Nunca dice nada negativo: un puntaje bajo se ve igual que uno oculto. */
-export function lineaPublica(p: Puntaje, mostrarPuntaje: boolean): string {
+/** ¿Se muestra el número? Siempre desde el 3.er alquiler cerrado, sin opción para ocultarlo (decisión de Katherine, 25/10/2026,
+ *  2:24 p. m.), salvo «En revisión» mientras haya un reclamo abierto (C.3). */
+export const puntajeVisible = (p: Puntaje) => !p.enRevision && p.cerrados >= MINIMO_PARA_PUNTAJE && p.valor !== null
+/** Línea pública del perfil o de la tarjeta. Con 0 a 2 alquileres cerrados, el estado neutro «Nuevo en Lockumi» (C.3, C.9). */
+export function lineaPublica(p: Puntaje): string {
   if (p.cerrados < MINIMO_PARA_PUNTAJE) return `Nuevo en Lockumi · ${alquileresCerrados(p.cerrados)}`
-  if (p.enRevision) return 'En revisión'
-  if (!mostrarPuntaje || p.valor === null || p.valor < PUNTAJE_MINIMO_VISIBLE) return `${p.cerrados} alquileres cerrados en Lockumi`
+  if (p.enRevision || p.valor === null) return 'En revisión'
   return `${formatoPuntaje(p.valor)} de 5`
 }
-/** ¿Se puede mostrar el número del puntaje (anillo)? Mismas reglas que lineaPublica. */
-export const puntajeVisible = (p: Puntaje, mostrarPuntaje: boolean) =>
-  mostrarPuntaje && !p.enRevision && p.cerrados >= MINIMO_PARA_PUNTAJE && p.valor !== null && p.valor >= PUNTAJE_MINIMO_VISIBLE
 
 export type Insignia = 'contrato' | 'deposito' | 'fotos-entrada' | 'fotos-salida' | 'devolvio' | 'recibio'
 const conFotos = (x?: Acta) => !!x && x.cuartos.length > 0 && x.cuartos.every(c => c.fotos.length > 0)

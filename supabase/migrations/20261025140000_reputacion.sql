@@ -21,7 +21,7 @@ create table if not exists public.lk_reputacion_perfiles (
 create table if not exists public.lk_reputacion_consentimientos (
   usuario uuid not null references auth.users(id) on delete cascade,
   rol text not null check (rol in ('dueno','inquilino')),
-  opcion text not null check (opcion in ('perfil','destacados','nuevos','puntaje')),
+  opcion text not null check (opcion in ('perfil','destacados','nuevos')),
   version text not null,
   texto text[] not null,
   aceptado_en timestamptz not null default now(),

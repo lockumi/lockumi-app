@@ -2,7 +2,6 @@
 // Eliminar la cuenta: gratis, el perfil deja de mostrarse al pedirlo y todo se borra en un máximo de 5 días hábiles (sin feriados de CR).
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
-import { readFileSync } from 'node:fs'
 import { fechaLimiteBorrado } from '../../reputacion/borrado'
 
 const PRELUDIO = `
@@ -18,7 +17,8 @@ const cuenta = async (t: string, u: string) => (await uno<{ n: number }>(`select
 beforeAll(async () => {
   db = new PGlite()
   await db.exec(PRELUDIO)
-  await db.exec(readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+  await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
   for (const u of [A, B]) {
     await db.query('insert into auth.users(id) values ($1)', [u])
     await db.query(`insert into public.lk_reputacion_perfiles(usuario, nombre_visible, canton) values ($1, 'Laura V.', 'Escazú')`, [u])

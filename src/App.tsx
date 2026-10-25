@@ -44,13 +44,14 @@ export default function App() {
   if (!u) return <Fondo>{skip}<Alertas /><Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} /><Pie /></Fondo>
   const m = r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
-  // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   const salir = () => { auth.salir(); olvidarBilletera(); setU(null) }
+  const pantalla = r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />
+  // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   return <Fondo>{skip}
     <Alertas />
     <Barra u={u} onSalir={salir} />
-    {Reputacion && (r === '/perfil' || r.startsWith('/perfil/')) ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir} /></Suspense>
-      : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />}
+    {/* Paso 19: con VITE_REPUTACION=1 todas las pantallas pasan por la puerta obligatoria de la reputación. Apagado, este código no existe en el build. */}
+    {Reputacion ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir}>{pantalla}</Reputacion></Suspense> : pantalla}
     <Pie />
   </Fondo>
 }

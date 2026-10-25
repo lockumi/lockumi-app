@@ -89,3 +89,4 @@
 .rp-peligro{background:#fff;color:#8A1F00;box-shadow:inset 0 0 0 1.5px #8A1F00}
 .rp .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .rp-texto h1+p{margin-top:10px}
+.rp .rp-enlace-peligro{display:inline-block;margin-top:10px;color:#8A1F00;font-weight:600;text-decoration:underline;text-underline-offset:3px}

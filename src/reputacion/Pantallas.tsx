@@ -6,12 +6,12 @@ import type { Alquiler, Rol, Usuario } from '../types'
 import { useAlquileres, rolDe } from '../store'
 import { ir } from '../router'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
-  valorDelAlquiler, ordenarVitrina, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, PUNTAJE_MINIMO_VISIBLE, type Insignia } from './puntaje'
+  valorDelAlquiler, ordenarVitrina, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
 import { useReputacion, guardarDatos, aceptar, activa, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { PROVINCIAS, provinciaDe } from './cantones'
 import { pedirBorrado, ejecutarBorrados, solicitudBorrado } from './borrado'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
-import { TEXTO_PERFIL, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_MOSTRAR_PUNTAJE, TEXTO_PUNTAJE_BAJO, TEXTO_PUNTAJE_NUEVO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
+import { TEXTO_PERFIL, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
 // ——— Piezas ———
@@ -86,9 +86,9 @@ function Insignias({ lista }: { lista: Insignia[] }) {
 function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
   const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now()
   const xs = mios(todos, u, rol), p = calcularPuntaje(xs, rol, ahora), ins = insignias(xs, rol), llave = tieneLlave(xs, rol, ahora)
-  const publico = activa(e, rol, 'perfil'), mostrar = activa(e, rol, 'puntaje'), borrado = solicitudBorrado(u.email)
+  const publico = activa(e, rol, 'perfil'), borrado = solicitudBorrado(u.email)
   const nombre = nombreDe(e, u), cerrados = xs.filter(cuentaParaPuntaje), completos = cerrados.filter(a => fraccionDescontada(a, ahora) === 0).length
-  const opciones: [Opcion, string][] = [['perfil', 'Perfil público'], [p.cerrados >= MINIMO_PARA_PUNTAJE ? 'destacados' : 'nuevos', p.cerrados >= MINIMO_PARA_PUNTAJE ? (rol === 'dueno' ? UI.vitrinaDuenos : UI.vitrinaInquilinos) : 'Nuevos en Lockumi'], ['puntaje', 'Mostrar mi puntaje']]
+  const vitrina = opcionVitrina(p.cerrados), opciones: [Opcion, string][] = [['perfil', UI.opcion.perfil], [vitrina, vitrina === 'destacados' ? (rol === 'dueno' ? UI.vitrinaDuenos : UI.vitrinaInquilinos) : UI.opcion.nuevos]]
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver />
     <h1>{UI.entradaTitulo}</h1>
@@ -103,12 +103,11 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
         <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{e.canton}</span>}</div>
         <p className="nota" style={{ marginTop: 8 }}>{publico && !borrado ? UI.publico : UI.miPerfil}{desde(xs) ? ' · ' + UI.enLockumiDesde(mesAnio(desde(xs)!)) : ''}</p>
         <div className="rp-puntaje">
-          {puntajeVisible(p, true) ? <Anillo valor={p.valor!} /> : null}
-          <div><div className="rp-linea">{lineaPublica(p, true)}</div>
-            <p className="nota">{p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : !mostrar ? UI.asiTeVen.replace('perfil público', 'perfil') + ' ' + `«${lineaPublica(p, false)}»` : UI.segunLockumi}</p></div>
+          {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
+          <div><div className="rp-linea">{lineaPublica(p)}</div>
+            <p className="nota">{p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
         </div>
-        {llave && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
-        {llave && !mostrar && <p className="nota">{UI.llaveTuya}</p>}
+        {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
         <Insignias lista={ins} />
         <p className="rp-aviso">{AVISO_PERFIL}</p>
@@ -121,9 +120,9 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     {!borrado && <section className="glass tarjeta" aria-labelledby="rp-op">
       <h2 id="rp-op" className="h3">{UI.opciones}</h2>
       <ul className="rp-opciones">{opciones.map(([o, t]) => <li key={o}><span>{t}</span><span className="rp-estado"><span className={'rp-estado__punto' + (activa(e, rol, o) ? ' rp-estado__punto--si' : '')} />{activa(e, rol, o) ? UI.si : UI.no}</span></li>)}</ul>
-      {publico ? <p className="nota" style={{ marginTop: 10 }}>{UI.activoDesde(fechaLarga(e.roles[rol].perfil!.fecha))} {UI.publicoNota}</p>
-        : <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href={`#/perfil/${rol}/publicar/1`}>{UI.hacerPublico}</a></div>}
-      {publico && (!activa(e, rol, opciones[1]![0]) || !activa(e, rol, 'puntaje')) && <div className="rp-acciones"><a className="boton boton--secundario" href={`#/perfil/${rol}/publicar/3`}>Ver las opciones que faltan</a></div>}
+      {publico && <p className="nota" style={{ marginTop: 10 }}>{UI.activoDesde(fechaLarga(e.roles[rol].perfil!.fecha))}</p>}
+      <p className="nota" style={{ marginTop: 6 }}><Md t={PERFIL_FIJO} /></p>
+      {publico && !activa(e, rol, vitrina) && <div className="rp-acciones"><a className="boton boton--secundario" href={`#/perfil/${rol}/aparecer`}>{UI.verVitrinaOpcion}</a></div>}
     </section>}
     <nav className="glass tarjeta" aria-label="Más sobre tu perfil"><ul className="rp-enlaces">
       {[['#/perfil/calculo', UI.comoSeCalcula], ['#/perfil/llave', UI.queEsLlave], [`#/perfil/${rol}/datos`, MIS_DATOS.boton], ['#/perfil/calculo/corregir', UI.corregir],
@@ -132,13 +131,16 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
   </main>
 }
 
-// ——— Hacer público el perfil: un paso por pantalla ———
-const PASOS = 5
-function Paso({ i, titulo, children }: { i: number; titulo: string; children: ReactNode }) {
+// ——— Puerta obligatoria: sin la reputación aceptada no se puede usar Lockumi (decisión de Katherine, 25/10/2026, 2:24 p. m.) ———
+// Tres pantallas, una por paso: datos → perfil de dueño → perfil de inquilino. El paso sale del estado guardado (no de la URL), así que
+// no hay redirecciones durante el render y la persona vuelve a la ruta que pidió (por ejemplo, una invitación) al terminar.
+const PASOS_PUERTA = 3
+const opcionVitrina = (cerrados: number): Opcion => cerrados >= MINIMO_PARA_PUNTAJE ? 'destacados' : 'nuevos'
+function Pantalla({ i, n, titulo, volver, children }: { i?: number; n?: number; titulo: string; volver?: ReactNode; children: ReactNode }) {
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
-    <Volver a="#/perfil" t="← Tu perfil" />
+    {volver}
     <section className="glass tarjeta rp-perfil"><Banda mini /><div className="rp-perfil__cuerpo">
-      <p className="rp-paso">{UI.pasoDe(i, PASOS)}</p><h1 className="h2">{titulo}</h1>{children}</div></section>
+      {i && n ? <p className="rp-paso">{UI.pasoDe(i, n)}</p> : null}<h1 className="h2">{titulo}</h1>{children}</div></section>
   </main>
 }
 function Casillas({ b, marcadas, set, error }: { b: Bloque; marcadas: boolean[]; set: (m: boolean[]) => void; error: string | null }) {
@@ -149,19 +151,25 @@ function Casillas({ b, marcadas, set, error }: { b: Bloque; marcadas: boolean[];
     {error && <p id="rp-err" className="error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
   </fieldset>
 }
-function Publicar({ u, rol, paso }: { u: Usuario; rol: Rol; paso: number }) {
-  const todos = useAlquileres(), e = useReputacion(u.email), xs = mios(todos, u, rol), p = calcularPuntaje(xs, rol, Date.now())
-  const [nombre, setNombre] = useState(e.nombre ?? ''), [canton, setCanton] = useState(e.canton ?? '')
-  const [marcadas, setMarcadas] = useState<boolean[]>([]), [error, setError] = useState<string | null>(null), [errores, setErrores] = useState<{ n?: string | null; c?: string | null }>({})
-  const base = `#/perfil/${rol}/publicar/`, vars = { 'nombre visible': e.nombre ?? '', 'cantón': e.canton ?? '' }
-  const sig = (n: number) => { setMarcadas([]); setError(null); ir(base.slice(1) + n) }
-  const guardar = (o: Opcion, b: Bloque, n: number) => {
-    if (marcadas.filter(Boolean).length < b.casillas.length) { setError(b.casillas.length > 1 ? UI.errCasillas : UI.errCasilla); return }
-    try { aceptar(u.email, rol, o, [b.titulo, ...b.parrafos, ...b.casillas].map(t => conVars(t, vars))); sig(n) } catch { setError(UI.errGuardar) }
-  }
-  if (paso === 1) return <Paso i={1} titulo={UI.datosTitulo}>
+const textoAceptado = (b: Bloque, vars: Record<string, string>) => [b.titulo, ...b.parrafos, ...b.casillas].map(t => conVars(t, vars))
+const TextoBloque = ({ b, vars }: { b: Bloque; vars: Record<string, string> }) =>
+  <div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={conVars(t, vars)} /></p>)}</div>
+
+export function Puerta({ u, salir }: { u: Usuario; salir: () => void }) {
+  const e = useReputacion(u.email)
+  const paso = !e.nombre || !e.canton ? 1 : !activa(e, 'dueno', 'perfil') ? 2 : 3
+  const salida = <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={salir}>{UI.salir}</button>
+    <a className="rp-enlace-peligro" href="#/perfil/eliminar">{ELIMINAR.boton}</a></div>
+  if (paso === 1) return <PuertaDatos key="d" u={u} e={e} salida={salida} />
+  const rol: Rol = paso === 2 ? 'dueno' : 'inquilino'
+  return <PuertaPerfil key={rol} u={u} e={e} rol={rol} paso={paso} salida={salida} />
+}
+function PuertaDatos({ u, e, salida }: { u: Usuario; e: EstadoReputacion; salida: ReactNode }) {
+  const [nombre, setNombre] = useState(e.nombre ?? ''), [canton, setCanton] = useState(e.canton ?? ''), [errores, setErrores] = useState<{ n?: string | null; c?: string | null }>({})
+  return <Pantalla i={1} n={PASOS_PUERTA} titulo={UI.datosTitulo}>
+    <p className="nota" style={{ marginTop: 6 }}>{UI.puertaNota}</p>
     <form noValidate onSubmit={ev => { ev.preventDefault(); const n = validarNombre(nombre), c = validarCanton(canton); setErrores({ n, c })
-      if (n || c) return; try { guardarDatos(u.email, nombre, canton); sig(2) } catch { setErrores({ n: UI.errGuardar }) } }}>
+      if (n || c) return; try { guardarDatos(u.email, nombre, canton) } catch { setErrores({ n: UI.errGuardar }) } }}>
       <div className={'campo' + (errores.n ? ' rp-campo--error' : '')} style={{ marginTop: 'var(--s4)' }}>
         <label htmlFor="rp-n">{UI.nombreVisible}</label>
         <input id="rp-n" value={nombre} onChange={ev => setNombre(ev.target.value)} autoComplete="off" aria-describedby="rp-n-a" aria-invalid={!!errores.n} />
@@ -172,33 +180,39 @@ function Publicar({ u, rol, paso }: { u: Usuario; rol: Rol; paso: number }) {
           <option value="">{UI.elegirCanton}</option>
           {Object.entries(PROVINCIAS).map(([pr, cs]) => <optgroup key={pr} label={pr}>{cs.map(c => <option key={c}>{c}</option>)}</optgroup>)}</select>
         <p id="rp-c-a" className={errores.c ? 'error' : 'nota'}>{errores.c ?? UI.cantonAyuda}</p></div>
-      <div className="rp-acciones"><button className="rp-boton rp-boton--ancho">{UI.continuar}</button><a className="boton boton--secundario" href="#/perfil">{UI.ahoraNo}</a></div>
-    </form></Paso>
-  if (paso === 2) { const b = TEXTO_PERFIL[rol]
-    return <Paso i={2} titulo={b.titulo}><div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={conVars(t, vars)} /></p>)}</div>
-      <Casillas b={b} marcadas={marcadas} set={setMarcadas} error={error} />
-      <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => guardar('perfil', b, 3)}>{UI.continuar}</button>
-        <a className="boton boton--secundario" href="#/perfil">{UI.ahoraNo}</a></div></Paso> }
-  if (!activa(e, rol, 'perfil')) return <Paso i={paso} titulo={TEXTO_PERFIL[rol].titulo}><p className="nota">{UI.primeroPerfil}</p>
-    <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href={base + 1}>{UI.continuar}</a></div></Paso>
-  if (paso === 3) { const o: Opcion = p.cerrados >= MINIMO_PARA_PUNTAJE ? 'destacados' : 'nuevos', b = (o === 'destacados' ? TEXTO_DESTACADOS : TEXTO_NUEVOS)[rol]
-    if (activa(e, rol, o)) { sig(4); return null }
-    return <Paso i={3} titulo={conVars(b.titulo, vars)}><div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={conVars(t, vars)} /></p>)}</div>
-      {o === 'nuevos' && <p className="nota" style={{ marginTop: 10 }}>{VITRINA.nuevos}</p>}
-      <Casillas b={b} marcadas={marcadas} set={setMarcadas} error={error} />
-      <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => guardar(o, b, 4)}>{UI.activar}</button>
-        <button type="button" className="boton boton--secundario" onClick={() => sig(4)}>{UI.saltar}</button></div></Paso> }
-  if (paso === 4) { const b = TEXTO_MOSTRAR_PUNTAJE, puede = p.cerrados >= MINIMO_PARA_PUNTAJE && p.valor !== null && p.valor >= PUNTAJE_MINIMO_VISIBLE
-    if (activa(e, rol, 'puntaje')) { sig(5); return null }
-    return <Paso i={4} titulo={b.titulo}>
-      {puede ? <><div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={t} /></p>)}</div>
-        <Casillas b={b} marcadas={marcadas} set={setMarcadas} error={error} />
-        <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => guardar('puntaje', b, 5)}>{UI.activar}</button>
-          <button type="button" className="boton boton--secundario" onClick={() => sig(5)}>{UI.saltar}</button></div></>
-        : <><p className="rp-deshabilitada" style={{ marginTop: 10 }}>{p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : TEXTO_PUNTAJE_BAJO}</p>
-          <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => sig(5)}>{UI.continuar}</button></div></>}</Paso> }
-  return <Paso i={5} titulo={UI.publicoListo}><p style={{ marginTop: 10 }}>{UI.publicoNota}</p>
-    <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href={`#/perfil/${rol}`}>{UI.listo}</a></div></Paso>
+      <div className="rp-acciones"><button className="rp-boton rp-boton--ancho">{UI.continuar}</button></div>
+    </form>{salida}</Pantalla>
+}
+function PuertaPerfil({ u, e, rol, paso, salida }: { u: Usuario; e: EstadoReputacion; rol: Rol; paso: number; salida: ReactNode }) {
+  const [marcadas, setMarcadas] = useState<boolean[]>([]), [error, setError] = useState<string | null>(null)
+  const b = TEXTO_PERFIL[rol], vars = { 'nombre visible': e.nombre ?? '', 'cantón': e.canton ?? '' }
+  const aceptarPerfil = () => {
+    if (marcadas.filter(Boolean).length < b.casillas.length) { setError(UI.errCasillas); return }
+    try { aceptar(u.email, rol, 'perfil', textoAceptado(b, vars)) } catch { setError(UI.errGuardar) }
+  }
+  return <Pantalla i={paso} n={PASOS_PUERTA} titulo={b.titulo}>
+    <p className="rp-fila" style={{ marginTop: 6 }}><Papel rol={rol} /></p>
+    <TextoBloque b={b} vars={vars} />
+    <Casillas b={b} marcadas={marcadas} set={setMarcadas} error={error} />
+    <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={aceptarPerfil}>{UI.aceptarYSeguir}</button></div>
+    <p className="nota" style={{ marginTop: 10 }}>{UI.obligatoria}</p>{salida}</Pantalla>
+}
+
+// ——— Vitrinas (opcionales, C.1): una sola pantalla desde el perfil ———
+function Aparecer({ u, rol }: { u: Usuario; rol: Rol }) {
+  const todos = useAlquileres(), e = useReputacion(u.email), p = calcularPuntaje(mios(todos, u, rol), rol, Date.now())
+  const [marcadas, setMarcadas] = useState<boolean[]>([]), [error, setError] = useState<string | null>(null), [hecho, setHecho] = useState(false)
+  const o = opcionVitrina(p.cerrados), b = (o === 'destacados' ? TEXTO_DESTACADOS : TEXTO_NUEVOS)[rol], vars = { 'nombre visible': e.nombre ?? '', 'cantón': e.canton ?? '' }
+  const volver = <Volver a={`#/perfil/${rol}`} t="← Tu perfil" />
+  if (hecho || activa(e, rol, o)) return <Pantalla titulo={UI.aparecesListo} volver={volver}>
+    <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href={`#/perfil/${rol}`}>{UI.listo}</a></div></Pantalla>
+  return <Pantalla titulo={conVars(b.titulo, vars)} volver={volver}><TextoBloque b={b} vars={vars} />
+    {o === 'nuevos' && <p className="nota" style={{ marginTop: 10 }}>{VITRINA.nuevos}</p>}
+    <Casillas b={b} marcadas={marcadas} set={setMarcadas} error={error} />
+    <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => {
+      if (!marcadas[0]) { setError(UI.errCasilla); return }
+      try { aceptar(u.email, rol, o, textoAceptado(b, vars)); setHecho(true) } catch { setError(UI.errGuardar) } }}>{UI.activar}</button>
+      <a className="boton boton--secundario" href={`#/perfil/${rol}`}>{UI.ahoraNo}</a></div></Pantalla>
 }
 
 // ——— Mis datos de reputación (C.5.2) ———
@@ -216,13 +230,13 @@ function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
     <Volver a={`#/perfil/${rol}`} t="← Tu perfil" />
     <section className="glass tarjeta"><h1 className="h2">{MIS_DATOS.titulo}</h1><p className="nota" style={{ marginTop: 6 }}><Papel rol={rol} /></p>
       <p style={{ marginTop: 10 }}>{MIS_DATOS.texto}</p></section>
-    <section className="glass tarjeta"><h2 className="h3">{lineaPublica(p, true)}</h2>
+    <section className="glass tarjeta"><h2 className="h3">{lineaPublica(p)}</h2>
       {!filas.length ? <p className="nota">{UI.datosVacio}</p> : <ul className="rp-opciones">{filas.map((f, k) => <li key={k}><span>{f.alquiler}<br /><small className="nota">{fechaLarga(f.cerrado)}</small></span>
         <span style={{ textAlign: 'right' }}>{rol === 'dueno' ? (f.reclamoDevuelto ? UI.reclamoDevuelto(f.reclamoDevuelto) : UI.sinReclamo) : f.descuento ? UI.descuento(f.descuento) : UI.sinDescuento}<br /><small className="nota">{UI.vale(formatoPuntaje(f.vale))}</small></span></li>)}</ul>}
     </section>
     <section className="glass tarjeta"><h2 className="h3">{UI.insignias}</h2><Insignias lista={ins} /></section>
     <section className="glass tarjeta"><h2 className="h3">{UI.opciones}</h2>
-      <ul className="rp-opciones">{(['perfil', 'destacados', 'nuevos', 'puntaje'] as Opcion[]).map(o => { const r = e.roles[rol][o]
+      <ul className="rp-opciones">{(['perfil', 'destacados', 'nuevos'] as Opcion[]).map(o => { const r = e.roles[rol][o]
         return <li key={o}><span>{UI.opcion[o]}</span><span>{r ? `${UI.si} · ${fechaLarga(r.fecha)}` : UI.no}</span></li> })}</ul></section>
     <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={descargar}>{MIS_DATOS.descargar}</button>
       <a className="boton boton--secundario" href="#/perfil/calculo/corregir">{MIS_DATOS.corregir}</a>
@@ -237,7 +251,7 @@ function Calculo({ corregir }: { corregir: boolean }) {
     <Volver a="#/perfil" t="← Tu perfil" />
     {corregir ? <section className="glass tarjeta rp-texto"><h1 className="h2">{CORREGIR.titulo}</h1>{CORREGIR.parrafos.map((t, k) => <p key={k}><Md t={t} /></p>)}</section> : <>
       <section className="glass tarjeta rp-texto"><h1 className="h2">{UI.comoSeCalcula}</h1><p><Md t={COMO_SE_CALCULA.intro} /></p>{lista(COMO_SE_CALCULA.puntos)}
-        <p><Md t={COMO_SE_CALCULA.duenos} /></p><p>{COMO_SE_CALCULA.diezAnios}</p><p className="rp-aviso"><Md t={COMO_SE_CALCULA.demo} /></p></section>
+        <p className="rp-aviso"><Md t={COMO_SE_CALCULA.demo} /></p></section>
       <section className="glass tarjeta rp-texto"><h2 className="h3">{UI.queSePublica}</h2>{lista(SE_PUBLICA)}</section>
       <section className="glass tarjeta rp-texto"><h2 className="h3">{UI.queNoSePublica}</h2>{lista(NO_SE_PUBLICA)}</section>
       <div className="rp-acciones"><a className="boton boton--secundario" href="#/perfil/calculo/corregir">{UI.corregir}</a></div></>}
@@ -265,7 +279,7 @@ function Tarjeta({ x }: { x: Ejemplo }) {
     <div className="rp-tarjeta__cuerpo"><div className="rp-tarjeta__cab"><Avatar nombre={x.nombre} rol={x.rol} mini /><div>
       <p className="rp-tarjeta__nombre">{x.nombre}</p><div className="rp-fila" style={{ marginTop: 0 }}><Papel rol={x.rol} /><span className="chip chip--neutro chip--mini">{UI.ejemplo}</span></div></div></div>
       <p className="nota" style={{ marginTop: 10 }}>{x.canton} · {x.rol === 'dueno' ? UI.alquilaDesde(usd(x.precio)) : UI.buscaDe(`${usd(x.precio)} a ${usd(x.precio + 200)}`)}</p>
-      <p className="rp-linea" style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>{x.llave && x.mostrar && <Sello t={28} />}{lineaPublica(p, x.mostrar)}</p>
+      <p className="rp-linea" style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>{x.llave && puntajeVisible(p) && <Sello t={28} />}{lineaPublica(p)}</p>
       <ul className="rp-burbujas" aria-label={UI.insignias}>{x.insignias.map(i => <li key={i} className="rp-burbuja" title={INSIGNIAS[i]!.nombre}><Icono n={i} /><span className="sr-only">{INSIGNIAS[i]!.nombre}</span></li>)}</ul>
     </div></li>
 }
@@ -301,15 +315,21 @@ function Eliminar({ u, listo, salir }: { u: Usuario; listo: boolean; salir: () =
   </main>
 }
 
-/** Rutas de la reputación (#/perfil/…). App.tsx solo las usa con VITE_REPUTACION=1. */
-export default function Reputacion({ u, r, salir }: { u: Usuario; r: string; salir: () => void }) {
-  const [, a, b, c] = r.split('/').filter(Boolean)   // ['perfil', a, b, c]
+/** Con VITE_REPUTACION=1, App.tsx pasa por aquí TODAS las pantallas con sesión: la puerta obligatoria primero (salvo «Eliminar mi cuenta»),
+ *  después las rutas #/perfil/… o, si la ruta es otra, la pantalla de siempre (children). */
+export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: string; salir: () => void; children?: ReactNode }) {
+  const e = useReputacion(u.email)
+  const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
+  const perfil = raiz === 'perfil'
+  if (perfil && a === 'eliminar') return <Eliminar u={u} listo={b === 'listo'} salir={salir} />
+  const acepto = !!e.nombre && !!e.canton && activa(e, 'dueno', 'perfil') && activa(e, 'inquilino', 'perfil')
+  if (!acepto) return <Puerta u={u} salir={salir} />
+  if (!perfil) return <>{children}</>
   if (a === 'calculo') return <Calculo corregir={b === 'corregir'} />
   if (a === 'llave') return <Llave />
   if (a === 'vitrina') return <Vitrina rol={b === 'inquilinos' ? 'inquilino' : 'dueno'} />
-  if (a === 'eliminar') return <Eliminar u={u} listo={b === 'listo'} salir={salir} />
   const rol = rolDeRuta(a)
-  if (b === 'publicar') return <Publicar key={c} u={u} rol={rol} paso={Math.min(Math.max(Number(c) || 1, 1), PASOS)} />
+  if (b === 'aparecer') return <Aparecer u={u} rol={rol} />
   if (b === 'datos') return <MisDatos u={u} rol={rol} />
   return <MiPerfil u={u} rol={rol} />
 }
