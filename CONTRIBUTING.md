@@ -83,6 +83,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Colores nuevos solo en `src/prueba/prueba.css` (texto café sobre el degradado #FFB08A → #FF6B35; nunca texto blanco sobre naranja). Sin animaciones ni ilustraciones.
 - Botones de red: usa `useProceso` de `src/proceso.tsx` (no se toca dos veces, muestra el avance y el error). Los mensajes de acción no cambian.
 - Simulador de días: los avisos salen al adelantar el reloj de la demo (`src/prueba/sincronizar.ts`); no hay tareas en el servidor.
+- E2E: `npm run e2e` (Playwright, `e2e/*.e2e.ts`; ver `docs/e2e.md`). Los archivos E2E no terminan en `.spec`/`.test` para que vitest no los tome.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

@@ -5,6 +5,9 @@
 ## PR 4 (24 oct 2026): flujo del dueño, avisos 1/4/6, contador B.9 y simulador de días, sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. Ver docs/prueba-completa.md.
 
+## E2E automática (24 oct 2026)
+- Playwright + workflow post-despliegue, cada 6 h y a pedido; E2E.md en la rama e2e-resultados. Ver docs/e2e.md.
+
 ## PR 3 (24 oct 2026): interruptor, Regla de propuesta automática (B.1) y Anexo 6-A (B.5), sin cambios visibles
 - Todo detrás de `VITE_PRUEBA_COMPLETA` (apagado). Ver docs/prueba-completa.md.
 
