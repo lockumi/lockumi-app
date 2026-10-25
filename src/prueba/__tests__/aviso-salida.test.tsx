@@ -28,7 +28,7 @@ describe('aviso de 5 días (B.3)', () => {
     sincronizar(x, cinco)
     const h = renderToStaticMarkup(<AvisoSalida a={x} rol="inquilino" />)
     expect(h).toContain('5 días antes de la salida'); expect(h).toContain('Tu alquiler termina pronto: repara lo que haga falta')
-    expect(h).toContain('Tus fotos de entrada'); expect(h).toContain('href="#/terminos"')
+    expect(h).toContain('Tus fotos de entrada'); expect(h).toContain('El desgaste normal no se cobra: <a href="#/terminos">ver las reglas</a>. Después de entregar las llaves')
     expect(renderToStaticMarkup(<AvisoSalida a={x} rol="dueno" />)).not.toContain('Tu alquiler termina pronto')
   })
 })
