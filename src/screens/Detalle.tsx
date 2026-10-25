@@ -23,7 +23,7 @@ import { EsperaPago } from '../EsperaPago'
 import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { Expediente } from '../prueba/Expediente'
-import { esDosPersonas, TEXTO_CERRADO_AUTO } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_CERRADO_AUTO, montoPrueba, recibeInquilino, notaComisionAuto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -281,12 +281,14 @@ function Cerrado({ a, rol }: P) {
   return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{via}</p></>}
-    <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>
+    {auto2 ? <ul className="lista"><li><span>Inquilino</span><strong>{montoPrueba(recibeInquilino(r.inquilino))}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
+      : <ul className="lista"><li><span>Inquilino</span><strong>{usd(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(r.dueno)}</strong></li></ul>}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}
     {pruebaCompleta() && !!a.reclamo && <Expediente a={a} />}{/* paso 14 · B.11 */}{/* solo con la prueba completa (interruptor encendido) */}
-    {escrowReal && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}
+    {auto2 && <p className="nota">{notaComisionAuto(r.inquilino)}</p>}{/* LEGAL: revisar */}
+    {escrowReal && !auto2 && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}
     {escrowReal && [a.red?.txs.liberacion, a.red?.txs.resolucion].filter(esHash).map(h => <p key={h} className="nota">{h === a.red?.txs.liberacion ? 'Devolución' : 'Reparto'} en la red de prueba: <VerTx h={h} /></p>)}
     <EscrowReal a={a} rol={rol} />
   </section>
