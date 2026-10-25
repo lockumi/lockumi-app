@@ -6,9 +6,13 @@ import { modoServidor } from '../servidor/config'
 import { pruebaCompleta } from './interruptor'
 import { reglas17 } from './version'
 import { sincronizar, pendiente } from './dueno'
+import { debeBorrarMediacion, borrarMediacion } from './borrado'
 
 export function sincronizarTodos() {
-  for (const a of store.todos()) if (reglas17(a) && pendiente(a, ahoraDe(a))) store.cambiar(a.id, x => { sincronizar(x, ahoraDe(x)) })
+  for (const a of store.todos()) {
+    if (reglas17(a) && pendiente(a, ahoraDe(a))) store.cambiar(a.id, x => { sincronizar(x, ahoraDe(x)) })
+    if (reglas17(a) && debeBorrarMediacion(a, ahoraDe(a))) store.cambiar(a.id, x => { borrarMediacion(x, ahoraDe(x)) })
+  }
 }
 export function useSincronizarPrueba() {
   useEffect(() => {

@@ -40,7 +40,9 @@ export interface Reclamo {
   /** Propuesta automática (simulación) cuando el inquilino rechaza todo o una parte. */
   propuesta?: AceptacionReparto
   /** Mediación Lockumi (demo): pedida, rechazada o sin cupo; y el acuerdo propuesto con el botón de simulación. */
-  mediacion?: { estado: 'pedida' | 'no-usar' | 'sin-cupo'; fecha: string; acuerdo?: AceptacionReparto }
+  mediacion?: { estado: 'pedida' | 'no-usar' | 'sin-cupo'; fecha: string; acuerdo?: AceptacionReparto
+    /** Paso 16: cuándo se borraron los datos de la mediación (30 días después del cierre) y si una parte pidió guardarlos. */
+    borrado?: string; guardar?: { por: Rol; fecha: string } }
 }
 /** Aviso en la app (días 1, 4 y 6) con su registro de entrega y de apertura; y el correo, si se escribió una dirección. */
 export interface Aviso {
