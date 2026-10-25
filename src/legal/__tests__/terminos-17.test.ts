@@ -37,6 +37,6 @@ describe('Términos 1.7-demo', () => {
   })
   it('Privacidad 1.7-demo: los datos de una mediación se borran a los 30 días de cerrar el caso', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
-    expect(texto(privacidadActual()!.html)).toContain('Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app.')
+    expect(texto(privacidadActual()!.html)).toContain('Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app. Los datos que quedan solo en tu navegador')
   })
 })
