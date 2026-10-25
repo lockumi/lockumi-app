@@ -99,7 +99,10 @@ Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con t
 
 <!-- LEGAL: revisado (25/10) · cuentas anteriores a la 1.10-demo (texto literal de Legal) -->
 Si tu cuenta es anterior a la versión 1.10‑demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.
-<!-- LEGAL: revisar · ronda 25/10 4:01 · PROPUESTA NO PUBLICADA (persona por correo; esta línea no se muestra). Texto propuesto para agregar aquí: «Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus pedidos por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos.» -->
+
+<!-- LEGAL: revisado (25/10) · persona por correo (texto de Legal, con «solicitudes» en vez de «pedidos») -->
+Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus solicitudes por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos.
+
 - **Datos que se publican:** tu nombre visible, tu papel (dueño o inquilino), tu cantón o provincia, desde cuándo estás en Lockumi, cuántos alquileres cerraste, tus insignias, tu puntaje y la Llave Lockumi si la tienes (siempre desde tu 3.er alquiler cerrado) y, solo en las vitrinas en las que aparezcas, el precio desde el que alquilas o el rango que buscas.
 - **Datos que nunca se publican:** tu dirección, tu barrio, la dirección del inmueble, la distancia, tu teléfono, tu correo, tu cédula, tu billetera, fotos, montos y el detalle de tus reclamos.
 - **Finalidad:** que dueños e inquilinos conozcan el historial de la otra parte en Lockumi. No es una garantía ni una recomendación.
