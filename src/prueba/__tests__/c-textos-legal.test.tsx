@@ -10,7 +10,9 @@ const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
 vi.stubGlobal('location', { origin: 'http://127.0.0.1:4620', hostname: '127.0.0.1', hash: '' })
 
-const { Contrato, Pago } = await import('../../screens/Detalle')
+const { Contrato, Pago, EnCurso } = await import('../../screens/Detalle')
+const { ContratoDoc } = await import('../../screens/ContratoDoc')
+const { alertaPorCambio, instantanea } = await import('../../alertas')
 const { Expediente } = await import('../Expediente')
 const { turno } = await import('../../flujo')
 const D = await import('../dosPersonas')
@@ -76,7 +78,7 @@ describe('2) «Qué sigue» y otros textos de C: la propuesta solo se aplica si 
 describe('3) pago en C: confirma la cuenta Lockumi (Cavos), la única que firma el depósito de dos personas', () => {
   it('nota del inquilino, palabra por palabra', () => {
     const h = renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino', cuentas: { inquilino: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV' } })} rol="inquilino" />)
-    expect(h).toContain(`<p class="nota">${PAGO}</p>`); expect(h).not.toContain('Freighter')
+    expect(h).toContain(`<p class="nota">${PAGO} `); expect(h).not.toContain('Freighter')
   })
   it('el depósito de dos personas solo lo firma la billetera Cavos (trustless.depositar → firmarXdr → Cavos)', async () => {
     const t = (await import('../../services/trustless.ts?raw')).default as string, b = (await import('../../services/billetera.ts?raw')).default as string
@@ -94,5 +96,70 @@ describe('4) fecha de la 1.9-demo: una sola constante, provisional hasta el ence
   it('no hay otra copia de la fecha en versiones.ts', async () => {
     const src = (await import('../../legal/versiones.ts?raw')).default as string
     expect(src.match(/'25 de octubre de 2026'/g)).toHaveLength(1)
+  })
+})
+
+// Legal, 25/10, 3:16 a. m. (sobre 1c8af23): segunda línea del pago, 6.5 c), aviso del silencio y marcas quitadas de lo aprobado.
+const ESCROW = 'El depósito queda guardado en una cuenta de garantía (escrow) de Trustless Work en la red de prueba, y se libera según las reglas de los Términos (cláusulas 5 y 6).'
+const SOLOS = /(sacar|tomar|liberar)l[oa]s? solos|lo pueden sacar solos|nadie puede (sacar|tomar|mover)l[oa]/i
+describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «nadie puede sacarlo solo»', () => {
+  it('la nota del pago es la línea de Legal y, después, la del escrow, palabra por palabra', () => {
+    expect(D.TEXTO_ESCROW_DOS).toBe(ESCROW)
+    const h = renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino' })} rol="inquilino" />)
+    expect(h).toContain(`<p class="nota">${PAGO} ${ESCROW}</p>`); expect(h).not.toMatch(SOLOS)
+  })
+  it('ninguna pantalla de C dice que nadie puede sacar el depósito solo (pago, contrato, en curso, aviso del pago)', () => {
+    const hs = [renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino' })} rol="inquilino" />), renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'dueno' })} rol="dueno" />),
+      renderToStaticMarkup(<ContratoDoc a={A()} completo />), renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)]
+    for (const h of hs) expect(h).not.toMatch(SOLOS)
+    expect(renderToStaticMarkup(<ContratoDoc a={A()} completo />)).toContain('El depósito queda guardado hasta el final. Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.')
+    expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)).toContain('El depósito sigue guardado.</p>')
+    for (const red of [true, false]) {
+      const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago' })), A({ estado: 'fotos_entrada' }), 'inquilino', { prueba: false, video: false, red })!
+      expect(al.titulo).toBe('¡Depósito guardado!'); expect(al.hecho).toMatch(/^800 USDC( de prueba)? guardados en una cuenta segura de la red de prueba\.$/); expect(al.hecho).not.toMatch(SOLOS)
+    }
+  })
+  it('sin dos personas, esas pantallas no cambian', () => {
+    const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago', dosPersonas: false })), A({ estado: 'fotos_entrada', dosPersonas: false }), 'inquilino', { prueba: false, video: false, red: true })!
+    expect(al.hecho).toMatch(/Ni el dueño ni el inquilino pueden sacarlos solos\.$/)
+    expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso', dosPersonas: false })} rol="inquilino" />)).toContain('ni el dueño ni el inquilino pueden tomarlo solos')
+  })
+  it('los textos de C (dosPersonas.ts) no lo dicen', async () => {
+    expect((await import('../dosPersonas.ts?raw')).default as string).not.toMatch(SOLOS)
+  })
+})
+describe('6) Legal 3:16: aviso del silencio del inquilino', () => {
+  it('palabra por palabra; el de A no cambia', async () => {
+    expect(D.TEXTO_SILENCIO_DOS).toBe('Venció el plazo para responder. El caso pasa a la Mediación Lockumi (demo).')
+    expect(D.EXPEDIENTE_REGLA_DOS).toBe('Regla de propuesta automática: no se ofrece en esta versión (cláusula 6.5.1 d)')
+  })
+})
+describe('7) Legal 3:16: sin «LEGAL: revisar» en lo que Legal aprobó', () => {
+  const antesDe = (src: string, ancla: string) => { const i = src.indexOf(ancla); expect(i).toBeGreaterThan(-1); const l = src.slice(0, i).split('\n'); return l.slice(-2).join('\n') }
+  it.each(['TITULO_RECLAMO_DOS', 'TEXTO_RECLAMO_DOS', 'TEXTO_PAGO_DOS', 'TEXTO_ESCROW_DOS', 'SIGUE_RECLAMO_DOS', 'TEXTO_SILENCIO_DOS', 'BOTON_EXPEDIENTE_DOS', 'EXPEDIENTE_REGLA_DOS', 'TEXTO_ACEPTARON_DOS'])('dosPersonas.ts: %s', async n => {
+    const src = (await import('../dosPersonas.ts?raw')).default as string
+    expect(antesDe(src, `export const ${n} =`)).not.toMatch(/LEGAL: revisar/)
+  })
+  it('notaComisionReparto (cierre de C)', async () => {
+    const src = (await import('../dosPersonas.ts?raw')).default as string
+    expect(antesDe(src, 'export const notaComisionReparto')).not.toMatch(/LEGAL: revisar/)
+  })
+  it('Detalle.tsx: nota de 07, pago de C y cierre de C', async () => {
+    const src = (await import('../../screens/Detalle.tsx?raw')).default as string
+    for (const a of ['{esDosPersonas(a) && rol === \'inquilino\' && !a.contrato.firmas.inquilino && <div className="auto-dos"', '{dos ? <p className="nota">']) expect(antesDe(src, a)).not.toMatch(/LEGAL: revisar/)
+    expect(src).toMatch(/\{dosAceptan && <p className="nota">\{notaComisionReparto\(r\.inquilino, r\.dueno\)\}<\/p>\}\n/)
+  })
+  it('flujo.ts: «Qué sigue» de C', async () => {
+    const src = (await import('../../flujo.ts?raw')).default as string
+    expect(src).toMatch(/case 'reclamo': if \(esDosPersonas\(a\)\) return yo === 'inquilino'\n/)
+  })
+  it('CasillaVersion.tsx: casilla al unirse y al crear', async () => {
+    expect((await import('../CasillaVersion.tsx?raw')).default as string).not.toMatch(/LEGAL: revisar/)
+  })
+  it('terminos.md: 2.2 b), 6.5 c) y 6.5.1 d) de C', async () => {
+    const src = (await import('../../legal/v17/terminos.md?raw')).default as string
+    expect(antesDe(src, '<!-- si: dos-personas -->\nb) En la fase 2')).not.toMatch(/LEGAL: revisar/)
+    expect(antesDe(src, '<!-- si: dos-personas -->\nd) En la versión con dos personas')).not.toMatch(/LEGAL: revisar/)
+    expect(antesDe(src, 'c) **Si el inquilino no responde:**')).not.toMatch(/LEGAL: revisar/)
   })
 })

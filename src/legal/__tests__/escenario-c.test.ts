@@ -47,6 +47,17 @@ describe('6.5.1 d) de C (Legal, 25/10, 2:53 a. m.)', () => {
     expect(t).not.toContain('En la versión con dos personas'); expect(t).not.toContain('Hay una excepción')
   })
 })
+const C65 = 'Si no la aceptó, o si no abrió ningún aviso, el caso pasa a la Mediación Lockumi (demo) (6.8).'
+const ADD65 = 'En la versión con dos personas, la regla no se ofrece (6.5.1 d).'
+const br = (t: string) => t.replace(/\)\.d\) Estos/g, '). d) Estos')   // <br /> entre la c) y la d)
+describe('6.5 c) de C (Legal, 25/10, 3:16 a. m.): al final, solo con dos personas', () => {
+  it.each([{ dos: true, correos: true }, { dos: true, correos: false }])('con dos personas termina con la frase de Legal (%o)', c => {
+    expect(br(encender(c).t)).toContain(`${C65} ${ADD65} d) Estos plazos son solo de la app.`)
+  })
+  it.each([{ dos: false, correos: false }, { dos: false, correos: true }])('sin dos personas no cambia (%o)', c => {
+    const t = br(encender(c).t); expect(t).toContain(`${C65} d) Estos plazos son solo de la app.`); expect(t).not.toContain(ADD65)
+  })
+})
 describe('2.2 b) de C (texto exacto de Legal y, después, la b) de antes sin cambios)', () => {
   it('la b) de antes trae el registro en la red de prueba, «simulados» y «Nada de esto tiene efecto legal»', () => {
     expect(B22_VIEJA).toMatch(/^El depósito, la aprobación, la liberación, el reclamo y el reparto del reclamo sí se registran en la red de prueba\./)

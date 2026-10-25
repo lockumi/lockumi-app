@@ -25,7 +25,7 @@ import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
-import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, montoPrueba, recibeInquilino, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
@@ -45,7 +45,7 @@ export function Contrato({ a, rol }: P) {
   if (reglas17(a) && !esDosPersonas(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
     return <ReglaPropuesta onListo={acepta => store.cambiar(a.id, x => { x.regla = registroRegla(a.inquilinoEmail, a.id, acepta) }, acepta ? 'El inquilino aceptó la Regla de propuesta automática' : 'El inquilino no aceptó la Regla de propuesta automática')} />
   return <div className="pila">
-    {/* LEGAL: revisar · C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.), en el recuadro informativo de la devolución automática */}
+    {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
@@ -79,8 +79,8 @@ function PagoSimulado({ a, rol }: P) {
     <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p>
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
-      {/* LEGAL: revisar · C: la nota aprobada de cuenta propia («Son USDC de prueba, sin valor, de tu cuenta…»), con la cuenta Lockumi del inquilino */}
-      {dos ? <p className="nota">{TEXTO_PAGO_DOS}</p>
+      {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
+      {dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
@@ -125,11 +125,11 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
   </div>
 }
 
-function EnCurso({ a }: P) {
+export function EnCurso({ a }: P) {
   return <section className="pila"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
     <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div>
-    {/* LEGAL: revisado (24/10) */}
-    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.</p>
+    {/* LEGAL: revisado (24/10). LEGAL: revisar · C (Legal, 25/10, 3:16 a. m.): se quita «ni el dueño ni el inquilino pueden tomarlo solos» */}
+    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? 'El depósito sigue guardado.' : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
     <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
     <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={() => void acciones.iniciarSalida(a)}>Empezar fotos de salida</button>
   </section>
@@ -329,7 +329,7 @@ export function Cerrado({ a, rol }: P) {
     {pruebaCompleta() && r.via === 'propuesta' && rol === 'inquilino' && <SeAplico a={a} />}
     {pruebaCompleta() && !!a.reclamo && <Expediente a={a} />}{/* paso 14 · B.11 */}{/* solo con la prueba completa (interruptor encendido) */}
     {auto2 && <p className="nota">{notaComisionAuto(r.inquilino)}</p>}{/* LEGAL: revisar */}
-    {dosAceptan && <p className="nota">{notaComisionReparto(r.inquilino, r.dueno)}</p>}{/* LEGAL: revisar */}
+    {dosAceptan && <p className="nota">{notaComisionReparto(r.inquilino, r.dueno)}</p>}
     {dosAceptan && esHash(a.liquidacionTx) && <p className="nota">Reparto en la red de prueba: <VerTx h={a.liquidacionTx} /></p>}
     {escrowReal && !auto2 && <p className="nota">Montos que llegaron, ya con el {COMISION_TEXTO} de comisión de la red de prueba (Trustless Work).{r.via === 'mediacion' && <> La persona mediadora es simulada <Simulado />, pero el reparto se hizo en la red de prueba.</>}</p>}
     {escrowReal && [a.red?.txs.liberacion, a.red?.txs.resolucion].filter(esHash).map(h => <p key={h} className="nota">{h === a.red?.txs.liberacion ? 'Devolución' : 'Reparto'} en la red de prueba: <VerTx h={h} /></p>)}

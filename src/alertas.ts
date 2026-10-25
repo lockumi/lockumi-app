@@ -1,4 +1,5 @@
 import { reglas17 } from './prueba/version'
+import { esDosPersonas } from './prueba/dosPersonas'
 // Avisos emergentes después de cada paso del flujo: confirman qué pasó y dicen qué sigue.
 // Aviso v2 (toast): pila de hasta 3, el más nuevo al frente. Las pantallas llaman a `avisar`; <Alertas /> (en App) los muestra con <Tostada />.
 // Los textos con sentido legal están marcados con `// LEGAL: revisar` (pendientes de revisión de Legal).
@@ -129,7 +130,8 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       paso: 'pago', titulo: '¡Depósito guardado!',
       // LEGAL: revisar · texto corto de la red de prueba aprobado por Legal (23 oct 2026)
       // LEGAL: revisado (24/10)
-      hecho: c.red ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.` : `El depósito de ${usd(ahora.monto)} quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.`,
+      // LEGAL: revisar · C (Legal, 25/10, 3:16 a. m.): sin «Ni el dueño ni el inquilino pueden sacarlos solos»
+      hecho: esDosPersonas(ahora) ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba.` : c.red ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.` : `El depósito de ${usd(ahora.monto)} quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.`,
       sigue: 'Tomar las fotos de entrada de cada espacio y marcar la lista.',
       linea: { et: 'Ahora:', texto: 'fotos de entrada' },   // LEGAL: revisado el 23/10
       accion: { texto: 'Tomar fotos →', etiqueta: 'Tomar fotos de entrada', ir: 'panel' },

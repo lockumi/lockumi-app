@@ -43,24 +43,26 @@ export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devue
 export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa. El depósito se le entrega al inquilino cuando termine tu plazo de reclamos.'
 
 // PR #22 (d) · cierre de la mediación con las dos aceptaciones (lk_aceptar_acuerdo_mediacion, resultado.cierre = 'dos_aceptan').
-// LEGAL: revisar · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)
+// Legal: aprobado (25/10, 3:16 a. m.) · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)
 export const TEXTO_ACEPTARON_DOS = 'Lo aceptaron las dos partes.'
 const redondo = (n: number) => Math.round(n * 1e7) / 1e7
 export const notaComisionReparto = (inquilino: number, dueno: number) =>
   `Llegaron ${montoPrueba(recibeInquilino(inquilino))} al inquilino y ${montoPrueba(recibeInquilino(dueno))} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(redondo(inquilino + dueno - recibeInquilino(inquilino) - recibeInquilino(dueno)))}). Lockumi no recibe nada.`
 
-// LEGAL: revisar · Legal, 25/10, 2:53 a. m.: en C la Regla 6.5.1 no se ofrece al firmar (Términos 1.9-demo, 6.5.1 d). Nota sin casilla.
+// Legal, 25/10, 2:53 a. m.: en C la Regla 6.5.1 no se ofrece al firmar (Términos 1.9-demo, 6.5.1 d). Nota sin casilla. Aprobado el 25/10, 3:16 a. m.
 export const TITULO_RECLAMO_DOS = 'Si hay un reclamo'
-// LEGAL: revisar · texto de Legal, palabra por palabra (25/10, 2:53 a. m.)
+// Texto de Legal, palabra por palabra (25/10, 2:53 a. m.; aprobado el 25/10, 3:16 a. m.)
 export const TEXTO_RECLAMO_DOS = 'En esta versión, la app no aplica ninguna propuesta por su cuenta. Si el dueño hace un reclamo y no respondes a tiempo (cláusula 6.5), el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. Si el dueño no hace un reclamo a tiempo, recibes el 100 % del depósito.'
-// LEGAL: revisar · Legal, 25/10, 2:53 a. m. (pago de C: el depósito de dos personas solo lo firma la cuenta Lockumi, Cavos)
+// Legal, 25/10, 2:53 a. m., aprobado a las 3:16 a. m. (pago de C: el depósito de dos personas solo lo firma la cuenta Lockumi, Cavos)
 export const TEXTO_PAGO_DOS = 'Tu cuenta Lockumi te pedirá confirmar el pago en la red de prueba. Son USDC de prueba, sin valor.'
-// LEGAL: revisar · C: «Qué sigue» del reclamo; la propuesta automática solo se aplica si las dos partes la aceptan (Legal, 25/10, 2:53 a. m.)
+// Legal, 25/10, 3:16 a. m.: va después de TEXTO_PAGO_DOS. En C no se dice que nadie puede sacar el depósito solo.
+export const TEXTO_ESCROW_DOS = 'El depósito queda guardado en una cuenta de garantía (escrow) de Trustless Work en la red de prueba, y se libera según las reglas de los Términos (cláusulas 5 y 6).'
+// C: «Qué sigue» del reclamo; la propuesta automática solo se aplica si las dos partes la aceptan (Legal, 25/10, 2:53 a. m.; aprobado a las 3:16 a. m.)
 export const SIGUE_RECLAMO_DOS = { inquilino: 'Si no aceptas todo, verás una propuesta automática (simulación), que solo se aplica si las dos partes la aceptan. Si no hay acuerdo, pasa a la Mediación Lockumi (demo).',
   dueno: 'Si no acepta todo, verán una propuesta automática (simulación), que solo se aplica si las dos partes la aceptan. Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
-// LEGAL: revisar · C: al vencer el plazo del inquilino, el servidor pasa el caso a la mediación (6.5.1 d); no aplica ninguna regla
-export const TEXTO_SILENCIO_DOS = 'Venció el plazo para responder. Pasando el caso a la Mediación Lockumi (demo)…'
-// LEGAL: revisar · C: el expediente descarga los datos reales de la prueba (PDF armado en el navegador con este alquiler)
+// C: al vencer el plazo del inquilino, el servidor pasa el caso a la mediación (6.5.1 d); no aplica ninguna regla (Legal, 25/10, 3:16 a. m.)
+export const TEXTO_SILENCIO_DOS = 'Venció el plazo para responder. El caso pasa a la Mediación Lockumi (demo).'
+// C: el expediente descarga los datos reales de la prueba (PDF armado en el navegador con este alquiler). Aprobado (25/10, 3:16 a. m.)
 export const BOTON_EXPEDIENTE_DOS = 'Descargar el expediente (datos de prueba)'
-// LEGAL: revisar · C: línea de «Aceptaciones» del expediente
+// C: línea de «Aceptaciones» del expediente. Aprobado (25/10, 3:16 a. m.)
 export const EXPEDIENTE_REGLA_DOS = 'Regla de propuesta automática: no se ofrece en esta versión (cláusula 6.5.1 d)'

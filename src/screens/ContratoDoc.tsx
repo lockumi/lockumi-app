@@ -37,8 +37,9 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       {/* Texto que ya mostraba la app en «El contrato». */}
       {/* LEGAL: revisado (24/10) */}
       <p className="ct__texto">El depósito queda guardado hasta el final. {deDosPersonas(a)
-        // LEGAL: revisar · alquiler con otra persona: el reparto lo ejecuta la cuenta que resuelve disputas (persona mediadora)
-        ? 'Ni el dueño ni el inquilino pueden tomarlo solos. Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.'
+        // LEGAL: revisar · alquiler con otra persona: el reparto lo ejecuta la cuenta que resuelve disputas (persona mediadora).
+        // C (Legal, 25/10, 3:16 a. m.): sin «Ni el dueño ni el inquilino pueden tomarlo solos».
+        ? 'Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.'
         : 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.'}</p>
     </section>
 
