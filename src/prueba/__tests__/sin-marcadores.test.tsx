@@ -31,7 +31,9 @@ describe('sin marcadores visibles (interruptor encendido)', () => {
     ['/privacidad (1.7-demo)', () => renderToStaticMarkup(<PaginaLegal slug="privacidad" />)],
     ['B.1 regla', () => renderToStaticMarkup(<ReglaPropuesta onListo={() => {}} />) + ROTULO_REGLA],
   ]
-  for (const [n, f] of pantallas) it(n, () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const h = f().replace(/<[^>]+>/g, ' '); expect(h.match(MARCADOR)?.[0] ?? null).toBeNull() })
+  for (const [n, f] of pantallas) it(n, () => { vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const h = f().replace(/<[^>]+>/g, ' '); expect(h.match(MARCADOR)?.[0] ?? null).toBeNull()
+    // Paso 16: las notas internas para Legal (<!-- LEGAL: … -->) nunca se ven, ni dentro de un párrafo.
+    expect(h).not.toMatch(/&lt;!--|LEGAL:/) })
   it('ningún texto del código de la app (fuera de comentarios y pruebas) tiene marcadores', async () => {
     const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readdirSync(r: URL, o: { recursive: true }): string[]; readFileSync(r: URL, c: 'utf8'): string }
     const malos: string[] = []
