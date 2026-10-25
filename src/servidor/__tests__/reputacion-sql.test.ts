@@ -22,7 +22,9 @@ beforeAll(async () => {
   for (const u of [A, B]) {
     await db.query('insert into auth.users(id) values ($1)', [u])
     await db.query(`insert into public.lk_reputacion_perfiles(usuario, nombre_visible, canton) values ($1, 'Laura V.', 'Escazú')`, [u])
-    await db.query(`insert into public.lk_reputacion_consentimientos(usuario, rol, opcion, version, texto) values ($1, 'dueno', 'perfil', 'demo', '{a,b}')`, [u])
+    await db.query(`insert into public.lk_reputacion_aceptaciones(usuario, version, texto) values ($1, 'demo', '{a,b}')`, [u])
+    await db.query(`insert into public.lk_reputacion_consentimientos(usuario, rol, opcion, version, texto) values ($1, 'dueno', 'destacados', 'demo', '{a}')`, [u])
+    await db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, limite) values ($1, 'inquilino', gen_random_uuid(), 'x', now())`, [u])
   }
 }, 30_000)
 
@@ -42,11 +44,20 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
     await db.query('select public.lk_pedir_borrado_cuenta()')
     expect(await cuenta('public.lk_reputacion_perfiles', A)).toBe(0)
     expect(await cuenta('public.lk_reputacion_perfiles', B)).toBe(1)
+    expect(await cuenta('public.lk_reputacion_aceptaciones', A)).toBe(0); expect(await cuenta('public.lk_reputacion_aceptaciones', B)).toBe(1)
     await como(null)
     expect((await uno<{ n: number }>('select public.lk_borrar_cuentas_pedidas() n')).n).toBe(1)
     expect((await uno<{ n: number }>('select count(*)::int n from auth.users where id = $1', [A])).n).toBe(0)
     expect((await uno<{ h: Date | null }>('select hecho_en h from public.lk_solicitudes_borrado where usuario = $1', [A])).h).not.toBeNull()
+    expect(await cuenta('public.lk_reputacion_revisiones', A)).toBe(0)
     expect((await uno<{ n: number }>('select public.lk_borrar_cuentas_pedidas() n')).n).toBe(0)
+  })
+  it('REP-01 es una sola aceptación con versión, fecha y hora; las vitrinas no aceptan «perfil»; la nota de respuesta tiene hasta 300 caracteres', async () => {
+    const r = await uno<{ v: string; t: Date }>('select version v, aceptado_en t from public.lk_reputacion_aceptaciones where usuario = $1', [B])
+    expect(r.v).toBe('demo'); expect(r.t).toBeInstanceOf(Date)
+    await expect(db.query(`insert into public.lk_reputacion_consentimientos(usuario, rol, opcion, version, texto) values ($1, 'inquilino', 'perfil', 'demo', '{a}')`, [B])).rejects.toThrow()
+    await expect(db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, nota, limite) values ($1, 'dueno', gen_random_uuid(), 'x', repeat('n', 301), now())`, [B])).rejects.toThrow()
+    await db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, nota, limite) values ($1, 'dueno', gen_random_uuid(), 'x', repeat('n', 300), now())`, [B])
   })
   it('lo negativo de más de 10 años se borra; lo reciente queda', async () => {
     await db.query(`insert into public.lk_reputacion_eventos(usuario, rol, contrato_id, tipo, valor, ocurrio_en) values

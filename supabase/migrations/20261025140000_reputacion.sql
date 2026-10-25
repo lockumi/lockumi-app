@@ -3,7 +3,9 @@
 -- Hoy app.lockumi.com no llama a estas funciones.
 --
 -- Qué hace:
---   1. Perfil público y opciones aceptadas (consentimiento por papel, con versión, fecha y texto aceptado).
+--   1. Perfil público (se crea con la cuenta) y la aceptación de REP-01 + REP-01b, en una pantalla aparte antes de crear la cuenta,
+--      con versión, fecha y hora y el texto aceptado (Ley 8968; legal/reputacion-textos-para-producto.md, regla 5). Vitrinas opcionales.
+--   1b. Revisiones pedidas (REP-11): acuse con fecha y hora, «En revisión» y respuesta en 5 días hábiles; nota de hasta 300 caracteres.
 --   2. Eventos negativos (dueño: reclamo indebido; inquilino: descuento del depósito) que se borran a los 10 años.
 --   3. Eliminar la cuenta (decisión de Katherine, 25/10/2026, 2:11 p. m.): gratis; el perfil deja de mostrarse al instante y todo
 --      se borra en un máximo de 5 días hábiles (lunes a viernes, sin los feriados de Costa Rica).
@@ -17,11 +19,18 @@ create table if not exists public.lk_reputacion_perfiles (
   canton text not null,                         -- nunca barrio ni dirección
   creado_en timestamptz not null default now()
 );
--- LEGAL: revisar · una fila por papel y opción; no se puede retirar sin eliminar la cuenta.
+-- REP-01 (y REP-01b, mayoría de edad): una fila por cuenta. No se puede retirar sin eliminar la cuenta.
+create table if not exists public.lk_reputacion_aceptaciones (
+  usuario uuid primary key references auth.users(id) on delete cascade,
+  version text not null,                        -- p. ej. 'reputacion-1.0-demo · 25/10/2026 2:24 p. m.'
+  texto text[] not null,                        -- el texto exacto que vio y aceptó
+  aceptado_en timestamptz not null default now() -- fecha y hora
+);
+-- Vitrinas (REP-06, opcionales): una fila por papel y opción. LEGAL: revisar
 create table if not exists public.lk_reputacion_consentimientos (
   usuario uuid not null references auth.users(id) on delete cascade,
   rol text not null check (rol in ('dueno','inquilino')),
-  opcion text not null check (opcion in ('perfil','destacados','nuevos')),
+  opcion text not null check (opcion in ('destacados','nuevos')),
   version text not null,
   texto text[] not null,
   aceptado_en timestamptz not null default now(),
@@ -37,6 +46,24 @@ create table if not exists public.lk_reputacion_eventos (
   valor numeric(3,2) not null check (valor between 0 and 5),   -- lo que vale ese alquiler (de 0 a 5)
   ocurrio_en timestamptz not null
 );
+-- REP-11: revisiones pedidas. Mientras no se resuelven, ese alquiler no cuenta y el puntaje público dice «En revisión».
+create table if not exists public.lk_reputacion_revisiones (
+  id bigint generated always as identity primary key,
+  usuario uuid not null references auth.users(id) on delete cascade,
+  rol text not null check (rol in ('dueno','inquilino')),
+  contrato_id uuid not null,
+  texto text not null check (char_length(btrim(texto)) > 0),
+  nota text check (nota is null or char_length(nota) <= 300),   -- derecho de respuesta
+  pedida_en timestamptz not null default now(),
+  limite timestamptz not null,                                  -- 5 días hábiles (lk_fecha_limite_borrado)
+  resuelta_en timestamptz
+);
+alter table public.lk_reputacion_aceptaciones enable row level security;
+alter table public.lk_reputacion_revisiones enable row level security;
+drop policy if exists lk_rep_acept_propia on public.lk_reputacion_aceptaciones;
+create policy lk_rep_acept_propia on public.lk_reputacion_aceptaciones for select using (usuario = auth.uid());
+drop policy if exists lk_rep_rev_propias on public.lk_reputacion_revisiones;
+create policy lk_rep_rev_propias on public.lk_reputacion_revisiones for select using (usuario = auth.uid());
 alter table public.lk_reputacion_perfiles enable row level security;
 alter table public.lk_reputacion_consentimientos enable row level security;
 alter table public.lk_reputacion_eventos enable row level security;
@@ -83,6 +110,7 @@ begin
   return ((d + 1)::timestamp at time zone 'America/Costa_Rica') - interval '1 millisecond';
 end $$;
 
+-- TODO(Legal): qué pasa con un alquiler abierto al eliminar la cuenta. Pendiente de Legal; no hay regla ni texto todavía.
 -- La persona pide eliminar su cuenta (gratis). El perfil deja de mostrarse al instante: se borran ya el perfil y los consentimientos.
 create or replace function public.lk_pedir_borrado_cuenta() returns timestamptz
 language plpgsql security definer set search_path = public as $$
@@ -92,6 +120,7 @@ begin
   insert into public.lk_solicitudes_borrado(usuario, fecha_limite) values (u, public.lk_fecha_limite_borrado(now()))
   on conflict (usuario) do nothing;                         -- un segundo pedido no corre el plazo
   delete from public.lk_reputacion_consentimientos where usuario = u;
+  delete from public.lk_reputacion_aceptaciones where usuario = u;
   delete from public.lk_reputacion_perfiles where usuario = u;
   select fecha_limite into lim from public.lk_solicitudes_borrado where usuario = u;
   return lim;
@@ -108,12 +137,14 @@ begin
   for s in select usuario from public.lk_solicitudes_borrado where hecho_en is null for update skip locked loop
     delete from public.lk_reputacion_eventos where usuario = s.usuario;
     delete from public.lk_reputacion_consentimientos where usuario = s.usuario;
+    delete from public.lk_reputacion_aceptaciones where usuario = s.usuario;
+    delete from public.lk_reputacion_revisiones where usuario = s.usuario;
     delete from public.lk_reputacion_perfiles where usuario = s.usuario;
     delete from auth.users where id = s.usuario;          -- la cuenta (las tablas con FK a auth.users se borran en cascada)
     update public.lk_solicitudes_borrado set hecho_en = now() where usuario = s.usuario;
     n := n + 1;
   end loop;
-  -- LEGAL: revisar · 10 años (tope legal; legal/reputacion-textos.md, sección E).
+  -- 10 años (regla 8 de legal/reputacion-textos-para-producto.md).
   delete from public.lk_reputacion_eventos where ocurrio_en < now() - interval '10 years';
   return n;
 end $$;
