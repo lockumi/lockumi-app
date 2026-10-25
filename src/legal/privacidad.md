@@ -2,7 +2,7 @@
 
 > Versión demo en red de prueba. Este texto puede actualizarse; te avisaremos de los cambios importantes.
 
-**Versión 1.5-demo · 20 de octubre de 2026**
+**Versión 1.6-demo · 24 de octubre de 2026**
 
 ## Responsable
 Katherine María Moreira Solano, persona física, con domicilio en Torres de Heredia, Barreal de Heredia, Costa Rica. Lockumi es un proyecto de Quantz, una iniciativa que todavía no está constituida como sociedad. Contacto: business.applockumi@gmail.com.
@@ -13,7 +13,8 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 ## Qué datos recogemos
 - **Datos de acceso:** tu correo electrónico y, si entras con Google o Apple, el nombre asociado a ese servicio. El inicio de sesión lo gestiona Cavos.
 - **Billetera (tu cuenta digital en la app):** la dirección pública de tu billetera, que crea Cavos. Si eliges el USDC de prueba que te da Lockumi, el depósito no sale de tu billetera, sino de una cuenta de inquilino de prueba de Lockumi. Lockumi no recibe ni guarda tu llave privada. Como Lockumi puede vincular esa dirección con tu correo, **la tratamos como un dato personal**.
-- **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Las transacciones las firmas tú en la extensión de Freighter, y Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
+<!-- LEGAL: revisado (24/10) · ronda 9b (quién firma: ver Términos 5.3) -->
+- **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Si usas Freighter, las transacciones de tu billetera las confirmas tú en la extensión. Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba. Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
 - **Alquiler simulado:** el lugar (la dirección del inmueble) que escribes, el monto, las fechas, las reglas, las firmas con fecha y hora, el inventario de entrada y de salida, el reclamo simulado y el historial de eventos.
 - **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. En la fase 1, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. En la fase 2, cuando esté disponible, las fotos reducidas sí se guardarán en Supabase (ver abajo).
 - **Aceptaciones:** la versión y la fecha en que aceptaste estos textos, guardadas en tu navegador y en tu perfil.

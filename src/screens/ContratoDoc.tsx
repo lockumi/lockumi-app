@@ -30,17 +30,18 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
 
     <section className="ct__sec"><h3>El depósito</h3>
       {/* Texto que ya mostraba la app en «El contrato». */}
-      <p className="ct__texto">El depósito queda guardado hasta el final. Nadie puede tomarlo solo: ni el dueño, ni el inquilino, ni Lockumi.</p>
+      {/* LEGAL: revisado (24/10) */}
+      <p className="ct__texto">El depósito queda guardado hasta el final. Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.</p>
     </section>
 
     <section className="ct__sec"><h3>7 días para reclamos</h3>
-      {/* LEGAL: revisar. Resumen de la cláusula 6.5 de los Términos 1.5-demo. */}
-      <p className="ct__texto">Al terminar el alquiler, el dueño tiene 7 días para hacer un reclamo, con fotos y una factura o un presupuesto. Si no reclama, el depósito vuelve completo al inquilino. El inquilino tiene 7 días para responder.</p>
+      {/* LEGAL: revisar. Resumen de la cláusula 6.5 de los Términos 1.6-demo. LEGAL: revisado (24/10) · «después de 7 días…» */}
+      <p className="ct__texto">Al terminar el alquiler, el dueño tiene 7 días para hacer un reclamo, con fotos y una factura o un presupuesto. Si no reclama, después de 7 días el depósito se devuelve completo al inquilino. El inquilino tiene 7 días para responder.</p>
     </section>
 
     <section className="ct__sec"><h3>Mediación</h3>
-      {/* LEGAL: revisar. Resumen de la cláusula 6.7 de los Términos 1.5-demo. */}
-      <p className="ct__texto">Si no se ponen de acuerdo, una persona mediadora revisa las fotos de entrada y de salida y decide cómo se reparte el depósito.{modoPrueba ? ' En esta prueba, la persona mediadora es simulada.' : ''}</p>
+      {/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide. Resumen de la cláusula 6.7 de los Términos 1.6-demo. */}
+      <p className="ct__texto">Si no se ponen de acuerdo, una persona mediadora revisa con ustedes las fotos de entrada y de salida y les ayuda a buscar un acuerdo sobre el reparto del depósito. No decide por ustedes.{modoPrueba ? ' En esta prueba, la mediación es una simulación y el reparto se elige con el botón «Resolver el reclamo (simulación)».' : ''}</p>
     </section>
 
     <section className="ct__sec"><h3>Firmas</h3>
@@ -81,7 +82,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
       </div>
     </> : completo}
 
-    {/* LEGAL: revisar. Resumen de las cláusulas 2.5 y 2.6 de los Términos 1.5-demo y de la línea de privacidad aprobada. */}
+    {/* LEGAL: revisar. Resumen de las cláusulas 2.5 y 2.6 de los Términos 1.6-demo y de la línea de privacidad aprobada. */}
     <footer className="ct__pie">
       {modoPrueba && <p>Es una prueba en la red de prueba de Stellar, sin dinero real. No reemplaza un contrato de alquiler.</p>}
       <p>Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.</p>
@@ -89,8 +90,9 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
   </article>
 }
 
-/** Contrato (resumen fijo y resto plegable) con el botón «Descargar o imprimir», que siempre imprime el contrato completo. El navegador abre su ventana de impresión, donde también se puede guardar como PDF. */
-export function ContratoDoc({ a }: { a: Alquiler }) {
+/** Contrato (resumen fijo y resto plegable) con el botón «Descargar o imprimir», que siempre imprime el contrato completo. El navegador abre su ventana de impresión, donde también se puede guardar como PDF.
+ *  `completo`: sin plegar (lo usa el panel de «Ver contrato» del contrato compacto); el texto es el mismo. */
+export function ContratoDoc({ a, completo: todo }: { a: Alquiler; completo?: boolean }) {
   const [imprimiendo, setImprimiendo] = useState(false)
   // Siempre empieza cerrado (no se guarda en ningún lado). Al imprimir con el menú del navegador, @media print muestra lo plegado
   // igual; además se abre aquí para que pantalla e impresión coincidan, y al terminar vuelve a como estaba.
@@ -113,7 +115,7 @@ export function ContratoDoc({ a }: { a: Alquiler }) {
     return () => { clearTimeout(t); removeEventListener('afterprint', fin); document.documentElement.classList.remove('imprimiendo') }
   }, [imprimiendo])
   return <div className="pila">
-    <Documento a={a} plegado={{ abierto, alternar: () => setAbierto(v => !v), id }} />
+    {todo ? <Documento a={a} /> : <Documento a={a} plegado={{ abierto, alternar: () => setAbierto(v => !v), id }} />}
     <button type="button" className="boton boton--secundario boton--ancho ct__imprimir" onClick={() => setImprimiendo(true)}>Descargar o imprimir</button>
     <p className="nota centro">Se abre la ventana de impresión. Para descargarlo, elige «Guardar como PDF».</p>
     {imprimiendo && createPortal(<div className="impresion"><Documento a={a} impresion /></div>, document.body)}

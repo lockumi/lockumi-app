@@ -1,4 +1,4 @@
-// Contrato plegable: recorrido con Playwright en Firma y Detalle (390 y 1280 px), capturas cerrado/abierto, teclado y PDF.
+// Contrato plegable: recorrido con Playwright en Firma (390 y 1280 px; en Detalle ahora va el contrato compacto), capturas cerrado/abierto, teclado y PDF.
 // Vite en localhost:5173 con VITE_TRUSTLESS=1 y VITE_CAVOS_APP_ID (como producción). Sesión simulada como la deja el login
 // (lockumi.usuario con metodo 'google' + identidad pública de Cavos). /api/solo se responde AQUÍ con datos de ejemplo (solo
 // «dueno» y «cuenta-prueba»; no se paga): no hace falta la vista previa protegida ni ningún enlace para saltar la protección.
@@ -6,7 +6,7 @@
 import { chromium } from 'playwright'
 import { Keypair } from '@stellar/stellar-sdk'
 import { execFileSync } from 'node:child_process'
-const APP_ID = (process.env.VITE_CAVOS_APP_ID || '').trim(), OUT = process.env.OUT || 'contrato-plegable-', B = 'http://localhost:5173/'
+const APP_ID = (process.env.VITE_CAVOS_APP_ID || '').trim(), OUT = process.env.OUT || 'contrato-plegable-', B = process.env.BASE || 'http://localhost:5173/'
 const DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
 const fallas = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fallas.push(m) }
 const browser = await chromium.launch({ ...(process.env.CHROME && { executablePath: process.env.CHROME }), args: ['--no-sandbox'] })
@@ -97,7 +97,7 @@ for (const [n, w] of [['movil', 390], ['escritorio', 1280]]) {
     ok(await p.locator('.cp-abrir').getAttribute('aria-expanded') === 'false', 'después de imprimir sigue cerrado')
     for (const f of ['impresion-menu-cerrado', 'impresion-boton-cerrado']) {
       const t = execFileSync('pdftotext', [`${OUT}${f}.pdf`, '-']).toString().replace(/\s+/g, ' ').toLowerCase()
-      const faltan = ['El alquiler', 'Partes', 'Reglas', 'No se permiten mascotas', 'El depósito', 'Nadie puede tomarlo solo', '7 días para reclamos', 'Mediación', 'persona mediadora es simulada', 'Firmas', 'No reemplaza un contrato de alquiler', 'Este contrato se guarda solo en tu navegador']
+      const faltan = ['El alquiler', 'Partes', 'Reglas', 'No se permiten mascotas', 'El depósito', 'Ni el dueño ni el inquilino pueden tomarlo solos', '7 días para reclamos', 'Mediación', 'la mediación es una simulación', 'No decide por ustedes', 'Firmas', 'No reemplaza un contrato de alquiler', 'Este contrato se guarda solo en tu navegador']
         .filter(x => !t.includes(x.toLowerCase()))
       if (f === 'impresion-boton-cerrado') ok(!t.includes('firmas del contrato') && !t.includes('tus alquileres'), `PDF ${f}: solo el contrato (sin el resto de la pantalla)`)
       ok(!faltan.length && !t.includes('ver contrato completo'), `PDF ${f}: contrato completo${faltan.length ? ' (faltan: ' + faltan.join(', ') + ')' : ''}`)
@@ -107,17 +107,11 @@ for (const [n, w] of [['movil', 390], ['escritorio', 1280]]) {
   // ---- Firmar con el contrato cerrado y pasar a Detalle ----
   await casilla.check(); await p.getByRole('button', { name: 'Firma como inquilino' }).click()
   await p.getByText('Ahora te toca: pagar el depósito.').waitFor({ timeout: 30000 }); await p.waitForTimeout(1200)
-  const enLado = await p.locator('.detalle__lado .ct').count(); ok(enLado === 1, 'detalle: contrato en la columna lateral')
-  const b2 = await revisar('detalle')
-  ok(await p.locator('.ct__sello--ok').first().isVisible(), 'detalle: sello «Firmado por los dos» visible cerrado')
-  console.log('  desborde', JSON.stringify(await desborde()))
-  await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: `${OUT}detalle-cerrado-${n}.png`, fullPage: true })
-  await teclado(b2, 'detalle')
-  await b2.click(); await p.waitForTimeout(400); await p.mouse.move(0, 0)
-  await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: `${OUT}detalle-abierto-${n}.png`, fullPage: true })
-  // Volver a entrar: empieza cerrado otra vez (no se recuerda)
-  await p.reload(); await p.waitForTimeout(1500); await entendido()
-  ok(await p.locator('.cp-abrir').getAttribute('aria-expanded') === 'false', 'detalle: al volver a entrar empieza cerrado')
+  // Desde el 24/10/2026 (contrato compacto) el detalle ya no muestra el contrato plegable en la columna: tarjeta corta (escritorio) o
+  // barra compacta (celular) con «Ver contrato». Lo revisa a fondo scripts/contrato-compacto/capturar.mjs.
+  ok(await p.locator('.detalle .cp-abrir, .detalle .ct:not(.ct--impresion)').count() === 0, 'detalle: sin contrato plegable en la columna')
+  ok(await p.locator(movil ? '.cc-barra' : '.detalle__lado .cc-tarjeta').count() === 1 && await p.locator('.cc-tarjeta, .cc-barra').count() === 1, `detalle: ${movil ? 'barra compacta' : 'tarjeta corta'} (una sola variante)`)
+  await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: `${OUT}detalle-compacto-${n}.png`, fullPage: true })
   await ctx.close()
 }
 await browser.close()

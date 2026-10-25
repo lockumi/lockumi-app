@@ -111,7 +111,8 @@ export function PagoReal({ a, rol }: { a: Alquiler; rol: Rol }) {
     <Cuentas a={a} />
     {!listo ? <><p className="mini">Parte 1 de 2 · Consigue USDC de prueba</p><ObtenerUsdc objetivo={a.monto} onListo={r => setListo(Number(r.saldo) >= a.monto)} /></> : <>
       <p className="mini">Parte 2 de 2 · Deposita</p>
-      <p>Tus {usd(a.monto)} de prueba quedan bloqueados en una cuenta segura de Trustless Work en la red de prueba de Stellar. Nadie puede tomarlos solo.
+      {/* LEGAL: revisado (24/10) */}
+      <p>Tus {usd(a.monto)} de prueba quedan bloqueados en una cuenta segura de Trustless Work en la red de prueba de Stellar. Ni el dueño ni el inquilino pueden tomarlos solos.
         {!prueba && ' Tu billetera te mostrará una ventana para confirmar el depósito.'}</p>
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado} onClick={() => void pagar()}>{ocupado ? (avance || 'Un momento…') : `Depositar ${usd(a.monto)}`}</button>
       <p className="nota">Esto toma entre 20 y 60 segundos.</p></>}

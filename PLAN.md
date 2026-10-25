@@ -2,6 +2,9 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## PR 1 (24 oct 2026): contrato compacto + 1.6-demo + volver a aceptar
+- Sale a app.lockumi.com con la pantalla para volver a aceptar dentro de la sesión (regla de Legal: toda versión nueva sale con ella). Sin funciones de la 1.7-demo.
+
 ## Estado actual (20 oct 2026)
 
 - **Repositorio (23 oct 2026):** el repositorio de la app pasó a la organización de GitHub **`lockumi`**: https://github.com/lockumi/lockumi-app (público, rama por defecto `master`). Los enlaces y el `git` de la dirección anterior (`businessapplockumi-crypto/lockumi-app`) redirigen a la nueva. El repositorio de la landing, `lockumi-landing`, **sigue privado en `businessapplockumi-crypto`** y no se mueve. El CI volvió a verde el 23 oct: faltaba en `package-lock.json` la entrada opcional `typescript@5.9.3` que exige `npm ci` con npm 10 (Node 22).
@@ -20,7 +23,26 @@
 - **Probado en producción (24 oct 2026, app.lockumi.com, 390 y 1280 px, sesión de demostración demo@lockumi.com sin login real de Cavos; `/api/solo` respondido por el script, sin tocar la red):** recorrido 97 ✓ (sale solo la primera vez con localStorage limpio, no sale al recargar, «¿Cómo funciona?» lo vuelve a abrir), espera del pago 84 ✓ y aviso v2 21 ✓. Imagen: `diseno/envio/ux-guiada/produccion.jpg`.
 - ~~**Pendiente de Legal antes de usar dinero real:** cambiar «La persona mediadora (simulación) decidió…» del aviso `reparto`.~~ **Cerrado el 24 oct 2026 (rama `ux-guiada`):** Legal aprobó «Reparto del depósito» y «Se repartió el depósito…: {usd(r.dueno)} al dueño y {usd(r.inquilino)} al inquilino», la línea y el texto largo nuevos de la mediación (ayuda a buscar un acuerdo; no decide) y las líneas cortas de los 11 pasos del aviso v2. Detalle: `docs/alertas.md`.
 - **Cerrado el 24 oct 2026 (rama `ux-guiada`):** la tarjeta de Inicio dice «Pagar el depósito · Luego, fotos de entrada» en vez de «Depósito protegido» (Legal). «Depósito guardado» solo se usa cuando ya está pagado.
-- **Pendiente de Legal:** todavía dicen que la persona mediadora «decide» `src/flujo.ts` (línea «sigue» de mediación), el texto de la mediación en `src/screens/Detalle.tsx` y el contrato (`src/screens/ContratoDoc.tsx`). El aviso de ingreso dice «crear un depósito protegido». No se cambian sin el OK de Legal.
+- ~~**Pendiente de Legal:** todavía dicen que la persona mediadora «decide» `src/flujo.ts` (línea «sigue» de mediación), el texto de la mediación en `src/screens/Detalle.tsx` y el contrato (`src/screens/ContratoDoc.tsx`).~~ **Resuelto el 24 oct 2026 en la rama `contrato-compacto` (vista previa, sin publicar):** Legal aprobó los textos nuevos (la persona mediadora ayuda a buscar un acuerdo; no decide), marcados `// LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide`. Ver [`docs/alertas.md`](docs/alertas.md). Sigue pendiente: el aviso de ingreso dice «crear un depósito protegido»; no se cambia sin el OK de Legal.
+- **Vista previa, sin publicar (24 oct 2026, rama `contrato-compacto` desde `051c071`):** contrato compacto en el detalle del alquiler. En la computadora, tarjeta corta (lugar, depósito, fechas, estado y «Ver contrato») arriba de la columna derecha, fija a 48 px y nunca más alta que la pantalla; el contrato completo se abre en un panel lateral. En el teléfono, una barra arriba (lugar · depósito) abre una hoja desde abajo que se cierra deslizando. Imprimir sigue dando el contrato completo; sin cambios en textos legales. La pantalla Firma sigue con el contrato plegable. Ver [`docs/contrato-compacto.md`](docs/contrato-compacto.md).
+- **Antes de producción (lista para el abogado, 24 oct 2026):**
+  - La resolución de disputas (`disputeResolver` en Trustless Work) tiene que quedar en una **persona neutral distinta de la plataforma**. Hoy es la cuenta de Lockumi (`api/_lib/solo.ts`, `api/_lib/tw.ts`). Trustless Work v2 lo exige: https://docs.trustlesswork.com/trustless-work/v2-en/introduction/technology-overview/roles-in-trustless-work
+  - Custodia: quién guarda el depósito y quién puede moverlo en cada rol del escrow.
+  - Si Lockumi sería proveedor de servicios de activos virtuales y qué registro o supervisión le tocaría.
+  - *(Legal, ronda 4, 24 oct 2026)* Hoy el servidor de Lockumi guarda la llave del **dueño de prueba** (`api/_lib/solo.ts`, `duenoDe`) y firma por esa cuenta, por ejemplo la aprobación que devuelve el depósito. Con dinero real, eso sería **custodia**: el abogado tiene que revisarlo, y el dueño real tiene que firmar con su propia billetera.
+  - *(Legal, ronda 6, 24 oct 2026)* **Con dinero real, esto es custodia y tiene que cambiar antes de producción:** hoy el servidor de Lockumi firma por las partes (el reclamo y la aprobación por el dueño de prueba, el depósito por el inquilino de prueba, la liberación y el reparto por la plataforma; `api/_lib/solo.ts` `fondear-prueba`, `aprobar`, `liberar`, `disputar`, `resolver`) y guarda la llave del dueño de prueba (`duenoDe`) y de los inquilinos de prueba. Con dinero real, cada parte tiene que firmar con su propia billetera y Lockumi no puede guardar llaves de las partes.
+- **Antes de publicar los Términos 1.6-demo (Legal, rondas 5 a 8, 24 oct 2026):** desde la ronda 6, la cláusula 5.3 («Firmas.») tiene el texto final de Legal y **ya no depende del cambio en Cavos**: dice que Lockumi no usa la firma sin confirmación de Cavos y que abrir la línea de USDC se firma sin confirmación. Las variantes (a) y (b) de la ronda 5 quedan sin efecto (ver [`docs/alertas.md`](docs/alertas.md), «Legal, ronda 6»).
+  - [ ] Términos 1.6-demo, ronda 7: 3.1, 5.3 y 5.5.1 b) con el texto de Legal sobre quién firma (misma versión y fecha).
+  - [ ] Términos 1.6-demo, ronda 9 y 9b: 5.3 entera (a–f), 2.2 b), 3.1 y 5.5.1 b) con el texto de Legal (opción a: el reclamo y el reparto sí van a la red de prueba); Privacidad 1.6-demo (Freighter, «ver la cláusula 5.3»). Ya no hay discrepancia con producción (ver `docs/alertas.md`, «Legal, ronda 9b»).
+  - [ ] **Aviso de privacidad 1.6-demo · 24 de octubre de 2026** (ronda 7: párrafo de Freighter y quién firma) **necesita el OK de Katherine** antes de publicarse. Al publicarlo, quien aceptó 1.5-demo en producción vuelve a marcar las dos casillas en «Entrar» (una sola vez). Quien ya tiene la sesión abierta no ve «Entrar» y no se le vuelve a pedir: la app no tiene otra pantalla que pida aceptar de nuevo.
+  - [ ] *(recomendado, no bloquea)* Katherine pone en el panel de Cavos (app → Approvals) límites de **0** para XLM y USDC y «Over the limit» = *Ask the user*, para que ningún pago de la billetera se firme sin preguntar.
+  - [ ] Legal revisa los textos que todavía dicen que el usuario firma con su billetera sin decir «si usas tu propia billetera» (lista en `docs/alertas.md`, «Legal, ronda 6»), por ejemplo Términos 3.1.
+  - [ ] La landing (`index.html:148`) sigue sin cambios hasta el OK de Katherine. Texto de Legal: «Si no hay un reclamo con pruebas, después de 7 días se te devuelve tu depósito.»
+  - [ ] **Nueva aceptación con la sesión abierta** (propuesta en `docs/reaceptacion.md`, imagen `reaceptacion.jpg`): necesita el OK de Katherine y debe salir junto con 1.6-demo; si no, quien ya tiene la sesión abierta no acepta la nueva versión.
+- **BLOQUEO: modo de dos personas (Supabase, `modoTrustless`).** Desde la ronda 9b, 5.3 c) ya cubre la aprobación con la billetera del dueño (`trustless.ts:28-30`). No activarlo hasta que Legal reescriba **5.3 e) y 2.2 b) para la fase 2**: ahí la disputa la abriría la billetera del dueño real, no la cuenta del dueño de prueba. La liberación sí la firma el servidor.
+- **Decisión de Katherine (dinero real), Términos 6.3 f):** mientras hay un reclamo, todo el depósito queda bloqueado (escrow *single-release*). Opciones: varias liberaciones (3–5 h de tiempo real / 16–24 h para una persona) o mantener el texto. Antes, preguntarle a Trustless Work si un hito agregado después puede usar el saldo ya depositado (ver `docs/alertas.md`, «Legal, ronda 9b»).
+- **RIESGO DE PRODUCTO:** hoy, en producción, el inquilino elige el reparto con un botón y Lockumi lo ejecuta en la red de prueba. Está informado en Términos 6.7, pero **no puede llegar a dinero real**: en un servicio real, sin acuerdo, el depósito queda bloqueado (ver `docs/alertas.md`, «Legal, ronda 9b»).
+- **Antes de producción (técnico, Legal ronda 4, 24 oct 2026):** una **tarea programada** que devuelva el depósito al terminar el plazo sin reclamo, **sin depender de que alguien abra la app**. Hoy la devolución la dispara la app abierta (`src/screens/Detalle.tsx`, efecto que llama a `cerrarSinReclamo`) y `vercel.json` no tiene crons. Además, revisar en el panel de Cavos (app → Approvals) los límites de firma sin confirmación y la regla «Over the limit» = *Ask the user* (ver `docs/alertas.md`, «Legal, ronda 4»).
 - **Historial:** «Alquiler creado» (ya no dice que se envió una invitación).
 - **Resend:** dominio `lockumi.com` verificado y DNS listos para el correo de invitación de la Parte 4, que **no está activa**. Ver [`docs/correo-resend.md`](docs/correo-resend.md).
 - Próximamente: dos personas reales con invitación por correo o link (Parte 4). El rendimiento con Blend no está activo.
@@ -37,9 +59,9 @@ Demo navegable (no se publica en lockumi.com). Vite + React + TypeScript, estado
 6. **Pago del depósito** — el inquilino paga; queda "apartado" en escrow; mensaje: nadie lo libera solo. ✅ Fase 2
 7. **Rendimiento opcional** — interruptor USDC (Blend); VARIABLE y NO GARANTIZADO; reparto 40% inquilino / 40% dueño / 20% Lockumi; sin tasa fija (cualquier número va marcado como "ejemplo"). ✅ Fase 2
 8. **Acta de salida** — fotos + checklist, comparación lado a lado con la entrada. ✅ Fase 2
-9. **Ventana de reclamo** — 7 días con cuenta regresiva; sin reclamo, el depósito vuelve solo al inquilino; botón "simular paso de 7 días". ✅ Fase 2
+9. **Ventana de reclamo** — 7 días con cuenta regresiva; sin reclamo, después de 7 días el depósito se devuelve al inquilino; botón "simular paso de 7 días". ✅ Fase 2
 10. **Reclamo** — el dueño presenta fotos y monto; el inquilino acepta o rechaza. ✅ Fase 2
-11. **Mediación** — el mediador decide el reparto; mensaje: la mayoría de los casos se resuelve en la app, la mediación es solo para pocos. ✅ Fase 2
+11. **Mediación** — el mediador decide el reparto *(histórico; desde el 24 oct 2026 la persona mediadora ayuda a buscar un acuerdo y no decide)*; mensaje: la mayoría de los casos se resuelve en la app, la mediación es solo para pocos. ✅ Fase 2
 
 ## Simulado vs. real
 | Pieza | Estado | Archivo |
@@ -57,14 +79,14 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Pago del depósito + aviso de escrow multiparte
 - [x] Interruptor de rendimiento con avisos de "variable / no garantizado" y reparto 40/40/20
 - [x] Acta de salida + comparación lado a lado
-- [x] Ventana de 7 días: cuenta regresiva, botón "simular paso de 7 días", devolución automática
+- [x] Ventana de 7 días: cuenta regresiva, botón "simular paso de 7 días", devolución después de 7 días sin reclamo
 - [x] Reclamo (fotos/monto) → aceptar/rechazar → pantalla del mediador (reparto)
 - [x] Línea de tiempo visual con todos los estados
 - [x] Decoraciones SVG, repaso del texto (español neutro, CR), accesibilidad
 - [x] Capturas a 390/1366 de todas las pantallas; despliegue de vista previa (proyecto aparte, NO la landing)
 
 ## Estado al cierre de la fase 2 (16 oct 2026)
-- Recorrido completo verificado con Playwright (`node e2e.mjs <url> [carpeta] [anchos]`) a 390 y 1366: entrar → crear → acta de entrada → firmas → pago → rendimiento → acta de salida → 7 días → devolución automática; y reclamo → rechazo → mediación → cierre. Sin desbordes ni errores JS.
+- Recorrido completo verificado con Playwright (`node e2e.mjs <url> [carpeta] [anchos]`) a 390 y 1366: entrar → crear → acta de entrada → firmas → pago → rendimiento → acta de salida → 7 días → devolución después de 7 días sin reclamo; y reclamo → rechazo → mediación → cierre. Sin desbordes ni errores JS.
 - Fechas: campo propio dd/mm/aaaa con la fecha escrita debajo (ej.: "1 nov 2026"), igual en cualquier navegador.
 - Fondo: la aurora ahora es `absolute` y cubre todo el documento (antes era `fixed` y se cortaba en capturas de página completa).
 - Barra a 390: logo más compacto y "Salir" como ícono.

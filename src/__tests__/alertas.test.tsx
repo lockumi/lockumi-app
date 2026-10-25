@@ -113,6 +113,8 @@ describe('Aviso v2: toast (componente)', () => {
     expect(al.lineaDe({ paso: 'x', titulo: 'T', hecho: 'Pasó esto.', sigue: 'Hacer aquello.' })).toEqual({ texto: 'Hacer aquello.' })
     expect(al.lineaDe({ paso: 'x', titulo: 'T', hecho: 'Pasó esto.' })).toEqual({ texto: 'Pasó esto.' })
     expect(al.lineaDe(al.alertaIngreso(true))).toEqual({ et: 'Sigue:', texto: 'crear o ver tus alquileres' })
+    // LEGAL: revisado (24/10): «depósito de prueba» (antes «depósito protegido»)
+    for (const r of [true, false]) { expect(al.alertaIngreso(r).hecho).toMatch(/Desde aquí puedes ver tus alquileres y crear un depósito de prueba\.$/); expect(al.alertaIngreso(r).hecho).not.toMatch(/protegid/i) }
   })
   it('«Tomar foto» usa el ícono de cámara de la app (sin emoji)', () => {
     const c = leer('../Camara.tsx'); expect(c).toContain('<Icono id="i-camara" />'); expect(c).not.toMatch(EMOJI)
@@ -217,7 +219,7 @@ describe('cada paso del flujo dispara su aviso', () => {
     expect(leer('../screens/Crear.tsx')).toContain("avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))\n      ir('/alquiler/' + r.id)")
     const app = leer('../App.tsx')
     expect(app).toContain('avisar(alertaIngreso(modoReal))'); expect(app).toContain("setRegreso('fallo'); avisar(alertaIngresoFallo())")
-    expect(app.match(/<Alertas \/>/g)).toHaveLength(3)   // Entrar, «Entrando…» y con sesión
+    expect(app.match(/<Alertas \/>/g)).toHaveLength(4)   // Entrar, «Entrando…», volver a aceptar y con sesión
   })
 })
 
@@ -225,7 +227,7 @@ describe('textos de los avisos', () => {
   it('textos aprobados por Legal (23 oct): depósito guardado y mediación', () => {
     const base = { id: '1', direccion: 'Casa', monto: 20, ventanaSegundos: 604800, diasSimulados: 0, contrato: { firmas: {} }, entrada: { firmas: {} } }
     const p = al.alertaPorCambio({ ...base, estado: 'pendiente_pago' } as never, { ...base, estado: 'fotos_entrada' } as never, 'inquilino', VIDEO)!
-    expect(p.titulo).toBe('¡Depósito guardado!'); expect(p.hecho).toMatch(/^[^a-z]*20[^a-z]* guardados en una cuenta segura de la red de prueba\. Nadie puede sacarlos solo\.$/)   // «20 USDC» en la app (formato de usd())
+    expect(p.titulo).toBe('¡Depósito guardado!'); expect(p.hecho).toMatch(/^[^a-z]*20[^a-z]* guardados en una cuenta segura de la red de prueba\. Ni el dueño ni el inquilino pueden sacarlos solos\.$/)   // «20 USDC» en la app (formato de usd())
     const m = al.alertaPorCambio({ ...base, estado: 'reclamo' } as never, { ...base, estado: 'mediacion' } as never, 'inquilino', VIDEO)!
     expect(m.sigue).toBe('Una persona mediadora revisa las fotos y les ayuda a buscar un acuerdo sobre el reparto del depósito. En esta prueba, decides tú el reparto con «Resolver el reclamo (simulación)».')
     expect(al.lineaDe(m)).toEqual({ et: 'En esta prueba:', texto: 'decides tú el reparto (simulación)' })
@@ -287,9 +289,9 @@ describe('error del ingreso escrito en Entrar', () => {
 
 describe('aviso al inicio del orden de Tab', () => {
   const app = leer('../App.tsx')
-  it('<Alertas /> va justo después de «Saltar al contenido» en las tres vistas (sin sesión, entrando y con sesión)', () => {
+  it('<Alertas /> va justo después de «Saltar al contenido» en las cuatro vistas (sin sesión, entrando, volver a aceptar y con sesión)', () => {
     const fondos = app.match(/<Fondo>\{skip\}[\s\S]*?<\/Fondo>/g)!.filter(f => f.includes('<Alertas />'))
-    expect(fondos).toHaveLength(3)
+    expect(fondos).toHaveLength(4)
     for (const f of fondos) expect(f).toMatch(/^<Fondo>\{skip\}\s*<Alertas \/>/)
     expect(app).not.toMatch(/<Pie \/>\s*<Alertas \/>/)
   })

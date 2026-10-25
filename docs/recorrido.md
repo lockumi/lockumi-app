@@ -39,6 +39,10 @@ Los pasos 4 a 6 abren `#/ejemplo`: un alquiler inventado («Apartamento en Barre
 - Unitarias: `src/__tests__/recorrido.test.tsx` (textos exactos, rutas, clave, botones, accesibilidad, CSS sin colores nuevos).
 - Navegador: `scripts/recorrido/capturar.mjs` contra `vite preview` (390 px, 1280 px y movimiento reducido).
 
+## Columna del detalle reordenada (24 oct 2026, rama `contrato-compacto`)
+
+Con el [contrato compacto](contrato-compacto.md), la columna derecha del detalle queda: Contrato (tarjeta corta), Comprobantes, **Los pasos** y Detalles, fija a 48 px y con desplazamiento propio. El paso 6 sigue resaltando «Los pasos» (`[data-recorrido="pasos"]`; en el teléfono su título). `scripts/recorrido/capturar.mjs` revisa además que el elemento resaltado se vea entero en cada paso. Resultado: todo bien en 390 y 1280 px y con movimiento reducido. En el teléfono la barra del contrato queda arriba del detalle, dentro del alquiler de ejemplo de solo lectura (`inert`).
+
 ## Falta
 
 - La maqueta también pone el recorrido en el menú de la cuenta (avatar). La app todavía no tiene ese menú; por ahora están el botón del encabezado y la tarjeta de Inicio.

@@ -70,7 +70,7 @@ const quien = (r: Rol, c: Contexto) => r === 'dueno' && c.prueba ? 'El dueño de
 export const alertaIngreso = (real = modoReal): Alerta => ({
   paso: 'ingreso', titulo: '¡Ingresaste correctamente!',
   linea: { et: 'Sigue:', texto: 'crear o ver tus alquileres' },   // LEGAL: revisado el 23/10
-  hecho: `${real ? 'Estamos preparando tu billetera.' : 'Te damos la bienvenida a la demo.'} Desde aquí puedes ver tus alquileres y crear un depósito protegido.`,
+  hecho: `${real ? 'Estamos preparando tu billetera.' : 'Te damos la bienvenida a la demo.'} Desde aquí puedes ver tus alquileres y crear un depósito de prueba.`,   // LEGAL: revisado (24/10)
 })
 export const alertaIngresoFallo = (): Alerta => ({
   paso: 'ingreso-fallo', tipo: 'error', titulo: 'El ingreso no terminó',
@@ -127,7 +127,8 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
     case 'fotos_entrada': return {
       paso: 'pago', titulo: '¡Depósito guardado!',
       // LEGAL: revisar · texto corto de la red de prueba aprobado por Legal (23 oct 2026)
-      hecho: c.red ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba. Nadie puede sacarlos solo.` : `El depósito de ${usd(ahora.monto)} quedó guardado. Nadie puede tomarlo solo.`,
+      // LEGAL: revisado (24/10)
+      hecho: c.red ? `${usd(ahora.monto)} guardados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.` : `El depósito de ${usd(ahora.monto)} quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.`,
       sigue: 'Tomar las fotos de entrada de cada espacio y marcar la lista.',
       linea: { et: 'Ahora:', texto: 'fotos de entrada' },   // LEGAL: revisado el 23/10
       accion: { texto: 'Tomar fotos →', etiqueta: 'Tomar fotos de entrada', ir: 'panel' },
@@ -149,8 +150,8 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       paso: 'salida-confirmada', titulo: 'Fotos de salida confirmadas',
       hecho: `Los dos confirmaron las fotos de salida. Empiezan los ${textoPlazo(ahora)} para reclamos.`,
       // LEGAL: revisar
-      sigue: c.video ? `Si el dueño de prueba no reclama en ${textoPlazo(ahora)}, el depósito vuelve al inquilino. En esta prueba puedes adelantar el plazo o hacer un reclamo en nombre del dueño de prueba.`
-        : `Si el dueño no reclama en ${textoPlazo(ahora)}, el depósito vuelve al inquilino.`,
+      sigue: c.video ? `Si el dueño de prueba no reclama, después de ${textoPlazo(ahora)} el depósito se devuelve al inquilino. En esta prueba puedes adelantar el plazo o hacer un reclamo en nombre del dueño de prueba.`
+        : `Si el dueño no reclama, después de ${textoPlazo(ahora)} el depósito se devuelve al inquilino.`,   // LEGAL: revisado (24/10)
       linea: { et: 'Sigue:', texto: `${textoPlazo(ahora)} para hacer un reclamo` },   // LEGAL: revisado (24/10) · {textoPlazo} sale del alquiler
     }
     case 'reclamo': return !ahora.reclamo ? null : {

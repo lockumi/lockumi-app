@@ -125,6 +125,7 @@ Hallazgos:
    - Un token nuevo y correr `node scripts/aplicar-supabase-e2e.mjs`.
    - O pegar el SQL de la migración en el SQL Editor y activar Authentication → Sign In / Providers → "Allow anonymous sign-ins".
    - Falta además la clave publishable/anon para `VITE_SUPABASE_ANON_KEY`.
+   - *24 oct 2026 (rama `contrato-compacto`):* hay una migración nueva, `20261024120000_lk_mediacion_acuerdo.sql`, que cambia solo los mensajes de `lk_decidir_mediacion` («Solo la persona mediadora puede registrar el acuerdo.», «Acuerdo registrado: …»). `aplicar-supabase-e2e.mjs` la aplica después de la e2e, en orden. Si alguien ya aplicó la e2e a mano, también hay que correr esta. No toca `20261024000000_lk_espacios.sql` (rama `agregar-espacio`).
 2. **Variables de Vercel (Preview)**: ya están `TRUSTLESS_WORK_API_KEY`, `LOCKUMI_TW_PLATAFORMA_SECRET` (sensibles), `VITE_TRUSTLESS=1` y `VITE_VENTANA_SEGUNDOS=300`. Faltan `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 3. **Panel de Cavos**: Approvals → "Over the limit" = Ask the user, y el origen de la vista previa en allowed web origins.
 4. Sin probar todavía: el flujo por la app (proxy + Supabase) y la firma con el vault de Cavos en dos aparatos reales. El camino feliz contra TW ya está probado por script (sección 6).

@@ -33,6 +33,7 @@ El contrato tiene dos partes (publicado el 23 oct 2026):
 - **Plegado por defecto:** Reglas, El depósito, 7 días para reclamos, Mediación y Firmas. El estado vive en `ContratoDoc` y empieza cerrado cada vez; no lo guardes en localStorage.
 - Una sección nueva va dentro de `completo` (plegada) salvo que Producto y Legal pidan que se vea siempre. No cambies textos legales al moverla.
 - **La impresión siempre es completa.** «Descargar o imprimir» usa `Documento` con `impresion` (sin botón ni partes ocultas); con el menú del navegador, `@media print` muestra `.cp-completo[hidden]` y oculta el botón, y `beforeprint`/`afterprint` lo abren y lo dejan como estaba. Si tocas esto, corre `src/screens/__tests__/contrato-plegable.test.tsx` y `scripts/contrato-plegable/capturar.mjs` (genera los PDF y los revisa con `pdftotext`).
+- **Detalle del alquiler: contrato compacto (rama `contrato-compacto`, sin publicar).** `src/screens/ContratoCompacto.tsx` muestra **una sola variante** según `useEscritorio()` (960 px): tarjeta en la columna (computadora) o barra arriba (teléfono), y un `<dialog>` con `ContratoDoc completo`. No dibujes las dos variantes a la vez (ids repetidos). Si cambias la columna del detalle, corre también `scripts/recorrido/capturar.mjs` (el paso 6 resalta «Los pasos»). Pruebas: `src/screens/__tests__/contrato-compacto.test.tsx` y `scripts/contrato-compacto/capturar.mjs`. Ver [`docs/contrato-compacto.md`](docs/contrato-compacto.md).
 - Accesibilidad: `<button type="button">` con `aria-expanded` y `aria-controls`; el bloque es `role="region"` con `hidden`. Letra de 14 px o más, 56 px de alto como mínimo y solo variables de `src/index.css`.
 
 ## Estado de espera del pago (`src/espera.ts`, `src/EsperaPago.tsx`)
@@ -110,5 +111,5 @@ Si agregas lógica nueva, agrega su prueba en `src/**/__tests__/`.
 - Nombres, textos de la interfaz y comentarios en español neutro.
 - Sigue el estilo de los archivos vecinos: funciones cortas, sin dependencias nuevas si no hacen falta.
 - `npm run lint` no debe dar errores.
-- Los textos legales de `src/legal/` no se editan a mano: se reemplazan como indica `src/legal/LEEME.md`. Hoy son la versión 1.5-demo.
+- Los textos legales de `src/legal/` no se editan a mano: se reemplazan como indica `src/legal/LEEME.md`. Hoy: Términos 1.6-demo (24 oct 2026, rama `contrato-compacto`, sin publicar) y Aviso de privacidad 1.5-demo.
 - Todo texto nuevo con implicación legal (fuera de `src/legal/`) lleva el comentario `// LEGAL: revisar` y se lista en el *pull request* para que Legal lo revise.

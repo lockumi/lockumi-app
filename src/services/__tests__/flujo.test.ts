@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { firmar, estadoFirma, ambos, etapaDe, pasoTexto, turno, ErrorFirma } from '../../flujo'
+import { firmar, estadoFirma, ambos, etapaDe, pasoTexto, turno, ahoraPrueba, ErrorFirma } from '../../flujo'
 import type { Alquiler } from '../../types'
 const T = '2026-10-16T20:00:00Z'
 describe('firmas', () => {
@@ -47,5 +47,22 @@ describe('textoPlazo', async () => {
     expect(textoPlazo({ ventanaSegundos: 7200 })).toBe('2 horas')
     expect(textoPlazo({ ventanaSegundos: 300 })).toBe('5 minutos')
     expect(textoPlazo({ ventanaSegundos: 60 })).toBe('1 minuto')
+  })
+})
+
+// LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide.
+describe('mediación: la persona mediadora ayuda, no decide', () => {
+  const a = (estado: Alquiler['estado']) => ({ estado, contrato: { firmas: {} }, entrada: { firmas: {} } }) as unknown as Alquiler
+  it('textos «sigue» de reclamo y mediación', () => {
+    expect(turno(a('reclamo'), 'inquilino').sigue).toBe('Si lo rechazas, una persona mediadora les ayuda a buscar un acuerdo.')
+    expect(turno(a('reclamo'), 'dueno').sigue).toBe('Si lo rechaza, una persona mediadora les ayuda a buscar un acuerdo.')
+    expect(turno(a('mediacion'), 'inquilino').sigue).toBe('La persona mediadora les ayuda a acordar cómo se reparte el depósito.')
+  })
+  it('línea de la prueba: el reparto lo decides tú (simulación)', () => {
+    expect(ahoraPrueba(a('mediacion'))).toBe('Ahora toca la mediación (simulada). En esta prueba, el reparto lo decides tú con el botón de abajo.')
+  })
+  it('ningún texto dice que la persona mediadora decide', () => {
+    const todo = [...(['reclamo', 'mediacion'] as const).flatMap(e => (['dueno', 'inquilino'] as const).map(r => turno(a(e), r).sigue))].join(' ')
+    expect(todo).not.toMatch(/decide|decidir/)
   })
 })

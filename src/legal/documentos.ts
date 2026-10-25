@@ -39,10 +39,11 @@ export const hayPrivacidad = !!PRIVACIDAD
 
 /** Texto fijo de la casilla de consentimiento de privacidad (ya no viene en privacidad.md; sale solo de la app).
  *  "Aviso de privacidad de la app" se enlaza a /privacidad. La casilla es obligatoria y empieza sin marcar. */
+// LEGAL: revisado (24/10) · ajuste 3 de Legal (docs/reaceptacion.md): «o de mi cuenta de prueba»
 export const CONSENTIMIENTO_PRIVACIDAD = {
   antes: 'Acepto el ',
   enlace: 'Aviso de privacidad de la app',
-  despues: ' y autorizo que Lockumi trate mis datos y los transfiera a Supabase, Vercel, Cavos y Trustless Work, dentro y fuera de Costa Rica, para usar la demo. Entiendo que la demo funciona en la red de prueba de Stellar, con tokens sin valor y sin dinero real, y que la dirección de mi billetera, los montos y las fechas quedan registrados en esa red, que es pública y no se puede borrar.',
+  despues: ' y autorizo que Lockumi trate mis datos y los transfiera a Supabase, Vercel, Cavos y Trustless Work, dentro y fuera de Costa Rica, para usar la demo. Entiendo que la demo funciona en la red de prueba de Stellar, con tokens sin valor y sin dinero real, y que la dirección de mi billetera o de mi cuenta de prueba, los montos y las fechas quedan registrados en esa red, que es pública y no se puede borrar.',
 } as const
 
 /** Fecha legible: acepta ISO aaaa-mm-dd; si viene en otro formato se muestra tal cual. */

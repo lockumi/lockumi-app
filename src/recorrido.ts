@@ -20,8 +20,9 @@ export const PASOS_RECORRIDO: PasoRecorrido[] = [
     texto: 'Toca las reglas del lugar. Quedan escritas en el contrato que firman los dos.' },
   { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '.detalle__principal .cuarto .tomar', titulo: 'Fotos y lista de entrada',
     texto: 'Al entrar, una foto de cada espacio y una lista para marcar. Al salir se repite. Así los dos ven cómo estaba el lugar.' },
+  // LEGAL: revisado (24/10)
   { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito',
-    texto: 'Los dos firman el contrato. Después el inquilino paga el depósito y queda guardado. Nadie lo puede sacar solo. Al entregar el lugar, hay 7 días para hacer un reclamo.' },
+    texto: 'Los dos firman el contrato. Después el inquilino paga el depósito y queda guardado. Ni el dueño ni el inquilino lo pueden sacar solos. Al entregar el lugar, hay 7 días para hacer un reclamo.' },
   { ruta: RUTA_EJEMPLO, estado: 'ventana_reclamo', el: '[data-recorrido="pasos"]', elMovil: '[data-recorrido="pasos"] h3', titulo: 'La devolución',
     texto: 'Si no hay reclamos en 7 días, el depósito se puede devolver al inquilino. Si hay un reclamo, buscamos que una persona mediadora les ayude a llegar a un acuerdo. En esta prueba, la mediación es una simulación.' },
 ]

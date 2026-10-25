@@ -785,6 +785,51 @@ html.sin-scroll{overflow:hidden}
 .ejemplo-cinta{margin:0 0 8px;padding:6px 12px;border-radius:999px;display:inline-block;background:var(--estado-pendiente-fondo);font:700 13px/18px Inter,system-ui,sans-serif;color:var(--cafe)}
 @media (prefers-reduced-motion:reduce){.driver-popover.recorrido{animation:aviso-fade 120ms linear!important}.driver-overlay,.driver-active-element{transition:none!important}}
 
+/* ===== Contrato compacto (maqueta diseno/envio/contrato-compacto, aprobada el 24/10/2026). Prefijo cc-, solo tokens de este archivo. =====
+   Escritorio: tarjeta corta en la columna derecha, que queda fija bajo el aviso de la red de prueba (48 px) y nunca es más alta que la
+   pantalla (si no cabe, se desplaza por dentro). Celular: barra compacta arriba, que se va con la página. Las dos abren .cc-panel. */
+@media (min-width:960px){.detalle__lado{top:48px;max-height:calc(100vh - 64px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:2px;margin:-2px}}
+.cc-arriba{margin-top:var(--s4)}
+.cc-barra{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 12px 10px 16px;border:0;border-radius:18px;
+  background:rgba(255,255,255,.92);box-shadow:inset 0 0 0 1.5px var(--linea),0 6px 18px rgba(61,42,34,.08);color:var(--cafe);text-align:left;cursor:pointer;font:inherit}
+.cc-barra__txt{flex:1;min-width:0;display:grid}
+.cc-barra__txt small{font:700 14px/18px var(--f-texto);letter-spacing:.06em;text-transform:uppercase;color:var(--accion)}
+.cc-barra__txt strong{font:700 16px/22px var(--f-titulo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-barra__ver{flex:none;min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:var(--r-pildora);background:var(--fondo);box-shadow:inset 0 0 0 1.5px var(--linea);font:600 15px/20px var(--f-texto);color:var(--accion-activo)}
+.cc-barra:focus-visible{box-shadow:var(--foco)}
+.cc-tarjeta .ct__marca{margin:0}
+.cc-tarjeta__t{margin:2px 0 10px;font:800 22px/28px var(--f-titulo)}
+.cc-datos{display:grid;gap:6px;margin:0 0 12px;font-size:15px;line-height:20px}
+.cc-datos>div{display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:baseline}
+.cc-datos dt{color:var(--cafe-suave)}.cc-datos dd{margin:0;text-align:left;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.cc-panel{position:fixed;margin:0;padding:0;border:0;color:var(--cafe);background:rgb(255,251,248);overflow:hidden;flex-direction:column;transition:transform 200ms var(--ease)}
+.cc-panel[open]{display:flex}
+.cc-panel::backdrop{background:rgba(61,42,34,.38);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.cc-panel__cab{flex:none;padding:16px 16px 12px 24px;border-bottom:1px solid var(--linea)}
+.cc-panel__fila{display:flex;align-items:center;gap:8px}.cc-panel__esp{flex:1}
+.cc-panel__cuerpo{overflow:auto;overscroll-behavior:contain;padding:16px 24px 24px}
+.cc-panel .ct{border:0;padding:4px}
+/* Panel a la derecha (escritorio) */
+.cc-panel--lado{inset:0 0 0 auto;width:min(480px,100vw);height:100vh;max-height:none;max-width:none;border-radius:28px 0 0 28px;box-shadow:-10px 0 40px rgba(61,42,34,.18)}
+.cc-panel--lado[open]{animation:cc-entra 260ms var(--ease)}
+.cc-panel--lado .ct__datos{grid-template-columns:1fr 1fr}
+/* Hoja desde abajo (celular): la cabecera con el asa se arrastra hacia abajo para cerrar */
+.cc-panel--hoja{inset:auto 0 0 0;width:100%;max-width:none;max-height:90vh;border-radius:28px 28px 0 0;box-shadow:0 -10px 40px rgba(61,42,34,.18)}
+.cc-panel--hoja[open]{animation:sube 280ms var(--ease)}
+.cc-panel--hoja .cc-panel__cab{padding:8px 16px 8px 20px;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none}
+.cc-panel--hoja .cc-panel__cuerpo{padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.cc-panel__asa{width:40px;height:5px;border-radius:3px;background:rgba(61,42,34,.22);margin:0 auto 6px}
+@keyframes cc-entra{from{transform:translateX(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.cc-panel[open]{animation:none}.cc-panel{transition:none}}
+/* Imprimir con el menú del navegador: el contrato completo en lugar de la tarjeta o la barra */
+.cc-papel{display:none}
+@media print{
+  html:not(.imprimiendo) .cc-papel{display:block}
+  html:not(.imprimiendo) .cc-tarjeta>:not(.cc-papel),html:not(.imprimiendo) .cc-barra{display:none!important}
+  .cc-panel{display:none!important}
+  .detalle__lado{position:static;max-height:none;overflow:visible}
+}
+
 /* ── Estado de espera v2 del pago (src/EsperaPago.tsx; docs/estado-espera.md). Copiado de la maqueta aprobada
    diseno/estado-espera/v2/espera.css; solo usa variables de la paleta. ── */
 .envio{display:grid;gap:10px}
@@ -859,4 +904,3 @@ html.sin-scroll{overflow:hidden}
 /* El botón en espera no usa [disabled] (aria-disabled): sin hover terracota mientras espera. */
 .envio .boton.envio__boton:hover{filter:none}
 .envio--t1 .boton.envio__boton:hover{background:var(--estado-curso-fondo)}.envio--t2 .boton.envio__boton:hover{background:var(--salvia)}.envio--t3 .boton.envio__boton:hover{background:var(--exito)}
-

@@ -1,5 +1,7 @@
 // Contrato plegable (maqueta producto/contrato-plegable): cerrado por defecto, se abre y se cierra con un botón real
 // (aria-expanded / aria-controls / hidden) y la versión para imprimir o guardar como PDF es siempre la completa.
+// Desde el 24/10/2026 (contrato compacto) el detalle del alquiler ya no muestra este contrato plegable en la columna derecha: lo
+// muestra entero dentro del panel «Ver contrato» (ver contrato-compacto.test.tsx). Lo plegable sigue en la pantalla de firma.
 import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { isValidElement, type ReactElement, type ReactNode } from 'react'
@@ -15,13 +17,13 @@ const css = fs.readFileSync(new URL('../../index.css', import.meta.url), 'utf8')
 const A: Alquiler = {
   id: '3f2a9c1b-0000-4000-8000-000000000000', direccion: 'Apartamento en Barreal de Heredia', monto: 20, moneda: 'USDC',
   inicio: '2026-10-19', fin: '2027-04-19', reglas: ['No se permiten mascotas', 'No fumar dentro del apartamento'],
-  duenoEmail: 'dueno@ejemplo.cr', inquilinoEmail: 'katherine@ejemplo.cr', estado: 'firmas', rendimiento: false, historial: [],
+  duenoEmail: 'demo@lockumi.com', inquilinoEmail: 'demo@lockumi.com', estado: 'firmas', rendimiento: false, historial: [],
   contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, diasSimulados: 0,
 }
-const SIEMPRE = ['Contrato', 'Pendiente de firmas', 'Referencia 3F2A9C1B', 'El alquiler', 'Apartamento en Barreal de Heredia', 'Partes', 'katherine@ejemplo.cr',
+const SIEMPRE = ['Contrato', 'Pendiente de firmas', 'Referencia 3F2A9C1B', 'El alquiler', 'Apartamento en Barreal de Heredia', 'Partes', 'demo@lockumi.com',
   'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.', 'Descargar o imprimir']
-const PLEGADO = ['Reglas', 'No se permiten mascotas', 'El depósito', 'Nadie puede tomarlo solo: ni el dueño, ni el inquilino, ni Lockumi.',
-  '7 días para reclamos', 'Mediación', 'Si no se ponen de acuerdo, una persona mediadora revisa las fotos', 'Firmas', 'Pendiente</span>']
+const PLEGADO = ['Reglas', 'No se permiten mascotas', 'El depósito', 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.',
+  '7 días para reclamos', 'Mediación', 'Si no se ponen de acuerdo, una persona mediadora revisa con ustedes las fotos', 'Firmas', 'Pendiente</span>']
 
 /** Parte el HTML en lo que queda a la vista y lo que está dentro del bloque plegado (`<div class="cp-completo" …>`). */
 const partir = (html: string) => {

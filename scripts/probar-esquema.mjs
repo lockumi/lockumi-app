@@ -100,12 +100,14 @@ await espera('salida y ventana', async () => {
 await falla('reclamo sin foto rechazado', () => como(DUENO, `select public.lk_reclamar($1, 30, 'Mancha en la pared de la sala')`, [id]), /foto del daño/)
 await falla('el inquilino no puede reclamar', () => como(INQ, `select public.lk_reclamar($1, 30, 'Mancha en la pared de la sala')`, [id]), /dueño/)
 await falla('reclamo mayor que el depósito', async () => { await como(DUENO, `select public.lk_registrar_foto($1, 'reclamo', null, $2, $3, now(), null, 'camara', false)`, [id, `${id}/reclamo/1.jpg`, 'e'.repeat(64)]); await como(DUENO, `select public.lk_reclamar($1, 500, 'Mancha en la pared de la sala')`, [id]) }, /no más que el depósito/)
-await espera('reclamo, rechazo y mediador decide', async () => {
+// LEGAL: revisado (24/10) · textos de 20261024120000_lk_mediacion_acuerdo.sql (la persona mediadora registra el acuerdo, no decide)
+await espera('reclamo, rechazo y acuerdo registrado por la persona mediadora', async () => {
   await como(DUENO, `select public.lk_reclamar($1, 30, 'Mancha en la pared de la sala')`, [id]); await como(INQ, `select public.lk_responder_reclamo($1, false)`, [id])
-  await falla('x', () => como(DUENO, `select public.lk_decidir_mediacion($1, 30)`, [id]), /Solo una persona mediadora/)
+  await falla('x', () => como(DUENO, `select public.lk_decidir_mediacion($1, 30)`, [id]), /Solo la persona mediadora puede registrar el acuerdo\./)
   const v = await como(MED, `select estado from public.lk_contratos where id = $1`, [id]); if (v[0]?.estado !== 'mediacion') throw new Error('el mediador no ve el caso')
   await como(MED, `select public.lk_decidir_mediacion($1, 20, 'Daño parcial')`, [id])
   const [c] = await como(INQ, `select estado, resultado from public.lk_contratos where id = $1`, [id]); if (c.estado !== 'cerrado' || Number(c.resultado.dueno) !== 20 || Number(c.resultado.inquilino) !== 80) throw new Error(JSON.stringify(c))
+  const ev = await como(INQ, `select texto from public.lk_eventos where contrato_id = $1 order by id`, [id]); if (!ev.some(x => /^Acuerdo registrado: 20 USDC al dueño y 80(\.00)? al inquilino · Daño parcial$/.test(x.texto)) || ev.some(x => /decidi/.test(x.texto))) throw new Error(JSON.stringify(ev.map(x => x.texto)))
   await como(MED, `select public.lk_registrar_liquidacion($1, 'txresolve')`, [id])
 })
 await espera('historial con hashes de transacción', async () => {

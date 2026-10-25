@@ -11,7 +11,7 @@ describe('recorrido: textos aprobados', () => {
     expect(PASOS_RECORRIDO.map(p => p.titulo)).toEqual(['Te damos la bienvenida a Lockumi', 'Los datos del alquiler', 'Las reglas del dueño', 'Fotos y lista de entrada', 'Firmas y depósito', 'La devolución'])
   })
   it('paso 5 «Firmas y depósito» y paso 6 con la mediación como simulación (correcciones de Legal)', () => {
-    expect(PASOS_RECORRIDO[4].texto).toBe('Los dos firman el contrato. Después el inquilino paga el depósito y queda guardado. Nadie lo puede sacar solo. Al entregar el lugar, hay 7 días para hacer un reclamo.')
+    expect(PASOS_RECORRIDO[4].texto).toBe('Los dos firman el contrato. Después el inquilino paga el depósito y queda guardado. Ni el dueño ni el inquilino lo pueden sacar solos. Al entregar el lugar, hay 7 días para hacer un reclamo.')
     expect(PASOS_RECORRIDO[5].texto).toBe('Si no hay reclamos en 7 días, el depósito se puede devolver al inquilino. Si hay un reclamo, buscamos que una persona mediadora les ayude a llegar a un acuerdo. En esta prueba, la mediación es una simulación.')
   })
   it('sin promesas ni palabras que Legal quitó', () => {

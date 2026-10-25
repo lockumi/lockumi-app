@@ -4,7 +4,7 @@ import { store, ahoraDe, actaVacia } from './store'
 import { escrow, type Guardar, type Avance } from './services/escrow'
 import { NOMBRE_PASO, ORDEN, esHash } from './services/comprobantes'
 import { unaVez } from './services/pasos'
-import { firmar as firmarLocal, ambos, NOMBRE } from './flujo'
+import { firmar as firmarLocal, ambos, NOMBRE, plazoMs, textoPlazo } from './flujo'
 import { usd } from './ui'
 import type { Alquiler, Foto, Rol } from './types'
 import { modoServidor, modoTrustless, modoSolo } from './servidor/config'
@@ -13,12 +13,7 @@ import { servidor } from './servidor/repositorio'
 
 type Etapa = 'contrato' | 'entrada' | 'salida'
 const iso = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
-export const plazoMs = (a: Pick<Alquiler, 'ventanaSegundos'>) => (a.ventanaSegundos ?? 604800) * 1000
-/** "7 días", "1 día", "2 horas", "5 minutos": el plazo real del contrato (en la prueba de testnet puede ser corto). */
-export function textoPlazo(a: Pick<Alquiler, 'ventanaSegundos'>) {
-  const s = plazoMs(a) / 1000, n = (x: number, u: string, us: string) => `${x} ${x === 1 ? u : us}`
-  return s >= 86400 && s % 86400 === 0 ? n(s / 86400, 'día', 'días') : s >= 3600 && s % 3600 === 0 ? n(s / 3600, 'hora', 'horas') : n(Math.max(1, Math.round(s / 60)), 'minuto', 'minutos')
-}
+export { plazoMs, textoPlazo } from './flujo'   // viven en flujo.ts (puro) para usarlos también en «turno»
 
 
 export interface Acciones {
@@ -67,7 +62,7 @@ const local: Acciones = {
       if (!ambos(obj.firmas)) return
       if (etapa === 'contrato') { x.estado = 'pendiente_pago'; x.historial.push({ fecha: cuando, texto: 'Contrato firmado por los dos' }) }
       else if (etapa === 'entrada') { x.estado = 'en_curso'; x.historial.push({ fecha: cuando, texto: 'Fotos de entrada confirmadas por los dos' }) }
-      else { x.estado = 'ventana_reclamo'; x.ventanaInicio = cuando; x.historial.push({ fecha: cuando, texto: 'Fotos de salida confirmadas. Empiezan los 7 días para reclamos' }) }
+      else { x.estado = 'ventana_reclamo'; x.ventanaInicio = cuando; x.historial.push({ fecha: cuando, texto: `Fotos de salida confirmadas. Empiezan los ${textoPlazo(x)} para reclamos` }) }   // LEGAL: revisado (24/10) · {plazo} real
     })
   },
   async duenoPruebaAuto(a) {
@@ -121,7 +116,8 @@ const local: Acciones = {
     if (x.estado !== 'mediacion') return
     const r = await escrow.resolver(x, aDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'mediacion') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'mediacion', fecha: iso(y) }
-      y.historial.push({ fecha: iso(y), texto: `La persona mediadora decidió: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      // LEGAL: revisado (24/10) · mismo texto que el evento del servidor, sin «decidió»
+      y.historial.push({ fecha: iso(y), texto: `Acuerdo registrado: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
   }),
 }
 

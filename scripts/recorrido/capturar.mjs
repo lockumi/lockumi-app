@@ -51,6 +51,13 @@ for (const [n, w] of [['movil', 390], ['escritorio', 1280]]) {
     ok(JSON.stringify(g.botones) === JSON.stringify(esperados) && g.alto >= 44, `${n}: paso ${i + 1} botones ${g.botones.join(' · ')} (${g.alto} px o más)`)
     ok(g.dentro && g.foco === esperados.at(-1), `${n}: paso ${i + 1} foco en «${g.foco}»`)
     ok(!g.choca && g.cabe, `${n}: paso ${i + 1} el globo no tapa lo que señala y cabe en la pantalla`)
+    // Contrato compacto (24/10/2026): la columna derecha se desplaza por dentro; lo señalado (p. ej. «Los pasos») se ve entero, sin cortes.
+    const visto = await p.evaluate(() => { const e = document.querySelector('.driver-active-element'); if (!e) return { ok: false }; const r = e.getBoundingClientRect()
+      if (r.height > innerHeight - 24) return { ok: true, alto: true }
+      let bien = r.top >= -1 && r.bottom <= innerHeight + 1
+      for (let x = e.parentElement; x && x !== document.body; x = x.parentElement) { if (/(auto|scroll|hidden)/.test(getComputedStyle(x).overflowY)) { const c = x.getBoundingClientRect(); if (r.top < c.top - 1 || r.bottom > c.bottom + 1) bien = false } }
+      return { ok: bien, sel: e.getAttribute('data-recorrido') || e.className } })
+    ok(visto.ok, `${n}: paso ${i + 1} lo señalado se ve entero (${visto.alto ? 'más alto que la pantalla' : visto.sel})`)
     if (i === 0) ok(g.fondo === 'rgb(255, 245, 238)', `${n}: globo crema sólido (${g.fondo})`)
     await quieto(p); await p.screenshot({ path: `${OUT}${n}-${i + 1}.png` }); await cuadro(p)
     if (i === 1) { // trampa de foco: Tab no sale del globo
