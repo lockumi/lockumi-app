@@ -53,6 +53,10 @@ Solo agrega (3 tablas y 9 funciones nuevas, permisos y RLS de esas tablas). No c
 - **Al vencer** (`lk_mediacion_vencimientos`, en cada pasada): se anota la hora en `vencido_en`, se escribe en el historial «Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo) sin el mismo reparto aceptado por las dos partes. No se pagó nada: el monto reclamado sigue retenido y la mediación sigue abierta.» (LEGAL: revisar) y sale **COR-C-06 «sin acuerdo»** a las dos partes y a la persona mediadora. **No se paga nada ni se aplica ninguna regla** (la 6.5.1 no se ofrece en C); las partes todavía pueden aceptar el mismo reparto en la app.
 - Legal tiene que redactar la frase definitiva de qué pasa al vencer: hoy está en el evento de arriba y en `COR-C-06/vencida` y `COR-C-06/vencida-mediacion`.
 
+## Prueba real (25/10/2026)
+
+`NODE_OPTIONS=--experimental-websocket ./correr-c.sh --prod-datos-prueba --otra-vez` (commit c522c2a): 111 pasos, 0 fallas, Stellar testnet, dos cuentas. Los 45 correos (5 invitaciones y 40 del servidor) llegaron entre las 4:43:58 y las 4:46:06 p. m. (hora de Costa Rica), solo a `lockumi+e2ec-…@mail.grokbot.com`. Capturas: `prueba-completa/capturas/paso17-escenario-c/correos/` (fuera del repo). Luego `--limpiar`: todo en 0.
+
 ## Lista de correos y disparadores
 
 | Id | Para | Cuándo |
