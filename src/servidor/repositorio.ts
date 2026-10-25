@@ -115,10 +115,15 @@ export const servidor = {
   verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
   aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string) => tras(rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
   // Paso 19 · reputación por la persona (Legal, 25/10/2026): el correo es el de la sesión de Cavos (el mismo que p_email_cavos).
-  datosReputacion: (email: string, rol?: 'dueno' | 'inquilino') => rpc<Record<string, unknown>>('lk_mis_datos_reputacion', { p_correo: email, p_rol: rol ?? null }),
   aceptarReputacion: (email: string, version: string, texto: string[]) => rpc<boolean>('lk_aceptar_reputacion', { p_correo: email, p_version: version, p_texto: texto }),
   // Ronda 25/10, 4:22–4:23 p. m.: límite 5 (eliminar en el servidor), límite 4 (REP-01 por el correo) y límite 1 (correo verificado).
-  pedirBorradoCuenta: (email: string) => rpc<string | null>('lk_pedir_borrado_cuenta', { p_correo: email }),
+  // Segundo factor (Legal 25/10, 5:04 p. m.): «Eliminar mi cuenta» y «Descargar mis datos» ya no llaman a lk_pedir_borrado_cuenta ni a
+  // lk_mis_datos_reputacion directo: van por /api/codigo-correo, que manda el código al correo y, con el código correcto, hace la acción.
+  async codigoCorreo(cuerpo: { paso: 'pedir' | 'confirmar'; accion: 'eliminar' | 'descargar'; codigo?: string; rol?: 'dueno' | 'inquilino' }) {
+    const r = await fetch('/api/codigo-correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenSesion()}` },
+      body: JSON.stringify(cuerpo) })
+    return { ok: r.ok, estado: r.status, cuerpo: await r.json().catch(() => ({})) as Record<string, unknown> }
+  },
   necesitaRep01: (email: string) => rpc<boolean>('lk_necesita_rep01', { p_correo: email }),
   /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase. */
   async verificarCorreo(tokenCavos: string): Promise<{ correo: string }> {

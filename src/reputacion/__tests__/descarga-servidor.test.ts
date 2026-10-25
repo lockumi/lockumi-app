@@ -1,5 +1,6 @@
 // Paso 19 · Legal, 25/10/2026, 4:01 p. m. (condición 3): «Descargar mis datos» viene del SERVIDOR y cubre todas las sesiones con el correo
 // de la persona. La app lo pide en modo servidor; la demo local sin servidor sigue igual.
+// Segundo factor (Legal 25/10, 5:04 p. m.): en modo servidor, los datos llegan de /api/codigo-correo (paso 'confirmar') con el código del correo.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Usuario } from '../../types'
 
@@ -8,26 +9,32 @@ vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setI
   clear: () => mem.clear(), key: (i: number) => [...mem.keys()][i] ?? null, get length() { return mem.size } })
 const U: Usuario = { email: 'demo@lockumi.com', nombre: 'Demo', metodo: 'correo' }
 const DEL_SERVIDOR = { correo: 'demo@lockumi.com', cuentas: 2, perfiles: [], aceptaciones: [], vitrinas: [], eventos: [], revisiones: [], solicitudes_borrado: [] }
-const pedir = vi.fn(async (..._: unknown[]) => DEL_SERVIDOR), aceptarEnServidor = vi.fn(async (..._: unknown[]) => true)
+const pedir = vi.fn(async (..._: unknown[]) => ({ ok: true, estado: 200, cuerpo: { hecho: true, datos: DEL_SERVIDOR } as Record<string, unknown> })), aceptarEnServidor = vi.fn(async (..._: unknown[]) => true)
 const cargar = async (conServidor: boolean) => {
   vi.resetModules(); pedir.mockClear(); aceptarEnServidor.mockClear()
   vi.doMock('../../servidor/config', async (o) => ({ ...await o<typeof import('../../servidor/config')>(), conServidor }))
-  vi.doMock('../../servidor/repositorio', async (o) => { const m = await o<typeof import('../../servidor/repositorio')>(); return { ...m, servidor: { ...m.servidor, datosReputacion: pedir, aceptarReputacion: aceptarEnServidor } } })
+  vi.doMock('../../servidor/repositorio', async (o) => { const m = await o<typeof import('../../servidor/repositorio')>(); return { ...m, servidor: { ...m.servidor, codigoCorreo: pedir, aceptarReputacion: aceptarEnServidor } } })
   return await import('../Pantallas')
 }
 beforeEach(() => { mem.clear(); vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1') })
 
 describe('descargar mis datos', () => {
-  it('modo servidor: pide lk_mis_datos_reputacion con el correo de la cuenta (y el papel), y junta lo de este aparato', async () => {
+  it('modo servidor: con el código, el servidor devuelve lk_mis_datos_reputacion (con el papel) y se junta lo de este aparato', async () => {
     const { datosDeDescarga } = await cargar(true)
-    const d = await datosDeDescarga(U, [], 'dueno') as unknown as typeof DEL_SERVIDOR & { enEsteAparato: { cuenta: string } }
-    expect(pedir).toHaveBeenCalledWith('demo@lockumi.com', 'dueno')
+    const d = await datosDeDescarga(U, [], 'dueno', '123456') as unknown as typeof DEL_SERVIDOR & { enEsteAparato: { cuenta: string } }
+    expect(pedir).toHaveBeenCalledWith({ paso: 'confirmar', accion: 'descargar', codigo: '123456', rol: 'dueno' })
     expect(d.cuentas).toBe(2); expect(d.enEsteAparato.cuenta).toBe('demo@lockumi.com')
-    await datosDeDescarga(U, []); expect(pedir).toHaveBeenLastCalledWith('demo@lockumi.com', undefined)
+    await datosDeDescarga(U, [], undefined, '654321'); expect(pedir).toHaveBeenLastCalledWith({ paso: 'confirmar', accion: 'descargar', codigo: '654321' })
   })
-  it('si el servidor falla, la descarga falla (no se baja un archivo incompleto como si fuera todo)', async () => {
+  it('modo servidor sin código: no pide nada y falla (los datos del servidor solo salen con el código del correo)', async () => {
+    const { datosDeDescarga } = await cargar(true)
+    await expect(datosDeDescarga(U, [])).rejects.toThrow(); expect(pedir).not.toHaveBeenCalled()
+  })
+  it('si el servidor falla o rechaza el código, la descarga falla (no se baja un archivo incompleto como si fuera todo)', async () => {
     const { datosDeDescarga } = await cargar(true); pedir.mockRejectedValueOnce(new Error('sin red'))
-    await expect(datosDeDescarga(U, [])).rejects.toThrow()
+    await expect(datosDeDescarga(U, [], undefined, '123456')).rejects.toMatchObject({ motivo: 'accion' })
+    pedir.mockResolvedValueOnce({ ok: false, estado: 403, cuerpo: { motivo: 'codigo' } })
+    await expect(datosDeDescarga(U, [], undefined, '123456')).rejects.toMatchObject({ motivo: 'codigo' })
   })
   it('demo local sin servidor: igual que antes (datos de este aparato) y no llama al servidor', async () => {
     const { datosDeDescarga, datosParaDescargar } = await cargar(false)

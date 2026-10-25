@@ -2,13 +2,15 @@
 // · Límite 1 (Legal: bloqueante): el servidor solo acepta un correo que verificó contra el token de Cavos (api/verificar-correo.ts).
 //   La app NO cambia el login: solo lee el token que el kit de Cavos ya guarda (authCavos() → getAuthToken()) y lo manda con su sesión
 //   de Supabase. Sin token (p. ej. una pestaña nueva) no manda nada: el servidor decide con lo que ya verificó y, si no, rechaza.
-// · Límite 5: eliminar la cuenta manda el pedido al servidor (lk_pedir_borrado_cuenta con el correo de la sesión de Cavos).
+// · Límite 5: eliminar la cuenta manda el pedido al servidor (lk_pedir_borrado_cuenta con el correo de la sesión de Cavos), desde el
+//   25/10 (5:04 p. m.) con el código del correo (segundo-factor.ts, /api/codigo-correo).
 // · Límite 4: la pantalla previa de REP-01 en otro aparato se decide con lk_necesita_rep01 (por el correo verificado).
 import type { Alquiler } from '../types'
 import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
 import { authCavos } from '../services/auth'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
+import { confirmarCodigo, ErrorCodigo } from './segundo-factor'
 
 const normalizar = (c: string) => c.trim().toLowerCase()
 /** El último correo verificado en esta carga de la app. El servidor lee solo por el correo verificado ACTIVO de la sesión (el último
@@ -36,9 +38,11 @@ export function asegurarCorreo(email: string): Promise<boolean> {
   return p
 }
 
-/** Límite 5: en modo servidor, primero el pedido en el servidor; si falla, no se borra nada en este aparato (se puede reintentar). */
-export async function eliminarCuenta(email: string, todos: readonly Alquiler[], ahora = Date.now()) {
-  if (conServidor) { await asegurarCorreo(email); await servidor.pedirBorradoCuenta(email) }
+/** Límite 5: en modo servidor, primero el pedido en el servidor; si falla, no se borra nada en este aparato (se puede reintentar).
+ *  Segundo factor (Legal 25/10, 5:04 p. m.): en modo servidor el pedido va con el código del correo (/api/codigo-correo); sin código no se
+ *  borra nada. En la demo local sin servidor, igual que antes. */
+export async function eliminarCuenta(email: string, todos: readonly Alquiler[], ahora = Date.now(), codigo?: string) {
+  if (conServidor) { if (!codigo) throw new ErrorCodigo('codigo'); await confirmarCodigo('eliminar', codigo) }
   pedirBorrado(email, ahora, todos); ejecutarBorrados(ahora, todos)
 }
 

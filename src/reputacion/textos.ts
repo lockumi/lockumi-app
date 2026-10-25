@@ -150,6 +150,32 @@ export const ELIMINAR_UI = {
   esperaCierre: 'Tu cuenta se eliminará cuando el alquiler se cierre, en un máximo de 5 días hábiles después del cierre. Mientras tanto, puedes usar Lockumi para cerrarlo.',
 }
 
+// Segundo factor antes de «Eliminar mi cuenta» y «Descargar mis datos» (Legal 25/10/2026, 5:04 p. m.; Katherine, 5:29 p. m.). Pantalla
+// «Revisa tu correo» de par-eliminar.png y par-descargar.png. Los errores son los mismos que devuelve api/_lib/codigo-correo.ts (una
+// prueba revisa que sean iguales).
+// LEGAL: revisado (25/10, 5:04 p. m.) · textos literales de Legal (pantalla del código)
+export const SEGUNDO_FACTOR = {
+  titulo: 'Revisa tu correo',
+  texto: { eliminar: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para eliminar tu cuenta.',
+    descargar: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para descargar tus datos.' } as Record<'eliminar' | 'descargar', string>,
+  campo: 'Código del correo',
+  nota: 'El código vale 10 minutos. Si no llega en un minuto, revisa la carpeta de correo no deseado o toca «Reenviar código».',
+  boton: { eliminar: 'Eliminar mi cuenta', descargar: 'Descargar mis datos' } as Record<'eliminar' | 'descargar', string>,
+  reenviar: 'Reenviar código', cancelar: 'Cancelar',
+  errores: {
+    // LEGAL: revisado (25/10, 5:04 p. m.) · texto literal de Legal («Si el código falla»)
+    codigo: 'Ese código no es correcto o ya venció. Revisa el último correo de Lockumi y escríbelo de nuevo, o toca «Reenviar código».',
+    // LEGAL: revisado (25/10, 5:04 p. m.) · texto literal de Legal (reenvío antes de un minuto)
+    minuto: 'Ya te enviamos un código. Espera un minuto antes de pedir otro.',
+    // LEGAL: revisar · segundo factor 25/10 5:29 · texto propio (más de 5 códigos en una hora)
+    hora: 'Ya te enviamos 5 códigos en la última hora. Espera una hora y vuelve a tocar «Reenviar código».',
+    // LEGAL: revisar · segundo factor 25/10 5:29 · texto propio (el correo no salió)
+    envio: 'No pudimos enviarte el código. Revisa tu conexión y vuelve a intentarlo en un minuto.',
+    // LEGAL: revisado (25/10) · mismo texto del servidor (lk_correo_de_sesion): la sesión no tiene un correo verificado
+    correo: 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.',
+  },
+}
+
 // LEGAL: revisado (25/10) · REP-10
 export const MIS_DATOS = {
   boton: 'Ver mis datos de reputación',

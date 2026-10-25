@@ -11,6 +11,7 @@
 --   3. Eliminar la cuenta (decisión de Katherine, 25/10/2026, 2:11 p. m.): gratis; el perfil deja de mostrarse al instante y todo
 --      se borra en un máximo de 5 días hábiles (lunes a viernes, sin los feriados de Costa Rica).
 --      No hay «Dejar de mostrar»: el perfil solo desaparece al eliminar la cuenta.
+--   7. Segundo factor (Legal 25/10 5:04 p. m., Katherine 5:29 p. m.): eliminar y descargar exigen un código de 6 números enviado al correo.
 -- No edita migraciones anteriores. Se aplica dentro de una transacción.
 
 -- 1. Perfil y consentimientos --------------------------------------------------------------------------------------------
@@ -315,6 +316,7 @@ declare u uuid := auth.uid(); c text; us uuid[]; ex uuid[]; lim timestamptz; abi
 begin
   if u is null then raise exception 'Entra a tu cuenta para eliminarla.' using errcode = '28000'; end if;
   c := public.lk_correo_de_sesion(u, p_correo);               -- solo un correo verificado contra el token de Cavos
+  perform public.lk_usar_codigo(u, c, 'eliminar');            -- segundo factor (sección 7): código por correo confirmado, un solo uso
   us := array(select x from public.lk_uids_de_persona(u, c) x);
   ex := public.lk_uids_exclusivos(us, c);
   abierto := public.lk_persona_tiene_alquiler_abierto(us, c);
@@ -363,6 +365,7 @@ begin
     delete from public.lk_reputacion_revisiones x where public.lk_de_la_persona(x.usuario, x.correo, s.correo, ex);
     delete from public.lk_reputacion_perfiles x where public.lk_de_la_persona(x.usuario, x.correo, s.correo, ex);
     delete from public.lk_correos_verificados where correo = s.correo;
+    delete from public.lk_codigos_correo where correo = s.correo;   -- segundo factor (sección 7)
     delete from auth.users where id = any(ex);            -- la cuenta (las tablas con FK a auth.users se borran en cascada)
     update public.lk_solicitudes_borrado set hecho_en = now(), correo = null   -- la constancia queda sin datos personales
       where (id = s.id or correo = s.correo) and hecho_en is null;
@@ -436,7 +439,7 @@ end $$;
 -- reescribir esas funciones de producción (escenario C, PR #22). Apagada no cambia nada (compatibilidad); igual, un email_cavos sin
 -- verificar no cuenta para la persona (lk_correos_de, lk_uids_de_correo, lk_persona_tiene_alquiler_abierto, lk_rep_fila_correo,
 -- lk_rep01_pendiente). Va antes que los otros disparadores (orden alfabético).
--- LEGAL: revisar · ronda 25/10 4:45 · texto propio (solo con la reputación encendida)
+-- LEGAL: revisado (25/10, 5:04 p. m.) · texto propio aprobado por Legal (solo con la reputación encendida)
 create or replace function public.lk_participante_correo_verificado() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if exists (select 1 from public.lk_reputacion_encendido)
@@ -527,13 +530,15 @@ grant execute on function public.lk_aceptar_reputacion(text, text, text[]) to au
 
 -- «Descargar mis datos» desde el servidor: todo lo de reputación de TODAS las sesiones de la persona (sin los identificadores internos).
 -- p_rol: solo ese papel (Tus datos de reputación de un papel); null: todo (antes de eliminar la cuenta).
+-- Ya no es «stable»: consume el código del segundo factor (sección 7).
 create or replace function public.lk_mis_datos_reputacion(p_correo text default null, p_rol text default null) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare u uuid := auth.uid(); c text; us uuid[]; ex uuid[];
 begin
   -- LEGAL: revisado (25/10) · mensaje del servidor
   if u is null then raise exception 'Entra a tu cuenta para descargar tus datos.' using errcode = '28000'; end if;
   c := public.lk_correo_de_sesion(u, p_correo);               -- solo un correo verificado contra el token de Cavos
+  perform public.lk_usar_codigo(u, c, 'descargar');           -- segundo factor (sección 7): código por correo confirmado, un solo uso
   us := array(select x from public.lk_uids_de_persona(u, c) x);
   ex := public.lk_uids_exclusivos(us, c);                      -- dos correos en un aparato: nada de la otra persona
   return jsonb_build_object(
@@ -567,6 +572,122 @@ begin
 end $$;
 revoke all on function public.lk_necesita_rep01(text) from public;
 grant execute on function public.lk_necesita_rep01(text) to authenticated;
+
+-- 7. Segundo factor: código por correo antes de «Eliminar mi cuenta» y «Descargar mis datos» (aprobado: Legal 25/10/2026, 5:04 p. m.;
+-- Katherine, 5:29 p. m.) ---------------------------------------------------------------------------------------------------------------
+-- Por qué: Lockumi no tiene un aud propio con Cavos (docs/reputacion.md), así que un token de Google/Apple no prueba por sí solo que la
+-- persona entró a Lockumi. Antes de borrar o descargar, el servidor manda un código de 6 números al correo verificado ACTIVO de la sesión
+-- (lk_correo_activo). Lo arma api/_lib/codigo-correo.ts (Vercel, clave de servicio):
+--   · el código NUNCA se guarda: solo huella = HMAC-SHA256(LOCKUMI_CODIGO_PEPPER, sal|usuario|correo|acción|código), con una sal al azar
+--     por código y el pepper solo en el servidor (no está en la base: con una copia de la tabla no se pueden probar los 10^6 códigos);
+--   · vale 10 minutos, 5 intentos, un solo uso, ligado a la acción (eliminar o descargar), a la sesión y al correo;
+--   · «Reenviar código»: como mucho 1 por minuto y 5 por hora por correo; un código nuevo anula el anterior de esa acción;
+--   · la comparación es en tiempo constante (crypto.timingSafeEqual en el servidor, nunca en SQL ni en la app).
+-- La app no puede leer ni escribir esta tabla (RLS activo, sin políticas, sin permisos para anon/authenticated) y las funciones de abajo
+-- son solo de la clave de servicio, salvo lk_usar_codigo, que solo llaman lk_pedir_borrado_cuenta y lk_mis_datos_reputacion.
+create table if not exists public.lk_codigos_correo (
+  id bigint generated always as identity primary key,
+  usuario uuid not null references auth.users(id) on delete cascade,
+  correo text not null check (correo = lower(btrim(correo))),
+  accion text not null check (accion in ('eliminar', 'descargar')),
+  huella text not null check (huella ~ '^[0-9a-f]{64}$'),    -- HMAC-SHA256 en hex; nunca el código
+  sal text not null check (sal ~ '^[0-9a-f]{32}$'),
+  creado_en timestamptz not null default clock_timestamp(),
+  vence_en timestamptz not null,                             -- creado_en + 10 minutos
+  intentos int not null default 0 check (intentos between 0 and 5),
+  confirmado_en timestamptz,                                 -- el código fue correcto: la acción tiene 2 minutos para usarlo
+  usado_en timestamptz,                                      -- la acción lo usó (un solo uso)
+  anulado_en timestamptz                                     -- lo reemplazó un código nuevo de la misma acción
+);
+create index if not exists lk_codigos_correo_correo on public.lk_codigos_correo (correo, creado_en);
+create index if not exists lk_codigos_correo_vigente on public.lk_codigos_correo (usuario, correo, accion) where usado_en is null and anulado_en is null;
+alter table public.lk_codigos_correo enable row level security;
+revoke all on public.lk_codigos_correo from anon, authenticated;
+
+-- El correo al que se manda el código: el verificado ACTIVO de la sesión (nunca uno que mande la app). null = no hay ninguno.
+create or replace function public.lk_codigo_para(p_usuario uuid) returns text
+language sql stable security definer set search_path = public as $$ select public.lk_correo_activo(p_usuario) $$;
+revoke all on function public.lk_codigo_para(uuid) from public, anon, authenticated;
+grant execute on function public.lk_codigo_para(uuid) to service_role;
+
+-- Guarda la huella de un código nuevo. Devuelve {"id": n} o {"error": "correo" | "minuto" | "hora"} (el servidor elige el texto).
+create or replace function public.lk_codigo_nuevo(p_usuario uuid, p_correo text, p_accion text, p_huella text, p_sal text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare c text := public.lk_normalizar_correo(p_correo); n bigint;
+begin
+  if p_accion is null or p_accion not in ('eliminar', 'descargar') or p_huella !~ '^[0-9a-f]{64}$' or p_sal !~ '^[0-9a-f]{32}$' then
+    raise exception 'Pedido de código inválido.' using errcode = '22023';   -- solo lo ve api/_lib/codigo-correo.ts
+  end if;
+  if p_usuario is null or c is null or c is distinct from public.lk_correo_activo(p_usuario) then return jsonb_build_object('error', 'correo'); end if;
+  perform pg_advisory_xact_lock(hashtext('lk_codigo_nuevo:' || c));
+  delete from public.lk_codigos_correo where creado_en < clock_timestamp() - interval '1 day';
+  if exists (select 1 from public.lk_codigos_correo where correo = c and creado_en > clock_timestamp() - interval '1 minute') then
+    return jsonb_build_object('error', 'minuto');
+  end if;
+  if (select count(*) from public.lk_codigos_correo where correo = c and creado_en > clock_timestamp() - interval '1 hour') >= 5 then
+    return jsonb_build_object('error', 'hora');
+  end if;
+  update public.lk_codigos_correo set anulado_en = clock_timestamp()
+    where usuario = p_usuario and correo = c and accion = p_accion and usado_en is null and anulado_en is null;
+  insert into public.lk_codigos_correo(usuario, correo, accion, huella, sal, vence_en)
+    values (p_usuario, c, p_accion, p_huella, p_sal, clock_timestamp() + interval '10 minutes') returning id into n;
+  return jsonb_build_object('id', n);
+end $$;
+revoke all on function public.lk_codigo_nuevo(uuid, text, text, text, text) from public, anon, authenticated;
+grant execute on function public.lk_codigo_nuevo(uuid, text, text, text, text) to service_role;
+
+-- Si el correo no salió (Resend falló), el código se borra: no sirve y no cuenta para el límite de reenvíos.
+create or replace function public.lk_codigo_borrar(p_id bigint) returns void
+language sql security definer set search_path = public as $$ delete from public.lk_codigos_correo where id = p_id and usado_en is null $$;
+revoke all on function public.lk_codigo_borrar(bigint) from public, anon, authenticated;
+grant execute on function public.lk_codigo_borrar(bigint) to service_role;
+
+-- Un intento: toma el ÚLTIMO código vigente de (sesión, correo activo, acción), suma 1 a sus intentos ANTES de comparar y devuelve
+-- {"id", "huella", "sal"} para que el servidor compare en tiempo constante. null si no hay (vencido, usado, anulado o con 5 intentos).
+create or replace function public.lk_codigo_intento(p_usuario uuid, p_accion text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare c text := public.lk_correo_activo(p_usuario); r public.lk_codigos_correo;
+begin
+  if c is null then return null; end if;
+  select * into r from public.lk_codigos_correo
+    where usuario = p_usuario and correo = c and accion = p_accion and usado_en is null and anulado_en is null
+      and vence_en > clock_timestamp() and intentos < 5
+    order by creado_en desc limit 1 for update;
+  if not found then return null; end if;
+  update public.lk_codigos_correo set intentos = intentos + 1 where id = r.id;
+  return jsonb_build_object('id', r.id, 'huella', r.huella, 'sal', r.sal, 'correo', c);
+end $$;
+revoke all on function public.lk_codigo_intento(uuid, text) from public, anon, authenticated;
+grant execute on function public.lk_codigo_intento(uuid, text) to service_role;
+
+-- El código fue correcto: la acción tiene 2 minutos para usarlo (el servidor la llama enseguida, con la sesión de la persona).
+create or replace function public.lk_codigo_confirmar(p_id bigint) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.lk_codigos_correo set confirmado_en = clock_timestamp()
+    where id = p_id and usado_en is null and anulado_en is null and vence_en > clock_timestamp();
+  return found;
+end $$;
+revoke all on function public.lk_codigo_confirmar(bigint) from public, anon, authenticated;
+grant execute on function public.lk_codigo_confirmar(bigint) to service_role;
+
+-- La acción usa el código (un solo uso). Sin un código confirmado de ESA acción, sesión y correo, se rechaza: no se borra ni se
+-- descarga nada aunque la app llame directo a la función. Si la acción falla, su transacción se deshace y el código sigue confirmado.
+-- LEGAL: revisado (25/10, 5:04 p. m.) · texto literal de Legal (diseño del segundo factor)
+create or replace function public.lk_usar_codigo(p_usuario uuid, p_correo text, p_accion text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.lk_codigos_correo set usado_en = clock_timestamp()
+    where id = (select id from public.lk_codigos_correo
+                where usuario = p_usuario and correo = public.lk_normalizar_correo(p_correo) and accion = p_accion
+                  and confirmado_en > clock_timestamp() - interval '2 minutes' and usado_en is null and anulado_en is null
+                order by confirmado_en desc limit 1 for update);
+  if not found then
+    raise exception 'Ese código no es correcto o ya venció. Revisa el último correo de Lockumi y escríbelo de nuevo, o toca «Reenviar código».'
+      using errcode = '28000';
+  end if;
+end $$;
+revoke all on function public.lk_usar_codigo(uuid, text, text) from public, anon, authenticated;
 
 -- Programación con pg_cron si la extensión está instalada; si no, se deja escrito y hay que programarla a mano (docs/reputacion.md).
 do $$ begin

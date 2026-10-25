@@ -175,6 +175,8 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] «En revisión» con reclamo abierto o revisión pedida (REP-11), avisos de cambio de puntaje y de los 10 años (REP-12), noindex.
 - [x] Eliminar la cuenta gratis en 5 días hábiles; vitrinas opcionales; REP-14 y REP-15 en los textos legales (solo con el interruptor).
 - [x] Migración escrita (no aplicada), pruebas unitarias, SQL y E2E con dos cuentas en local.
+- [x] Segundo factor (Legal 5:04 p. m., Katherine 5:29 p. m.): código de 6 números por correo antes de «Eliminar mi cuenta» y «Descargar mis datos» (solo en modo servidor). Solo HMAC con pepper y sal, 10 minutos, 5 intentos, un solo uso por acción y persona, reenvío 1/min y 5/hora; la base lo exige (`lk_usar_codigo`). Pruebas SQL, API y pantalla; flujo real local con capturas a 390 px.
+- [ ] Segundo factor, para encender: `LOCKUMI_CODIGO_PEPPER` y `RESEND_API_KEY` en Production; OK de Legal a 2 textos propios (más de 5 por hora, el correo no salió).
 - [ ] Pendiente de Legal: alquiler abierto al eliminar la cuenta; fecha de publicación de la 1.8-demo; «Ajustes ›» en REP-14/REP-15 (la app no tiene Ajustes).
 - [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles, aplicar la migración.
 

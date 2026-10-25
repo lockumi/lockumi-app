@@ -3,6 +3,7 @@
 // 2) con un pedido de borrado pendiente, la cuenta no puede crear ni unirse a alquileres nuevos (texto literal de Legal).
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
+import { CODIGO_DE_PRUEBA } from './codigo-de-prueba'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
@@ -26,6 +27,7 @@ beforeAll(async () => {
   db = new PGlite(); await db.exec(PRELUDIO)
   const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  await db.exec(CODIGO_DE_PRUEBA)   // segundo factor: ver codigo-de-prueba.ts
   for (const x of [NUEVA1, NUEVA2, VIEJA, BORRA]) await db.query('insert into auth.users(id) values ($1)', [x])
   for (const x of [NUEVA1, NUEVA2, BORRA]) await db.query(`insert into public.lk_reputacion_aceptaciones(usuario, version, texto) values ($1, '1.10-demo', '{a,b}')`, [x])
   await db.query(`select public.lk_registrar_correo_verificado($1, 'borra@ejemplo.com', 'google', md5(random()::text) || md5(random()::text))`, [BORRA])   // correo verificado (4:23 p. m.)
@@ -42,7 +44,7 @@ describe('cuentas anteriores (sin aceptación de reputación)', () => {
     expect(await eventos(k(1))).toBe(1); expect(await eventos(k(2))).toBe(0); expect(await eventos(k(3))).toBe(0)
   })
   it('quien tenía perfil y pidió eliminar su cuenta sigue contando para la otra parte', async () => {
-    await contrato(k(4), NUEVA1, BORRA); await como(BORRA); await db.query('select public.lk_pedir_borrado_cuenta()'); await como(null)
+    await contrato(k(4), NUEVA1, BORRA); await como(BORRA); await db.query('select public.t_pedir_borrado_cuenta()'); await como(null)
     expect((await uno<{ c: boolean }>('select con_perfil c from public.lk_solicitudes_borrado where usuario = $1', [BORRA])).c).toBe(true)
     expect((await uno<{ v: boolean }>('select public.lk_cuenta_para_reputacion($1) v', [k(4)])).v).toBe(true)
   })

@@ -6,6 +6,7 @@
 // También: token de un solo uso (huella), límite de intentos y search_path vacío en las funciones de fechas.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
+import { CODIGO_DE_PRUEBA } from './codigo-de-prueba'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
@@ -33,6 +34,7 @@ beforeAll(async () => {
   db = new PGlite(); await db.exec(PRELUDIO)
   const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  await db.exec(CODIGO_DE_PRUEBA)   // segundo factor: ver codigo-de-prueba.ts
 }, 30_000)
 
 describe('BLOQUEANTE 1 · ataque con email_cavos sin verificar (reproducido)', () => {
@@ -48,9 +50,9 @@ describe('BLOQUEANTE 1 · ataque con email_cavos sin verificar (reproducido)', (
     expect((await db.query<{ x: string }>('select x from public.lk_correos_de($1) x', [X])).rows.map(r => r.x)).toEqual(['atacante@ejemplo.com'])
     expect((await uno<{ a: boolean }>(`select public.lk_persona_tiene_alquiler_abierto(array[$1]::uuid[], 'victima@ejemplo.com') a`, [V])).a).toBe(false)
     await como(V)
-    const d = (await uno<{ d: Record<string, unknown[]> }>('select public.lk_mis_datos_reputacion() d')).d
+    const d = (await uno<{ d: Record<string, unknown[]> }>('select public.t_mis_datos_reputacion() d')).d
     expect(JSON.stringify(d)).not.toContain('Inyectado')
-    const f = (await uno<{ f: Date | null }>(`select public.lk_pedir_borrado_cuenta('victima@ejemplo.com') f`)).f
+    const f = (await uno<{ f: Date | null }>(`select public.t_pedir_borrado_cuenta('victima@ejemplo.com') f`)).f
     await como(null)
     expect(f).not.toBeNull()                                   // con fecha: el alquiler del atacante no cuenta como abierto
     expect((await uno<{ x: boolean | null }>('select alquiler_abierto x from public.lk_solicitudes_borrado where usuario = $1', [V])).x).toBe(false)

@@ -4,6 +4,7 @@
 // sesión compartida). (3) Límite 4: lk_necesita_rep01 dice, por el correo verificado, si la persona todavía tiene que aceptar REP-01.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
+import { CODIGO_DE_PRUEBA } from './codigo-de-prueba'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
@@ -28,6 +29,7 @@ beforeAll(async () => {
   db = new PGlite(); await db.exec(PRELUDIO)
   const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  await db.exec(CODIGO_DE_PRUEBA)   // segundo factor: ver codigo-de-prueba.ts
 }, 30_000)
 
 describe('correo verificado contra el token de Cavos (cierre por defecto)', () => {
@@ -43,20 +45,20 @@ describe('correo verificado contra el token de Cavos (cierre por defecto)', () =
   it('descarga: rechaza un correo sin verificar aunque sea el email_cavos de sus alquileres; con el correo verificado, sí', async () => {
     const A = await aparato(); await entrar(await contrato(), 'dueno', A, 'datos.v@ejemplo.com')
     await como(A)
-    await expect(db.query(`select public.lk_mis_datos_reputacion('datos.v@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
-    await expect(db.query(`select public.lk_mis_datos_reputacion()`)).rejects.toThrow(NO_VERIFICADO)
+    await expect(db.query(`select public.t_mis_datos_reputacion('datos.v@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
+    await expect(db.query(`select public.t_mis_datos_reputacion()`)).rejects.toThrow(NO_VERIFICADO)
     await como(null); await verificar(A, 'datos.v@ejemplo.com'); await como(A)
-    expect((await uno<{ d: { correo: string } }>(`select public.lk_mis_datos_reputacion('Datos.V@ejemplo.com') d`)).d.correo).toBe('datos.v@ejemplo.com')
+    expect((await uno<{ d: { correo: string } }>(`select public.t_mis_datos_reputacion('Datos.V@ejemplo.com') d`)).d.correo).toBe('datos.v@ejemplo.com')
     await como(null)
   })
   it('borrado: rechaza un correo sin verificar (no guarda ningún pedido); con el correo verificado, sí', async () => {
     const A = await aparato(); await entrar(await contrato(), 'dueno', A, 'borra.v@ejemplo.com')
     await como(A)
-    await expect(db.query(`select public.lk_pedir_borrado_cuenta('borra.v@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
-    await expect(db.query(`select public.lk_pedir_borrado_cuenta()`)).rejects.toThrow(NO_VERIFICADO)
+    await expect(db.query(`select public.t_pedir_borrado_cuenta('borra.v@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
+    await expect(db.query(`select public.t_pedir_borrado_cuenta()`)).rejects.toThrow(NO_VERIFICADO)
     await como(null)
     expect((await uno<{ n: number }>(`select count(*)::int n from public.lk_solicitudes_borrado where usuario = $1`, [A])).n).toBe(0)
-    await verificar(A, 'borra.v@ejemplo.com'); await como(A); await db.query(`select public.lk_pedir_borrado_cuenta('borra.v@ejemplo.com')`); await como(null)
+    await verificar(A, 'borra.v@ejemplo.com'); await como(A); await db.query(`select public.t_pedir_borrado_cuenta('borra.v@ejemplo.com')`); await como(null)
     expect((await uno<{ n: number }>(`select count(*)::int n from public.lk_solicitudes_borrado where correo = 'borra.v@ejemplo.com'`)).n).toBe(1)
   })
   it('aceptación: rechaza un correo sin verificar (no guarda nada); con el correo verificado, sí', async () => {
@@ -71,7 +73,7 @@ describe('correo verificado contra el token de Cavos (cierre por defecto)', () =
   it('el correo verificado de OTRA sesión no sirve en esta (cada aparato verifica el suyo)', async () => {
     const A = await aparato(), B = await aparato(); await verificar(A, 'otro.ap@ejemplo.com')
     await como(B)
-    await expect(db.query(`select public.lk_mis_datos_reputacion('otro.ap@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
+    await expect(db.query(`select public.t_mis_datos_reputacion('otro.ap@ejemplo.com')`)).rejects.toThrow(NO_VERIFICADO)
     await expect(db.query(`select public.lk_aceptar_reputacion('otro.ap@ejemplo.com', 'v', '{a}')`)).rejects.toThrow(ACEPTAR_NO_VERIFICADO)
     await como(null)
   })
@@ -108,7 +110,7 @@ describe('dos correos en el mismo aparato: eliminar A nunca borra lo de B', () =
       (select count(*)::int from auth.users where id = $1) cuenta`, [U]))
     const antes = await deB()
     expect(antes.perfiles).toBe(1); expect(antes.aceptaciones).toBe(1)
-    await verificar(U, 'a.comp@ejemplo.com'); await como(U); await db.query(`select public.lk_pedir_borrado_cuenta('a.comp@ejemplo.com')`); await como(null)
+    await verificar(U, 'a.comp@ejemplo.com'); await como(U); await db.query(`select public.t_pedir_borrado_cuenta('a.comp@ejemplo.com')`); await como(null)
     await db.query(`update public.lk_solicitudes_borrado set fecha_limite = now() - interval '1 day' where correo = 'a.comp@ejemplo.com'`)
     await db.query('select public.lk_borrar_cuentas_pedidas()')
     expect(await deB()).toEqual(antes)
@@ -123,7 +125,7 @@ describe('dos correos en el mismo aparato: eliminar A nunca borra lo de B', () =
     expect((await uno<{ v: boolean }>('select public.lk_perfil_visible($1) v', [U])).v).toBe(true)
     await entrar(await contrato('firmas'), 'dueno', U, 'b.comp@ejemplo.com')
     await verificar(U, 'b.comp@ejemplo.com'); await como(U)
-    const d = (await uno<{ d: { aceptaciones: { correo: string }[]; perfiles: { correo: string }[] } }>(`select public.lk_mis_datos_reputacion('b.comp@ejemplo.com') d`)).d
+    const d = (await uno<{ d: { aceptaciones: { correo: string }[]; perfiles: { correo: string }[] } }>(`select public.t_mis_datos_reputacion('b.comp@ejemplo.com') d`)).d
     await como(null)
     expect(d.aceptaciones.map(x => x.correo)).toEqual(['b.comp@ejemplo.com']); expect(d.perfiles.map(x => x.correo)).toEqual(['b.comp@ejemplo.com'])
   })
@@ -132,7 +134,7 @@ describe('dos correos en el mismo aparato: eliminar A nunca borra lo de B', () =
     await verificar(U, 'a.blq@ejemplo.com'); await verificar(U, 'b.blq@ejemplo.com')
     await entrar(await contrato(), 'dueno', U, 'a.blq@ejemplo.com')
     await db.query(`insert into public.lk_reputacion_perfiles(usuario, correo, nombre_visible, canton) values ($1, 'b.blq@ejemplo.com', 'Ejemplo E.', 'Escazú')`, [U])
-    await verificar(U, 'a.blq@ejemplo.com'); await como(U); await db.query(`select public.lk_pedir_borrado_cuenta('a.blq@ejemplo.com')`); await como(null)
+    await verificar(U, 'a.blq@ejemplo.com'); await como(U); await db.query(`select public.t_pedir_borrado_cuenta('a.blq@ejemplo.com')`); await como(null)
     await entrar(await contrato('firmas'), 'inquilino', U, 'b.blq@ejemplo.com')
     await expect(entrar(await contrato('firmas'), 'inquilino', U, 'a.blq@ejemplo.com')).rejects.toThrow(/Pediste eliminar tu cuenta/)
     expect((await uno<{ v: boolean }>('select public.lk_perfil_visible($1) v', [U])).v).toBe(true)
@@ -142,7 +144,7 @@ describe('dos correos en el mismo aparato: eliminar A nunca borra lo de B', () =
     await verificar(U, 'a.abi@ejemplo.com'); await verificar(U, 'b.abi@ejemplo.com')
     await entrar(await contrato(), 'dueno', U, 'a.abi@ejemplo.com'); await entrar(await contrato('en_curso'), 'inquilino', U, 'b.abi@ejemplo.com')
     await verificar(U, 'a.abi@ejemplo.com'); await como(U)
-    expect((await uno<{ f: Date | null }>(`select public.lk_pedir_borrado_cuenta('a.abi@ejemplo.com') f`)).f).not.toBeNull()
+    expect((await uno<{ f: Date | null }>(`select public.t_pedir_borrado_cuenta('a.abi@ejemplo.com') f`)).f).not.toBeNull()
     await como(null)
   })
 })

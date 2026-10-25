@@ -4,6 +4,7 @@
 // Las políticas se prueban con el papel `authenticated` (como en Supabase), no con el dueño de las tablas (que se salta RLS).
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
+import { CODIGO_DE_PRUEBA } from './codigo-de-prueba'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
@@ -45,6 +46,7 @@ beforeAll(async () => {
   db = new PGlite(); await db.exec(PRELUDIO)
   const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  await db.exec(CODIGO_DE_PRUEBA)   // segundo factor: ver codigo-de-prueba.ts
   // Aquí solo importan las lecturas: los eventos se siembran sin alquiler real (lk_rep_evento_cuenta los descartaría).
   await db.exec('alter table public.lk_reputacion_eventos disable trigger lk_rep_evento_cuenta')
 }, 30_000)
@@ -73,7 +75,7 @@ describe('lecturas por el correo verificado de la sesión (RLS)', () => {
   it('otra sesión con el mismo correo verificado no lee por tabla las filas de la primera (la descarga del servidor sí las junta)', async () => {
     const A = await aparato(), B = await aparato(); await sembrar(A, 'dos.ap@ejemplo.com'); await verificar(A, 'dos.ap@ejemplo.com'); await verificar(B, 'dos.ap@ejemplo.com')
     expect((await veo(B)).lk_reputacion_perfiles).toEqual([])
-    await como(B); const d = (await uno<{ d: { perfiles: unknown[] } }>(`select public.lk_mis_datos_reputacion('dos.ap@ejemplo.com') d`)).d; await como(null)
+    await como(B); const d = (await uno<{ d: { perfiles: unknown[] } }>(`select public.t_mis_datos_reputacion('dos.ap@ejemplo.com') d`)).d; await como(null)
     expect(d.perfiles).toHaveLength(1)
   })
   it('anon no lee ninguna tabla de reputación', async () => {
@@ -88,11 +90,11 @@ describe('funciones de lectura: solo el correo verificado ACTIVO de la sesión',
     const U = await aparato(); await sembrar(U, 'a.fn@ejemplo.com'); await sembrar(U, 'b.fn@ejemplo.com')
     await verificar(U, 'b.fn@ejemplo.com'); await verificar(U, 'a.fn@ejemplo.com')
     await como(U)
-    await expect(db.query(`select public.lk_mis_datos_reputacion('b.fn@ejemplo.com')`)).rejects.toThrow(/no es el de tu cuenta en este aparato/)
+    await expect(db.query(`select public.t_mis_datos_reputacion('b.fn@ejemplo.com')`)).rejects.toThrow(/no es el de tu cuenta en este aparato/)
     await expect(db.query(`select public.lk_necesita_rep01('b.fn@ejemplo.com')`)).rejects.toThrow(/no es el de tu cuenta en este aparato/)
-    await expect(db.query(`select public.lk_pedir_borrado_cuenta('b.fn@ejemplo.com')`)).rejects.toThrow(/no es el de tu cuenta en este aparato/)
+    await expect(db.query(`select public.t_pedir_borrado_cuenta('b.fn@ejemplo.com')`)).rejects.toThrow(/no es el de tu cuenta en este aparato/)
     await expect(db.query(`select public.lk_aceptar_reputacion('b.fn@ejemplo.com', 'v', '{b}')`)).rejects.toThrow(/No pudimos leer el correo de tu cuenta/)
-    const d = (await uno<{ d: { correo: string; perfiles: { correo: string }[]; aceptaciones: { correo: string }[] } }>('select public.lk_mis_datos_reputacion() d')).d
+    const d = (await uno<{ d: { correo: string; perfiles: { correo: string }[]; aceptaciones: { correo: string }[] } }>('select public.t_mis_datos_reputacion() d')).d
     expect(d.correo).toBe('a.fn@ejemplo.com'); expect(d.perfiles.map(x => x.correo)).toEqual(['a.fn@ejemplo.com']); expect(d.aceptaciones.map(x => x.correo)).toEqual(['a.fn@ejemplo.com'])
     expect(JSON.stringify(d)).not.toContain('b.fn@')
     await como(null)

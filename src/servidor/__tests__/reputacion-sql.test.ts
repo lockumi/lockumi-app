@@ -2,6 +2,7 @@
 // Eliminar la cuenta: gratis, el perfil deja de mostrarse al pedirlo y todo se borra en un máximo de 5 días hábiles (sin feriados de CR).
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
+import { CODIGO_DE_PRUEBA } from './codigo-de-prueba'
 import { fechaLimiteBorrado } from '../../reputacion/borrado'
 
 const PRELUDIO = `
@@ -23,6 +24,7 @@ beforeAll(async () => {
   await db.exec(PRELUDIO)
   const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
   await db.exec(fs.readFileSync('supabase/migrations/20261025140000_reputacion.sql', 'utf8'))
+  await db.exec(CODIGO_DE_PRUEBA)   // segundo factor: ver codigo-de-prueba.ts
   for (const u of [A, B, C]) {
     await db.query('insert into auth.users(id) values ($1)', [u])
     await db.query(`insert into public.lk_reputacion_perfiles(usuario, nombre_visible, canton) values ($1, 'Laura V.', 'Escazú')`, [u])
@@ -42,11 +44,11 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
   })
   it('pedir el borrado exige sesión', async () => {
     await como(null)
-    await expect(db.query('select public.lk_pedir_borrado_cuenta()')).rejects.toThrow(/Entra a tu cuenta/)
+    await expect(db.query('select public.t_pedir_borrado_cuenta()')).rejects.toThrow(/Entra a tu cuenta/)
   })
   it('al pedirlo, el perfil deja de existir al instante; la tarea programada borra la cuenta y deja constancia', async () => {
     await como(A)
-    await db.query('select public.lk_pedir_borrado_cuenta()')
+    await db.query('select public.t_pedir_borrado_cuenta()')
     expect(await cuenta('public.lk_reputacion_perfiles', A)).toBe(0)
     expect(await cuenta('public.lk_reputacion_perfiles', B)).toBe(1)
     expect(await cuenta('public.lk_reputacion_aceptaciones', A)).toBe(0); expect(await cuenta('public.lk_reputacion_aceptaciones', B)).toBe(1)
@@ -63,7 +65,7 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
     await db.query(`insert into public.lk_participantes(contrato_id, rol, usuario) values ($1, 'dueno', $2), ($1, 'inquilino', $3)`, [K, C, B])
     await como(C)
     const antes = { p: await cuenta('public.lk_reputacion_perfiles', C), a: await cuenta('public.lk_reputacion_aceptaciones', C), c: await cuenta('public.lk_reputacion_consentimientos', C) }
-    expect((await uno<{ f: Date | null }>('select public.lk_pedir_borrado_cuenta() f')).f).toBeNull()
+    expect((await uno<{ f: Date | null }>('select public.t_pedir_borrado_cuenta() f')).f).toBeNull()
     // Legal (revisión del PR #26, regla 6): el perfil deja de mostrarse al instante, pero NO se borra nada de la cuenta mientras siga abierto.
     expect((await uno<{ v: boolean }>('select public.lk_perfil_visible($1) v', [C])).v).toBe(false)
     expect(antes.p).toBeGreaterThan(0)

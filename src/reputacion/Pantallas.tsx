@@ -18,8 +18,9 @@ import type { Registro } from './consentimiento'
 import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
 import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, type EstadoServidor } from './verificacion'
+import { pedirCodigo, confirmarCodigo, ErrorCodigo, type AccionCodigo } from './segundo-factor'
 import { REP01, REP01_EXISTENTE, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
-  AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
+  AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, SEGUNDO_FACTOR, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
 // ——— Piezas ———
 const ICONOS: Record<string, string[]> = {
@@ -350,11 +351,13 @@ export function datosParaDescargar(u: Usuario, todos: Alquiler[], roles: Rol[] =
 /** «Descargar mis datos» (Legal, 25/10 4:01 p. m., condición 3): en modo servidor, del SERVIDOR (lk_mis_datos_reputacion: todas las
  *  sesiones con el correo de la cuenta), más lo que guarda este aparato; si el servidor falla, falla (no se baja un archivo incompleto).
  *  En la demo local sin servidor, igual que antes. */
-export async function datosDeDescarga(u: Usuario, todos: Alquiler[], rol?: Rol) {
+export async function datosDeDescarga(u: Usuario, todos: Alquiler[], rol?: Rol, codigo?: string) {
   const local = datosParaDescargar(u, todos, rol ? [rol] : undefined)
   if (!conServidor) return local
-  await asegurarCorreo(u.email)   // límite 1: el servidor solo acepta el correo verificado contra el token de Cavos
-  return { ...await servidor.datosReputacion(u.email, rol) as object, enEsteAparato: local }
+  // Segundo factor (Legal 25/10, 5:04 p. m.): los datos del servidor solo salen con el código del correo (/api/codigo-correo).
+  if (!codigo) throw new ErrorCodigo('codigo')
+  const r = await confirmarCodigo('descargar', codigo, rol)
+  return { ...(r.datos ?? {}) as object, enEsteAparato: local }
 }
 /** RIESGO de Legal (revisión de c887895): en modo servidor, la aceptación de REP-01 se escribe también en el servidor por el correo de la
  *  cuenta (lk_aceptar_reputacion), para que la fila de encendido no bloquee a quien ya aceptó. Idempotente: se reintenta en cada carga. */
@@ -367,13 +370,59 @@ function bajar(datos: unknown, nombre: string) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }))
   const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+// ——— Segundo factor: «Revisa tu correo» (Legal 25/10/2026, 5:04 p. m.; Katherine, 5:29 p. m.; par-eliminar.png y par-descargar.png) ———
+// Solo en modo servidor. Mismas clases de siempre (glass tarjeta, rp-texto, campo rp-campo, nota, error, rp-acciones, botones).
+type Codigo = { accion: AccionCodigo; correo: string }
+/** Texto de un error del segundo factor. 'accion' (el servidor no hizo la acción) = el error de siempre de esa acción. */
+const textoCodigo = (e: unknown, accion: AccionCodigo) => {
+  const m = e instanceof ErrorCodigo ? e.motivo : 'accion'
+  return m === 'accion' ? (accion === 'eliminar' ? UI.errBorrado : UI.errDescarga) : SEGUNDO_FACTOR.errores[m]
+}
+function useSegundoFactor(email: string) {
+  const [codigo, setCodigo] = useState<Codigo | null>(null), [err, setErr] = useState<{ t: string; codigo: boolean } | null>(null), [enviando, setEnviando] = useState(false)
+  /** Pide el código y abre la pantalla. Si falla antes de mandarlo, devuelve el texto del error (se muestra donde estaba el botón). */
+  const pedir = (accion: AccionCodigo, alFallar: (t: string) => void) => { if (enviando) return; setEnviando(true); setErr(null)
+    pedirCodigo(email, accion).then(r => setCodigo({ accion, correo: r.correo }), e => {
+      if (e instanceof ErrorCodigo && e.correo && (e.motivo === 'minuto' || e.motivo === 'hora')) { setCodigo({ accion, correo: e.correo }); setErr({ t: SEGUNDO_FACTOR.errores[e.motivo], codigo: false }) }
+      else alFallar(textoCodigo(e, accion)) }).finally(() => setEnviando(false)) }
+  const reenviar = () => { if (!codigo || enviando) return; setEnviando(true); setErr(null)
+    pedirCodigo(email, codigo.accion).then(r => setCodigo({ ...codigo, correo: r.correo }), e => setErr({ t: textoCodigo(e, codigo.accion), codigo: false })).finally(() => setEnviando(false)) }
+  /** Confirma el código con la acción (hacer); si falla, el error se muestra en la pantalla del código. */
+  const confirmar = (valor: string, hacer: (valor: string) => Promise<unknown>) => { if (!codigo || enviando) return; setEnviando(true); setErr(null)
+    hacer(valor).then(() => { setCodigo(null) }, e => setErr({ t: textoCodigo(e, codigo.accion), codigo: e instanceof ErrorCodigo && e.motivo === 'codigo' })).finally(() => setEnviando(false)) }
+  const cancelar = () => { setCodigo(null); setErr(null) }
+  return { codigo, err, enviando, pedir, reenviar, confirmar, cancelar }
+}
+export function CodigoCorreo({ c, err, enviando, confirmar, reenviar, cancelar }: { c: Codigo; err: { t: string; codigo: boolean } | null; enviando: boolean
+  confirmar: (valor: string) => void; reenviar: () => void; cancelar: () => void }) {
+  const [valor, setValor] = useState(''), id = useId()
+  const [antes, despues] = SEGUNDO_FACTOR.texto[c.accion].split('{correo}')
+  return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
+    <section className="glass tarjeta rp-texto" aria-labelledby={`${id}t`}><h1 id={`${id}t`} className="h2">{SEGUNDO_FACTOR.titulo}</h1>
+      <p>{antes}<strong>{c.correo}</strong>{despues}</p>
+      <form onSubmit={e => { e.preventDefault(); confirmar(valor) }}>
+        <div className="campo rp-campo" style={{ marginTop: 'var(--s4)' }}><label htmlFor={`${id}c`}>{SEGUNDO_FACTOR.campo}</label>
+          <input id={`${id}c`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={valor} onChange={e => setValor(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            aria-invalid={err?.codigo || undefined} aria-describedby={err ? `${id}e` : undefined} /></div>
+        {err && <p id={`${id}e`} className="error" role="alert" style={{ marginTop: 8 }}>{err.t}</p>}
+        <p className="nota">{SEGUNDO_FACTOR.nota}</p>
+        <div className="rp-acciones"><button type="submit" className={c.accion === 'eliminar' ? 'boton rp-peligro' : 'rp-boton rp-boton--ancho'} disabled={enviando}>{SEGUNDO_FACTOR.boton[c.accion]}</button>
+          <button type="button" className="boton boton--secundario" onClick={reenviar} disabled={enviando}>{SEGUNDO_FACTOR.reenviar}</button>
+          <a className="boton boton--secundario" href="#/perfil" onClick={cancelar}>{SEGUNDO_FACTOR.cancelar}</a></div>
+      </form></section></main>
+}
 function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
   const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), xs = mios(todos, u, rol), cerrados = xs.filter(cuentaParaPuntaje)
   const p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol)
   const filas = cerrados.map(a => ({ alquiler: a.direccion, cerrado: a.resultado!.fecha, descuento: Math.round(fraccionDescontada(a, ahora) * 100),
     reclamoDevuelto: rol === 'dueno' ? Math.round(fraccionReclamoDevuelta(a) * 100) : undefined, vale: valorDelAlquiler(a, rol, ahora) }))
-  const [errDescarga, setErrDescarga] = useState<string | null>(null)
-  const descargar = () => { setErrDescarga(null); datosDeDescarga(u, todos, rol).then(d => bajar(d, `lockumi-reputacion-${rol}.json`), () => setErrDescarga(UI.errDescarga)) }
+  const [errDescarga, setErrDescarga] = useState<string | null>(null), sf = useSegundoFactor(u.email)
+  // Segundo factor: en modo servidor, primero el código del correo; sin servidor, baja el archivo como siempre.
+  const descargar = () => { setErrDescarga(null)
+    if (conServidor) sf.pedir('descargar', setErrDescarga)
+    else datosDeDescarga(u, todos, rol).then(d => bajar(d, `lockumi-reputacion-${rol}.json`), () => setErrDescarga(UI.errDescarga)) }
+  if (sf.codigo) return <CodigoCorreo c={sf.codigo} err={sf.err} enviando={sf.enviando} reenviar={sf.reenviar} cancelar={sf.cancelar}
+    confirmar={v => sf.confirmar(v, codigo => datosDeDescarga(u, todos, rol, codigo).then(d => bajar(d, `lockumi-reputacion-${rol}.json`)))} />
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver a={`#/perfil/${rol}`} t="← Tu perfil" />
     <section className="glass tarjeta"><h1 className="h2">{MIS_DATOS.titulo}</h1><p className="nota" style={{ marginTop: 6 }}><Papel rol={rol} /></p>
@@ -461,12 +510,21 @@ function BorradoEnCurso({ s }: { s: Solicitud }) {
 }
 function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => void }) {
   const todos = useAlquileres(), s = solicitudBorrado(u.email), abiertos = abiertosDe(todos, u.email).length > 0
-  const [errBorrado, setErrBorrado] = useState<string | null>(null), [enviando, setEnviando] = useState(false)
+  const [errBorrado, setErrBorrado] = useState<string | null>(null), [enviando, setEnviando] = useState(false), sf = useSegundoFactor(u.email)
   // Límite 5: en modo servidor, el pedido va al servidor (lk_pedir_borrado_cuenta); si falla, no se borra nada y se explica cómo seguir.
-  const pedir = () => { if (enviando) return; const ahora = Date.now(); setErrBorrado(null); setEnviando(true)
+  // Segundo factor (Legal 25/10, 5:04 p. m.): en modo servidor, «Eliminar mi cuenta» primero pide el código del correo («Revisa tu correo»).
+  const pedir = () => { if (enviando || sf.enviando) return; setErrBorrado(null)
+    if (conServidor) { sf.pedir('eliminar', setErrBorrado); return }
+    const ahora = Date.now(); setEnviando(true)
     eliminarCuenta(u.email, todos, ahora).then(() => ir('/perfil/eliminar/listo'), () => { setErrBorrado(UI.errBorrado); setEnviando(false) }) }
   const [errDescarga, setErrDescarga] = useState<string | null>(null)
-  const descargar = () => { setErrDescarga(null); datosDeDescarga(u, todos).then(d => bajar(d, 'lockumi-reputacion.json'), () => setErrDescarga(UI.errDescarga)) }
+  const descargar = () => { setErrDescarga(null)
+    if (conServidor) sf.pedir('descargar', setErrDescarga)
+    else datosDeDescarga(u, todos).then(d => bajar(d, 'lockumi-reputacion.json'), () => setErrDescarga(UI.errDescarga)) }
+  if (sf.codigo && !s) return <CodigoCorreo c={sf.codigo} err={sf.err} enviando={sf.enviando} reenviar={sf.reenviar} cancelar={sf.cancelar}
+    confirmar={v => sf.confirmar(v, codigo => sf.codigo!.accion === 'eliminar'
+      ? eliminarCuenta(u.email, todos, Date.now(), codigo).then(() => ir('/perfil/eliminar/listo'))
+      : datosDeDescarga(u, todos, undefined, codigo).then(d => bajar(d, 'lockumi-reputacion.json')))} />
   if (s && (paso === 'listo' || !s.hecho)) {
     if (s.hecho || s.limite) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
       <section className="glass tarjeta" role="status"><h1 className="h2">{s.hecho ? ELIMINAR.listo : ELIMINAR_UI.enCurso}</h1><PlazoBorrado s={s} />

@@ -229,14 +229,42 @@ lo use serviría una vez.
 todas sus apps: «Register your OAuth client ID … The enclave then accepts tokens minted for your client instead of only Cavos's»
 (https://docs.cavos.xyz/docs/hardware-isolated-recovery), y eso es solo para quien trae su propio login. El código por correo tampoco tiene un
 client id por app. Entonces un token de Google/Apple de OTRA app de Cavos tiene el mismo `aud`; lo que lo separa es el App ID del nonce (arriba).
-**Por eso borrar y descargar necesitan un segundo factor** (código que el servidor manda a ese correo): diseño abajo, SIN programar su pantalla.
+**Por eso borrar y descargar necesitan un segundo factor** (código que el servidor manda a ese correo): PROGRAMADO (abajo).
 
-**Segundo factor para «Eliminar mi cuenta» y «Descargar mis datos» (diseño para aprobar, NO programado):** imágenes antes/después en
-`prueba-completa/capturas/paso19-reputacion/segundo-factor/` (ver su `cambios.md`). Un paso por pantalla: (1) la pantalla de siempre con su
-botón; (2) «Te enviamos un código» al correo de la cuenta (6 dígitos, vale 10 minutos, 5 intentos), con «Reenviar código» (tras 60 s) y
-«Volver»; (3) al confirmar, lo de siempre (pedido enviado / descarga). Servidor: `lk_pedir_codigo(p_correo, p_accion)` (solo el correo
-activo; guarda la huella del código; correo con Resend, como REP-12) y `lk_pedir_borrado_cuenta` / `lk_mis_datos_reputacion` con
-`p_codigo`. Estimación: 1 a 1,5 días de una persona (RPC y correo ~0,5 d, pantallas ~0,25 d, pruebas SQL/API/E2E ~0,5 d, textos con Legal).
+### Segundo factor: código por correo antes de «Eliminar mi cuenta» y «Descargar mis datos» (programado 25/10/2026)
+Diseño aprobado por Legal (5:04 p. m.) y por Katherine (5:29 p. m., hora de Costa Rica); pantallas iguales a
+`prueba-completa/capturas/paso19-reputacion/segundo-factor/par-eliminar.png` y `par-descargar.png`. Solo en modo servidor (`conServidor`);
+en la demo local sin servidor nada cambia.
+- **Flujo:** (1) la pantalla de siempre con su botón; (2) «Revisa tu correo»: el servidor manda un código de 6 números al correo verificado
+  ACTIVO de la sesión (`lk_correo_activo`), con «Código del correo», «Reenviar código» y «Cancelar»; (3) con el código correcto, lo de siempre
+  (pedido de borrado / archivo). App: `src/reputacion/segundo-factor.ts`, `useSegundoFactor` y `CodigoCorreo` en `src/reputacion/Pantallas.tsx`,
+  textos en `SEGUNDO_FACTOR` (`src/reputacion/textos.ts`).
+- **Servidor:** `POST /api/codigo-correo` (`api/codigo-correo.ts` → `atenderCodigo` en `api/_lib/codigo-correo.ts`), con la sesión de
+  Supabase. `{paso:'pedir', accion}` manda el código; `{paso:'confirmar', accion, codigo}` lo comprueba y hace la acción ahí mismo, con la
+  sesión de la persona (`lk_pedir_borrado_cuenta` o `lk_mis_datos_reputacion`).
+- **Código:** 6 números al azar sin sesgo (`crypto.getRandomValues`). Nunca se guarda: solo `HMAC-SHA256(LOCKUMI_CODIGO_PEPPER,
+  sal|usuario|correo|acción|código)` con una sal al azar por código; el pepper vive solo en Vercel (no en la base). Comparación en tiempo
+  constante (`crypto.subtle.verify` de HMAC). Vale 10 minutos, 5 intentos (el intento se cuenta ANTES de comparar), un solo uso, ligado a la
+  acción, a la sesión y al correo. Un código nuevo anula el anterior de esa acción. «Reenviar código»: 1 por minuto y 5 por hora por correo.
+- **Base (sección 7 de la migración, escrita, NO aplicada):** tabla `lk_codigos_correo` (RLS activo, sin políticas, sin permisos para
+  `anon`/`authenticated`: el cliente no lee la huella); `lk_codigo_para`, `lk_codigo_nuevo`, `lk_codigo_borrar`, `lk_codigo_intento`,
+  `lk_codigo_confirmar` (solo `service_role`) y `lk_usar_codigo` (sin permisos: solo la llaman las acciones). **La acción exige el código
+  en la base, no solo en la pantalla:** `lk_pedir_borrado_cuenta` y `lk_mis_datos_reputacion` llaman a `lk_usar_codigo`, que consume un código
+  confirmado en los últimos 2 minutos para esa sesión, correo y acción; sin eso, rechazan aunque se las llame directo con la sesión. Si la
+  acción falla, la transacción vuelve atrás y el código sigue sirviendo.
+- **Correo:** aviso del servicio (sin casilla ni contenido comercial), asunto «Tu código de Lockumi: {código}», el texto de Legal y el pie de
+  siempre (`PIE`, el de REP-12), por Resend (`idempotency-key` por código). Si Resend falla, se borra la fila y la app dice cómo seguir.
+- **Errores (sin palabras técnicas):** código incorrecto o vencido y reenvío antes de un minuto: textos literales de Legal (revisado 5:04).
+  Más de 5 códigos en una hora y «el correo no salió»: textos propios, **`LEGAL: revisar`**. Sin `LOCKUMI_CODIGO_PEPPER` (32+ caracteres),
+  `RESEND_API_KEY` o `SUPABASE_*`, el servidor responde 503 (cierre por defecto).
+- **Pruebas:** `segundo-factor-sql.test.ts` (15, Postgres real: huella, vencimiento, 5 intentos, un solo uso, límites de reenvío, acción y
+  persona, permisos/RLS), `codigo-correo-api.test.ts` (18, la API contra la migración real con Supabase y Resend falsos),
+  `segundo-factor-pantalla.test.tsx` (5). **Flujo real local** (sin producción): `prueba-completa/scripts/segundo-factor-real.mjs` (Postgres
+  real con la migración + el `atenderCodigo` real + Resend de verdad SOLO a lockumi@mail.grokbot.com) y
+  `segundo-factor-capturas-real.mjs` (Playwright, 390 px): capturas en `prueba-completa/capturas/paso19-reputacion/segundo-factor/real/`.
+- **Límites:** el código va al correo que Cavos verificó; quien controla ese correo puede borrar o descargar (es el diseño aprobado). El
+  correo lleva el enlace de Privacidad con el origen de la app que lo pidió (solo orígenes permitidos).
+
 **Límites que quedan** (la (g) quedó cerrada a las 4:41 p. m.)**:** (a) el token vive en `sessionStorage`: en una pestaña nueva no hay token y, si esa sesión de Supabase no se verificó
 antes, el servidor rechaza hasta volver a entrar. (b) El código por correo: si el JWT del enclave no trae `email`, no se verifica (cierre por
 defecto); confirmarlo con un token real. (c) El `aud` no está documentado por Cavos: cada `CAVOS_AUD_*` sale de un token real, y no es
@@ -250,7 +278,10 @@ alquileres ni aceptación no tiene correo conocido hasta que se verifica.
   REP-01 (el servidor no tiene correo que verificar). Medir también su `exp - iat` y anotarlo arriba.
 - Con tokens reales de Google y Apple: confirmar el formato del `nonce` (`<app id>.<hash>`) y el `aud` de cada emisor.
 - Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros).
-- Decidir el segundo factor (imágenes en `segundo-factor/`) antes de dejar borrar y descargar en producción.
+- Segundo factor (programado): poner `LOCKUMI_CODIGO_PEPPER` (al azar, 32+ caracteres, solo servidor, NUNCA en el bundle) y `RESEND_API_KEY`
+  en Production; OK de Legal a los 2 textos `LEGAL: revisar · segundo factor 25/10 5:29` (más de 5 por hora, el correo no salió).
+- Aplicar la migración `20261025140000_reputacion.sql` (con OK de Katherine; incluye la sección 7 del segundo factor).
+- Modo servidor encendido (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, con OK): sin eso el segundo factor no se usa.
 
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta

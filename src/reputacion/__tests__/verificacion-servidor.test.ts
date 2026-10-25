@@ -13,10 +13,11 @@ vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setI
 const orden: string[] = []
 const srv = {
   verificarCorreo: vi.fn(async (_t: string) => { orden.push('verificar'); return { correo: 'demo@lockumi.com' } }),
-  pedirBorradoCuenta: vi.fn(async (_e: string) => { orden.push('borrar'); return null as string | null }),
+  // Segundo factor (Legal 25/10, 5:04 p. m.): eliminar y descargar van por /api/codigo-correo (pedir el código y confirmarlo con la acción).
+  codigoCorreo: vi.fn(async (b: { paso: string; accion: string; codigo?: string }) => { orden.push(`${b.paso}:${b.accion}`)
+    return { ok: true, estado: 200, cuerpo: (b.paso === 'pedir' ? { enviado: true, correo: 'demo@lockumi.com' } : b.accion === 'eliminar' ? { hecho: true, fecha_limite: null } : { hecho: true, datos: {} }) as Record<string, unknown> } }),
   necesitaRep01: vi.fn(async (_e: string) => { orden.push('necesita'); return false }),
   aceptarReputacion: vi.fn(async () => { orden.push('aceptar'); return true }),
-  datosReputacion: vi.fn(async () => { orden.push('datos'); return {} }),
 }
 let token: string | null = 'token-de-cavos'
 const cargar = async (conServidor: boolean) => {
@@ -24,7 +25,7 @@ const cargar = async (conServidor: boolean) => {
   vi.doMock('../../servidor/config', async (o) => ({ ...await o<typeof import('../../servidor/config')>(), conServidor }))
   vi.doMock('../../servidor/repositorio', async (o) => { const m = await o<typeof import('../../servidor/repositorio')>(); return { ...m, servidor: { ...m.servidor, ...srv } } })
   vi.doMock('../../services/auth', async (o) => ({ ...await o<typeof import('../../services/auth')>(), authCavos: async () => token === null ? null : { getAuthToken: () => token } }))
-  return { v: await import('../verificacion'), P: await import('../Pantallas'), b: await import('../borrado') }
+  return { v: await import('../verificacion'), P: await import('../Pantallas'), b: await import('../borrado'), sf: await import('../segundo-factor') }
 }
 beforeEach(() => { mem.clear(); token = 'token-de-cavos'; vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1') })
 
@@ -62,11 +63,12 @@ describe('límite 1 en la app: el token de Cavos que ya existe va a /api/verific
     await v.necesitaRep01EnServidor('demo@lockumi.com')
     expect(srv.verificarCorreo).not.toHaveBeenCalled(); expect(srv.necesitaRep01).toHaveBeenCalledWith('demo@lockumi.com')
   })
-  it('aceptar y descargar también verifican antes', async () => {
-    const { P } = await cargar(true)
+  it('aceptar y descargar también verifican antes (descargar: pedir el código y confirmarlo)', async () => {
+    const { P, sf } = await cargar(true)
     await P.subirAceptacion('demo@lockumi.com', { version: 'v', fecha: '2026-10-25T22:00:00Z', texto: ['a'] })
-    await P.datosDeDescarga({ email: 'demo@lockumi.com', nombre: 'Demo', metodo: 'correo' }, [])
-    expect(orden).toEqual(['verificar', 'aceptar', 'datos'])
+    expect(await sf.pedirCodigo('demo@lockumi.com', 'descargar')).toEqual({ correo: 'demo@lockumi.com' })
+    await P.datosDeDescarga({ email: 'demo@lockumi.com', nombre: 'Demo', metodo: 'correo' }, [], undefined, '123456')
+    expect(orden).toEqual(['verificar', 'aceptar', 'pedir:descargar', 'confirmar:descargar'])
   })
   it('no cambia el login: services/auth.ts no se toca y la app solo lee getAuthToken()', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
@@ -77,21 +79,41 @@ describe('límite 1 en la app: el token de Cavos que ya existe va a /api/verific
 })
 
 describe('límite 5: eliminar la cuenta pide el borrado al servidor', () => {
-  it('modo servidor: lk_pedir_borrado_cuenta con el correo de la sesión de Cavos y, después, el pedido en este aparato', async () => {
-    const { v, b } = await cargar(true)
-    await v.eliminarCuenta('demo@lockumi.com', [], Date.parse('2026-10-25T22:00:00Z'))
-    expect(srv.pedirBorradoCuenta).toHaveBeenCalledWith('demo@lockumi.com'); expect(orden).toEqual(['verificar', 'borrar'])
+  it('modo servidor: con el código del correo, el servidor hace lk_pedir_borrado_cuenta y, después, el pedido en este aparato', async () => {
+    const { v, b, sf } = await cargar(true)
+    await sf.pedirCodigo('demo@lockumi.com', 'eliminar')
+    await v.eliminarCuenta('demo@lockumi.com', [], Date.parse('2026-10-25T22:00:00Z'), '123456')
+    expect(srv.codigoCorreo).toHaveBeenLastCalledWith({ paso: 'confirmar', accion: 'eliminar', codigo: '123456' }); expect(orden).toEqual(['verificar', 'pedir:eliminar', 'confirmar:eliminar'])
     expect(b.solicitudBorrado('demo@lockumi.com')).toBeTruthy()
   })
-  it('si el servidor lo rechaza, falla y NO borra nada en este aparato (se puede volver a intentar)', async () => {
-    const { v, b } = await cargar(true); srv.pedirBorradoCuenta.mockRejectedValueOnce(new Error('Ese correo no es el de tu cuenta en este aparato.'))
-    await expect(v.eliminarCuenta('demo@lockumi.com', [], Date.now())).rejects.toThrow()
+  it('modo servidor sin código: falla sin llamar al servidor y NO borra nada en este aparato', async () => {
+    const { v, b } = await cargar(true)
+    await expect(v.eliminarCuenta('demo@lockumi.com', [], Date.now())).rejects.toMatchObject({ motivo: 'codigo' })
+    expect(srv.codigoCorreo).not.toHaveBeenCalled(); expect(b.solicitudBorrado('demo@lockumi.com')).toBeFalsy()
+  })
+  it('si el servidor lo rechaza (código mal o la acción falla), falla y NO borra nada en este aparato (se puede volver a intentar)', async () => {
+    const { v, b } = await cargar(true)
+    srv.codigoCorreo.mockResolvedValueOnce({ ok: false, estado: 403, cuerpo: { motivo: 'codigo' } })
+    await expect(v.eliminarCuenta('demo@lockumi.com', [], Date.now(), '000000')).rejects.toMatchObject({ motivo: 'codigo' })
+    srv.codigoCorreo.mockResolvedValueOnce({ ok: false, estado: 502, cuerpo: { motivo: 'accion' } })
+    await expect(v.eliminarCuenta('demo@lockumi.com', [], Date.now(), '123456')).rejects.toMatchObject({ motivo: 'accion' })
+    srv.codigoCorreo.mockRejectedValueOnce(new Error('sin red'))
+    await expect(v.eliminarCuenta('demo@lockumi.com', [], Date.now(), '123456')).rejects.toMatchObject({ motivo: 'accion' })
     expect(b.solicitudBorrado('demo@lockumi.com')).toBeFalsy()
+  })
+  it('pedir el código: «minuto» trae el correo (la pantalla se abre igual, con el aviso); sin correo verificado, «correo»', async () => {
+    const { sf } = await cargar(true)
+    srv.codigoCorreo.mockResolvedValueOnce({ ok: false, estado: 429, cuerpo: { motivo: 'minuto', correo: 'demo@lockumi.com' } })
+    await expect(sf.pedirCodigo('demo@lockumi.com', 'eliminar')).rejects.toMatchObject({ motivo: 'minuto', correo: 'demo@lockumi.com' })
+    srv.codigoCorreo.mockResolvedValueOnce({ ok: false, estado: 403, cuerpo: { motivo: 'correo' } })
+    await expect(sf.pedirCodigo('demo@lockumi.com', 'eliminar')).rejects.toMatchObject({ motivo: 'correo' })
+    srv.codigoCorreo.mockResolvedValueOnce({ ok: false, estado: 500, cuerpo: {} })
+    await expect(sf.pedirCodigo('demo@lockumi.com', 'eliminar')).rejects.toMatchObject({ motivo: 'envio' })
   })
   it('demo local sin servidor: igual que antes, sin llamar al servidor', async () => {
     const { v, b } = await cargar(false)
     await v.eliminarCuenta('demo@lockumi.com', [], Date.now())
-    expect(srv.pedirBorradoCuenta).not.toHaveBeenCalled(); expect(b.solicitudBorrado('demo@lockumi.com')).toBeTruthy()
+    expect(srv.codigoCorreo).not.toHaveBeenCalled(); expect(b.solicitudBorrado('demo@lockumi.com')).toBeTruthy()
   })
   it('la pantalla usa eliminarCuenta y muestra un error que dice cómo seguir (texto para Legal)', async () => {
     const { UI } = await import('../textos')

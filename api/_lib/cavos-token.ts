@@ -96,7 +96,7 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
 // LEGAL: revisado (25/10) · ronda 4:41 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
 export const NO_SE_PUDO_VERIFICAR = 'No pudimos confirmar el correo de tu cuenta. Sal de Lockumi y vuelve a entrar con tu correo.'
 
-// LEGAL: revisar · ronda 25/10 4:45 · texto propio (respuesta 429 de /api/verificar-correo; la app no lo muestra)
+// LEGAL: revisado (25/10, 5:04 p. m.) · ronda 4:45 · texto propio aprobado por Legal (respuesta 429 de /api/verificar-correo; la app no lo muestra)
 export const DEMASIADOS_INTENTOS = 'Hiciste muchos intentos seguidos. Espera 10 minutos y vuelve a entrar con tu correo.'
 /** Límites de intentos (ventana de 10 minutos): por sesión de Supabase y por IP (la IP se guarda como huella, nunca en claro). */
 export const LIMITES = { sesion: 5, ip: 30, ventana: '10 minutes' } as const
