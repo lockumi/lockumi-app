@@ -1,6 +1,6 @@
 // Paso 11 · Cambios de Legal del 24/10 (11:29 p. m.): reclamo en dos variantes, pie de baja, casilla desmarcable y Privacidad 1.7-demo.
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { atenderCorreo, validar, armar, PIE_BAJA, RECLAMO_CON_REGLA, RECLAMO_SIN_REGLA, darDeBaja } from '../../../api/_lib/correo'
+import { atenderCorreo, validar, armar, PIE_BAJA, RECLAMO_CON_REGLA, RECLAMO_SIN_REGLA, registrarConsentimiento } from '../../../api/_lib/correo'
 import { avisosPorEnviar, desactivarCorreo } from '../correoAvisos'
 import { privacidadVigente } from '../../legal/documentos'
 import type { Alquiler } from '../../types'
@@ -32,10 +32,12 @@ describe('pie para dejar de recibir avisos', () => {
   })
 })
 describe('desmarcar la casilla detiene los envíos', () => {
-  it('servidor: después de la baja no envía avisos de ese alquiler a ese correo', async () => {
+  it('servidor: después de desmarcar no envía avisos de ese alquiler a ese correo', async () => {
     const f = ok(); const env = { RESEND_API_KEY: 'x' }
+    registrarConsentimiento({ tipo: 'consentimiento', para: 'demo@lockumi.com', alquiler: 'r2329', acepta: true })
+    registrarConsentimiento({ tipo: 'consentimiento', para: 'demo@lockumi.com', alquiler: 'otro1', acepta: true })
     await expect(atenderCorreo(env, reclamo(true), ORIGEN, 'ip-baja', f)).resolves.toMatchObject({ enviado: true })
-    expect(darDeBaja({ tipo: 'baja', para: 'Demo@Lockumi.com', alquiler: 'r2329' })).toEqual({ baja: true })
+    expect(registrarConsentimiento({ tipo: 'consentimiento', para: 'Demo@Lockumi.com', alquiler: 'r2329', acepta: false })).toEqual({ consentimiento: false })
     await expect(atenderCorreo(env, reclamo(true), ORIGEN, 'ip-baja', f)).rejects.toMatchObject({ estado: 409 })
     expect(f).toHaveBeenCalledTimes(1)
     // otro alquiler sigue igual

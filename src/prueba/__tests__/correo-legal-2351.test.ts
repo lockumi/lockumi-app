@@ -1,6 +1,6 @@
 // Paso 11 · Cambios de Legal del 24/10 (11:51 p. m.): consentimiento guardado en el servidor, nota de botones y Privacidad 1.7-demo sin «fase».
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readFileSync } from 'node:fs'
+import privacidad17 from '../privacidad-1.7.md?raw'
 import { atenderCorreo, armar, validar, olvidarConsentimientos, tieneConsentimiento, NOTA_CONFIRMAR, NOTA_UN_BOTON } from '../../../api/_lib/correo'
 
 const ORIGEN = 'https://app.lockumi.com', env = { RESEND_API_KEY: 'llave-de-prueba' }
@@ -53,7 +53,7 @@ describe('nota de los botones', () => {
 })
 
 describe('Privacidad 1.7-demo sin «fase»', () => {
-  const t = readFileSync('src/prueba/privacidad-1.7.md', 'utf8'), l = t.split('\n')
+  const t = privacidad17, l = t.split('\n')
   it('no menciona fases', () => { expect(t).not.toMatch(/fase/i) })
   it('textos de Legal, palabra por palabra', () => {
     expect(l[18]).toContain('Si simulas el alquiler en un solo aparato, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. Si simulas un alquiler con otra persona, las fotos reducidas se guardan en Supabase (ver abajo).')

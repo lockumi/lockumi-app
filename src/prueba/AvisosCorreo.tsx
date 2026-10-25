@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Alquiler, Rol } from '../types'
 import { store } from '../store'
-import { CASILLA_CORREO, puedeEnviarAvisos, enviarCorreo, avisosPorEnviar, desactivarCorreo, avisarBaja } from './correoAvisos'
+import { CASILLA_CORREO, puedeEnviarAvisos, enviarCorreo, avisosPorEnviar, desactivarCorreo, guardarConsentimiento } from './correoAvisos'
 import { datosAviso } from './avisos'
 import type { Plantilla } from '../../api/_lib/avisos'
 
@@ -27,7 +27,7 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
   }, [pendientes, a.id, rol]) // eslint-disable-line
   const desmarcar = () => {
     const para = guardado; store.cambiar(a.id, x => desactivarCorreo(x, rol), 'Avisos por correo desactivados'); setAcepta(false); setEstado('')
-    if (para) void avisarBaja(para, a.id)
+    if (para) void guardarConsentimiento(para, a.id, false)
   }
   if (guardado && estado !== 'enviando') return <div className="avisos-correo" role="status">
     <p><strong>Avisos por correo activados.</strong> Te escribiremos a la dirección que diste cuando haya un aviso nuevo de este alquiler. Los avisos también siguen en la app.</p>
@@ -37,6 +37,8 @@ export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {
     setError('')
     if (!puedeEnviarAvisos(correo, acepta)) { setError(acepta ? 'Revisa el correo: tiene que ser como nombre@correo.com.' : 'Marca la casilla para recibir los avisos por correo. Si no quieres, no hace falta: los avisos siguen en la app.'); return }
     setEstado('enviando')
+    const c = await guardarConsentimiento(correo, a.id, true)
+    if (!c.ok) { setEstado(''); setError(c.error); return }
     const ultimo = [...(a.avisos ?? [])].reverse().find(v => v.para === rol && typeof v.dia === 'number')
     const r = ultimo ? await enviarCorreo(correo, a.id, acepta, { tipo: 'aviso', plantilla: ultimo.id as Plantilla, datos: datosAviso(a, ultimo.id as Plantilla) }) : { ok: true as const }
     if (!r.ok) { setEstado(''); setError(r.error); return }

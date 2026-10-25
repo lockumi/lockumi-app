@@ -12,7 +12,7 @@ const NOMBRE = /^[\p{L} .'-]{1,60}$/u
 /** Orígenes permitidos para el enlace a la app: app.lockumi.com (red de prueba, paso 11), las vistas previas y la app local. */
 export const origenPermitido = (o: string) => o === 'https://app.lockumi.com' || /^https:\/\/lockumi-app-demo-[a-z0-9-]+\.vercel\.app$/.test(o) || /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/.test(o)
 
-export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'baja'; para: string; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
+export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
 
 // LEGAL: revisado (24/10) · pie común (LEGAL-correos-2104.md, punto 3)
 export const PIE = 'Lockumi · Demo en la red de prueba de Stellar, sin dinero real. Nada de lo que pasa en esta demo tiene efecto legal. Este es un aviso del servicio, no publicidad. Lockumi nunca te pedirá por correo tu contraseña, tu frase secreta ni tus claves. Esta dirección no recibe respuestas; para consultas: business.applockumi@gmail.com.'
@@ -24,17 +24,26 @@ export const textoInvitacion = (nombre: string, rol: 'dueno' | 'inquilino') =>
 export const PIE_BAJA = 'Para dejar de recibir estos avisos, desmarca la casilla en la app; seguirás viéndolos dentro de la app.'
 // LEGAL: revisado (24/10, 11:29 p. m.) · correo del reclamo, según lo registrado al firmar (regla aceptada o no)
 export const RECLAMO_CON_REGLA = 'Si no respondes a tiempo y abriste al menos un aviso, se aplicará la propuesta automática (máximo el 30 % del depósito de prueba, solo con pruebas completas).'
+// LEGAL: revisado (24/10, 11:51 p. m.) · la nota de «Todo bien, devolver» solo va en el correo que tiene ese botón
+export const NOTA_CONFIRMAR = 'Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.'
+export const NOTA_UN_BOTON = 'El botón abre la app. Desde el correo no se acepta ni se devuelve nada.'
 export const RECLAMO_SIN_REGLA = 'Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo).'
 
-// Bajas: al desmarcar la casilla, la app avisa al servidor y este deja de enviar avisos de ese alquiler a ese correo.
-// En memoria por instancia (la red de prueba no tiene base de datos); la app además deja de pedir envíos. En el paso 16 se guarda en Supabase.
-const bajas = new Set<string>()
-const claveBaja = (para: string, alquiler: string) => `${para.trim().toLowerCase()}|${alquiler}`
-export function darDeBaja(p: { tipo?: string; para?: unknown; alquiler?: unknown }) {
-  exigir(p && p.tipo === 'baja' && typeof p.para === 'string' && EMAIL.test(p.para.trim()) && typeof p.alquiler === 'string' && ID.test(p.alquiler), 400, 'Pedido de baja inválido.')
-  bajas.add(claveBaja(p.para as string, p.alquiler as string)); return { baja: true as const }
+// Consentimiento (Legal 24/10, 11:51 p. m.): el servidor guarda la casilla MARCADA, no la baja, y sin consentimiento guardado no envía
+// ningún aviso. Marcar la casilla lo guarda; desmarcarla lo borra. Hoy vive en memoria por instancia (la red de prueba no tiene base
+// de datos): si la instancia se reinicia, no se envía nada hasta volver a marcar la casilla. Antes del paso 16 pasa a Supabase.
+const consentimientos = new Set<string>()
+const claveConsentimiento = (para: string, alquiler: string) => `${para.trim().toLowerCase()}|${alquiler}`
+export function registrarConsentimiento(p: { tipo?: string; para?: unknown; alquiler?: unknown; acepta?: unknown }) {
+  exigir(p && p.tipo === 'consentimiento' && typeof p.para === 'string' && EMAIL.test(p.para.trim()) && typeof p.alquiler === 'string' && ID.test(p.alquiler) && typeof p.acepta === 'boolean',
+    400, 'No pudimos guardar la casilla: revisa el correo (nombre@correo.com) y vuelve a marcarla.')
+  const k = claveConsentimiento(p.para as string, p.alquiler as string)
+  if (p.acepta) consentimientos.add(k); else consentimientos.delete(k)
+  return { consentimiento: p.acepta as boolean }
 }
-export const deBaja = (para: string, alquiler: string) => bajas.has(claveBaja(para, alquiler))
+export const tieneConsentimiento = (para: string, alquiler: string) => consentimientos.has(claveConsentimiento(para, alquiler))
+/** Solo para pruebas: simula un reinicio del servidor (memoria vacía). */
+export const olvidarConsentimientos = () => consentimientos.clear()
 
 const num = (n: unknown, max = 50_000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max
 /** Valida el pedido; devuelve el pedido limpio. */
@@ -75,14 +84,15 @@ export function armar(p: PedidoCorreo, origen: string) {
   // Paso 11: paleta del logo (#FF6B35, #E8531F, #FFB08A sobre crema #FFF5EE, texto café #3D2A22); nunca texto blanco sobre naranja.
   // LEGAL: revisar · nota de demo arriba del texto (pedido de Katherine: cada correo dice que es una demo sin dinero real)
   const demo = 'Demo en la red de prueba: sin dinero real.'
+  const nota = p.tipo !== 'aviso' ? '' : botonesAviso(p.plantilla!).some(b => b.accion === 'confirmar-devolver') ? NOTA_CONFIRMAR : NOTA_UN_BOTON
   const html = `<!doctype html><html lang="es"><body style="font-family:Arial,sans-serif;color:#3D2A22;background:#FFF5EE;max-width:560px;margin:0 auto;padding:16px">
 <p style="font-size:13px;color:#7A5446;margin:0 0 12px"><strong>${esc(demo)}</strong></p>
 <h1 style="font-size:20px;margin:0 0 12px;color:#3D2A22">${esc(asunto)}</h1>
 <p style="font-size:15px;line-height:1.5">${esc(cuerpo)}</p>
 ${botones.map(b => `<p><a href="${esc(b.url)}" style="display:inline-block;background:#FF6B35;color:#3D2A22;font-weight:bold;padding:10px 16px;border-radius:8px;border:1px solid #E8531F;text-decoration:none">${esc(b.texto)}</a></p>`).join('\n')}
-${p.tipo === 'aviso' ? `<p style="font-size:13px;color:#7A5446">Los botones abren la app. «Todo bien, devolver» abre la confirmación: nunca devuelve el depósito con un solo toque.</p>\n<p style="font-size:13px;color:#3D2A22">${esc(PIE_BAJA)}</p>` : ''}
+${p.tipo === 'aviso' ? `<p style="font-size:13px;color:#7A5446">${esc(nota)}</p>\n<p style="font-size:13px;color:#3D2A22">${esc(PIE_BAJA)}</p>` : ''}
 <hr style="border:none;border-top:1px solid #FFB08A;margin:20px 0"><p style="font-size:12px;color:#7A5446;line-height:1.5">${esc(PIE)} <a href="${esc(origen)}/privacidad" style="color:#E8531F">Privacidad</a></p></body></html>`
-  const texto = `${demo}\n\n${asunto}\n\n${cuerpo}\n\n${botones.map(b => `${b.texto}: ${b.url}`).join('\n')}\n\n${p.tipo === 'aviso' ? PIE_BAJA + '\n\n' : ''}${PIE} Privacidad: ${origen}/privacidad`
+  const texto = `${demo}\n\n${asunto}\n\n${cuerpo}\n\n${botones.map(b => `${b.texto}: ${b.url}`).join('\n')}\n\n${p.tipo === 'aviso' ? nota + '\n\n' + PIE_BAJA + '\n\n' : ''}${PIE} Privacidad: ${origen}/privacidad`
   return { asunto, html, texto }
 }
 
@@ -94,11 +104,11 @@ export function limite(clave: string, max: number, ahora = Date.now()) {
   v.push(ahora); usos.set(clave, v)
 }
 
-export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch): Promise<{ enviado: true; id?: string } | { baja: true }> {
+export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch): Promise<{ enviado: true; id?: string } | { consentimiento: boolean }> {
   exigir(origenPermitido(origen), 403, 'Los correos solo salen desde la vista previa de la prueba.')
-  if (pedido?.tipo === 'baja') return darDeBaja(pedido)
+  if (pedido?.tipo === 'consentimiento') return registrarConsentimiento(pedido)
   const p = validar(pedido)
-  exigir(p.tipo !== 'aviso' || !deBaja(p.para, p.alquiler), 409, 'Desmarcaste la casilla de avisos por correo para este alquiler: ya no te enviamos correos. Los avisos siguen en la app; si quieres recibirlos otra vez, marca la casilla.')
+  exigir(p.tipo !== 'aviso' || tieneConsentimiento(p.para, p.alquiler), 409, 'No tenemos guardada tu casilla de avisos por correo para este alquiler, así que no te enviamos nada. Si quieres recibirlos, marca otra vez la casilla en la app; los avisos siguen en la app.')
   const llave = env.RESEND_API_KEY?.trim()
   exigir(llave, 503, 'El correo no está configurado en este servidor. Los avisos siguen en la app.')
   limite('ip:' + ip, 40); limite('para:' + p.para.toLowerCase(), 15)

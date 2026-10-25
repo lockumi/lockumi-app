@@ -1,11 +1,13 @@
-import { describe, it, expect, vi } from 'vitest'
-import { atenderCorreo, validar, armar, origenPermitido, PIE, REMITENTE, ErrorCorreo, limite } from '../../../api/_lib/correo'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { atenderCorreo, validar, armar, origenPermitido, PIE, REMITENTE, ErrorCorreo, limite, registrarConsentimiento } from '../../../api/_lib/correo'
 import { textoAviso, botonesAviso, PLANTILLAS } from '../../../api/_lib/avisos'
 
 const ORIGEN = 'https://lockumi-app-demo-git-prueba-completa-businessapplockumi-4427.vercel.app'
 const aviso = (x = {}) => ({ tipo: 'aviso' as const, consentimiento: true, para: 'demo@lockumi.com', alquiler: 'a1b2', plantilla: 'dueno-1' as const, datos: { deposito: 20, venceMs: +new Date('2026-11-09T16:00:00Z'), recibido: false }, ...x })
 const ok = () => vi.fn(async () => new Response(JSON.stringify({ id: 'em_1' }), { status: 200 })) as unknown as typeof fetch
 
+// Desde el 24/10 (11:51 p. m.) el servidor solo envía avisos con el consentimiento guardado: la casilla está marcada en estas pruebas.
+beforeEach(() => { registrarConsentimiento({ tipo: 'consentimiento', para: 'demo@lockumi.com', alquiler: 'a1b2', acepta: true }) })
 describe('correo de avisos (Resend)', () => {
   it('textos de los avisos: días 1, 4 y 6 con «depósito de prueba» y hora de Costa Rica', () => {
     const d1 = textoAviso('dueno-1', { deposito: 20, venceMs: +new Date('2026-11-09T16:00:00Z'), recibido: false })

@@ -16,14 +16,14 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 <!-- LEGAL: revisado (24/10) · ronda 9b (quién firma: ver Términos 5.3) -->
 - **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Si usas Freighter, las transacciones de tu billetera las confirmas tú en la extensión. Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba. Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
 - **Alquiler simulado:** el lugar (la dirección del inmueble) que escribes, el monto, las fechas, las reglas, las firmas con fecha y hora, el inventario de entrada y de salida, el reclamo simulado y el historial de eventos.
-- **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. En la fase 1, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. En la fase 2, las fotos reducidas sí se guardan en Supabase (ver abajo).
+- **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. Si simulas el alquiler en un solo aparato, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. Si simulas un alquiler con otra persona, las fotos reducidas se guardan en Supabase (ver abajo).
 - **Aceptaciones:** la versión y la fecha en que aceptaste estos textos, guardadas en tu navegador y en tu perfil.
-- **Datos técnicos:** datos que se guardan en tu navegador para mantener la sesión y, en la fase 2, un identificador de sesión anónima.
+- **Datos técnicos:** datos que se guardan en tu navegador para mantener la sesión y, si simulas un alquiler con otra persona, un identificador de sesión anónima.
 - **Invitaciones y avisos por correo:** el correo de la persona que invitas y su papel en el alquiler simulado.
 - **USDC de prueba que te da Lockumi, sin valor:** si eliges esa opción, registramos qué cuenta de inquilino de prueba de Lockumi se asignó a tu alquiler simulado, el monto y la fecha. Esos tokens no se envían a tu billetera.
 No pedimos datos sensibles. **No subas fotos de personas ni de documentos.**
 
-## Fase 2: dos personas reales
+## Alquiler simulado con otra persona
 Dos personas pueden simular juntas un alquiler, cada una con su cuenta. En ese caso:
 - Usamos **Supabase** con una sesión anónima. El alquiler simulado y las fotos reducidas **sí se guardan allí**, las fotos en un **almacenamiento privado en Estados Unidos**, al que se accede con enlaces temporales.
 - **La otra parte del alquiler simulado ve** tu correo, tus firmas, el inventario con las fotos, el reclamo con su respuesta y el historial de ese alquiler. No ve tu llave privada ni tus otros alquileres.
@@ -61,10 +61,10 @@ Darnos tus datos es voluntario, pero sin el correo, la billetera y el inventario
 Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotuladas**: la del dueño de prueba y, si falla la firma de tu billetera, una cuenta de inquilino de prueba de respaldo. Si eliges el USDC de prueba que te da Lockumi, sin valor, Lockumi también guarda la llave de la cuenta de inquilino de prueba que usa tu alquiler simulado y firma el depósito por ella; tú no recibes ni controlas esos tokens. Esas llaves **no son datos personales tuyos**, porque pertenecen a cuentas de Lockumi que solo manejan tokens de prueba. Si usas tu propio USDC de prueba, Lockumi no custodia los tokens de tu billetera. Si usas una cuenta de inquilino de prueba de Lockumi, sus movimientos quedan vinculados a tu alquiler simulado.
 
 ## Quién puede ver tus datos
-- El personal autorizado de Lockumi y, en la fase 2, la otra parte del alquiler simulado y la persona mediadora de la demo.
+- El personal autorizado de Lockumi y, si simulas un alquiler con otra persona, la otra parte del alquiler simulado y, si aceptas la mediación con una persona, la persona mediadora de la demo.
 - Los proveedores que actúan por nuestra cuenta, **todos en Estados Unidos**:
   - **Vercel** (alojamiento de la app y funciones del servidor).
-  - **Supabase** (base de datos del perfil y, en la fase 2, de los alquileres y las fotos).
+  - **Supabase** (base de datos del perfil y, en los alquileres simulados con otra persona, de los alquileres y las fotos).
   - **Cavos, LLC** (Delaware): inicio de sesión y billetera. Recibe tu correo o tu identidad de Google o Apple y actúa como encargado del tratamiento. Política de privacidad: https://cavos.xyz/privacy
   - **Permissionless Escrows Inc.** (Delaware), que opera **Trustless Work**: recibe las direcciones de las cuentas, el monto y las fechas para crear el contrato digital. Política de privacidad: https://www.trustlesswork.com/privacy-policy
   - **Plus Five Five, Inc.**, que opera **Resend** (Estados Unidos). Envía los correos de invitación y de avisos desde invitaciones@lockumi.com, una dirección que solo envía y no recibe respuestas. Recibirá el correo de la persona invitada, su papel, un resumen del alquiler simulado (sin el lugar ni fotos) y el enlace para unirse. Actuará como encargado del tratamiento. Política de privacidad: https://resend.com/legal/privacy-policy
