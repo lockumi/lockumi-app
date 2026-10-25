@@ -114,6 +114,7 @@ describe('REGLAS QUE NO SE CUMPLÍAN', () => {
   })
   it('3) robots.txt existe y se sirve antes del rewrite; X-Robots-Tag noindex, nofollow en las rutas de perfil', async () => {
     const r = await leerArchivo('public/robots.txt'); expect(r).toMatch(/^User-agent: \*$/m); expect(r).toMatch(/^Disallow: \/perfil$/m)
+    expect(r).toMatch(/^[\x00-\x7F]*$/)   // solo ASCII: se sirve como text/plain sin charset y los acentos se verían rotos
     const v = JSON.parse(await leerArchivo('vercel.json')) as { rewrites: { source: string }[]; headers: { source: string; headers: { key: string; value: string }[] }[] }
     const re = new RegExp('^' + v.rewrites[0]!.source.replace('/((?!', '/(?:(?!') + '$')
     expect(re.test('/robots.txt')).toBe(false); expect(re.test('/alquiler/x')).toBe(true)
