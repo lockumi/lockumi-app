@@ -51,7 +51,7 @@ export async function recargar() {
   const [ps, as, fs, fts, rs, es] = await Promise.all([
     de('lk_participantes', 'rol, usuario, email_cavos, direccion_stellar'), de('lk_actas', 'etapa, cuartos'), de('lk_firmas', 'etapa, rol, firmado_en'),
     de('lk_fotos', 'id, etapa, cuarto, por_rol, ruta, sha256, sha256_original, tomada_en, fecha_archivo, origen, posible_galeria, subido_en'),
-    de('lk_reclamos', 'monto, motivo, creado_en, respuesta'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
+    de('lk_reclamos', 'monto, motivo, creado_en, respuesta, respondido_en'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
   for (const r of [ps, as, fs, fts, rs, es]) if (r.error) throw new ErrorServidor(mensajeServidor(r.error))
   // Escenario C (20261025050000): versión de los Términos por alquiler. Sin la migración, la consulta falla y todo sigue como antes.
   const [tv, at, en] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en'),

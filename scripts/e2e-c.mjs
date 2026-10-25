@@ -180,11 +180,11 @@ const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una f
 const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 92 * 864e5).toISOString().slice(0, 10)
 // Igual que declaracionInvitacion() de la app: con VITE_CORREOS=1 la declaración incluye el correo de invitación.
 const DECL = CORREOS ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.' : 'Declaro que esta persona sabe que la invito.'
-const ASUNTO_INVITACION = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
+const { ASUNTO_INVITACION, NOMBRE_INVITACION } = await vite.ssrLoadModule('/api/_lib/textos-correos.ts')   // el mismo nombre por defecto que la app («el dueño»)
 /** Lo que hace la app al crear con «Invitar» (enviarInvitacionUnaVez → /api/correo): el mismo atenderCorreo, origen de la app. */
 async function invitarPorCorreo(k, id) {
   const para = correo('inquilino', k); exigir(BUZON.test(para), 'dirección de prueba fuera del buzón: ' + para)
-  const pedido = { tipo: 'invitacion', para, alquiler: id, consentimiento: true, rol: 'inquilino', nombre: 'El dueño' }
+  const pedido = { tipo: 'invitacion', para, alquiler: id, consentimiento: true, rol: 'inquilino', nombre: NOMBRE_INVITACION }
   const r = await atenderCorreo(env, pedido, ORIGEN_CORREO, '127.0.0.1', fCorreo)
   exigir(r.enviado && r.id, 'Resend no devolvió el id del correo de invitación')
   enviados.push({ caso: k, tipo: 'invitacion', para, asunto: ASUNTO_INVITACION, resend_id: REAL ? r.id : 'simulado', enviado_en: new Date().toISOString() })

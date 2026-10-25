@@ -20,6 +20,14 @@ describe('privacidad de los correos (1.7-demo)', () => {
     expect(texto).not.toContain('En la fase 2, cuando se active, el correo')
   })
 })
+describe('Legal 25/10, 5:01 p. m. (punto 2): privacidad.md:72', () => {
+  it('con los avisos por correo (sin el modo de dos personas), la línea literal de Legal', () => {
+    encenderTodo(); vi.stubEnv('VITE_DOS_PERSONAS', '')
+    const texto = privacidadVigente()!.html.replace(/<[^>]+>/g, '')
+    expect(texto).toContain('Usamos ese correo solo para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos). No lo agregamos a ninguna lista ni te enviamos novedades.')
+    expect(texto).not.toContain('recibimos tu pedido de borrarla')
+  })
+})
 describe('consentimiento en el momento de uso', () => {
   it('texto exacto de la casilla', () => { expect(CASILLA_CORREO).toBe('Acepto que Lockumi me envíe avisos por correo') })
   it('sin la casilla o sin un correo válido, no se envía', () => {

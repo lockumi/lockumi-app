@@ -30,6 +30,8 @@ export interface RespuestaRubro { acepta: boolean; soporte?: { tipo: 'factura' |
 export interface AceptacionReparto { alDueno: number; dueno?: 'si' | 'no'; inquilino?: 'si' | 'no'; fecha: string }
 export interface Reclamo {
   monto: number; motivo: string; fotos: Foto[]; fecha: string; respuesta?: 'aceptado' | 'rechazado'
+  /** Escenario C: cuándo respondió el inquilino (lk_reclamos.respondido_en); de ahí cuenta el plazo de la mediación. */
+  respondido?: string
   /** Prueba completa: reclamo por rubros. */
   rubros?: Rubro[]
   /** Cuándo el aviso del reclamo se entregó al inquilino en la app (empieza su plazo de 7 días, 6.5 b). */

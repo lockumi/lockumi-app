@@ -33,6 +33,7 @@ import { MediacionPC, ResueltoSimulacion, GuardarDatosMediacion } from '../prueb
 import { Expediente } from '../prueba/Expediente'
 import { AvisoSalida } from '../prueba/AvisoSalida'
 import { etapaDeAvance, type EtapaPago } from '../espera'
+import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -245,6 +246,7 @@ function Mediacion({ a, rol }: P) {
   const leer = () => servidor.aceptaciones(a.id).then(setFilas).catch(() => {})
   useEffect(() => { if (!modoServidor || mediador) return; void leer(); const t = setInterval(() => void leer(), 8000); return () => clearInterval(t) }, [modoServidor, mediador, a.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const est = estadoAceptaciones(rol, filas, a.monto)
+  const vence = modoServidor ? venceMediacionC(a) : null
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
   return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
@@ -254,6 +256,8 @@ function Mediacion({ a, rol }: P) {
     <p>No hubo acuerdo. Una persona mediadora revisa con ustedes las fotos de entrada y salida y les ayuda a buscar un acuerdo sobre el reparto.</p>
     {/* LEGAL: revisado (25/10, P-05) · texto literal de la decisión P-05: cada parte elige el reparto; la persona mediadora no decide */}
     {!modoVideo && <Espera texto={modoServidor ? ESPERA_MEDIACION_C : 'No tienes que hacer nada. Te avisaremos cuando haya un acuerdo.'} />}
+    {/* LEGAL: revisado (25/10, 5:01 p. m., Legal punto 1) · plazo de 3 días hábiles de la mediación de C (misma fecha que el servidor, P-06) */}
+    {modoServidor && vence !== null && <p>{textoPlazoMediacionC(vence)}</p>}
     <Evidencia a={a} />
     {/* LEGAL: revisado (25/10, lista de Legal) · B2 (dos personas): cada parte acepta el reparto en la app; se cierra solo con las dos aceptaciones del mismo monto (2.2 b) */}
     {modoServidor && !mediador && <div className="pila">

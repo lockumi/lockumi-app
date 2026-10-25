@@ -13,7 +13,7 @@ export interface Filas {
   firmas: { etapa: 'contrato' | 'entrada' | 'salida'; rol: Rol; firmado_en: string }[]
   fotos: { id: string; etapa: 'entrada' | 'salida' | 'reclamo'; cuarto: number | null; por_rol: Rol; ruta: string; sha256: string; sha256_original: string | null
     tomada_en: string; fecha_archivo: string | null; origen: 'camara' | 'archivo'; posible_galeria: boolean; subido_en: string }[]
-  reclamo: { monto: number | string; motivo: string; creado_en: string; respuesta: 'aceptado' | 'rechazado' | null } | null
+  reclamo: { monto: number | string; motivo: string; creado_en: string; respuesta: 'aceptado' | 'rechazado' | null; respondido_en?: string | null } | null
   eventos: { texto: string; tx_hash: string | null; creado_en: string }[]
   /** 20261025050000 (escenario C): versión de los Términos guardada al crear y quién la aceptó y cuándo. Sin la migración, no viene. */
   terminos?: { version: string | null; aceptaciones: { rol: Rol; aceptado_en: string }[] } | null
@@ -54,6 +54,7 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string, a
     contrato: { firmas: firmasDe(f.firmas, 'contrato') }, entrada: acta(f, 'entrada', url) ?? { firmas: {}, cuartos: [] }, salida: acta(f, 'salida', url),
     pago: pagoEv?.creado_en, ventanaInicio: inicioPlazo(c, ahora), ...(c.entregado_en ? { entrega: c.entregado_en } : {}), ventanaSegundos: c.ventana_segundos, diasSimulados: 0,
     reclamo: f.reclamo ? { monto: Number(f.reclamo.monto), motivo: f.reclamo.motivo, fecha: f.reclamo.creado_en, respuesta: f.reclamo.respuesta ?? undefined,
+      ...(f.reclamo.respondido_en ? { respondido: f.reclamo.respondido_en } : {}),
       fotos: f.fotos.filter(x => x.etapa === 'reclamo').map(x => aFoto(x, url)) } : undefined,
     resultado: c.resultado ? { via: c.resultado.via, ...(c.resultado.cierre ? { cierre: c.resultado.cierre } : {}), dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,
     liquidacionTx: comprobanteLiquidacion(c.liquidacion_tx),

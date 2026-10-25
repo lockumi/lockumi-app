@@ -25,6 +25,8 @@ export const RECLAMO_CON_REGLA = 'Si no respondes a tiempo y abriste al menos un
 export const RECLAMO_SIN_REGLA = 'Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo).'
 // LEGAL: revisado (25/10, lista de Legal) · COR-C-00 asunto de la invitación
 export const ASUNTO_INVITACION = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
+/** Nombre por defecto de quien invita (sin nombre visible). En minúscula: va a mitad de la frase (Legal 25/10, 5:01 p. m., punto 3). */
+export const NOMBRE_INVITACION = 'el dueño'
 // LEGAL: revisado (24/10) · COR-C-00 invitación, arriba del botón
 export const textoInvitacion = (nombre: string, rol: 'dueno' | 'inquilino') =>
   `Recibes este correo porque ${nombre} escribió tu correo para invitarte como ${rol === 'dueno' ? 'dueño' : 'inquilino'} a un alquiler de ejemplo en la demo de Lockumi. Usamos tu correo solo para esta invitación y para los avisos de ese alquiler. Si no quieres participar, ignora este correo: el enlace vence en 7 días. Puedes pedir que borremos tu correo cuando quieras.`

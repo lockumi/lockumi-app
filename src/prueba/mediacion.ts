@@ -2,7 +2,7 @@
 // En la demo no hay una persona real: el reparto se elige con «Resolver el reclamo (simulación)» (6.8 b). La mediación con una
 // persona del equipo queda fuera hasta que Legal publique el texto de Privacidad (LEGAL-produccion-2114.md).
 import type { Alquiler } from '../types'
-import { sumarHabiles } from '../../api/_lib/plazos'
+import { sumarHabiles, fechaHoraCR } from '../../api/_lib/plazos'
 import { dosPersonas } from '../servidor/config'
 
 export const CUPO = 10
@@ -27,6 +27,17 @@ export function noUsarMediacion(x: Alquiler, ahora: number) {
   // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: 'Se prefirió no usar la Mediación Lockumi (demo)' })
 }
+/** Escenario C (P-06): fin del plazo de 3 días hábiles de la mediación. La MISMA cuenta que lk_mediacion_vencimientos en el servidor
+ *  (20261025090000_c_correos.sql): desde la respuesta del inquilino o, si no respondió, desde el evento «Pasa a la Mediación Lockumi (demo)». */
+export function venceMediacionC(a: Alquiler): number | null {
+  const ev = [...(a.historial ?? [])].reverse().find(e => e.texto.includes('Pasa a la Mediación Lockumi (demo)'))
+  const desde = a.reclamo?.respondido ?? ev?.fecha
+  return desde ? sumarHabiles(+new Date(desde), 3) : null
+}
+// LEGAL: revisado (25/10, 5:01 p. m., respuesta de Legal, punto 1) · línea del plazo en la pantalla de la mediación de C
+export const textoPlazoMediacionC = (t: number) =>
+  `La mediación tiene un plazo de 3 días hábiles, hasta el ${fechaHoraCR(t)}, hora de Costa Rica. Si para entonces no aceptan el mismo reparto, no se paga nada: el monto reclamado sigue retenido y pueden seguir buscando un acuerdo.`
+
 /** Plazo de respuesta: 3 días hábiles desde que se pidió (6.8 b). */
 export const plazoMediacion = (a: Alquiler) => a.reclamo?.mediacion?.estado === 'pedida' ? sumarHabiles(+new Date(a.reclamo.mediacion.fecha), 3) : null
 
