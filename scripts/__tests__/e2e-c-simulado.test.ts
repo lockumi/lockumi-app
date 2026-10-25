@@ -23,6 +23,12 @@ describe('E2E del escenario C (simulado, sin llaves)', () => {
     expect(capa.cerrado.contrato.resultado).toMatchObject({ via: 'mediacion', cierre: 'dos_aceptan' })
     expect(capa.auto.contrato.resultado).toMatchObject({ via: 'automatico', dueno: 0 })
     expect(capa.mediacion.aceptaciones).toHaveLength(1)
+    // Correos (VITE_CORREOS=1): la invitación de cada caso sale por el mismo atenderCorreo de /api/correo, solo al buzón de prueba
+    const inv = e.correos.enviados.filter((c: { tipo: string }) => c.tipo === 'invitacion')
+    expect(inv.map((c: { caso: string }) => c.caso).sort()).toEqual(['aprobada', 'mediacion', 'silencio-dueno', 'silencio-inquilino'])
+    for (const c of inv) { expect(c.para).toBe(`lockumi+e2ec-${c.caso}-inquilino@mail.grokbot.com`); expect(c.asunto).toBe('Te invitaron a un alquiler de ejemplo en la demo de Lockumi') }
+    expect(pasos).toContain('aprobada: un segundo correo de invitación se rechaza (un solo correo por alquiler)')
+    expect(e.correos.enviados.every((c: { para: string }) => /^lockumi\+e2ec-[a-z-]+@mail\.grokbot\.com$/.test(c.para))).toBe(true)
     expect(salida).not.toMatch(/S[A-Z2-7]{55}/)   // ninguna llave secreta de Stellar en la salida
   }, 130_000)
 })

@@ -8,21 +8,25 @@
 //   node scripts/e2e-c.mjs --real [--salida DIR] Testnet de verdad. Lee SUPABASE_URL (por defecto el proyecto de la app), SUPABASE_ANON_KEY,
 //                                                SUPABASE_SERVICE_ROLE_KEY, TRUSTLESS_WORK_API_KEY, LOCKUMI_TW_PLATAFORMA_SECRET y
 //                                                LOCKUMI_TW_MEDIADOR_* del entorno. No imprime ningún secreto.
+//   node scripts/e2e-c.mjs --real --correos      Además, el correo de invitación de cada caso sale de verdad (Resend, RESEND_API_KEY) por el
+//                                                mismo atenderCorreo de /api/correo, SOLO al buzón de prueba lockumi+e2ec-<caso>-<papel>@mail.grokbot.com
+//                                                (scripts/correos-e2e.mjs corta cualquier otro destinatario). En --simulado siempre, con Resend falso.
 //   node scripts/e2e-c.mjs --limpiar --real      Borra los datos de prueba marcados («E2E-C …») del destino.
 // Salida: <DIR>/estado.json (ids, hashes, enlaces) e informe.md. Los datos de prueba llevan la marca «E2E-C <corrida>» en la dirección
 // y correos @lockumi.test. Cada corrida crea alquileres nuevos: nunca reintenta un pago ya hecho (y «repartir» es idempotente).
 import { createServer } from 'vite'
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, chmodSync } from 'node:fs'
 import { randomUUID, randomBytes, createHash } from 'node:crypto'
+import { BUZON, correoPrueba, fetchSoloBuzon } from './correos-e2e.mjs'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, Asset, Horizon, nativeToScVal, BASE_FEE } from '@stellar/stellar-sdk'
 
-const A = process.argv.slice(2), REAL = A.includes('--real'), LIMPIAR = A.includes('--limpiar')
+const A = process.argv.slice(2), REAL = A.includes('--real'), LIMPIAR = A.includes('--limpiar'), CORREOS = !REAL || A.includes('--correos')
 const SALIDA = (A[A.indexOf('--salida') + 1] && A.includes('--salida') ? A[A.indexOf('--salida') + 1] : 'e2e-c-salida').replace(/\/$/, '')
 const CORRIDA = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13) + '-' + randomBytes(2).toString('hex'), MARCA = 'E2E-C ' + CORRIDA
 const VENTANA = 60, MONTO = Number(process.env.E2E_C_MONTO || 2), RECLAMO = MONTO / 2, ACORDADO = MONTO / 4
 const enlace = h => 'https://stellar.expert/explorer/testnet/tx/' + h
 const env = { ...process.env }
-const SECRETOS = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_SECRET'].map(k => env[k]).filter(Boolean)
+const SECRETOS = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_SECRET', 'RESEND_API_KEY'].map(k => env[k]).filter(Boolean)
 const limpio = t => SECRETOS.reduce((s, x) => s.split(x).join('[secreto]'), String(t))
 const log = (...x) => console.log(limpio(x.join(' ')))
 const espera = ms => new Promise(r => setTimeout(r, ms))
@@ -56,6 +60,7 @@ async function destinoSimulado() {
     if (t === 'lk_eventos' && m === 'POST') { await q(null, `insert into public.lk_eventos(contrato_id, texto, tx_hash) values ($1, $2, $3)`, [b.contrato_id, b.texto, b.tx_hash]); return new Response(null, { status: 201 }) }
     if (t === 'lk_eventos' && m === 'GET' && p.tx_hash) return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and tx_hash = $2`, [id, p.tx_hash.slice(3)]))
     if (t === 'lk_eventos' && m === 'GET') return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and texto = $2`, [id, p.texto.slice(3)]))
+    if (t === 'lk_registrar_correo_invitacion' && m === 'POST') { const [r] = await q(null, `select public.lk_registrar_correo_invitacion($1, $2) r`, [b.p_contrato, b.p_para]); return ok(r.r) }
     // 20261025060000: «Todo bien, devolver» cierra al instante (solo la clave de servicio puede llamarla)
     if (t === 'lk_cerrar_aprobado' && m === 'POST') { const [r] = await q(null, `select public.lk_cerrar_aprobado($1) r`, [b.p_contrato]); return ok(r.r) }
     return new Response('ruta no simulada: ' + t, { status: 500 })
@@ -119,12 +124,15 @@ const firmar = (kp, xdr) => { const t = TransactionBuilder.fromXDR(xdr, Networks
 
 // ── Corrida ──
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
-const { atender } = await vite.ssrLoadModule('/api/_lib/tw.ts')
+const { atender } = await vite.ssrLoadModule('/api/_lib/tw.ts'), { atenderCorreo } = await vite.ssrLoadModule('/api/_lib/correo.ts')
 const D = REAL ? await destinoReal() : await destinoSimulado()
 if (LIMPIAR) { log('Borrados', await D.limpiar(), 'alquileres marcados E2E-C en', D.nombre); await vite.close(); process.exit(0) }
-if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
-else { const P = Keypair.random(), M = Keypair.random(); Object.assign(env, { TRUSTLESS_WORK_API_KEY: 'sim', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://simulado.supabase.co', SUPABASE_ANON_KEY: 'sim', SUPABASE_SERVICE_ROLE_KEY: 'sim' }) }
+if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (CORREOS && !env.RESEND_API_KEY) falta.push('RESEND_API_KEY'); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
+else { const P = Keypair.random(), M = Keypair.random(); Object.assign(env, { TRUSTLESS_WORK_API_KEY: 'sim', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://simulado.supabase.co', SUPABASE_ANON_KEY: 'sim', SUPABASE_SERVICE_ROLE_KEY: 'sim', RESEND_API_KEY: 'sim' }) }
 const fTw = REAL ? fetch : twFalso(D)
+// Correos: Resend de verdad solo en --real --correos; en --simulado un Resend falso. Siempre detrás del corte al buzón de prueba.
+const resendFalso = async (url, init) => /^https:\/\/api\.resend\.com\//.test(String(url)) ? new Response(JSON.stringify({ id: 'sim-' + randomUUID() }), { status: 200 }) : fTw(url, init)
+const fCorreo = fetchSoloBuzon(REAL ? fetch : resendFalso), ORIGEN_CORREO = 'https://app.lockumi.com', enviados = []
 const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
@@ -137,12 +145,27 @@ if (!mig.m050) { log('✘ falta la migración 20261025050000 (Términos por alqu
 
 const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await D.cuenta()]
 await D.hacerMediador(mediador.uid)
-const correo = r => `e2e-c+${CORRIDA.toLowerCase()}-${r}@lockumi.test`
+const correo = (r, k) => CORREOS ? correoPrueba(k, r) : `e2e-c+${CORRIDA.toLowerCase()}-${k}-${r}@lockumi.test`
 log('Preparando cuentas de testnet (dueño e inquilino desechables)…')
 const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 3 + 1)])
 const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una foto de prueba
 const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 92 * 864e5).toISOString().slice(0, 10)
-const DECL = 'Declaro que esta persona sabe que la invito.'
+// Igual que declaracionInvitacion() de la app: con VITE_CORREOS=1 la declaración incluye el correo de invitación.
+const DECL = CORREOS ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.' : 'Declaro que esta persona sabe que la invito.'
+const ASUNTO_INVITACION = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
+/** Lo que hace la app al crear con «Invitar» (enviarInvitacionUnaVez → /api/correo): el mismo atenderCorreo, origen de la app. */
+async function invitarPorCorreo(k, id) {
+  const para = correo('inquilino', k); exigir(BUZON.test(para), 'dirección de prueba fuera del buzón: ' + para)
+  const pedido = { tipo: 'invitacion', para, alquiler: id, consentimiento: true, rol: 'inquilino', nombre: 'El dueño' }
+  const r = await atenderCorreo(env, pedido, ORIGEN_CORREO, '127.0.0.1', fCorreo)
+  exigir(r.enviado && r.id, 'Resend no devolvió el id del correo de invitación')
+  enviados.push({ caso: k, tipo: 'invitacion', para, asunto: ASUNTO_INVITACION, resend_id: REAL ? r.id : 'simulado', enviado_en: new Date().toISOString() })
+  paso(k, `correo de invitación enviado a ${para} (Resend${REAL ? '' : ' simulado'})`)
+  if (k === 'aprobada') {   // un solo correo por alquiler (lk_correos_invitacion): el segundo se rechaza antes de llamar a Resend
+    const e = await atenderCorreo(env, pedido, ORIGEN_CORREO, '127.0.0.1', fCorreo).then(() => null, x => x)
+    exigir(e?.estado === 409, 'un segundo correo de invitación no se rechazó'); paso(k, 'un segundo correo de invitación se rechaza (un solo correo por alquiler)')
+  }
+}
 
 async function fotos(cta, id, etapa) {
   const actas = await cta.filas('lk_actas', id), acta = actas.find(a => a.etapa === etapa)
@@ -154,12 +177,13 @@ async function fotos(cta, id, etapa) {
 }
 /** Invitar → unirse → firmar → (pagar en la red) → fotos de entrada → salida → plazo del dueño. */
 async function hastaPlazo(k, conPago) {
-  const r = await dueno.rpc('lk_crear_contrato_con_terminos', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino'),
-    p_email_cavos: correo('dueno'), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: VENTANA })
+  const r = await dueno.rpc('lk_crear_contrato_con_terminos', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino', k),
+    p_email_cavos: correo('dueno', k), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: VENTANA })
   const id = r.id; exigir((await estado(id)).terminos_version === TERMINOS, 'el alquiler no quedó en la ' + TERMINOS)
   paso(k, `el dueño crea el alquiler e invita (link de 7 días, con la declaración y los Términos ${TERMINOS})`)
+  if (CORREOS) await invitarPorCorreo(k, id)
   await inquilino.rpc('lk_ver_invitacion', { p_contrato: id, p_token: r.token })
-  await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino'), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
+  await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino', k), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
   const acept = await inquilino.filas('lk_aceptaciones_terminos', id); exigir(['dueno', 'inquilino'].every(x => acept.some(a => a.rol === x && a.version === TERMINOS && a.aceptado_en)), 'faltan las aceptaciones de los Términos')
   paso(k, `el inquilino se une con su propia cuenta, aceptando los Términos ${TERMINOS} y el Aviso de privacidad`)
   await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); paso(k, 'los dos firman el contrato')
@@ -247,13 +271,17 @@ const flujos = {
 await Promise.all(Object.entries(flujos).map(([k, f]) => f().catch(e => { fallas.push(`${k}: ${limpio(e.message)}`); log(`✘ [${k}] ${limpio(e.message)}`) })))
 const seg = Math.round((Date.now() - t0) / 1000)
 mkdirSync(SALIDA, { recursive: true })
-const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { dueno: correo('dueno'), inquilino: correo('inquilino') } }
+const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { activos: CORREOS, enviados,
+  // Lo que la app NO envía en C (modo servidor): no se finge. Ver docs/prueba-completa.md.
+  no_cubiertos: CORREOS ? ['recordatorios de los días 1, 4 y 6 del plazo del dueño (dueno-1/4/6)', 'avisos del reclamo al inquilino (reclamo-1/4/6)', 'aviso de reparación (reparacion-5)', 'avisos de mediación y de cierre (no existen plantillas)'] : [] } }
 writeFileSync(SALIDA + '/estado.json', JSON.stringify(est, null, 2))
 writeFileSync(SALIDA + '/capa-capturas.json', JSON.stringify(capa, (k, v) => v instanceof Date ? v.toISOString() : v, 2))
 if (REAL) { writeFileSync(SALIDA + '/sesiones.json', JSON.stringify({ dueno: dueno.sesion, inquilino: inquilino.sesion })); chmodSync(SALIDA + '/sesiones.json', 0o600) }   // solo para las capturas; vencen solas
 const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}, 060000 ${mig.m060 ? 'sí' : 'NO'}`,
   `- Resultado: ${fallas.length ? fallas.length + ' fallas' : 'todo en verde'}${omitidos.length ? ` · ${omitidos.length} omitido(s)` : ''}`, '', '| Alquiler | Paso | Transacción |', '|---|---|---|',
-  ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o)].join('\n')
+  ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o),
+  ...(CORREOS ? ['', '## Correos', '', '| Alquiler | Correo | Para | Id de Resend | Enviado (UTC) |', '|---|---|---|---|---|', ...enviados.map(c => `| ${c.caso} | ${c.asunto} | ${c.para} | ${c.resend_id} | ${c.enviado_en} |`), '',
+    'La app no envía en C (modo servidor, sin cron ni consentimiento guardado en Supabase): ' + est.correos.no_cubiertos.join('; ') + '.'] : [])].join('\n')
 writeFileSync(SALIDA + '/informe.md', md + '\n')
 log(`\n${fallas.length ? '✘' : '✔'} ${pasos.length} pasos, ${fallas.length} fallas, ${omitidos.length} omitidos en ${seg} s · ${SALIDA}/informe.md`)
 await vite.close(); process.exit(fallas.length ? 1 : 0)
