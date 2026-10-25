@@ -1,3 +1,4 @@
+import { pruebaCompleta } from './prueba/interruptor'
 import { modoReal } from './services/auth'
 import { abrirRecorrido } from './recorrido'
 import { modoPrueba, escrowReal } from './servidor/config'
@@ -29,8 +30,10 @@ export const AVISO_RED = 'Red de prueba de Stellar: sin dinero real.'
 /** Mismo aviso mientras el depósito sea simulado (modoVideo): no promete movimientos reales en la red. */
 export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito simulado'
 export const Fondo = ({ children }: { children: ReactNode }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>
-  {modoPrueba && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}{children}</>
-export const usd = (n: number) => escrowReal ? new Intl.NumberFormat('es-CR', { maximumFractionDigits: 7 }).format(n) + ' USDC'
+  {(modoPrueba || pruebaCompleta()) && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}{children}</>
+// LEGAL: revisado (24/10, 11:25 p. m.) · con la prueba completa, todos los montos dicen «USDC de prueba» (también la cabecera del detalle)
+export const usd = (n: number) => pruebaCompleta() ? new Intl.NumberFormat('es-CR', { maximumFractionDigits: 7 }).format(n) + ' USDC de prueba'
+  : escrowReal ? new Intl.NumberFormat('es-CR', { maximumFractionDigits: 7 }).format(n) + ' USDC'
   : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code' }).format(n)
 /** Rótulo siempre visible para lo que sigue simulado en la fase 1 (reglas, reclamos y mediador). */
 export const Simulado = ({ texto = 'Simulado' }: { texto?: string }) => <span className="demo demo--simulado">{texto}</span>

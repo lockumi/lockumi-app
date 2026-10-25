@@ -5,6 +5,9 @@
 ## Franja: texto nuevo (sin publicar)
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción: rama aparte, sin publicar hasta el OK de Katherine.
 
+## Ajustes de Legal 11:25 p. m. (24 oct 2026), sin cambios visibles
+- Con `VITE_PRUEBA_COMPLETA`: `usd()` da «N USDC de prueba» y `Fondo` siempre muestra la franja de la red de prueba.
+
 ## PR 8 · paso 15 (24 oct 2026): B.8 suscripción y B.13 rendimiento «función en estudio», sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/SuscripcionPC.tsx`, montado en Crear antes del Anexo 6-A.
 

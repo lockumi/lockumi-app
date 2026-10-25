@@ -63,6 +63,9 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 ## Franja de la red de prueba (sin publicar)
 Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción: rama aparte, sin publicar hasta el OK de Katherine.
 
+## Montos y franja (ajustes de Legal, 11:25 p. m.)
+Con el interruptor encendido, `usd()` escribe «800 USDC de prueba» en todas las pantallas (cabecera y tarjeta del detalle incluidas) y la franja de la red de prueba se ve en todas las pantallas, también en la demo local con depósito simulado.
+
 ## Suscripción (B.8) y rendimiento (B.13) (PR 8, paso 15)
 1. En «Crear alquiler», antes del Anexo 6-A: la B.8 con el texto «En la demo, la app es gratis…» y el cuadro del servicio real con las dos autorizaciones que se pedirían (sin casillas).
 2. Debajo, la B.13 plegada: «Rendimiento del depósito: función en estudio», etiquetas «Función en estudio» y «Simulación», el texto de Legal, enlace a la cláusula 10 y [Entendido] (cierra el bloque).
