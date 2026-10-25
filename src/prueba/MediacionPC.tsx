@@ -36,7 +36,7 @@ function B7({ a }: { a: Alquiler }) {
   return <section className="pila mediacion-b7" aria-labelledby="t-b7">
     <h3 id="t-b7">Mediación Lockumi (demo)</h3>
     <p>Una persona del equipo de Lockumi les ayuda a buscar un acuerdo. <strong>No decide por ustedes.</strong> No es mediadora certificada ni neutral: es parte de Lockumi. Lockumi no gana nada con el resultado del reclamo. En el servicio con dinero real, quien pagaría la suscripción sería el inquilino. Esto es una demo: <strong>no tiene efecto legal, no es una mediación según la Ley 7727 y no tiene costo.</strong> El reparto solo se hace si los dos lo aceptan. Si no hay acuerdo, el monto sigue guardado y pueden ir a los tribunales. Respondemos en un plazo de 3 días hábiles (máximo 10 casos en la demo).</p>
-    <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la mediación tendría un costo, que se informaría antes de firmar ([PENDIENTE: monto y quién lo paga]).</div>
+    <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la mediación tendría un costo, que se informaría antes de firmar.</div>{/* LEGAL: revisar · se quitó el marcador [PENDIENTE] (Katherine, 24/10) */}
     <p className="nota">En la demo: simulación, no se cobra.</p>
     <label className="casilla"><input type="checkbox" checked={ok} onChange={e => setOk(e.target.checked)} /> Entiendo esto y quiero usar la Mediación Lockumi (demo).</label>
     <div className="fila-botones"><button type="button" className="boton boton--pc" disabled={!ok} onClick={pedir}>Pedir mediación</button>
