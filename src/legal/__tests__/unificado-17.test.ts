@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { condicional } from '../condicional'
 import { docs, terminosActual, privacidadActual, docTerminos, consentimientoPrivacidad, CONSENTIMIENTO_PRIVACIDAD } from '../documentos'
-import { V17, FECHA_V17, EDICION_V17 } from '../version17'
+import { versionVigente, edicionDe, datosVersion } from '../versiones'
 import { TERMINOS_42E } from '../../prueba/dosPersonas'
 afterEach(() => vi.unstubAllEnvs())
 const plano = (h: string) => h.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ')
@@ -26,22 +26,22 @@ const B68_DOS = 'En los alquileres simulados con otra persona, si los dos lo pid
 const INVITADA_7 = 'Si la persona invitada no se une en 7 días, borramos su correo.'
 // Sección B y E de legal/dos-personas-textos.md (texto exacto de Legal)
 const DOS_TERMINOS = [
-  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. Quien crea el alquiler elige si es el dueño o el inquilino e invita a la otra persona con un enlace que vence a los 7 días.',
+  'Fase 2 (disponible): dos personas reales, cada una con su cuenta, pueden simular juntas un alquiler. En el alquiler con otra persona, quien lo crea es el dueño e invita al inquilino con un enlace. El enlace vence a los 7 días si la persona no se une.',
   'En esta fase, el alquiler simulado y las fotos reducidas se guardan en Supabase, en un almacenamiento privado en Estados Unidos.',
   'En la fase 2 no hay dueño de prueba: el dueño firma con su propia billetera, y Lockumi no guarda su llave.',
   'En la fase 1, el dueño es la cuenta de prueba de Lockumi, así que Lockumi firma esa aprobación. En la fase 2, el dueño la firma con su propia billetera.',
   'Aprobación de la devolución: en la fase 1, Lockumi la firma con la cuenta del dueño de prueba (4.2 a). En la fase 2, la firma el dueño con su billetera.',
   'En la fase 2, la liberación necesita la aprobación del dueño. Si el dueño no aprueba ni reclama dentro de su plazo (cláusula 6.5 a), la devolución es automática: el sistema de Lockumi abre una disputa en la red de prueba solo para poder devolver el depósito, y otra cuenta de Lockumi, la que resuelve disputas, entrega el 100 % al inquilino. Ninguna persona decide ese reparto, no pasa a mediación y no puede entregar nada al dueño ni a Lockumi.',
-  'En la fase 2, si el plazo vence sin reclamo y el dueño no aprobó, la devolución del 100 % al inquilino es automática (cláusula 5.3 d). No la decide una persona ni pasa a la Mediación Lockumi (demo).',
+  'En la fase 2, si el plazo vence sin reclamo y el dueño no aprobó, la devolución del 100 % al inquilino es automática (cláusula 5.3 d). Puede tardar hasta 24 horas después de que vence el plazo. No la decide una persona ni pasa a la Mediación Lockumi (demo).',
   'Mientras Lockumi tenga el rol de resolver disputas, la cuenta de plataforma no puede abrir una disputa en el contrato digital, salvo la disputa automática de la cláusula 5.3 d), que abre otra cuenta de Lockumi solo para devolver el 100 % al inquilino.',
   TERMINOS_42E,
-  'En la fase 2, lo decide la Mediación Lockumi (demo) si las partes no se ponen de acuerdo (cláusula 6).',
+  'En la fase 2, se aplica el reparto que las dos partes acepten en la mediación (cláusula 6).',
   B68_DOS,
 ]
 const DOS_PRIVACIDAD = [
   'Mediación Lockumi (demo), en los alquileres simulados con otra persona: si un reclamo pasa a la mediación, una persona del equipo de Lockumi ve el reclamo, la respuesta, las fotos y los mensajes de ese alquiler simulado, y el nombre visible y el papel de cada parte. Accede a las fotos con enlaces temporales. No ve tu llave privada, tu correo ni tus otros alquileres.',
   'Si el reclamo pasa a la Mediación Lockumi (demo), también lo ve la persona mediadora del equipo de Lockumi.',
-  'Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y, si no lo logran, decida el reparto simulado. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.',
+  'Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y registre el reparto que las dos partes acepten en la mediación. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.',
   'Alquiler simulado con otra persona', INVITADA_7, 'El enlace de invitación vence a los 7 días.',
 ]
 const CORREOS_PRIVACIDAD = ['Resend', 'invitaciones@lockumi.com', 'Acepto que Lockumi me envíe avisos por correo', 'transfieran a estos proveedores (Vercel, Supabase, Cavos, Trustless Work y Resend)']
@@ -50,7 +50,7 @@ describe('condicional(): bloques y frases según los interruptores', () => {
   const s = { 'dos-personas': true, correos: false }
   it('bloques (anidados) e incisos en línea; sin marcas en el resultado', () => {
     const txt = ['a', '<!-- si: dos-personas -->', 'b {{correos: c}}{{!correos:d}}', '<!-- si: correos -->', 'e', '<!-- fin -->', '<!-- fin -->', '<!-- si no: dos-personas -->', 'f', '<!-- fin -->', 'Versión {{edicion}}'].join('\n')
-    expect(condicional(txt, s)).toBe(['a', 'b d', 'Versión ' + EDICION_V17].join('\n'))
+    expect(condicional(txt, s)).toBe(['a', 'b d', 'Versión ' + edicionDe('1.9-demo')].join('\n'))   // escenario C: la edición de lo encendido
   })
   it('un interruptor desconocido o un bloque sin cerrar es un error (no se publica un texto roto)', () => {
     expect(() => condicional('{{otro: x}}', s)).toThrow(); expect(() => condicional('<!-- si: dos-personas -->\nx', s)).toThrow()
@@ -61,10 +61,11 @@ describe('condicional(): bloques y frases según los interruptores', () => {
 describe('Una sola 1.7-demo para todas las combinaciones', () => {
   for (const c of COMBOS) it(`dos personas ${c.dos ? 'sí' : 'no'} · correos ${c.correos ? 'sí' : 'no'}`, () => {
     const { t, p } = encender(c)
-    // Misma versión y fecha, de una sola constante; nada de marcas a la vista
-    for (const d of [terminosActual(), privacidadActual()!]) { expect(d.version).toBe(V17); expect(d.fecha).toBe(FECHA_V17); expect(d.html).not.toMatch(/\{\{|\}\}|&lt;!--|si:|LEGAL/) }
-    expect(t).toContain('Versión ' + EDICION_V17); expect(p).toContain('Versión ' + EDICION_V17)
-    expect(docTerminos(V17).html).toBe(terminosActual().html)
+    // Misma versión y fecha en los dos textos (escenario C: la de lo encendido, src/legal/versiones.ts); nada de marcas a la vista
+    const v = versionVigente({ 'dos-personas': c.dos, correos: c.correos })
+    for (const d of [terminosActual(), privacidadActual()!]) { expect(d.version).toBe(v); expect(d.fecha).toBe(datosVersion(v)!.fecha); expect(d.html).not.toMatch(/\{\{|\}\}|&lt;!--|si:|LEGAL/) }
+    expect(t).toContain('Versión ' + edicionDe(v)); expect(p).toContain('Versión ' + edicionDe(v))
+    expect(docTerminos(v).html).toBe(terminosActual().html)
     // Arreglo 1: cláusula 12 exacta y sin «Al crear o firmar…»
     expect(t).toContain('12. Cambios ' + CL12); expect(t).not.toMatch(/Al crear o firmar/); expect(t).not.toContain('antes de que entre a regir')
     // Arreglo 2: 6.8 b)

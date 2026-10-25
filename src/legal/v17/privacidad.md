@@ -19,7 +19,7 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 - **Fotos del inventario:** cada foto se reduce a 720 píxeles y se vuelve a guardar **sin sus metadatos**, es decir, sin ubicación, GPS ni otros datos internos del archivo. Guardamos también su **hash (una huella digital que no permite ver el contenido)** y la fecha original. Si simulas el alquiler en un solo aparato, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos.{{dos-personas: Si simulas un alquiler con otra persona, las fotos reducidas se guardan en Supabase (ver abajo).}}
 - **Aceptaciones:** la versión y la fecha en que aceptaste estos textos, guardadas en tu navegador y en tu perfil.
 - **Datos técnicos:** datos que se guardan en tu navegador para mantener la sesión{{dos-personas: y, si simulas un alquiler con otra persona, un identificador de sesión anónima}}.
-<!-- LEGAL: revisar · paso16-unido: «Invitaciones» solo con el modo de dos personas y «Avisos por correo» solo con VITE_CORREOS=1; se guarda tu declaración (quién, cuándo y el texto) -->
+<!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: «Invitaciones» solo con el modo de dos personas y «Avisos por correo» solo con VITE_CORREOS=1; se guarda tu declaración (quién, cuándo y el texto) -->
 <!-- si: dos-personas -->
 - **Invitaciones{{correos: y avisos por correo}}:** el correo de la persona que invitas y su papel en el alquiler simulado.
 <!-- LEGAL: revisado (24/10) · dos-personas-textos.md C (datos) -->
@@ -42,14 +42,14 @@ Dos personas pueden simular juntas un alquiler, cada una con su cuenta. En ese c
 - Si el reclamo pasa a la Mediación Lockumi (demo), también lo ve la persona mediadora del equipo de Lockumi.
 
 ## Invitar a otra persona{{correos: y avisos por correo}}
-<!-- LEGAL: revisar · paso16-unido: sección partida según los interruptores; la frase de los 7 días es de Legal (25/10, arreglo 5) -->
+<!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: sección partida según los interruptores; la frase de los 7 días es de Legal (25/10, arreglo 5) -->
 Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuenta.{{correos: Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.}}
-- Puedes invitar a otra persona a un alquiler simulado escribiendo su correo. **Al invitarla, declaras que esa persona sabe que la invitas{{correos: y que acepta recibir el correo de Lockumi}}.** Guardamos esa declaración: quién la hizo, cuándo y con qué texto. No invites a nadie sin avisarle antes.
+- Puedes invitar a otra persona a un alquiler simulado escribiendo su correo. **Al invitarla, declaras que esa persona sabe que la invitas{{correos: y que acepta recibir el correo de invitación de Lockumi}}.** Guardamos esa declaración: quién la hizo, cuándo y con qué texto. No invites a nadie sin avisarle antes.
 <!-- si: correos -->
 - Le enviamos **un solo correo de invitación**, sin recordatorios.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
-- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, el papel de la persona invitada (dueño o inquilino), un resumen del alquiler simulado (monto y fechas) y el enlace para unirse. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
-- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
+- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, que la invitan como inquilino y un enlace para abrir la demo de Lockumi. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
+- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 <!-- fin -->
 <!-- si no: correos -->
 - Lockumi no le envía ningún correo: tú le compartes el enlace para unirse.
@@ -63,12 +63,13 @@ Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuen
 <!-- si no: dos-personas -->
 <!-- si: correos -->
 ## Avisos por correo
-<!-- LEGAL: revisar · paso16-unido: avisos por correo sin el modo de dos personas (texto del paso 11 sin la parte de invitaciones) -->
+<!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: avisos por correo sin el modo de dos personas (texto del paso 11 sin la parte de invitaciones) -->
 Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.
 - Los avisos solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
 - Es un **correo transaccional, sin publicidad**. Los avisos de plazos y de reclamos no incluyen la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
-- Usamos ese correo solo para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregamos a ninguna lista ni te enviamos novedades.
+<!-- LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · 1.9-demo (escenario C, 25/10): avisos de mediación y cierre, y correos de servicio de la cuenta (COR-C-08 y COR-C-09, sin casilla) -->
+- Usamos ese correo solo para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos). No lo agregamos a ninguna lista ni te enviamos novedades.
 - Resend guarda un registro de cada correo enviado (destinatario, asunto, contenido y estado de entrega). Según Resend, en sus planes estándar conserva esos datos durante 30 días (https://resend.com/security/gdpr).
 
 <!-- fin -->
@@ -76,10 +77,11 @@ Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la a
 ## Para qué los usamos
 1. Permitirte entrar a la demo y usarla.
 2. Crear en la red de prueba el **escrow (contrato digital de garantía)**, registrar el depósito, la aprobación y la liberación, y dejar como evidencia solo la huella digital de las fotos.
-<!-- LEGAL: revisar · paso16-unido: punto 3 según los interruptores; el punto de la mediación es de dos-personas-textos.md C -->
+<!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: punto 3 según los interruptores; el punto de la mediación es de dos-personas-textos.md C -->
+<!-- LEGAL: revisado (25/10, lista de Legal) · escenario C: «registre el reparto que las dos partes acepten en la mediación» (antes, «decida el reparto simulado») -->
 <!-- si: dos-personas -->
 3. Mostrar a la otra parte lo necesario para la simulación{{correos: y enviar por correo la invitación y los avisos del alquiler simulado}}.
-4. Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y, si no lo logran, decida el reparto simulado. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.
+4. Si un reclamo pasa a la Mediación Lockumi (demo), que una persona del equipo lo revise para ayudar a las partes a llegar a un acuerdo y registre el reparto que las dos partes acepten en la mediación. Usa los datos solo para ese caso, guarda confidencialidad y no hace capturas ni los comparte.
 <!-- fin -->
 <!-- si no: dos-personas -->
 3. Mostrar en la app lo necesario para la simulación{{correos: y enviarte por correo los avisos del alquiler simulado, si los pides}}.
@@ -117,7 +119,7 @@ Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotul
 - Solo compartiremos tus datos con una autoridad cuando lo exijan una orden judicial fundamentada o la ley.
 
 ## Cuánto tiempo los guardamos
-<!-- LEGAL: revisado (24/10) · conservación, dos-personas-textos.md C · LEGAL: revisar: la frase del correo invitado (7 días) solo con dos personas -->
+<!-- LEGAL: revisado (24/10) · conservación, dos-personas-textos.md C · LEGAL: revisado (25/10, lista de Legal): la frase del correo invitado (7 días) solo con dos personas -->
 Mientras la demo esté activa y hasta 6 meses después de que termine, o antes si pides que los eliminemos.{{dos-personas: El correo de una persona invitada se borra si no se une en 7 días; si se une, se guarda mientras exista el alquiler simulado, salvo que pida antes que lo borremos.}} Luego los eliminamos o los anonimizamos. Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app. Los datos que quedan solo en tu navegador los puedes borrar cuando limpies los datos del sitio. Lo registrado en la red pública no se puede borrar.
 
 ## Tus derechos

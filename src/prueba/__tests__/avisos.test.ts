@@ -11,7 +11,7 @@ describe('avisos 1, 4 y 6', () => {
     const d1 = textoAviso('dueno-1', { deposito: 20, venceMs: +new Date('2026-11-09T16:00:00Z'), recibido: false })
     expect(d1.asunto).toBe('Tienes 7 días naturales para revisar la casa y reclamar')
     expect(d1.texto).toMatch(/^Como no confirmaste «Recibí la casa», tu plazo empezó automáticamente 2 días después de la entrega registrada\./)
-    expect(d1.texto).toContain('depósito de prueba de 20 USDC de prueba. Vence el 9 nov 2026, 10:00, hora de Costa Rica.')
+    expect(d1.texto).toContain('depósito de prueba de 20 USDC de prueba. Vence el 9 nov 2026, 10:00 a. m., hora de Costa Rica.')
     expect(textoAviso('reclamo-6', { deposito: 20, reclamado: 5, venceMs: 0, regla: true }).texto).toContain('La app registra que abriste este aviso.')
     expect(textoAviso('reclamo-6', { deposito: 20, reclamado: 5, venceMs: 0, regla: false }).texto).toContain('que tiene costo (en la demo no se cobra)')
     for (const p of PLANTILLAS) expect(textoAviso(p, { deposito: 1 }).asunto.length).toBeGreaterThan(5)

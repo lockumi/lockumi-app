@@ -9,7 +9,8 @@ const cabeceras = (s: ServicioSupabase) => ({ apikey: s.llave, authorization: `B
 export async function rpc<T>(s: ServicioSupabase, nombre: string, args: Record<string, unknown>, f: typeof fetch = fetch): Promise<T> {
   const r = await f(`${s.url}/rest/v1/rpc/${nombre}`, { method: 'POST', headers: cabeceras(s), body: JSON.stringify(args) })
   if (!r.ok) throw new Error(`Supabase respondió ${r.status} en ${nombre}`)
-  return await r.json() as T
+  const t = await r.text()   // una función «returns void» responde 204 sin cuerpo
+  return (t ? JSON.parse(t) : null) as T
 }
 /** Borra objetos del bucket (Storage API). El bucket lk-fotos no tiene política de borrado: solo la clave de servicio puede. */
 export async function borrarObjetos(s: ServicioSupabase, bucket: string, rutas: string[], f: typeof fetch = fetch) {

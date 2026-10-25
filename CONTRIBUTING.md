@@ -15,6 +15,8 @@ Desde el 20 de octubre de 2026, **todo cambio publicado en app.lockumi.com tiene
 - `PLAN.md` (sección «Estado actual»).
 - `docs/` (por ejemplo, [`docs/correo-resend.md`](docs/correo-resend.md)) y `src/legal/LEEME.md` si cambian los textos legales.
 
+Textos de correos: todos van en `api/_lib/textos-correos.ts` y en la lista de [`docs/correos-c.md`](docs/correos-c.md). Un texto nuevo se marca `legal: 'revisar'` con el comentario «LEGAL: revisar» encima; mientras quede uno, el servidor no envía y el build de producción falla. Para probarlos solo existe `LOCKUMI_CORREOS_BORRADOR=1` en tu máquina (nunca en Vercel) y solo al buzón de prueba `lockumi@mail.grokbot.com`. La guarda (`api/_lib/guarda-correos.ts`) también busca cualquier comentario «LEGAL: revisar» en `src/`, `api/` y `supabase/migrations/`: el build de producción falla mientras quede uno. Formatos: la hora siempre en 12 h con espacio fijo («9:00 a. m.», `horaCR`/`fechaHoraCR` en `api/_lib/plazos.ts`, `fechaHora` en `src/ui.tsx`) y los montos siempre con 2 decimales. Si cambias un texto, corre `node scripts/textos-correos-doc.mjs` para regenerar la sección «Textos» de `docs/correos-c.md`.
+
 Nunca pongas valores de secretos en la documentación: solo el nombre de la variable y dónde está (por ejemplo, «Vercel, solo Preview, sensible»).
 
 ## Cambios en `/api/solo`: piensa en las pestañas abiertas
@@ -94,6 +96,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Mediación (PR 6): en la demo no hay persona mediadora; todo reparto va por `acciones.resolverSimulacion` con confirmación (B.14) y nunca da al dueño más de lo reclamado.
 - Términos 1.7-demo (paso 16): las reglas nuevas se piden con `reglas17(a)` de `src/prueba/version.ts` (interruptor encendido **y** alquiler en la 1.7-demo), nunca solo con `pruebaCompleta()`; así un alquiler de la 1.6-demo no cambia de reglas. Los textos legales vigentes salen de `docs()`, `terminosActual()` y `privacidadActual()` (`src/legal/documentos.ts`). No uses `Reaceptacion.tsx`.
 - Consentimientos (paso 16): cada función que trata datos nuevos pide su casilla sin marcar en el momento de usarla y la registra con `registrarConsentimiento` (`src/prueba/consentimientos.ts`). Datos de la mediación: se borran a los 30 días del cierre (`src/prueba/borrado.ts`, lo aplica `sincronizarTodos`).
+- Versiones nuevas de los Términos (escenario C, 25/10): no agregues avisos de «Términos actualizados» ni pantallas de volver a aceptar. Una cuenta nueva acepta la versión vigente en «Entrar»; lo nuevo de cada función va con su casilla (`casillaDeFuncion`, `CasillaVersion`). Lo revisa `src/screens/__tests__/c-sin-aviso-version.test.tsx`.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

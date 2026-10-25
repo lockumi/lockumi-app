@@ -5,20 +5,20 @@
 //   (avance «Guardando el depósito en la cuenta segura…»). 3 Guardado: la llamada terminó bien y el alquiler quedó anotado.
 export type EtapaPago = 0 | 1 | 2 | 3
 
-export const PASOS_PAGO = ['Firmando', 'Enviando', 'Guardado'] as const // LEGAL: revisar
-export const ESPERA_PAGO = 'Guardando tu depósito…' // LEGAL: revisar
-export const NOTA_ESPERA_PAGO = 'Esto tarda unos segundos. No cierres la app.' // LEGAL: revisar
-export const LISTO_PAGO = 'Depósito guardado' // LEGAL: revisar
-export const REINTENTO_PAGO = 'Volver a intentar el pago' // LEGAL: revisar
-export const BARRA_PAGO = 'Avance del depósito' // LEGAL: revisar (solo lectores de pantalla)
-export const LISTA_PASOS = 'Cómo va' // LEGAL: revisar (solo lectores de pantalla)
-export const MARCA_PASO = { hecho: ' (listo)', actual: ' (ahora)', futuro: ' (falta)', error: ' (no se pudo)' } as const // LEGAL: revisar (solo lectores de pantalla)
+export const PASOS_PAGO = ['Firmando', 'Enviando', 'Guardado'] as const // LEGAL: revisado (25/10, lista de Legal)
+export const ESPERA_PAGO = 'Guardando tu depósito…' // LEGAL: revisado (25/10, lista de Legal)
+export const NOTA_ESPERA_PAGO = 'Esto tarda unos segundos. No cierres la app.' // LEGAL: revisado (25/10, lista de Legal)
+export const LISTO_PAGO = 'Depósito guardado' // LEGAL: revisado (25/10, lista de Legal)
+export const REINTENTO_PAGO = 'Volver a intentar el pago' // LEGAL: revisado (25/10, lista de Legal)
+export const BARRA_PAGO = 'Avance del depósito' // LEGAL: revisado (25/10, lista de Legal) (solo lectores de pantalla)
+export const LISTA_PASOS = 'Cómo va' // LEGAL: revisado (25/10, lista de Legal) (solo lectores de pantalla)
+export const MARCA_PASO = { hecho: ' (listo)', actual: ' (ahora)', futuro: ' (falta)', error: ' (no se pudo)' } as const // LEGAL: revisado (25/10, lista de Legal) (solo lectores de pantalla)
 
 /** Texto de avance de services/escrow.ts → paso. Solo el envío del depósito firmado es «Enviando»; lo anterior es «Firmando». */
 export const etapaDeAvance = (texto: string): 1 | 2 => /^Guardando el depósito/.test(texto) ? 2 : 1
 
 /** Lo que se anuncia (role=status) y el aria-valuetext de la barrita. */
-export const vozPago = (e: EtapaPago) => e === 3 ? `${LISTO_PAGO}.` : e === 0 ? '' : `Paso ${e} de 3: ${PASOS_PAGO[e - 1]}.` // LEGAL: revisar
+export const vozPago = (e: EtapaPago) => e === 3 ? `${LISTO_PAGO}.` : e === 0 ? '' : `Paso ${e} de 3: ${PASOS_PAGO[e - 1]}.` // LEGAL: revisado (25/10, lista de Legal)
 
 /** Barrita: un tercio por paso; dentro del paso se acerca despacio al siguiente sin llegar. `salto` = mitad del tramo (reducir movimiento). */
 export function tramoBarra(e: EtapaPago) {

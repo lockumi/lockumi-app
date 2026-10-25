@@ -55,7 +55,7 @@ describe('textos del modo de dos personas (Legal)', () => {
       duenoEmail: 'demo@lockumi.com', inquilinoEmail: 'inquilino.prueba@lockumi.com', estado: 'firmas', rendimiento: false, historial: [], contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, diasSimulados: 0 }
     const dos = renderToStaticMarkup(<Documento a={{ ...A, dosPersonas: true }} impresion />)
     expect(dos).not.toContain('se guarda solo en tu navegador'); expect(dos).toContain(TEXTO_GUARDA_DOS)
-    expect(dos).toContain('800 USDC de prueba'); expect(dos).not.toContain('USD 800')
+    expect(dos).toContain('800,00 USDC de prueba'); expect(dos).not.toContain('USD 800')
     expect(renderToStaticMarkup(<Documento a={A} impresion />)).toContain('Este contrato se guarda solo en tu navegador')
   })
 })

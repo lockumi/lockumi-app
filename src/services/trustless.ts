@@ -34,6 +34,10 @@ export const trustless = {
   async devolverAutomatico(contrato: string): Promise<string> {
     const { tx } = await llamar<{ tx: string }>({ accion: 'devolver-automatico', contrato }); await recargar(); return tx
   },
+  /** PR #22: paga en la red el reparto de un caso cerrado por acuerdo o con las dos aceptaciones (disputa + resolución en el servidor). */
+  async repartir(contrato: string): Promise<string> {
+    const { tx } = await llamar<{ tx: string }>({ accion: 'repartir', contrato }); await recargar(); return tx
+  },
   async liberar(contrato: string): Promise<string> {
     const { tx } = await llamar<{ tx: string }>({ accion: 'liberar', contrato }); await recargar(); return tx
   },

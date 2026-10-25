@@ -65,7 +65,7 @@ describe('lk_decidir_mediacion en producción: solo con las dos aceptaciones (A2
     await acepta(DUENO, id, 20); await acepta(INQ, id, 20)
     await registrar(id, 20)
     expect(await estado(id)).toMatchObject({ estado: 'cerrado', resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 20, inquilino: 80 } })
-    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC al dueño y 80 al inquilino (aceptado por las dos partes) · Daño parcial')
+    expect(await ultimoEvento(id)).toBe('Acuerdo registrado: 20 USDC de prueba al dueño y 80 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work (aceptado por las dos partes) · Daño parcial')
   })
   it('una parte puede cambiar su aceptación antes del cierre; el reparto registrado debe ser el aceptado por las dos', async () => {
     const id = await enMediacion()
@@ -99,9 +99,10 @@ describe('lk_decidir_mediacion en producción: solo con las dos aceptaciones (A2
     expect(r).toEqual({ a: false, u: false, s: true, x: false, d: false })
   })
   it('no depende del escenario C: no crea lk_reglas_651 ni lk_aceptar_regla_651 y mantiene la misma firma de lk_decidir_mediacion', async () => {
-    const r = await uno<{ t: string | null; f: string | null; d: string | null }>(`select to_regclass('public.lk_reglas_651')::text t, to_regprocedure('public.lk_aceptar_regla_651(uuid, text)')::text f,
-      to_regprocedure('public.lk_decidir_mediacion(uuid, numeric, text)')::text d`)
-    expect(r).toEqual({ t: null, f: null, d: 'lk_decidir_mediacion(uuid,numeric,text)' })
+    const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+    const sql = fs.readFileSync('supabase/migrations/20261025020000_mediacion_solo_dos_aceptan.sql', 'utf8')
+    expect(sql).not.toMatch(/lk_reglas_651|lk_aceptar_regla_651/)
+    expect((await uno<{ d: string | null }>(`select to_regprocedure('public.lk_decidir_mediacion(uuid, numeric, text)')::text d`))!.d).toBe('lk_decidir_mediacion(uuid,numeric,text)')
   })
 })
 

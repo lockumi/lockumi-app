@@ -7,15 +7,17 @@ import type { Alquiler, Foto, Rol } from '../types'
 import { MOTIVOS, propuesta, referencia } from './propuesta'
 import { nombreRubro } from './reclamos'
 import { leerAceptacion } from '../legal/aceptacion'
+import { esDosPersonas, EXPEDIENTE_REGLA_DOS } from './dosPersonas'
+import { fechaHoraCR } from '../../api/_lib/plazos'
 
-// LEGAL: revisar · B.11
+// LEGAL: revisado (25/10, lista de Legal) · B.11
 export const BOTON_EXPEDIENTE = 'Descargar el expediente (demo)'
-// LEGAL: revisar · B.11 (aviso antes de descargar)
+// LEGAL: revisado (25/10, lista de Legal) · B.11 (aviso antes de descargar)
 export const AVISO_EXPEDIENTE = 'Este expediente tiene datos personales de la otra parte. Úsalo solo para este reclamo: para conversar con la otra parte, en una mediación o conciliación, o ante un tribunal. No lo publiques ni lo compartas con otras personas.'
-// LEGAL: revisar · B.11 (marca de cada página)
+// LEGAL: revisado (25/10, lista de Legal) · B.11 (marca de cada página)
 export const MARCA_EXPEDIENTE = 'DEMO · Sin efecto legal'
 
-// LEGAL: revisar · Legal 24/10 (11:29 p. m.), en «Resultado» cuando el reparto salió del botón de simulación
+// LEGAL: revisado (25/10, lista de Legal) · Legal 24/10 (11:29 p. m.), en «Resultado» cuando el reparto salió del botón de simulación
 export const NOTA_SIMULACION = 'El reparto se eligió con el botón de simulación: no lo decidió una persona.'
 /** `fotos`: índice de línea → src de la foto que va debajo de esa línea. */
 export interface Seccion { titulo: string; lineas: string[]; fotos?: Record<number, string> }
@@ -25,8 +27,9 @@ export interface Aceptaciones { terminos?: { version: string; fecha: string } | 
 export interface ImagenPdf { ancho: number; alto: number; jpeg: Uint8Array }
 const ROL: Record<Rol, string> = { dueno: 'Dueño', inquilino: 'Inquilino' }
 const VIA: Record<string, string> = { automatico: 'Sin reclamo en el plazo', acuerdo: 'Acuerdo en la app', mediacion: 'Mediación Lockumi (demo)', propuesta: 'Propuesta automática', devuelto: 'El dueño devolvió todo', simulacion: 'Resolver el reclamo (simulación)' }
-const usdc = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
-const cr = (s?: string | number) => s === undefined || s === '' ? '—' : new Date(s).toLocaleString('es-CR', { timeZone: 'America/Costa_Rica', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' (hora de Costa Rica)'
+// Legal 25/10 5:09 p. m. (punto 8): montos con 2 decimales y hora en 12 h
+const usdc = (n: number) => `${n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC de prueba`
+const cr = (s?: string | number) => s === undefined || s === '' ? '—' : fechaHoraCR(+new Date(s)) + ' (hora de Costa Rica)'
 const dia = (s: string) => new Date(s).toLocaleDateString('es-CR', { timeZone: /^\d{4}-\d\d-\d\d$/.test(s) ? 'UTC' : 'America/Costa_Rica', day: 'numeric', month: 'long', year: 'numeric' })
 /** Quita del texto libre correos, teléfonos y números de identificación que alguien haya escrito. */
 export const sinDatos = (s: string) => s.replace(/[^\s@]+@[^\s@]+/g, '(dato quitado)').replace(/\+?\d[\d\s-]{6,}\d/g, '(dato quitado)')
@@ -59,7 +62,7 @@ export function contenidoExpediente(a: Alquiler, ahora: number, ac: Aceptaciones
     { titulo: 'Resultado', lineas: a.resultado ? [`${VIA[a.resultado.via] ?? a.resultado.via} · ${cr(a.resultado.fecha)}`, `Dueño: ${usdc(a.resultado.dueno)}`, `Inquilino: ${usdc(a.resultado.inquilino)}`,
       ...(a.resultado.via === 'simulacion' ? [NOTA_SIMULACION] : [])] : ['Sin resultado todavía'] },
     { titulo: 'Aceptaciones', lineas: [
-      a.regla ? `Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}` : 'Regla de propuesta automática: sin registro',
+      esDosPersonas(a) ? EXPEDIENTE_REGLA_DOS : a.regla ? `Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}` : 'Regla de propuesta automática: sin registro',
       acepto('Términos y condiciones', ac.terminos), acepto('Aviso de privacidad', ac.privacidad, 'aceptado')] },
     { titulo: 'Registro de avisos', lineas: (a.avisos ?? []).map(v => `${v.id} para ${ROL[v.para].toLowerCase()} · entregado en la app ${cr(v.entregado)} · ${v.abierto ? 'abierto ' + cr(v.abierto) : 'sin abrir'}`) },
     { titulo: 'Red de prueba de Stellar', lineas: tx.length ? [...new Set(tx)].map(h => `Transacción: ${h}`) : ['Sin transacciones'] },

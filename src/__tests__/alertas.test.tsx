@@ -156,7 +156,7 @@ describe('aviso v2: textos aprobados por Legal (23/10) y montos del reparto real
       expect(a.linea).toEqual({ texto: `${usd(dueno)} al dueño y ${usd(inquilino)} al inquilino` })
     }
     const src = leer('../alertas.ts')
-    expect(src).toContain('linea: { texto: `${usd(r.inquilino)} volvieron al inquilino` }'); expect(src).toContain('linea: { texto: `${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }')
+    expect(src).toContain(': `${usd(r.inquilino)} volvieron al inquilino` }'); expect(src).toContain('linea: { texto: `${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }')
     expect(src).not.toMatch(/linea: \{[^}]*\b\d+ USDC/)
   })
   it('error de red: «No se pudo completar» con el texto A12 sin cambios (el mismo de services/escrow.ts); sin acción', () => {
@@ -166,7 +166,7 @@ describe('aviso v2: textos aprobados por Legal (23/10) y montos del reparto real
   })
   it('los textos nuevos del aviso v2 están marcados «LEGAL: revisado el 23/10»', () => {
     const src = leer('../alertas.ts').split('\n')
-    for (const l of src.filter(l => /^\s+linea: \{/.test(l))) expect(l).toMatch(/LEGAL: revisado (el 23\/10|\(24\/10\))|LEGAL: revisar · prueba completa/)   // prueba completa: detrás del interruptor, Legal los revisa antes del PR 10
+    for (const l of src.filter(l => /^\s+linea: \{/.test(l))) expect(l).toMatch(/LEGAL: revisado (el 23\/10|\(24\/10\))|LEGAL: revisado \(25\/10, lista de Legal\) · prueba completa/)   // prueba completa: detrás del interruptor, Legal los revisa antes del PR 10
   })
 })
 

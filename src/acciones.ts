@@ -7,7 +7,7 @@ import { unaVez } from './services/pasos'
 import { firmar as firmarLocal, ambos, NOMBRE, plazoMs, textoPlazo } from './flujo'
 import { usd } from './ui'
 import type { Alquiler, Foto, Rol, Rubro, RespuestaRubro } from './types'
-import { modoServidor, modoSolo, modoDe } from './servidor/config'
+import { modoServidor, modoSolo, modoDe, dosPersonas } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
 import { reglas17 } from './prueba/version'
@@ -23,7 +23,7 @@ export { plazoMs, textoPlazo } from './flujo'   // viven en flujo.ts (puro) para
 
 
 export interface Acciones {
-  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' }; /** paso16-unido: declaración de quien invita (solo al invitar) */ declaracion?: string }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
+  crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' }; /** paso16-unido: declaración de quien invita (solo al invitar) */ declaracion?: string; /** PR #22 (b): versión de los Términos que acepta el dueño (solo al invitar) */ terminosVersion?: string }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
   firmar(a: Alquiler, etapa: Etapa, rol: Rol): Promise<void>
   /** Prueba completa (B.4): devolver todo el depósito ahora, después de la confirmación. */
   devolverTodo?(a: Alquiler, avance?: Avance): Promise<void>
@@ -44,6 +44,12 @@ export interface Acciones {
   responder(a: Alquiler, acepta: boolean, avance?: Avance): Promise<void>
   cerrarSinReclamo(a: Alquiler, avance?: Avance): Promise<void>
   decidir(a: Alquiler, montoDueno: number, motivo?: string, avance?: Avance): Promise<void>
+  /** Dos personas (servidor): esta parte acepta el reparto `montoDueno` (lk_aceptar_acuerdo_mediacion). */
+  aceptarAcuerdo?(a: Alquiler, montoDueno: number): Promise<void>
+  /** Dos personas (servidor): el inquilino abrió el aviso del reclamo (6.5 b). */
+  abrirAvisoReclamo?(a: Alquiler): Promise<void>
+  /** Dos personas (servidor): el dueño toca «Recibí la casa» y empieza su plazo (lk_recibi_casa). */
+  recibirCasa?(a: Alquiler): Promise<void>
   /** Solo con Trustless Work real: el dueño aprueba en la cadena devolver el depósito. */
   aprobarDevolucion?(a: Alquiler): Promise<void>
   /** Red de prueba (un solo aparato): el dueño de prueba firma o confirma solo, apenas el inquilino lo hizo. Devuelve qué hizo. */
@@ -135,7 +141,7 @@ const local: Acciones = {
     store.cambiar(a.id, y => {
       if (y.estado !== 'ventana_reclamo' || y.reclamo) return
       y.estado = 'cerrado'; y.resultado = { inquilino: r.inquilino, dueno: 0, via: 'devuelto', fecha: iso(y) }
-      // LEGAL: revisar · historial
+      // LEGAL: revisado (25/10, lista de Legal) · historial
       y.historial.push({ fecha: iso(y), texto: `El dueño tocó «Todo bien, devolver»: ${usd(r.inquilino)} devueltos al inquilino` })
     })
   }),
@@ -157,30 +163,30 @@ const local: Acciones = {
     if (x.estado !== 'reclamo' || !x.reclamo?.propuesta || x.reclamo.propuesta[rol]) return
     const que = votarLocal(structuredClone(x), rol, si, ahoraDe(x))
     if (que !== 'aplicar') {
-      // LEGAL: revisar · historial
+      // LEGAL: revisado (25/10, lista de Legal) · historial
       store.cambiar(a.id, y => { if (y.estado !== 'reclamo' || y.reclamo!.propuesta![rol]) return; if (votarLocal(y, rol, si, ahoraDe(y)) === 'mediacion') { y.estado = 'mediacion'; y.historial.push({ fecha: iso(y), texto: 'No hubo acuerdo con la propuesta automática. Pasa a la Mediación Lockumi (demo)' }) } })
       return
     }
     const r = await escrow.resolver(x, x.reclamo.propuesta.alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; votarLocal(y, rol, si, ahoraDe(y)); y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
-      // LEGAL: revisar · historial
+      // LEGAL: revisado (25/10, lista de Legal) · historial
       y.historial.push({ fecha: iso(y), texto: `Los dos aceptaron la propuesta automática: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
   }),
   aplicarSilencio: (a, avance = nada) => paso(a, 'reparto', async x => {
     const s = silencio(x, ahoraDe(x)); if (!s) return
     if (s.tipo === 'mediacion') {
-      // LEGAL: revisar · historial (6.5 c: el silencio no es aceptación)
-      store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'mediacion'; y.historial.push({ fecha: iso(y), texto: `El inquilino no respondió en 7 días naturales. ${s.motivo} Pasa a la Mediación Lockumi (demo)` }) })
+      // LEGAL: revisado (25/10, lista de Legal) · historial (6.5 c: el silencio no es aceptación)
+      store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'mediacion'; y.historial.push({ fecha: iso(y), texto: dosPersonas ? `El inquilino no respondió a tiempo. El silencio no es aceptación. ${s.motivo} Pasa a la Mediación Lockumi (demo)` : `El inquilino no respondió en 7 días naturales. ${s.motivo} Pasa a la Mediación Lockumi (demo)` }) })
       return
     }
     const r = await escrow.resolver(x, s.alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'propuesta', fecha: iso(y) }
-      // LEGAL: revisar · historial
+      // LEGAL: revisado (25/10, lista de Legal) · historial
       y.historial.push({ fecha: iso(y), texto: `Se aplicó la propuesta automática (Regla 6.5.1): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
   }),
   resolverSimulacion: (a, alDueno, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'mediacion') return
-    if (!repartoValido(x, alDueno)) throw new Error('El dueño no puede recibir más de lo que reclamó.')   // LEGAL: revisar
+    if (!repartoValido(x, alDueno)) throw new Error('El dueño no puede recibir más de lo que reclamó.')   // LEGAL: revisado (25/10, lista de Legal)
     const r = await escrow.resolver(x, alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'mediacion') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'simulacion', fecha: iso(y) }
       // LEGAL: revisado (24/10, v4) · B.14 (título del aviso del resultado)
@@ -205,16 +211,30 @@ const remoto: Acciones = {
   pagar: async a => { await servidor.registrarPago(a.id, modoDe(a).trustless ? await trustless.depositar(a.id) : null) },
   iniciarSalida: a => servidor.iniciarSalida(a.id).then(() => {}),
   reclamar: (a, m, mot, fotos) => servidor.reclamar(a.id, m, mot, fotos).then(() => {}),
-  responder: (a, acepta) => servidor.responder(a.id, acepta).then(() => {}),
+  // PR #22: si el inquilino acepta, el servidor cierra por acuerdo y /api/tw paga el reparto en la red («repartir»).
+  async responder(a, acepta) { await servidor.responder(a.id, acepta); if (acepta && modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
   async cerrarSinReclamo(a) {
     const cerro = await servidor.cerrarSinReclamo(a.id)
+    // PR #22: un caso ya cerrado por acuerdo o por la mediación con las dos aceptaciones y sin pagar → «repartir» (el servidor lo valida).
+    if (a.estado === 'cerrado' && (a.resultado?.via === 'acuerdo' || a.resultado?.via === 'mediacion')) {
+      if (modoDe(a).trustless && a.escrowId && !a.liquidacionTx) await trustless.repartir(a.id)
+      return
+    }
     // Con TW: la plataforma libera el 100 % al inquilino (necesita la aprobación del dueño en la cadena).
     if (modoDe(a).trustless && a.escrowId && (cerro || (a.estado === 'cerrado' && !a.liquidacionTx)))
       // Paso 7 (interruptor encendido): sin la aprobación del dueño, devolución automática del 100 % al inquilino.
       await (pruebaCompleta() && !a.historial.some(e => e.texto === APROBADO_DUENO) ? trustless.devolverAutomatico(a.id) : trustless.liberar(a.id))
   },
   aprobarDevolucion: async (a: Alquiler) => { if (!modoDe(a).trustless) throw new Error('Esta aprobación solo existe con la red de prueba.'); await trustless.aprobarDevolucion(a.id) },
-  decidir: (a, m, mot) => servidor.decidir(a.id, m, mot).then(() => {}),
+  async decidir(a, m, mot) { await servidor.decidir(a.id, m, mot); if (modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
+  async aceptarAcuerdo(a, m) {
+    const tope = a.reclamo?.monto ?? 0
+    if (!(m >= 0 && m <= tope)) throw new Error('El monto para el dueño debe estar entre 0 y lo reclamado.')
+    await servidor.aceptarAcuerdo(a.id, Math.round(m * 100) / 100)
+  },
+  abrirAvisoReclamo: a => servidor.abrirAvisoReclamo(a.id).then(() => {}),
+  recibirCasa: a => servidor.recibirCasa(a.id).then(() => {}),
+  aplicarSilencio: a => servidor.aplicarSilencio(a.id).then(() => {}),
 }
 
 /** Acciones de los alquileres con otra persona (servidor compartido). `crear` e invitar usan estas directamente. */

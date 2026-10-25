@@ -76,12 +76,12 @@ describe('nota «Datos de la mediación» (Legal, 12:52 a. m.)', () => {
     expect(notaDatosMediacion(cerrado())).toBe(LOCAL)
     expect(plano(renderToStaticMarkup(<GuardarDatosMediacion a={cerrado()} rol="inquilino" />))).toContain(LOCAL)
   })
-  it('con otra persona (C, servidor), sigue «pide que los guardemos»', async () => {
+  it('con otra persona (C, servidor): «escríbenos… para que los guardemos» (lista de Legal)', async () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); vi.stubEnv('VITE_TRUSTLESS', '1'); vi.stubEnv('VITE_DOS_PERSONAS', '1')
     vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon')
     vi.resetModules(); const m = await import('../MediacionPC')
     const n = m.notaDatosMediacion(cerrado({ dosPersonas: true }))
-    expect(n).toContain('pide que los guardemos'); expect(n).not.toContain('de tu navegador')
+    expect(n).toContain('antes de que pasen esos 30 días para que los guardemos'); expect(n).not.toContain('de tu navegador')
   })
 })
 

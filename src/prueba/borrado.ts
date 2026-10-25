@@ -5,7 +5,8 @@
 // así que se borra todo caso que se cerró en la mediación. En los alquileres con otra persona, el borrado en Supabase (fotos
 // del bucket lk-fotos y mensajes) lo hace el trabajo del servidor api/borrados.ts (supabase/migrations/20261025010000_*.sql).
 import type { Alquiler, Rol } from '../types'
-import { versionAlquiler, V17 } from './version'
+import { versionAlquiler } from './version'
+import { desde17 } from '../legal/versiones'
 
 export const DIAS_BORRADO = 30
 const DIA = 86_400_000
@@ -22,7 +23,7 @@ export const pasoPorMediacion = (a: Alquiler) => a.estado === 'cerrado' && !!a.r
 export const datosMediacion = (a: Alquiler) => ({ borrado: a.reclamo?.datosMediacion?.borrado ?? a.reclamo?.mediacion?.borrado, guardar: a.reclamo?.datosMediacion?.guardar ?? a.reclamo?.mediacion?.guardar })
 
 export function debeBorrarMediacion(a: Alquiler, ahora: number) {
-  if (versionAlquiler(a) !== V17 || !pasoPorMediacion(a)) return false
+  if (!desde17(versionAlquiler(a)) || !pasoPorMediacion(a)) return false
   const d = datosMediacion(a); if (d.borrado || d.guardar) return false
   const cierre = +new Date(a.resultado?.fecha ?? a.reclamo!.mediacion?.fecha ?? a.reclamo!.fecha)
   return Number.isFinite(cierre) && ahora >= cierre + DIAS_BORRADO * DIA

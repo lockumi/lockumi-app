@@ -17,7 +17,8 @@ export const USDC = { code: 'USDC', issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DT
 export const TOPE_USDC = 20
 /** Máximo de la app por depósito (igual que MONTO_MAX de validacion.ts). Con USDC de prueba propios, el límite es el saldo de la cuenta. */
 export const MONTO_MAX_USDC = 50_000
-const fmt = (x: number) => x.toLocaleString('es-CR', { maximumFractionDigits: 7 })
+// Legal 25/10, 5:09 p. m. (punto 8): 2 decimales. Hacia abajo, para que un saldo de 499,999 no se lea como «500,00» si no alcanza.
+const fmt = (x: number) => (Math.floor(Math.round(x * 1e7) / 1e5) / 100).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** Al crear el alquiler: la cuenta propia no alcanza para el monto escrito. */
 export const mensajeSaldoPropio = (x: number) => `Tu cuenta tiene ${fmt(x)} USDC de prueba. Escribe un monto de ${fmt(x)} o menos, o usa «Obtener USDC de prueba».`
 /** Al depositar: la cuenta propia ya no alcanza (por ejemplo, se gastó después de crear el alquiler). */
