@@ -25,7 +25,7 @@ export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
     </div>
   </header>
 }
-// LEGAL: revisado (24/10, 11:25 p. m.) · CAMBIO VISIBLE: espera el OK de Katherine
+// LEGAL: revisado (24/10, 11:25 p. m.) · cambio visible con el OK de Katherine (24/10, 11:39 p. m.)
 export const AVISO_RED = 'Red de prueba de Stellar: sin dinero real.'
 /** Mismo aviso mientras el depósito sea simulado (modoVideo): no promete movimientos reales en la red. */
 export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito simulado'

@@ -60,8 +60,8 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 5. **Silencio** (6.5 c): al vencer sin respuesta, si aceptó la regla, las pruebas están completas, el total es ≤ 30 % del depósito y abrió al menos un aviso, se aplica la propuesta (`via: 'propuesta'`, texto B.10 en «Terminado»). Si no, pasa a la mediación. El silencio nunca es aceptación.
 6. El simulador de días del reclamo adelanta el reloj de la demo para ver los avisos 4 y 6 y el silencio.
 
-## Franja de la red de prueba (sin publicar)
-Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción: rama aparte, sin publicar hasta el OK de Katherine.
+## Franja de la red de prueba
+Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
 
 ## Montos y franja (ajustes de Legal, 11:25 p. m.)
 Con el interruptor encendido, `usd()` escribe «800 USDC de prueba» en todas las pantallas (cabecera y tarjeta del detalle incluidas) y la franja de la red de prueba se ve en todas las pantallas, también en la demo local con depósito simulado.
