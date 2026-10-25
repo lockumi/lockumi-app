@@ -1,4 +1,4 @@
-// B2 · 20261025040000_silencio_regla_651.sql (escenario C, sin aplicar) probada en Postgres (PGlite).
+// B2 · 20261025040000_silencio_dos_personas.sql (escenario C, sin aplicar) probada en Postgres (PGlite).
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 
@@ -37,9 +37,8 @@ beforeAll(async () => {
 
 // B2 (Legal, 25/10, 1:24 a. m.) · alquileres de dos personas en el servidor:
 // - 5.3 d / 6.5 a: si el dueño no aprueba ni reclama en su plazo, el 100 % vuelve al inquilino (lk_cerrar_sin_reclamo y lk_vencimientos).
-// - 6.5 c / 6.5.1: si el inquilino no responde en su plazo, ANTES de la mediación se aplica la Regla 6.5.1 solo si la aceptó aparte al
-//   firmar, abrió al menos un aviso del reclamo, las pruebas están completas y el monto no supera el 30 % del depósito (mismas
-//   condiciones que reglaAplica en src/prueba/propuesta.ts, usada por src/prueba/reclamos.ts:49). Si falta algo, pasa a la mediación.
+// - 6.5 c: si el inquilino no responde en su plazo, el caso pasa a la mediación con el motivo «pruebas incompletas (6.4.1)».
+//   Legal, 25/10, 1:50 a. m. (opción 1): en dos personas la Regla 6.5.1 no se aplica sola por ahora; sin tope ni recorte del 30 %.
 const SEG = 60
 async function enReclamo(o: { regla?: boolean; abre?: boolean; monto?: number; fotosEntrada?: boolean; firmasEntrada?: boolean; vencido?: boolean } = {}) {
   const { regla = true, abre = true, monto = 30, fotosEntrada = true, firmasEntrada = true, vencido = true } = o
@@ -56,46 +55,45 @@ async function enReclamo(o: { regla?: boolean; abre?: boolean; monto?: number; f
 }
 const silencio = async (id: string, uid = DUENO) => { await como(uid); return (await uno<{ r: string | null }>('select public.lk_aplicar_silencio($1) r', [id]))!.r }
 
-describe('B2 · Regla 6.5.1 antes de la mediación (servidor, dos personas)', () => {
-  it('con todas las condiciones, al vencer el plazo del inquilino se aplica la regla: el dueño recibe lo reclamado y el resto vuelve', async () => {
+describe('B2 · silencio del inquilino en dos personas (Legal, 25/10, 1:50 a. m., opción 1): la Regla 6.5.1 nunca se aplica sola', () => {
+  it('con todo a favor de la regla (aceptada, aviso abierto, pruebas, ≤ 30 %), al vencer el plazo pasa a la mediación sin reparto', async () => {
     const id = await enReclamo()
-    expect(await silencio(id)).toBe('regla_651')
-    expect(await estado(id)).toMatchObject({ estado: 'cerrado', resultado: { via: 'regla_651', dueno: 30, inquilino: 70 } })
-    expect(await ultimoEvento(id)).toMatch(/^Se aplicó la Regla de propuesta automática \(6\.5\.1\): 30(\.00)? USDC al dueño y 70(\.00)? al inquilino/)
+    expect(await silencio(id)).toBe('mediacion')
+    expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
+    expect(await ultimoEvento(id)).toMatch(/pruebas incompletas \(6\.4\.1\)/)
+  })
+  it('un reclamo de más del 30 % también pasa a la mediación, sin pago parcial ni recorte', async () => {
+    const id = await enReclamo({ monto: 80 })
+    expect(await silencio(id)).toBe('mediacion')
+    expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
+    expect((await uno<{ m: string }>('select monto::text m from public.lk_reclamos where contrato_id = $1', [id]))!.m).toBe('80.00')
+    expect(await ultimoEvento(id)).toMatch(/pruebas incompletas \(6\.4\.1\)/)
+  })
+  it.each([[{ regla: false }], [{ abre: false }], [{ fotosEntrada: false }], [{ firmasEntrada: false }]] as const)('sin las condiciones (%o) también pasa a la mediación', async o => {
+    const id = await enReclamo(o)
+    expect(await silencio(id)).toBe('mediacion'); expect((await estado(id)).resultado).toBeNull()
   })
   it('antes de que venza el plazo no hace nada', async () => {
     const id = await enReclamo({ vencido: false })
     expect(await silencio(id)).toBeNull(); expect((await estado(id)).estado).toBe('reclamo')
-  })
-  it.each([
-    [{ regla: false }, /no aceptó la regla/],
-    [{ abre: false }, /no abrió ningún aviso/],
-    [{ monto: 31 }, /30 %/],
-    [{ fotosEntrada: false }, /pruebas completas/],
-    [{ firmasEntrada: false }, /pruebas completas/],
-  ] as const)('si falta una condición (%o), pasa a la mediación sin reparto', async (o, motivo) => {
-    const id = await enReclamo(o)
-    expect(await silencio(id)).toBe('mediacion')
-    expect(await estado(id)).toMatchObject({ estado: 'mediacion', resultado: null })
-    expect(await ultimoEvento(id)).toMatch(motivo)
   })
   it('si el inquilino respondió, no hay silencio', async () => {
     const id = await enReclamo()
     await como(INQ); await db.query('select public.lk_responder_reclamo($1, false)', [id])
     expect(await silencio(id)).toBeNull(); expect((await estado(id)).estado).toBe('mediacion')
   })
-  it('solo el inquilino registra que abrió el aviso, una sola vez, y solo con el reclamo abierto', async () => {
+  it('ninguna función del servidor cierra con via regla_651 ni usa un tope del 30 %', async () => {
+    const fns = (await db.query<{ d: string }>(`select pg_get_functiondef(p.oid) d from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public' and p.proname like 'lk\\_%'`)).rows
+    expect(fns.some(f => /'regla_651'/.test(f.d))).toBe(false)
+    expect(fns.some(f => /0\.30?\b|30 %/.test(f.d))).toBe(false)
+  })
+  it('solo el inquilino registra que abrió el aviso (6.5 b), una sola vez', async () => {
     const id = await enReclamo({ abre: false, vencido: false })
     await como(DUENO); await expect(db.query('select public.lk_abrir_aviso_reclamo($1)', [id])).rejects.toThrow(/inquilino/)
     await como(INQ); await db.query('select public.lk_abrir_aviso_reclamo($1)', [id])
     const a = (await uno<{ a: Date }>('select abierto_en a from public.lk_reclamos where contrato_id = $1', [id]))!.a
     await db.query('select public.lk_abrir_aviso_reclamo($1)', [id])
     expect((await uno<{ a: Date }>('select abierto_en a from public.lk_reclamos where contrato_id = $1', [id]))!.a).toEqual(a)
-  })
-  it('abrir el aviso después del plazo no cuenta para la regla', async () => {
-    const id = await enReclamo({ abre: false })
-    await como(INQ); await db.query('select public.lk_abrir_aviso_reclamo($1)', [id])
-    expect(await silencio(id)).toBe('mediacion')
   })
   it('quien no participa no puede aplicar el silencio', async () => {
     const id = await enReclamo()
@@ -113,10 +111,11 @@ describe('B2 · silencio del dueño (5.3 d) y corrida diaria lk_vencimientos', (
   it('lk_vencimientos (solo service_role) cierra los plazos del dueño vencidos y aplica el silencio del inquilino', async () => {
     const sinReclamo = await crear(), conRegla = await enReclamo(), sinRegla = await enReclamo({ regla: false }), abierto = await enReclamo({ vencido: false })
     await db.query(`update public.lk_contratos set estado = 'ventana_reclamo', ventana_inicio = now() - interval '2 minutes', ventana_segundos = 60 where id = $1`, [sinReclamo])
-    const r = (await uno<{ r: { automatico: number; regla_651: number; mediacion: number } }>('select public.lk_vencimientos() r'))!.r
-    expect(r.automatico).toBeGreaterThanOrEqual(1); expect(r.regla_651).toBeGreaterThanOrEqual(1); expect(r.mediacion).toBeGreaterThanOrEqual(1)
+    const r = (await uno<{ r: Record<string, number> }>('select public.lk_vencimientos() r'))!.r
+    expect(Object.keys(r).sort()).toEqual(['automatico', 'mediacion'])
+    expect(r.automatico).toBeGreaterThanOrEqual(1); expect(r.mediacion).toBeGreaterThanOrEqual(2)
     expect((await estado(sinReclamo)).resultado).toMatchObject({ via: 'automatico', inquilino: 100 })
-    expect((await estado(conRegla)).resultado).toMatchObject({ via: 'regla_651' })
+    expect(await estado(conRegla)).toMatchObject({ estado: 'mediacion', resultado: null })
     expect((await estado(sinRegla)).estado).toBe('mediacion')
     expect((await estado(abierto)).estado).toBe('reclamo')
     const p = await uno<{ a: boolean; s: boolean }>(`select has_function_privilege('authenticated', 'public.lk_vencimientos()', 'execute') a, has_function_privilege('service_role', 'public.lk_vencimientos()', 'execute') s`)
