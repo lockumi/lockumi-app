@@ -81,13 +81,13 @@ function Rubros({ a, resp }: { a: Alquiler; resp?: Record<string, RespuestaRubro
 function Propuesta({ a, rol }: { a: Alquiler; rol: Rol }) {
   const pr = a.reclamo!.propuesta!; const p = useProceso(); const yo = pr[rol]
   const votar = (si: boolean) => p.correr(av => acciones.votarPropuesta!(a, rol, si, av))
-  // LEGAL: revisado (24/10) · B.6
+  // LEGAL: revisado (24/10) · B.6 (cuadro del servicio real: texto final de Legal, 24/10 11:09 p. m., sin región)
   return <section className="pila propuesta-auto" aria-labelledby="t-propuesta">
     <div className="cab"><h2 id="t-propuesta">Propuesta automática (no es una decisión)</h2><Simulado texto="Demo: simulada, sin inteligencia artificial" /></div>
     <p>Esta propuesta compara las fotos, la tabla de desgaste y los precios (y las cotizaciones, si hay más de una). Para cada rubro verás: el motivo, las fotos de antes y después, el precio usado y la depreciación. Solo se aplica si los dos la aceptan{a.regla?.acepta ? ', salvo la Regla de propuesta automática si la aceptaste' : ''}. Si no hay acuerdo, el caso pasa a la Mediación Lockumi (demo).</p>
     <Rubros a={a} resp={a.reclamo!.respuestas} />
     <p><strong>Propuesta: dueño {u(pr.alDueno)} · inquilino {u(a.monto - pr.alDueno)}</strong></p>
-    <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), región [REGIÓN: la elige Katherine], que no puede usar tus fotos para entrenar modelos. No le enviaríamos nombres, correos ni direcciones. Podrías pedir que la revise una persona.</div>
+    <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), que no puede usar tus fotos para entrenar modelos. Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso. No le enviaríamos nombres, correos ni direcciones. Podrías pedir que la revise una persona.</div>
     <p className="nota">Dueño: {pr.dueno === 'si' ? 'aceptó' : pr.dueno === 'no' ? 'no aceptó' : 'todavía no responde'} · Inquilino: {pr.inquilino === 'si' ? 'aceptó' : pr.inquilino === 'no' ? 'no aceptó' : 'todavía no responde'}</p>
     {p.error}
     {yo ? <p className="nota">Ya respondiste. {modoPrueba && rol === 'inquilino' ? 'Para responder como el dueño, toca «Ver la pantalla del dueño de prueba».' : ''}</p> : <div className="fila-botones">
