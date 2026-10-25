@@ -18,9 +18,11 @@ import { Detalle } from './screens/Detalle'
 import { Invitacion } from './screens/Invitacion'
 import { Ejemplo, useRecorridoPrimeraVez } from './screens/Ejemplo'
 import { RUTA_EJEMPLO } from './recorrido'
+import { useSincronizarPrueba } from './prueba/sincronizar'
 const volver = () => { const v = sessionStorage.getItem('lockumi.regreso'); sessionStorage.removeItem('lockumi.regreso'); return v ?? '/' }
 export default function App() {
   const [u, setU] = useState(auth.actual()); const r = useHash()
+  useSincronizarPrueba()   // prueba completa (interruptor apagado en producción): avisos e inicio automático del plazo
   // Regreso de Google o Apple: mientras se confirma la sesión se ve «Entrando…» (no la pantalla Entrar);
   // si no termina, el error queda escrito en Entrar hasta que la persona vuelve a intentar o entra bien.
   const [regreso, setRegreso] = useState<'esperando' | 'fallo' | null>(() => !auth.actual() && hayRegreso() ? 'esperando' : null)

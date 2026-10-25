@@ -10,6 +10,8 @@ import type { Alquiler, Foto, Rol } from './types'
 import { modoServidor, modoTrustless, modoSolo } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
+import { pruebaCompleta } from './prueba/interruptor'
+import { registrarEntrega, finVentana } from './prueba/dueno'
 
 type Etapa = 'contrato' | 'entrada' | 'salida'
 const iso = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -19,6 +21,8 @@ export { plazoMs, textoPlazo } from './flujo'   // viven en flujo.ts (puro) para
 export interface Acciones {
   crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; propia?: { g: string; firma: 'cavos' | 'freighter' } }, email: string, cuenta?: string): Promise<{ id: string; link?: string }>
   firmar(a: Alquiler, etapa: Etapa, rol: Rol): Promise<void>
+  /** Prueba completa (B.4): devolver todo el depósito ahora, después de la confirmación. */
+  devolverTodo?(a: Alquiler, avance?: Avance): Promise<void>
   marcar(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle'): Promise<void>
   nota(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, nota: string): Promise<void>
   agregarFoto(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, f: Foto): Promise<void>
@@ -62,6 +66,7 @@ const local: Acciones = {
       if (!ambos(obj.firmas)) return
       if (etapa === 'contrato') { x.estado = 'pendiente_pago'; x.historial.push({ fecha: cuando, texto: 'Contrato firmado por los dos' }) }
       else if (etapa === 'entrada') { x.estado = 'en_curso'; x.historial.push({ fecha: cuando, texto: 'Fotos de entrada confirmadas por los dos' }) }
+      else if (pruebaCompleta()) registrarEntrega(x, cuando)   // prueba completa: el plazo del dueño empieza con «Recibí la casa» o a los 2 días
       else { x.estado = 'ventana_reclamo'; x.ventanaInicio = cuando; x.historial.push({ fecha: cuando, texto: `Fotos de salida confirmadas. Empiezan los ${textoPlazo(x)} para reclamos` }) }   // LEGAL: revisado (24/10) · {plazo} real
     })
   },
@@ -104,12 +109,23 @@ const local: Acciones = {
     }),
   // Sin reclamos al terminar el plazo: el dueño (de prueba) aprueba y Lockumi devuelve el depósito al inquilino.
   cerrarSinReclamo: (a, avance = nada) => modoSolo ? Promise.resolve() : paso(a, 'devolucion', async x => {
-    if (x.estado !== 'ventana_reclamo' || x.reclamo || ahoraDe(x) < +new Date(x.ventanaInicio!) + plazoMs(x)) return
+    if (x.estado !== 'ventana_reclamo' || x.reclamo || !x.ventanaInicio || ahoraDe(x) < (pruebaCompleta() ? finVentana(x) ?? Infinity : +new Date(x.ventanaInicio) + plazoMs(x))) return
     const r = await escrow.devolver(x, guardarEn(a.id), avance)
     store.cambiar(a.id, y => {
       if (y.estado !== 'ventana_reclamo' || y.reclamo) return
       y.estado = 'cerrado'; y.resultado = { inquilino: r.inquilino, dueno: 0, via: 'automatico', fecha: iso(y) }
       y.historial.push({ fecha: iso(y), texto: `Sin reclamos en ${textoPlazo(y)}: ${usd(r.inquilino)} devueltos al inquilino` })
+    })
+  }),
+  // Prueba completa (B.4): «Todo bien, devolver» después de la confirmación. Devuelve todo ya; después no se puede reclamar en la app.
+  devolverTodo: (a, avance = nada) => paso(a, 'devolucion', async x => {
+    if (x.estado !== 'ventana_reclamo' || x.reclamo) return
+    const r = await escrow.devolver(x, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => {
+      if (y.estado !== 'ventana_reclamo' || y.reclamo) return
+      y.estado = 'cerrado'; y.resultado = { inquilino: r.inquilino, dueno: 0, via: 'devuelto', fecha: iso(y) }
+      // LEGAL: revisar · historial
+      y.historial.push({ fecha: iso(y), texto: `El dueño tocó «Todo bien, devolver»: ${usd(r.inquilino)} devueltos al inquilino` })
     })
   }),
   decidir: (a, aDueno, _motivo, avance = nada) => paso(a, 'reparto', async x => {

@@ -1,3 +1,4 @@
+import { pruebaCompleta } from './prueba/interruptor'
 // Lógica del flujo del alquiler (pura, con pruebas en __tests__/flujo.test.ts).
 import type { Alquiler, Estado, Rol } from './types'
 
@@ -45,7 +46,10 @@ export function ahoraPrueba(a: Alquiler): string {
     case 'fotos_entrada': return e.inquilino ? dueno('confirmar las fotos de entrada') : 'Ahora te toca: tomar las fotos de entrada y confirmarlas.'
     case 'en_curso': return 'Ahora te toca: cuando entregues el lugar, empezar las fotos de salida.'
     case 'salida': return s.inquilino ? dueno('confirmar las fotos de salida') : 'Ahora te toca: tomar las fotos de salida y confirmarlas.'
-    case 'ventana_reclamo': return `Ahora: corren los ${textoPlazo(a)} para reclamos. Puedes adelantar el plazo o hacer un reclamo en nombre del dueño de prueba.`   // LEGAL: revisado (24/10) · {plazo} real
+    case 'ventana_reclamo': if (pruebaCompleta()) return !a.ventanaInicio   // LEGAL: revisar · prueba completa (B.4)
+      ? 'Ahora: el dueño de prueba revisa la casa. Su plazo de 7 días naturales empieza con «Recibí la casa» o 2 días después de la entrega. Puedes simularlo en la pantalla del dueño de prueba.'
+      : 'Ahora: corre el plazo del dueño de prueba para reclamar. Puedes adelantar los días con el simulador o simular un reclamo en la pantalla del dueño de prueba.'
+      return `Ahora: corren los ${textoPlazo(a)} para reclamos. Puedes adelantar el plazo o hacer un reclamo en nombre del dueño de prueba.`   // LEGAL: revisado (24/10) · {plazo} real
     case 'reclamo': return 'Ahora te toca: responder el reclamo del dueño de prueba.'
     case 'mediacion': return 'Ahora toca la mediación (simulada). En esta prueba, el reparto lo decides tú con el botón de abajo.' // LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide
     case 'cerrado': return 'Listo: el alquiler terminó. No tienes nada pendiente.'
@@ -75,7 +79,10 @@ export function turno(a: Alquiler, yo: Rol): { tu: string; otra: string; sigue: 
       tu: s[yo] ? 'Ya confirmaste las fotos de salida.' : 'Toma fotos de cada espacio y confirma.',
       otra: s[otro(yo)] ? `El ${o} ya confirmó.` : `El ${o} también tiene que revisar y confirmar.`,
       sigue: `Después hay ${textoPlazo(a)} para reclamos. Si no hay reclamo, después de ese plazo el depósito se devuelve al inquilino.` }   // LEGAL: revisado (24/10)
-    case 'ventana_reclamo': return yo === 'dueno'
+    case 'ventana_reclamo': if (pruebaCompleta()) return yo === 'dueno'   // LEGAL: revisar · prueba completa (B.4)
+      ? { tu: a.ventanaInicio ? 'Si encontraste un daño, puedes reclamar. Si todo está bien, puedes tocar «Todo bien, devolver».' : 'Toca «Recibí la casa» cuando la recibas.', otra: 'El inquilino espera.', sigue: 'Si no reclamas a tiempo, se devuelve todo el depósito al inquilino.' }
+      : { tu: 'No tienes que hacer nada.', otra: 'El dueño revisa la casa y puede reclamar si encontró un daño.', sigue: 'Si el dueño no reclama a tiempo, se te devuelve todo el depósito.' }
+      return yo === 'dueno'
       ? { tu: 'Si encontraste un daño, puedes reclamar. Si todo está bien, no hagas nada.', otra: 'El inquilino espera.', sigue: `Si no reclamas, después de ${textoPlazo(a)} el depósito se devuelve al inquilino.` }   // LEGAL: revisado (24/10)
       : { tu: 'No tienes que hacer nada.', otra: 'El dueño puede reclamar si encontró un daño.', sigue: `Si no hay reclamo, después de ${textoPlazo(a)} se te devuelve el depósito.` }   // LEGAL: revisado (24/10)
     case 'reclamo': return yo === 'inquilino'

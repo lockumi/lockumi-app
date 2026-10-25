@@ -18,30 +18,16 @@ import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
 import { TomarFoto } from '../Camara'
 import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba } from '../flujo'
 import { adelantoPermitido } from '../../api/_lib/red'
-import { avisar, quitarAvisos, alertaPorCambio, alertaErrorRed, ERROR_RED, instantanea, type Instantanea } from '../alertas'
+import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alertas'
 import { EsperaPago } from '../EsperaPago'
+import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
+import { PlazoDueno } from '../prueba/PlazoDueno'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
-/** Botones que tocan la red de prueba: no se pueden tocar dos veces, muestran el avance y explican el error. */
-/** «24 oct 2026, 02:18 a. m.» ya termina en punto: no agregar otro. */
-const conPunto = (t: string) => t.endsWith('.') ? t : t + '.'
-function useProceso() {
-  const [ocupado, setOcupado] = useState(false); const [avance, setAvance] = useState(''); const [err, setErr] = useState('')
-  const correr = async (f: (av: (t: string) => void) => Promise<unknown>) => {
-    if (ocupado) return; setOcupado(true); setErr(''); quitarAvisos(alertaErrorRed().paso)   // al volver a intentar, el aviso de error se va
-    try { await f(setAvance) } catch (e) {
-      const m = e instanceof Error && e.message ? e.message : 'No pudimos terminar este paso. Vuelve a tocar el botón.'
-      setErr(m); if (m === ERROR_RED) avisar(alertaErrorRed())   // error de red (A12): también el aviso v2 de error (role=alert, no se esconde solo)
-    } finally { setOcupado(false); setAvance('') }
-  }
-  // Con el error de red el aviso v2 ya lo anuncia (role=alert): el texto queda escrito en la pantalla sin anunciarse dos veces.
-  return { ocupado, avance, err, correr, texto: (t: string) => ocupado ? (avance || 'Un momento…') : t, error: err ? <p className="error" role={err === ERROR_RED ? undefined : 'alert'}>{err}</p> : null }
-}
-const NOTA_TIEMPO = <p className="nota">En la red de prueba esto tarda entre 20 y 60 segundos. No cierres esta pestaña.</p>
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 function Contrato({ a, rol }: P) {
@@ -283,7 +269,7 @@ function Cerrado({ a, rol }: P) {
   const via = escrowReal && r.via === 'automatico' ? `No hubo reclamos en ${textoPlazo(a)}. El dueño de prueba aprobó y Lockumi devolvió el depósito en la red de prueba.` : { automatico: `No hubo reclamos en ${textoPlazo(a)}.`, acuerdo: 'Se pusieron de acuerdo en la app.', mediacion: 'Lo decidió una persona mediadora.',
     // Solo con la prueba completa (interruptor apagado en producción: ningún alquiler llega a estas vías).
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
-    devuelto: 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisar
+    devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisar
   return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     <h2>Depósito devuelto</h2><p>{via}</p>
@@ -322,7 +308,8 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
     firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
-    en_curso: <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, ventana_reclamo: <Ventana {...p} />,
+    en_curso: <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
+    ventana_reclamo: pruebaCompleta() ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => <FormReclamo a={a} onCancelar={cerrar} />}><EscrowReal a={a} rol={rol} /></PlazoDueno> : <Ventana {...p} />,
     reclamo: <Reclamo {...p} />, mediacion: <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
