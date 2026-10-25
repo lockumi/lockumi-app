@@ -12,6 +12,7 @@ import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { textoContador, textoRecibir, CONFIRMAR_DEVOLVER, botonRecibir, botonDevolver, recibirCasa, inicioAuto, finVentana, vencido, simularDias } from './dueno'
 import { AvisosApp } from './AvisosApp'
 import { AvisosCorreo } from './AvisosCorreo'
+import { correosActivos } from './interruptor'
 import { esDosPersonas, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_APROBAR_DOS, TEXTO_APROBADO_DOS, APROBADO_DUENO } from './dosPersonas'
 
 /** Paso 7: recuadro de la devolución automática (paleta del logo, pastilla del papel). */
@@ -70,7 +71,7 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
   return <section className="pila plazo-dueno">
     {cuerpo}
     <AvisosApp a={a} rol={rol} onAccion={acc => acc === 'confirmar-devolver' ? (setForm(false), setConfirmar(true)) : irA()} />
-    <AvisosCorreo a={a} rol={rol} />{/* paso 11 */}
+    {correosActivos() && <AvisosCorreo a={a} rol={rol} />}{/* paso 11, solo con VITE_CORREOS=1 */}
     {adelantoPermitido() && !termino && !enServidor && <section className="pila simulador" aria-labelledby="t-simulador">
       {/* LEGAL: revisar · simulador de días (aprobado: los avisos salen al adelantar) */}
       <h3 id="t-simulador">Simulador de días (solo red de prueba)</h3>
