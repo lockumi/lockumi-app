@@ -1,0 +1,11 @@
+// Páginas públicas: entrada, Términos y Privacidad (versión vigente), sin errores de consola.
+import { test, expect, captura } from './base'
+test.describe('páginas públicas', () => {
+  for (const [ruta, nombre, texto] of [['/', 'entrar', /Lockumi/], ['/terminos', 'terminos', /1\.6-demo/], ['/privacidad', 'privacidad', /1\.6-demo/]] as const)
+    test(nombre, async ({ page, rol }) => {
+      const errores: string[] = []; page.on('pageerror', e => errores.push(e.message))
+      const r = await page.goto(ruta); expect(r?.status()).toBeLessThan(400)
+      await expect(page.locator('body')).toContainText(texto)
+      await captura(page, 'paginas', nombre, rol); expect(errores).toEqual([])
+    })
+})
