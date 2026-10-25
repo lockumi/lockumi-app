@@ -15,14 +15,21 @@ Reemplaza a `legal/reputacion-textos.md`. Además se aplicó entera la revisión
 | sin definir (producción) | La app se ve igual. Las pantallas (`src/reputacion/Pantallas.tsx` y `reputacion.css`) no entran en el build. Los textos de REP-14 y REP-15 viajan en los `.md` de la 1.7-demo, pero no se muestran. La prueba `apagado.test.tsx` compara las pantallas con sus instantáneas. |
 | `1` | REP-01 antes de crear la cuenta, perfil, puntaje, vitrinas, revisión, avisos, eliminación de la cuenta y REP-14/REP-15 en `/privacidad` y `/terminos` (con la prueba completa). |
 
-Comprobar el build apagado: `npx vite build --outDir /tmp/off` y buscar «Ver y aceptar» o «Pantallas» en `/tmp/off/assets` (no debe aparecer). La única
+Comprobar el build apagado: `npx vite build --outDir /tmp/off` y buscar «Tu perfil es público y fijo» o «Pantallas» en `/tmp/off/assets` (no debe aparecer). La única
 frase de reputación que existe hoy en producción es la del Aviso 1.6/1.7 («no calculamos ningún puntaje de reputación»).
 
 ## Versión
 
 Con el interruptor encendido, la edición vigente es **`1.10-demo · [fecha de encendido]`** (`edicionVigente()` en `src/legal/version17.ts`):
-la usan REP-01, REP-13, la aceptación de Términos/Privacidad, `/privacidad` y `/terminos`. **Al encender hay que cambiar
-`FECHA_ENCENDIDO_REPUTACION`** por la fecha real de publicación. Apagado, todo sigue en 1.7-demo.
+la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
+
+- **Registros (Legal, bloqueo 2):** solo una cuenta NUEVA, creada desde la pantalla previa, guarda la 1.10-demo: al aceptar los Términos en el
+  login (`edicionAlAceptar()`, si en esa sesión se aceptó REP-01) y en sus registros por cuenta (`edicionDeCuenta(email)`, si la cuenta tiene
+  `rep01`). Las cuentas anteriores, también cuando vuelven a entrar, guardan la 1.7-demo; el cambio de un alquiler 1.6 → 1.7 siempre guarda la 1.7-demo.
+- **Guarda de encendido (Legal, bloqueo 1):** la fecha vive sola en `src/legal/fecha-reputacion.ts`. `vite.config.ts` usa `guardaEncendido`
+  (`src/legal/encendido.ts`): el build falla si `VITE_REPUTACION=1` y la fecha todavía lleva «[». **Al encender**, escribir ahí la fecha real
+  con el formato «2 de noviembre de 2026»; con el interruptor encendido, la prueba `ronda-cuentas-anteriores.test.tsx` exige ese formato.
+  Para los builds locales de borrador (capturas y E2E) existe `LOCKUMI_REPUTACION_BORRADOR=1`, que nunca vale con `VERCEL_ENV=production`.
 
 ## Flujo
 
@@ -34,14 +41,18 @@ la usan REP-01, REP-13, la aceptación de Términos/Privacidad, `/privacidad` y 
    - No se toca el login ni Cavos: `App.tsx` envuelve a `<Login/>` con `Previa`. Al entrar, `vincularPrevia` pasa la aceptación a la cuenta
      (`lockumi.reputacion.v1.<correo>`, campo `rep01`) **solo si la cuenta es nueva** (sin `rep01` y sin alquileres con ese correo); en todos los
      casos la borra de la sesión.
-   - «Ya tengo cuenta: entrar» lleva al login sin aceptar nada (bandera de sesión `lockumi.reputacion.entrar.v1`, se borra al entrar). Una
-     cuenta 1.7-demo que vuelve ve REP-13 y, en REP-01, una **tercera casilla** que acepta lo que agrega la 1.10-demo.
+   - «Ya tengo cuenta: entrar» lleva al login sin aceptar nada (bandera de sesión `lockumi.reputacion.entrar.v1`, se borra al entrar).
    - Después falta un último paso: nombre visible (nombre e inicial del apellido) y cantón.
-2. **Cuentas 1.7-demo sin REP-01 (regla provisional, Katherine 2:33 p. m.):** al entrar ven REP-13 con [Ver cambios] (abre REP-01 en
-   `#/perfil/aceptar`), «Ahora no», «Salir» y «Eliminar mi cuenta». Con «Ahora no» (guardado en la sesión del navegador) sus alquileres abiertos siguen
-   igual, pero `#/crear` y los enlaces de invitación muestran la tarjeta:
-   «Para crear o unirte a un alquiler nuevo, primero acepta tu perfil de reputación. Tus alquileres abiertos siguen funcionando igual.» [Ver y aceptar].
-3. **Con la reputación aceptada:** la app se usa igual que siempre. «Tu perfil en Lockumi» en Inicio lleva a `#/perfil`.
+2. **Cuentas anteriores a la 1.10-demo (sin REP-01; Coordinador, 25/10/2026, 3:24 p. m.):** no vuelven a aceptar nada. Siguen usando la app
+   igual, sin perfil público, sin bloqueo y sin pantallas ni tarjetas extra (tampoco «Tu perfil en Lockumi» en Inicio). Lo dicen los Términos
+   (15.1, última oración) y el Aviso de privacidad (después del primer párrafo de «Perfil de reputación»). Un alquiler entre una cuenta anterior
+   y una nueva **no cuenta para ninguna de las dos** (`alquileresDeReputacion` en `puntaje.ts`; en el servidor, `lk_cuenta_para_reputacion` y
+   el disparador `lk_rep_evento_cuenta`). Quien tenía perfil y pidió eliminar su cuenta sigue contando para la otra parte (`conPerfil` /
+   `con_perfil`). En la demo cada navegador guarda solo lo suyo: el REP-01 de la otra parte se lee de este navegador (las capturas y el E2E lo siembran).
+3. **Con un pedido de borrado pendiente (Legal, d):** «+ Nuevo alquiler» y los enlaces de invitación muestran, con los estilos de siempre:
+   «Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.»
+   En el servidor, el disparador `lk_sin_alquileres_nuevos_si_borra` en `lk_participantes` rechaza crear o aceptar una invitación con ese texto.
+4. **Con la reputación aceptada:** la app se usa igual que siempre. «Tu perfil en Lockumi» en Inicio lleva a `#/perfil`.
 
 ## Reglas del puntaje (`src/reputacion/puntaje.ts`)
 
@@ -96,16 +107,17 @@ pg_cron opcional. Probada con PGlite (`src/servidor/__tests__/reputacion-sql.tes
   npx vite preview --outDir /tmp/rp-dist --port 4319 &
   E2E_BASE=http://localhost:4319 E2E_CHROME=/usr/bin/google-chrome npx playwright test -c e2e pruebas/reputacion.e2e.ts --project=dueno
   ```
-  Dueño = cuenta nueva (REP-01 antes del login → datos → 4,2 → al final elimina su cuenta con un alquiler abierto). Inquilino = cuenta 1.7-demo
-  («Ya tengo cuenta: entrar» → REP-13 1.10-demo → «Ahora no» → bloqueo en «Nuevo alquiler» → [Ver y aceptar] → REP-01 con tres casillas → 4,6 →
-  revisión «En revisión» → elimina su cuenta). La prueba se salta sola contra app.lockumi.com.
+  Con la guarda, el build local de borrador lleva `LOCKUMI_REPUTACION_BORRADOR=1`.
+  Dueño = cuenta nueva (REP-01 antes del login → datos → 4,2, sin contar su alquiler con la cuenta anterior → al final elimina su cuenta con un
+  alquiler abierto y ya no puede crear alquileres nuevos). Inquilino = cuenta nueva («Ana María M.» → 4,6 → revisión «En revisión» → elimina su
+  cuenta). Cuenta anterior = «Ya tengo cuenta: entrar» → la app de siempre, sin pantallas extra. La prueba se salta sola contra app.lockumi.com.
 
 ## Pendientes
 
-**Legal:** OK del head con la lista de textos cambiados; los comentarios `LEGAL: revisar` de `textos.ts` siguen marcando qué viene de Legal y
-qué es redacción nuestra.
+**Legal:** aprobó los textos de 6e9210a (marcas cambiadas a «LEGAL: revisado (25/10)»). Solo las líneas nuevas de la ronda del 25/10
+(3:27 p. m.) llevan «LEGAL: revisar · ronda 25/10 3:27».
 **Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límites conocidos de «cuenta
-nueva»: una cuenta 1.7-demo sin alquileres que aceptó la pantalla previa en la misma sesión queda vinculada; un enlace mágico abierto en otra
-pestaña pierde la sesión (la persona ve REP-13 y la tercera casilla). Mientras hay un borrado pendiente no se bloquean alquileres nuevos.
+nueva»: una cuenta anterior sin alquileres que aceptó la pantalla previa en la misma sesión queda vinculada; una persona nueva que toca «Ya tengo
+cuenta: entrar» (o abre el enlace mágico en otra pestaña) queda sin perfil, como una cuenta anterior (sin datos publicados).
 No se implementan (por ahora): perfil solo para registrados, apagar Destacados/Nuevos, retirar un reclamo, espejo del 10 %.

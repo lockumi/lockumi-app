@@ -169,7 +169,8 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 
 - [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
 - [x] REP-01 en una pantalla aparte antes de crear la cuenta (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.
-- [x] Cuentas 1.7-demo: REP-13 al entrar y REP-01 aparte; sin aceptarla, crear o unirse a un alquiler nuevo muestra la tarjeta de bloqueo.
+- [x] Cuentas anteriores a la 1.10-demo: sin re-aceptación ni pantallas extra; sin perfil, y sus alquileres no cuentan para nadie (Coordinador, 25/10).
+- [x] Con un borrado pendiente no se crean ni se aceptan alquileres nuevos (app y SQL). El build falla si se enciende con «[fecha de encendido]».
 - [x] Puntaje: inquilino baja solo por descuento del depósito; dueño solo si se devolvió al inquilino el 90 % o más de lo reclamado (antes del 0,3 %); siempre visible desde el 3.er alquiler; 10 años.
 - [x] «En revisión» con reclamo abierto o revisión pedida (REP-11), avisos de cambio de puntaje y de los 10 años (REP-12), noindex.
 - [x] Eliminar la cuenta gratis en 5 días hábiles; vitrinas opcionales; REP-14 y REP-15 en los textos legales (solo con el interruptor).
