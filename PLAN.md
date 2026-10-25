@@ -2,6 +2,21 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Franja: texto nuevo (publicado con el OK de Katherine)
+- Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
+
+## Ajustes de Legal 11:25 p. m. (24 oct 2026), sin cambios visibles
+- Con `VITE_PRUEBA_COMPLETA`: `usd()` da «N USDC de prueba» y `Fondo` siempre muestra la franja de la red de prueba.
+
+## PR 8 · paso 15 (24 oct 2026): B.8 suscripción y B.13 rendimiento «función en estudio», sin cambios visibles
+- Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/SuscripcionPC.tsx`, montado en Crear antes del Anexo 6-A.
+
+## Sin marcadores visibles (24 oct 2026, 11:08 p. m.), sin cambios visibles
+- B.6 con el texto final de Legal sobre el país (sin región); fuera los [PENDIENTE] de la B.1 y la B.7. Prueba `sin-marcadores.test.tsx`.
+
+## PR 7 · pasos 12 y 13 (24 oct 2026): aviso de 5 días (B.3) y fecha y hora en las fotos (6.4.2), sin cambios visibles
+- Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/AvisoSalida.tsx` (aviso «reparacion-5» de `sincronizar`, fotos de entrada, enlace a las reglas, simulador hasta el aviso) y `src/prueba/fotosFecha.ts` (pie y sello de `FotoLista`). El PDF B.11, la B.8 y la B.13 quedan para el paso 14 (requiere Legal y Katherine).
+
 ## PR 6 · paso 10 (24 oct 2026): Mediación Lockumi (demo), B.12, B.14 y 6.3 f, sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. Lógica en `src/prueba/mediacion.ts`, acción `resolverSimulacion` (`via: 'simulacion'`), pantalla `src/prueba/MediacionPC.tsx`. La mediación con una persona real queda fuera (condición de Legal: texto de Privacidad). El borrado a los 30 días pasa al PR 10 (va con el texto de Privacidad).
 

@@ -22,3 +22,4 @@
 .avisos-correo input[type=email] { width: 100%; box-sizing: border-box; }
 .avisos-correo__casilla { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
 .avisos-correo__casilla input { accent-color: #E8531F; width: 18px; height: 18px; margin-top: 2px; }
+.foto__sello{position:absolute;right:4px;top:4px;background:rgba(61,40,23,.78);color:#FFF5EE;font:600 11px/1.2 ui-monospace,monospace;padding:2px 5px;border-radius:6px}

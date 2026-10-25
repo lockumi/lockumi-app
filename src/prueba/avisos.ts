@@ -21,6 +21,8 @@ export function plazoInquilino(a: Alquiler) {
 }
 /** Fecha de fin del alquiler a las 12:00 de Costa Rica. */
 export const finAlquiler = (a: Pick<Alquiler, 'fin'>) => +new Date(a.fin + 'T12:00:00-06:00')
+/** Días que faltan (redondeados hacia arriba) para que salga el aviso de 5 días (B.3). */
+export const diasHastaAvisoSalida = (a: Alquiler, ahora: number) => Math.max(0, Math.ceil((finAlquiler(a) - 5 * DIA_MS - ahora) / DIA_MS))
 /** Nombres de los rubros del reclamo (de la tabla de precios; «otro rubro» si no tiene precio de referencia). */
 export const rubrosDe = (a: Alquiler) => (a.reclamo?.rubros ?? []).map(r => r.ref >= 0 ? PRECIOS[r.ref]?.rubro ?? OTRO_RUBRO : OTRO_RUBRO)
 /** Datos del aviso (los mismos que se mandan al servidor de correo). */
