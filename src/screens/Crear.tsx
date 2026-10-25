@@ -5,6 +5,7 @@ import 'react-day-picker/style.css'
 import { acciones, accionesServidor } from '../acciones'
 import { cuentaPropia } from './Invitacion'
 import { CasillaVersion } from '../prueba/CasillaVersion'
+import { CasillaLegal } from '../legal/CasillaLegal'
 import { versionActual } from '../prueba/version'
 import { ir } from '../router'
 import type { Usuario } from '../types'
@@ -284,10 +285,10 @@ export function Crear({ u }: { u: Usuario }) {
           <button type="button" className="na-mas" aria-label="Agregar regla" onClick={agregar}><Ico n="mas" /></button></div>
       </section>
 
-      {!prueba1 && <section className="na-sec"><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
+      {!prueba1 && <section className={'na-sec' + (invitar ? ' pila' : '')}><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
         <input id="f-email" type="email" value={f.email} onChange={e => poner('email', e.target.value)} onBlur={tocar('email')} placeholder="inquilino@correo.com" autoComplete="off" aria-invalid={!!ver('email')} aria-describedby={ver('email') ? 'f-email-err' : undefined} />
         {ver('email') && <small id="f-email-err" className="campo__error" role="alert">{ver('email')}</small>}</label>
-        {invitar && <label className="casilla-legal__fila"><input type="checkbox" checked={declara} onChange={e => setDeclara(e.target.checked)} /><span>{declaracionInvitacion()}</span></label>}
+        {invitar && <CasillaLegal id="f-declara" marcada={declara} onCambio={setDeclara}>{declaracionInvitacion()}</CasillaLegal>}
         {invitar && <CasillaVersion id="f-terminos-version" marcada={aceptaVersion} onCambio={setAceptaVersion} />}</section>}
 
       {enviado && cuantos > 0 && <p className="error na-error" role="alert">Revisa {cuantos === 1 ? 'el campo marcado' : `los ${cuantos} campos marcados`} y vuelve a intentarlo.</p>}

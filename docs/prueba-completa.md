@@ -186,6 +186,7 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 Regla de Katherine: el diseño que ya existe no se toca; solo se agregan pantallas o tarjetas con los estilos que ya hay.
 - «Elegir modo» (Crear): con C, «Simular con dueño de prueba» e «Invitar a la otra persona» usan `ModoOpciones` (src/screens/Crear.tsx), con el mismo marcado que producción (`div.na-modo__op`). Antes eran `<button>`, y el navegador les cambiaba el estilo (texto centrado y negro, otro borde y otra sombra). En C solo cambia cuál está elegida (`is-sel` y la marca) y desaparece «Pronto». El teclado funciona con `role="radio"`, sin CSS nuevo.
 - «Invita al inquilino» (Detalle): el link va dentro de `label.campo`, el campo de la app, no el del navegador.
+- Declaración de «Invitar» (Crear): usa `CasillaLegal`, la misma casilla con borde que «Acepto los Términos…» y el Anexo 6-A. La sección toma el espacio de `.pila` solo con «Invitar».
 - Guarda: `src/screens/__tests__/c-diseno-modo.test.tsx` compara el marcado con C y sin C.
 
 ## Escenario C en un solo comando: `correr-c.sh` (25/10, ~2:20 a. m. CR)

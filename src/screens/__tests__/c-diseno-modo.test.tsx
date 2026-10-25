@@ -3,6 +3,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import detalleFuente from '../Detalle.tsx?raw'
+import crearFuente from '../Crear.tsx?raw'
 
 vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {} })
 const { ModoOpciones } = await import('../Crear')
@@ -38,5 +39,10 @@ describe('C · «elegir modo» igual que producción', () => {
 describe('C · tarjetas nuevas con los estilos que ya existen', () => {
   it('el link de invitación va dentro de un .campo', () => {
     expect(detalleFuente).toMatch(/<label className="campo"><input readOnly value=\{link\} aria-label="Link de invitación"/)
+  })
+  it('la declaración de «Invitar» usa la casilla de la app (CasillaLegal), con el mismo espacio que las demás', () => {
+    expect(crearFuente).toMatch(/\{invitar && <CasillaLegal id="f-declara" marcada=\{declara\} onCambio=\{setDeclara\}>\{declaracionInvitacion\(\)\}<\/CasillaLegal>\}/)
+    expect(crearFuente).not.toMatch(/\{invitar && <label className="casilla-legal__fila">/)
+    expect(crearFuente).toMatch(/<section className=\{'na-sec' \+ \(invitar \? ' pila' : ''\)\}>/)
   })
 })
