@@ -1,5 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": { "api/*.ts": { "maxDuration": 60 } },
-  "rewrites": [{ "source": "/((?!assets/|fonts/|img/|api/).*)", "destination": "/index.html" }]
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!assets/|fonts/|img/|api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "e2e-resultados": false
+    }
+  }
 }
