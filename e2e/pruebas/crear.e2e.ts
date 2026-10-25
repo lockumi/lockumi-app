@@ -10,6 +10,9 @@ test('crear alquiler de prueba', async ({ page, rol }) => {
     const el = document.getElementById(id) as HTMLInputElement
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true }))
   }, [id, v])
+  // Con la prueba completa encendida, «Crear» pide aceptar el Anexo 6-A (B.5).
+  const anexo = page.getByLabel('Leímos y aceptamos el Anexo 6-A.')
+  if (await anexo.count()) await anexo.check()
   await captura(page, 'crear', 'formulario', rol)
   await page.getByRole('button', { name: /Crear alquiler/ }).click()
   await expect(page).toHaveURL(/#\/alquiler\//, { timeout: 30_000 })
