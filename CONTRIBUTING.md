@@ -90,6 +90,8 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Sin marcadores visibles: ningún texto de la app puede tener «[REGIÓN…]», «[PENDIENTE…]», «[CONFIRMAR]», «ABIERTO» ni «[ALGO: …]» (lo revisa `src/prueba/__tests__/sin-marcadores.test.tsx`). Los pendientes van en comentarios `// LEGAL: revisar`.
 - Aviso de 5 días y fotos (PR 7): el aviso B.3 sale de `debidos`/`sincronizar` (no se crea a mano) y la fecha y hora de las fotos siempre se muestran en hora de Costa Rica con `fechaHoraCR`; nunca se guarda ni se muestra la ubicación.
 - Mediación (PR 6): en la demo no hay persona mediadora; todo reparto va por `acciones.resolverSimulacion` con confirmación (B.14) y nunca da al dueño más de lo reclamado.
+- Términos 1.7-demo (paso 16): las reglas nuevas se piden con `reglas17(a)` de `src/prueba/version.ts` (interruptor encendido **y** alquiler en la 1.7-demo), nunca solo con `pruebaCompleta()`; así un alquiler de la 1.6-demo no cambia de reglas. Los textos legales vigentes salen de `docs()`, `terminosActual()` y `privacidadActual()` (`src/legal/documentos.ts`). No uses `Reaceptacion.tsx`.
+- Consentimientos (paso 16): cada función que trata datos nuevos pide su casilla sin marcar en el momento de usarla y la registra con `registrarConsentimiento` (`src/prueba/consentimientos.ts`). Datos de la mediación: se borran a los 30 días del cierre (`src/prueba/borrado.ts`, lo aplica `sincronizarTodos`).
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

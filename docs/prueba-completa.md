@@ -80,3 +80,11 @@ Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice:
 3. **B.14:** el reparto se elige con «Resolver el reclamo (simulación)»: dueño entre 0 y lo reclamado, el inquilino recibe el resto (la suma es el depósito). Confirmación «¿Resolver el reclamo así?» → `acciones.resolverSimulacion` (una sola vez) → `cerrado`, `via: 'simulacion'` y el aviso «Reclamo resuelto (simulación)» con el comprobante.
 4. **6.3 f:** se muestra cuánto es la parte no reclamada y que se libera al cerrar el reclamo (la cuenta segura no permite liberar por partes).
 5. «Otras vías (fuera de la app)»: conciliación o mediación en un centro autorizado, arbitraje si los dos lo firman, tribunales.
+
+## Términos y Privacidad 1.7-demo (paso 16, sin publicar)
+- **Textos:** `src/legal/v17/terminos.md` y `privacidad.md`, con los bloques de Legal (A.1–A.8) y la frase de 30 días de Privacidad. Con el interruptor encendido, `/terminos` y `/privacidad` muestran la 1.7-demo y la 1.6-demo queda en `/terminos-1-6` y `/privacidad-1-6`. `sin-marcadores.test.tsx` también revisa las dos páginas.
+- **Login igual:** no hay pantalla de volver a aceptar; los enlaces llevan a la versión vigente. Como cambió la versión, quien aceptó la 1.6-demo ve las casillas sin marcar otra vez (mismo diseño).
+- **Versión por alquiler:** `terminos: { version }` al crear. El contrato dice «Términos y condiciones: versión X» con enlace a esa versión. Un alquiler de la 1.6-demo sigue con sus reglas (sin propuesta automática, sin suscripción, sin avisos 1, 4 y 6, sin mediación) salvo que los dos toquen «Acepto pasar este alquiler a la 1.7-demo» antes de la salida.
+- **Mediación:** casilla sin marcar en la B.7; «Pedir mediación» no se activa sin ella. Al pedirla se guarda el consentimiento (cuenta, rol, alquiler, versión, texto y fecha). `consentimientoCorreo` queda listo para el paso 11.
+- **Borrado a los 30 días:** con el reloj de la demo, 30 días después de cerrar un caso con mediación se borran fotos, motivos, descripciones y comercios de los soportes; quedan los montos y el resultado y se anota en el historial. No se borra si una parte pidió guardarlos (`guardarMediacion`).
+- **Encender:** commit aparte que agrega `.env.production` con `VITE_PRUEBA_COMPLETA=1`. Volver atrás: revertir ese commit.

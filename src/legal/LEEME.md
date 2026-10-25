@@ -57,3 +57,4 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **Ronda 9c (24 oct 2026, sin publicar, misma versión 1.6-demo):** Términos 2.1 «guardado con reglas claras» (antes «protegido»).
   El aviso de bienvenida dice «crear un depósito de prueba». `Login.tsx:118` («protegido») espera el OK de Katherine; cuando se aplique,
   «protegid» pasa al test de palabras prohibidas (ver `docs/alertas.md`, «Legal, ronda 9c»).
+- **1.7-demo (25 oct 2026, rama `paso16-terminos-17`, sin publicar):** `v17/terminos.md` (bloques A.1–A.8 de `legal/prueba-completa-textos.md`: 2.2 b, 4.2 d, 5.2.1, 5.3 e, cláusula 6 completa con 6.1.1–6.9 y el Anexo 6-A, y la frase nueva de la cláusula 8) y `v17/privacidad.md` (borrado de los datos de una mediación a los 30 días). Solo con `VITE_PRUEBA_COMPLETA=1`; la 1.6-demo queda en `/terminos-1-6` y `/privacidad-1-6`. Cada alquiler guarda la versión que lo rige.

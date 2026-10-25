@@ -27,6 +27,14 @@
 - Con la sesión abierta se entra directo, aunque la versión aceptada sea anterior. `src/legal/Reaceptacion.tsx` queda sin uso (se conserva con sus pruebas). Entrar sigue pidiendo la casilla y guarda 1.6-demo.
 - Propuesta de Legal (10:05 p. m.), **solo imágenes, sin programar** (`capturas/sin-reaceptacion/aviso.jpg` y `linea-boton.jpg`): a) aviso que se puede cerrar la primera vez que entra quien aceptó 1.5; b) línea «Al continuar, aceptas los Términos 1.6-demo y el Aviso de privacidad.» sobre el botón de crear o firmar un alquiler.
 
+## Paso 16 (25 oct 2026, rama `paso16-terminos-17`, sin publicar): Términos y Privacidad 1.7-demo
+- Textos de Legal (`legal/prueba-completa-textos.md` A.1–A.8 y la frase de 30 días de Privacidad) en `src/legal/v17/`. Con el interruptor encendido, `/terminos` y `/privacidad` muestran la 1.7-demo; la 1.6-demo queda en `/terminos-1-6` y `/privacidad-1-6`.
+- **Sin pantalla de volver a aceptar** (no se usa `Reaceptacion.tsx`): el login se ve igual; solo cambia el texto detrás de los enlaces.
+- Cada alquiler guarda `terminos.version` (los nuevos, la 1.7-demo) y el contrato la muestra. Los de la 1.6-demo siguen con sus reglas (`reglas17(a)` es falso) salvo que **los dos** acepten pasar a la 1.7-demo (tarjeta «Términos de este alquiler», solo antes de la salida).
+- Mediación: casilla sin marcar dentro de la B.7 y registro (`consentimientos`: cuenta, alquiler, versión, texto y fecha). Gancho `consentimientoCorreo` para el paso 11.
+- Borrado: los datos de una mediación (fotos, motivos, descripciones y soportes) se borran 30 días después de cerrar el caso, salvo que una parte pida guardarlos (`guardarMediacion`); quedan los montos y el resultado.
+- Encendido: commit aparte con `.env.production` (`VITE_PRUEBA_COMPLETA=1`). Volver atrás: revertir ese commit.
+
 ## PR 10 (plan, sin programar): 1.7-demo con la regla nueva de Legal (24 oct, 10:05 p. m.)
 - **Sin pantalla que bloquee.** En su lugar, el mismo aviso que se puede cerrar y la misma línea sobre el botón de crear o firmar, con 1.7-demo.
 - **Consentimiento de privacidad en el momento de usar cada función**, con casilla sin marcar: una para los correos y otra para la mediación. Sin esa casilla, la función no se usa (no se envían correos; no se abre la mediación).

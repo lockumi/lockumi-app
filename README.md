@@ -261,6 +261,7 @@ Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de d
 
 Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `master`.
 
+- **Paso 16 · Términos y Privacidad 1.7-demo** (rama `paso16-terminos-17`, sin publicar; espera el OK de Katherine porque es un cambio visible): textos de Legal en `/terminos` y `/privacidad` (la 1.6-demo sigue en `/terminos-1-6` y `/privacidad-1-6`); cada alquiler guarda su versión y la muestra en el contrato; los firmados con la 1.6-demo siguen con sus reglas salvo que los dos acepten pasar a la 1.7-demo; casilla sin marcar para la mediación dentro de la B.7 (con registro); los datos de la mediación se borran 30 días después de cerrar el caso. Sin pantalla de volver a aceptar: el login se ve igual. Un commit aparte enciende el interruptor (`.env.production`). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 - **Formulario «Nuevo alquiler» de una pregunta por pantalla** (en desarrollo; no publicado). Hoy «Nuevo alquiler» sigue siendo la pantalla de siempre.
 
 ## Cambios publicados
