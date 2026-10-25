@@ -3,7 +3,9 @@
 // mostrarse). En la demo se hace en este navegador; en el servidor, con supabase/migrations/20261025140000_reputacion.sql
 // (lk_pedir_borrado_cuenta + tarea programada lk_borrar_cuentas_pedidas). Escrita, NO aplicada a producción.
 import { borrarTodo } from './consentimiento'
-import { leer, activa } from './consentimiento'
+import { leer } from './consentimiento'
+import { borrarRevisiones } from './revision'
+import { borrarAvisos } from './avisos'
 
 export const DIAS_HABILES_BORRADO = 5
 const CR = -6 * 3_600_000   // Costa Rica no usa horario de verano: UTC−6 todo el año
@@ -59,11 +61,11 @@ export function ejecutarBorrados(ahora = Date.now()): string[] {
   for (const k of claves) {
     const email = k.slice(PREFIJO.length), s = solicitudBorrado(email)
     if (!s || s.hecho) continue
-    borrarTodo(email)
+    borrarTodo(email); borrarRevisiones(email); borrarAvisos(email)
     localStorage.setItem(k, JSON.stringify({ ...s, hecho: new Date(ahora).toISOString() }))
     hechos.push(email)
   }
   return hechos
 }
-/** El perfil existe si la persona lo hizo público y no pidió eliminar su cuenta. */
-export const perfilDisponible = (email: string) => !solicitudBorrado(email) && (activa(leer(email), 'dueno', 'perfil') || activa(leer(email), 'inquilino', 'perfil'))
+/** El perfil existe si la persona aceptó REP-01 y no pidió eliminar su cuenta. Si no: «Este perfil ya no está disponible» (REP-09). */
+export const perfilDisponible = (email: string) => !solicitudBorrado(email) && !!leer(email).rep01

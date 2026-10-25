@@ -17,9 +17,8 @@ export const MINIMO_POR_CANTON = 10
 const DIA = 86_400_000
 /** Ley 8968, art. 6.1: lo negativo deja de contar 10 años después de que ocurrió. */
 export const TOPE_LEGAL_DIAS = 3653
-/** Parte de lo reclamado que se devolvió al inquilino desde la que el reclamo baja el puntaje del dueño («todo o casi todo»).
- *  LEGAL: revisar · PENDIENTE del OK de Katherine: 90 % es la PROPUESTA de Legal (legal/reputacion-textos.md, C.3.1, 2:15 p. m.),
- *  sobre el monto reclamado y antes de la comisión. Cambiarlo solo aquí. */
+/** Regla 1 de legal/reputacion-textos-para-producto.md (aprobada): un alquiler del dueño baja solo si se devolvió al inquilino el 90 % o
+ *  más de lo reclamado. Base: el monto reclamado (no el depósito), antes del 0,3 % de Trustless Work. LEGAL: revisar */
 export const UMBRAL_CASI_TODO = 0.9
 const vigente = (fecha: string, ahora: number) => ahora - Date.parse(fecha) <= TOPE_LEGAL_DIAS * DIA
 
@@ -54,7 +53,7 @@ export const reclamoIndebido = (a: Alquiler, ahora = Date.now()) =>
 export const eventoNegativo = (a: Alquiler, rol: Rol, ahora = Date.now()) => rol === 'inquilino' ? fraccionDescontada(a, ahora) > 0 : reclamoIndebido(a, ahora)
 
 /** Valor de un alquiler cerrado (0 a 5). Cada uno vale 5,0. Inquilino: baja en proporción a lo descontado del depósito.
- *  Dueño: con un reclamo indebido, baja en proporción a lo reclamado y devuelto, sobre el depósito (decisión pendiente de confirmar). */
+ *  Dueño: con un reclamo indebido, baja en proporción a lo reclamado y devuelto, sobre el depósito (regla 2). */
 export function valorDelAlquiler(a: Alquiler, rol: Rol, ahora = Date.now()): number {
   if (rol === 'inquilino') return 5 * (1 - fraccionDescontada(a, ahora))
   if (!reclamoIndebido(a, ahora) || !(a.monto > 0)) return 5
@@ -65,9 +64,10 @@ export function valorDelAlquiler(a: Alquiler, rol: Rol, ahora = Date.now()): num
 const redondear1 = (x: number) => Math.round(x * 10 + 1e-9) / 10
 
 /** Puntaje de una persona en un papel, con sus alquileres de ese papel. */
-export function calcularPuntaje(alquileres: Alquiler[], rol: Rol, ahora = Date.now()): Puntaje {
-  const cerrados = alquileres.filter(cuentaParaPuntaje)
-  const enRevision = alquileres.some(a => a.estado === 'reclamo' || a.estado === 'mediacion')
+/** `revision`: alquileres con una revisión pedida (REP-11): no cuentan y el puntaje dice «En revisión» (regla 7). */
+export function calcularPuntaje(alquileres: Alquiler[], rol: Rol, ahora = Date.now(), revision: Set<string> = new Set()): Puntaje {
+  const cerrados = alquileres.filter(a => cuentaParaPuntaje(a) && !revision.has(a.id))
+  const enRevision = alquileres.some(a => a.estado === 'reclamo' || a.estado === 'mediacion' || revision.has(a.id))
   const valor = cerrados.length >= MINIMO_PARA_PUNTAJE
     ? Math.max(0, Math.min(5, redondear1(cerrados.reduce((s, a) => s + valorDelAlquiler(a, rol, ahora), 0) / cerrados.length))) : null
   return { cerrados: cerrados.length, valor, enRevision }
@@ -76,8 +76,8 @@ export function calcularPuntaje(alquileres: Alquiler[], rol: Rol, ahora = Date.n
 export const formatoPuntaje = (v: number) => v.toFixed(1).replace('.', ',')
 export const alquileresCerrados = (n: number) => n === 1 ? '1 alquiler cerrado' : `${n} alquileres cerrados`
 
-/** ¿Se muestra el número? Siempre desde el 3.er alquiler cerrado, sin opción para ocultarlo (decisión de Katherine, 25/10/2026,
- *  2:24 p. m.), salvo «En revisión» mientras haya un reclamo abierto (C.3). */
+/** ¿Se muestra el número? Siempre desde el 3.er alquiler cerrado, alto o bajo, sin opción para ocultarlo (regla 4), salvo
+ *  «En revisión» mientras haya un reclamo abierto o una revisión pedida (regla 7). */
 export const puntajeVisible = (p: Puntaje) => !p.enRevision && p.cerrados >= MINIMO_PARA_PUNTAJE && p.valor !== null
 /** Línea pública del perfil o de la tarjeta. Con 0 a 2 alquileres cerrados, el estado neutro «Nuevo en Lockumi» (C.3, C.9). */
 export function lineaPublica(p: Puntaje): string {

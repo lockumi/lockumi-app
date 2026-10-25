@@ -7,7 +7,9 @@ import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERS
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
 beforeEach(() => { const m = new Map<string, string>()
-  vi.describe('REP-01: aceptación previa a crear la cuenta', () => {
+  vi.stubGlobal('localStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() }) })
+
+describe('REP-01: aceptación previa a crear la cuenta', () => {
   it('todo empieza sin aceptar', () => {
     expect(aceptoRep01(E)).toBe(false); expect(previa()).toBeNull()
     for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['destacados', 'nuevos'] as const) expect(activa(leer(E), rol, o)).toBe(false)
@@ -42,11 +44,6 @@ beforeEach(() => { const m = new Map<string, string>()
     borrarTodo(E); expect(leer(E)).toEqual({ roles: { dueno: {}, inquilino: {} } })
   })
   it('se guarda por cuenta (sin importar mayúsculas)', () => {
-    guardarDatos(E, 'Laura V.', 'Escazú'); expect(leer('demo@lockumi.com').canton).toBe('Escazú'); expect(leer('otra@x.cr').canton).toBeUndefined()
-  })
-})
-
-da por cuenta (sin importar mayúsculas)', () => {
     guardarDatos(E, 'Laura V.', 'Escazú'); expect(leer('demo@lockumi.com').canton).toBe('Escazú'); expect(leer('otra@x.cr').canton).toBeUndefined()
   })
 })

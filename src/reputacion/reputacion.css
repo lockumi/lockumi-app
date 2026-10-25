@@ -90,3 +90,6 @@
 .rp .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .rp-texto h1+p{margin-top:10px}
 .rp .rp-enlace-peligro{display:inline-block;margin-top:10px;color:#8A1F00;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.rp .rp-boton[disabled]{opacity:.55;cursor:not-allowed}
+.rp .rp-enlace{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;padding:12px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.rp .rp-enlace:focus-visible{outline:3px solid #3D2A22;outline-offset:2px}

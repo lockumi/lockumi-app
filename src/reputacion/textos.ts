@@ -1,5 +1,5 @@
-// Paso 19 · Textos de la reputación. Fuente: legal/reputacion-textos.md (Legal, actualización del 25/10/2026, 1:56 p. m., hora de
-// Costa Rica, ya con «Llave Lockumi», decisión 2 de Katherine), copiados al pie de la letra. Las negritas van entre **…**.
+// Paso 19 · Textos de la reputación. Fuente única: legal/reputacion-textos-para-producto.md (Legal, aprobado; versión del 25/10/2026,
+// 2:24 p. m., hora de Costa Rica), que reemplaza a legal/reputacion-textos.md. Copiados al pie de la letra. Las negritas van entre **…**.
 // Las variables siguen la convención de Legal: {nombre visible}, {cantón}, {n}.
 // TODO lo que lleva «LEGAL: revisar» puede cambiar: la lista completa está en docs/reputacion.md.
 import type { Rol } from '../types'
@@ -9,103 +9,111 @@ export const NOMBRE_LLAVE = 'Llave Lockumi'
 
 export interface Bloque { titulo: string; parrafos: string[]; casillas: string[] }
 
-// LEGAL: revisar · C.1 (versión de Legal de las 2:15 p. m.). Decisión de Katherine (25/10/2026, 2:24 p. m.): la reputación es OBLIGATORIA
-// para usar Lockumi; cada papel acepta su bloque con sus dos casillas, sin marcar, y sin ellas no se puede seguir. Por pedido de Katherine
-// los textos se copian como están, aunque todavía dicen «Si lo activas» y «Es voluntario…»: Legal tiene que ajustarlos a «obligatoria».
-// Cambios nuestros: sin las notas entre corchetes de Legal y con la ruta real «Tu perfil en Lockumi» en lugar de «Ajustes › Cuenta», que no existe.
-const RETIRAR = '**Retirar el consentimiento es eliminar la cuenta:** elimina tu cuenta en Tu perfil en Lockumi › «Eliminar mi cuenta» (o pídelo por correo). Tu perfil deja de verse al instante y borramos tus datos de reputación en un máximo de 5 días hábiles. Es gratis. Por ley, un hecho que baja tu puntaje deja de contar y se borra de tu reputación 10 años después de que ocurrió.'
-const FIJO = '**Tu perfil es fijo:** una vez activado, tu perfil público no se puede ocultar. Solo deja de verse si eliminas tu cuenta.'
-const TIEMPO = '**Cuánto tiempo:** tu perfil y tus datos de reputación (puntaje, insignias y el historial de alquileres que alimenta el puntaje) se guardan y se muestran **mientras exista tu cuenta**.'
-const ENTIENDO = 'Entiendo que mi perfil es público y fijo: no se puede ocultar y solo deja de verse si elimino mi cuenta. Mis datos de reputación se guardan mientras exista mi cuenta y, para retirar mi consentimiento, debo eliminarla.'
-const PERFIL_DUENO: Bloque = {
-  titulo: 'Activar mi perfil público de dueño',
-  parrafos: [
-    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres dueño, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje y la Llave Lockumi si la tienes. **No publicamos** la dirección ni el barrio del inmueble, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
-    '**Para qué:** que inquilinos interesados conozcan tu historial en Lockumi. No es una garantía ni una recomendación de Lockumi. En la demo, los datos salen de la red de prueba y no reflejan alquileres reales.',
-    FIJO, TIEMPO, RETIRAR,
-    'Es voluntario: si no lo activas, puedes usar Lockumi igual.',   // LEGAL: revisar · contradice la decisión «obligatoria» (2:24 p. m.)
-  ],
-  casillas: ['Confirmo que soy mayor de 18 años y acepto que Lockumi publique estos datos en mi perfil público de dueño.', ENTIENDO],
-}
-const PERFIL_INQUILINO: Bloque = {
-  titulo: 'Activar mi perfil público de inquilino',
-  parrafos: [
-    'Si lo activas, **cualquier persona en internet** que tenga el enlace podrá ver: tu nombre visible ({nombre visible}), que eres inquilino, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi, tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje y la Llave Lockumi si la tienes. **No publicamos** tu dirección, tu barrio, dónde vives o vivías, tu teléfono, tu correo, tu cédula, fotos ni el detalle de tus reclamos.',
-    '**Para qué:** que dueños interesados conozcan tu historial en Lockumi. No es una garantía ni una recomendación de Lockumi. Nunca ordenamos a los inquilinos por puntaje ni publicamos listas de puntajes bajos. En la demo, los datos salen de la red de prueba y no reflejan alquileres reales.',
-    FIJO, TIEMPO, RETIRAR,
-    'Es voluntario: si no lo activas, puedes usar Lockumi igual, y ningún dueño sabrá que no lo activaste.',   // LEGAL: revisar · contradice «obligatoria»
-  ],
-  casillas: ['Confirmo que soy mayor de 18 años y acepto que Lockumi publique estos datos en mi perfil público de inquilino.', ENTIENDO],
-}
-export const TEXTO_PERFIL: Record<Rol, Bloque> = { dueno: PERFIL_DUENO, inquilino: PERFIL_INQUILINO }
+// Fuente: legal/reputacion-textos-para-producto.md (aprobado por Legal, versión del 25/10/2026, 2:24 p. m.), al pie de la letra.
+// Lo que dice «Ajustes › …» en Legal es la ubicación; en la app es «Tu perfil en Lockumi» (no hay pantalla de Ajustes).
 
-// LEGAL: revisar · C.1 vitrinas (siguen opcionales), sin «Puedes desactivarlo cuando quieras…» ni la pregunta entre corchetes: la app no tiene
-// botón para desactivarlas (pregunta abierta de Legal a Katherine).
+// LEGAL: revisar · REP-01 Pantalla previa a crear la cuenta (con la casilla) y REP-01b (edad, aparte).
+export const REP01 = {
+  titulo: 'Antes de crear tu cuenta: tu perfil de reputación',
+  subtitulo: 'Usar Lockumi incluye un perfil de reputación público',
+  intro: 'Para usar Lockumi necesitas un perfil de reputación. Se crea junto con tu cuenta y es **público**: cualquier persona en internet que tenga el enlace puede verlo.',
+  puntos: [
+    '**Qué muestra:** tu nombre visible (nombre e inicial del apellido), si eres dueño o inquilino, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi y tus insignias.',
+    '**Tu puntaje:** se muestra siempre a partir de tu 3.er alquiler cerrado, sea alto o bajo. Antes se ve «Nuevo en Lockumi».',
+    '**Qué nunca muestra:** tu dirección, tu barrio, la distancia, tu teléfono, tu correo, tu cédula, tu billetera, tus fotos, los montos ni el detalle de tus reclamos.',
+    '**Es fijo:** no se puede ocultar. Solo desaparece si eliminas tu cuenta, que es gratis y se cumple en un máximo de 5 días hábiles.',
+    '**Tus derechos:** puedes ver y descargar tus datos, pedir que corrijamos un dato o que revisemos un hecho, y eliminar tu cuenta cuando quieras.',
+  ],
+  enlaces: { ejemplo: 'Ver un ejemplo de perfil', calculo: 'Cómo se calcula el puntaje', privacidad: 'Aviso de privacidad' },
+  casilla: 'Entiendo que usar Lockumi implica tener un perfil de reputación público y fijo, con mi puntaje visible desde mi 3.er alquiler cerrado, y que solo desaparece si elimino mi cuenta. Acepto que Lockumi lo publique.',
+  edad: 'Confirmo que soy mayor de 18 años.',
+  noAcuerdo: 'Si no estás de acuerdo, puedes no crear tu cuenta. No tiene ningún costo.',
+  continuar: 'Continuar', noCrear: 'No crear mi cuenta',
+}
+// LEGAL: revisar · REP-13 Aviso por la nueva versión (cuentas 1.7-demo, al entrar).
+export const REP13 = { texto: 'Actualizamos el Aviso de privacidad (1.8-demo) y los Términos: usar Lockumi ahora incluye un perfil de reputación público y fijo. Antes de seguir, te pedimos aceptarlo en una pantalla aparte. Si no lo aceptas, puedes eliminar tu cuenta sin costo.', verCambios: 'Ver cambios' }
+// Regla provisional para cuentas 1.7-demo sin REP-01 (texto literal de Katherine, 25/10/2026, 2:33 p. m.).
+export const BLOQUEO_NUEVO = { texto: 'Para crear o unirte a un alquiler nuevo, primero acepta tu perfil de reputación. Tus alquileres abiertos siguen funcionando igual.', boton: 'Ver y aceptar' }
+
+// LEGAL: revisar · REP-02 Hoja «Ver un ejemplo de perfil».
+export const REP02 = {
+  titulo: 'Así se ve un perfil público', ejemplo: 'Ejemplo', nombre: 'Ana M.', papel: 'Inquilina', canton: 'Cantón: Heredia', desde: 'En Lockumi desde marzo de 2026',
+  cerrados: 'Alquileres cerrados en Lockumi: 4', puntaje: 'Puntaje: 4,6 de 5', calculo: 'Cómo se calcula',
+  insignias: ['contrato', 'deposito', 'fotos-entrada', 'fotos-salida'] as const,
+  aviso: 'No es una garantía ni una recomendación de Lockumi. Solo resume lo registrado en la app. Demo en la red de prueba: datos de ejemplo, sin dinero real.',
+  nunca: '**Esto no aparece nunca en un perfil:** dirección, barrio, distancia, teléfono, correo, cédula, billetera, fotos, montos ni el detalle de los reclamos.',
+  volver: 'Volver',
+}
+
+// LEGAL: revisar · REP-06 Vitrinas (casillas opcionales).
 export const TEXTO_DESTACADOS: Record<Rol, Bloque> = {
-  dueno: { titulo: 'Aparecer en Dueños destacados de {cantón} (opcional)', parrafos: ['Además de lo anterior, tu tarjeta aparecerá en la vitrina pública de {cantón} con tu nombre visible, tu cantón, el precio desde el que alquilas, cuántos alquileres cerraste y tus insignias. Solo apareces si tienes 3 o más alquileres cerrados, y solo publicamos la vitrina si en el cantón hay al menos 10 personas; si no, usamos la provincia. Nunca mostramos tu barrio ni la dirección.'],
+  dueno: { titulo: 'Aparecer en Dueños destacados de {cantón} (opcional)', parrafos: ['Tu tarjeta aparecerá en la vitrina pública de {cantón} con tu nombre visible, tu cantón, el precio desde el que alquilas, cuántos alquileres cerraste y tus insignias. Solo apareces si tienes 3 o más alquileres cerrados, y solo publicamos la vitrina si en el cantón hay al menos 10 personas; si no, usamos la provincia. Nunca mostramos tu barrio, la dirección ni la distancia.'],
     casillas: ['Acepto aparecer en Dueños destacados.'] },
-  inquilino: { titulo: 'Aparecer en Inquilinos destacados de {cantón} (opcional)', parrafos: ['Además de lo anterior, tu tarjeta aparecerá en la vitrina pública de {cantón} con tu nombre visible, tu cantón, el rango de alquiler que buscas, cuántos alquileres cerraste y tus insignias. Solo apareces si tienes 3 o más alquileres cerrados, y solo publicamos la vitrina si en el cantón hay al menos 10 personas; si no, usamos la provincia. Nunca mostramos tu barrio ni dónde vives.'],
+  inquilino: { titulo: 'Aparecer en Inquilinos destacados de {cantón} (opcional)', parrafos: ['Tu tarjeta aparecerá en la vitrina pública de {cantón} con tu nombre visible, tu cantón, el rango de alquiler que buscas, cuántos alquileres cerraste y tus insignias. Solo apareces si tienes 3 o más alquileres cerrados, y solo publicamos la vitrina si en el cantón hay al menos 10 personas; si no, usamos la provincia. Nunca mostramos tu barrio, dónde vives ni la distancia.'],
     casillas: ['Acepto aparecer en Inquilinos destacados.'] },
 }
-// LEGAL: revisar · C.1 Nuevos. Para inquilinos, Legal pide «el rango de alquiler que buscas» en lugar del precio, pero el texto de dueños
-// no nombra el precio: la frase se agregó junto a las insignias (redacción nuestra).
-const NUEVOS = 'Si tienes de 0 a 2 alquileres cerrados, tu tarjeta puede aparecer en un «Espacio para nuevos» de la vitrina de {cantón}, con tu nombre visible, «Nuevo en Lockumi · {n} alquileres cerrados» y tus insignias, sin puntaje.'
+const NUEVOS = 'Si tienes de 0 a 2 alquileres cerrados, tu tarjeta puede aparecer en un «Espacio para nuevos» de la vitrina de {cantón}, con tu nombre visible, «Nuevo en Lockumi · {n} alquileres cerrados» y tus insignias, sin puntaje. (Dueños: el precio desde el que alquilas; inquilinos: el rango que buscas.)'
 export const TEXTO_NUEVOS: Record<Rol, Bloque> = {
   dueno: { titulo: 'Aparecer en Nuevos en Lockumi (opcional)', parrafos: [NUEVOS], casillas: ['Acepto aparecer en Nuevos en Lockumi.'] },
-  inquilino: { titulo: 'Aparecer en Nuevos en Lockumi (opcional)', parrafos: [NUEVOS.replace('y tus insignias', 'el rango de alquiler que buscas y tus insignias')], casillas: ['Acepto aparecer en Nuevos en Lockumi.'] },
+  inquilino: { titulo: 'Aparecer en Nuevos en Lockumi (opcional)', parrafos: [NUEVOS], casillas: ['Acepto aparecer en Nuevos en Lockumi.'] },
 }
-// «Mostrar mi puntaje» ya no existe (decisión de Katherine, 2:24 p. m.): el puntaje se muestra siempre desde el 3.er alquiler cerrado.
-// LEGAL: revisar · con menos de 3 alquileres cerrados (estado neutro; frase de la maqueta, sección 7 de reputacion/textos.md).
-export const TEXTO_PUNTAJE_NUEVO = 'Todos empiezan con 5,0. El puntaje se muestra desde el 3.er alquiler cerrado.'
+// REP-04, primer punto: el estado neutro con 0 a 2 alquileres cerrados.
+export const TEXTO_PUNTAJE_NUEVO = 'Todas las personas empiezan con 5,0. Lo mostramos siempre desde el 3.er alquiler cerrado; antes se ve «Nuevo en Lockumi · {n} alquileres cerrados».'
 
-// LEGAL: revisar · C.2
+// LEGAL: revisar · REP-03 Qué se publica y qué no se publica.
+export const SE_PUBLICA_TITULO = 'Qué se publica en tu perfil (mientras exista tu cuenta)'
 export const SE_PUBLICA = [
-  'Tu nombre visible (nombre y la inicial del apellido) y tus iniciales en lugar de foto.',
+  'Tu nombre visible (nombre e inicial del apellido) y tus iniciales en lugar de foto.',
   'Si eres dueño o inquilino.',
-  'Tu cantón (o tu provincia, si en el cantón hay menos de 10 personas).',
+  'Tu cantón (o tu provincia, si en tu cantón hay menos de 10 personas).',
   'Desde cuándo estás en Lockumi y cuántos alquileres cerraste en Lockumi.',
   'Tus insignias, que salen solo de hechos registrados en la app.',
-  'Si eres dueño: el precio desde el que alquilas. Si eres inquilino: el rango de alquiler que buscas (solo en la vitrina).',
-  'Tu puntaje y la Llave Lockumi, si la tienes, desde tu 3.er alquiler cerrado.',
+  'Tu puntaje y la Llave Lockumi, si la tienes, siempre a partir de tu 3.er alquiler cerrado. Todos los puntajes se muestran igual, sean altos o bajos.',
+  'Solo en las vitrinas en las que aparezcas: el precio desde el que alquilas (dueños) o el rango de alquiler que buscas (inquilinos).',
 ]
+export const NO_SE_PUBLICA_TITULO = 'Qué no se publica nunca'
 export const NO_SE_PUBLICA = [
-  'La dirección ni el barrio del inmueble, ni dónde vives.',
-  'Tu teléfono, tu correo, tu cédula, tu billetera ni tus fotos.',
-  'Las fotos del inventario, los montos de tus depósitos y el detalle de tus reclamos.',
+  'Tu dirección, tu barrio, la dirección del inmueble ni la distancia.',
+  'Tu teléfono, tu correo, tu cédula ni tu billetera.',
+  'Fotos: ni la tuya ni las del inventario.',
+  'Los montos de tus depósitos y el detalle de tus reclamos.',
   'Opiniones o comentarios de otras personas.',
   'Cuántos depósitos se devolvieron o recibieron completos (eso solo lo ves tú).',
-  // Quitado: «Si tu puntaje es bajo: tu perfil se ve igual que el de quien eligió no mostrar su puntaje.» Con el puntaje siempre visible
-  // ya no es cierto (Legal lo marcó PENDIENTE). LEGAL: revisar
 ]
+export const PROTECCION = '**Cómo protegemos tu perfil:** no aparece en buscadores como Google, no se puede buscar por nombre, no hay rankings ni orden por puntaje y nadie puede filtrar personas por su puntaje.'
 
-// LEGAL: revisar · C.3 (versión de Legal de las 2:15 p. m.). El 90 % del dueño es la PROPUESTA C.3.1, pendiente del OK de Katherine.
+// LEGAL: revisar · REP-04 Cómo se calcula el puntaje.
 export const COMO_SE_CALCULA = {
+  titulo: 'Cómo se calcula',
   intro: 'El puntaje va de 0 a 5 y **solo usa alquileres cerrados en Lockumi**. No usamos opiniones, comentarios ni datos de fuera de la app.',
   puntos: [
-    'Todas las personas empiezan con 5,0. Lo mostramos desde el 3.er alquiler cerrado; antes se ve «Nuevo en Lockumi · {n} alquileres cerrados».',
+    'Todas las personas empiezan con 5,0. Lo mostramos siempre desde el 3.er alquiler cerrado; antes se ve «Nuevo en Lockumi · {n} alquileres cerrados».',
     'Cada alquiler cerrado vale 5,0.',
     '**Si eres inquilino:** un alquiler solo baja si su reclamo **terminó con un descuento del depósito**: porque lo aceptaste, por un acuerdo con el dueño o por un acuerdo en la mediación. Baja en proporción a la parte descontada: por ejemplo, si se descontó el 20 % del depósito, ese alquiler vale 4,0. Si el reclamo se cerró sin descontar nada, no cuenta.',
     '**Si eres dueño:** un alquiler solo baja si, en un acuerdo o en la mediación, **se devolvió al inquilino el 90 % o más de lo que reclamaste**. Si el inquilino aceptó tu reclamo o si recibiste más del 10 % de lo que reclamaste, no baja tu puntaje. Baja en proporción a lo devuelto: por ejemplo, con un depósito de 800 USDC de prueba y un reclamo de 300, si se devolvieron al inquilino los 300, ese alquiler vale 3,1. Si no reclamaste, si tocaste «Todo bien, devolver» o si el plazo para reclamar venció sin reclamo, no cuenta.',
-    'Para los dos: no baja por abrir un reclamo, por responder a uno ni por acudir a los tribunales u otras vías. Los reclamos abiertos no cuentan; mientras haya uno, tu puntaje público dice «En revisión». Un hecho que baja el puntaje deja de contar y se borra 10 años después de que ocurrió.',
+    'Para los dos: no baja por abrir un reclamo, por responder a uno ni por acudir a los tribunales u otras vías. Los reclamos abiertos no cuentan; mientras haya uno, o mientras revisamos un hecho que pediste revisar, tu puntaje público dice «En revisión». Un hecho que baja el puntaje deja de contar y se borra 10 años después de que ocurrió.',
     'El puntaje es el promedio de tus alquileres cerrados, con un decimal.',
     'Refleja tu historial en Lockumi. No mide tu identidad, tu solvencia ni tu conducta, y no es una garantía ni una recomendación.',
-    'Si ves un error, puedes pedir que lo corrijamos (ver «Corregir o responder»).',
+    'Si ves un error, puedes pedir que lo corrijamos o que revisemos un hecho (ver «Corregir o pedir revisión»).',
+    'Estas reglas pueden cambiar. Si cambian, te avisaremos antes y te pediremos aceptar la nueva versión.',
   ],
   demo: '**En la demo:** el puntaje se calcula con **datos de prueba** de la red de prueba de Stellar, sin dinero real. Las simulaciones y las mediaciones simuladas no cuentan. Los perfiles marcados «Ejemplo» son ficticios.',
 }
 
-// LEGAL: revisar · C.4 (versión demo)
+// LEGAL: revisar · REP-07 Avisos (el enlace [Cómo se calcula] va aparte, en la pantalla).
 export const AVISO_PERFIL = 'No es una garantía ni una recomendación de Lockumi. Solo resume lo registrado en la app. Demo en la red de prueba: datos de ejemplo, sin dinero real.'
 export const AVISO_LISTA = 'Solo aparecen personas que eligieron aparecer. No es una garantía ni una recomendación de Lockumi, y el orden no es un ranking. Demo en la red de prueba: datos de ejemplo, sin dinero real.'
 
-// LEGAL: revisar · C.5 Perfil fijo (no hay botón para ocultarlo).
-export const PERFIL_FIJO = '**Tu perfil es público y fijo.** Cualquier persona en internet con el enlace puede verlo. No se puede ocultar: solo deja de verse si eliminas tu cuenta.'
+// LEGAL: revisar · REP-08 Perfil fijo (los botones van aparte).
+export const PERFIL_FIJO = '**Tu perfil es público y fijo.** Cualquier persona en internet con el enlace puede verlo. No aparece en buscadores, no se puede buscar por nombre y no se puede ocultar: solo deja de verse si eliminas tu cuenta.'
+export const PERFIL_FIJO_BOTONES = { publica: 'Ver qué se publica', datos: 'Ver mis datos de reputación', eliminar: 'Eliminar mi cuenta' }
 
-// LEGAL: revisar · C.5.1 Eliminar la cuenta. El plazo de 5 días hábiles excluye sábados, domingos y feriados de Costa Rica.
+// LEGAL: revisar · REP-09 Eliminar la cuenta. El plazo de 5 días hábiles excluye sábados, domingos y feriados de Costa Rica.
+// TODO(Legal): qué pasa con un alquiler abierto al eliminar la cuenta. Pendiente de Legal: NO escribir ningún texto hasta que lo decidan.
 export const ELIMINAR = {
   boton: 'Eliminar mi cuenta',
   titulo: '¿Eliminar tu cuenta?',
-  intro: 'Eliminar tu cuenta es la única forma de que tu perfil deje de verse y de retirar tu consentimiento para los datos de reputación. Si la eliminas:',
+  intro: 'Eliminar tu cuenta es la única forma de que tu perfil deje de verse y de retirar tu consentimiento para los datos de reputación. Es gratis. Si la eliminas:',
   puntos: [
     'Tu perfil y tus tarjetas dejan de mostrarse al instante, y el enlace público mostrará «Este perfil ya no está disponible».',
     'Borramos tus datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje) en un máximo de 5 días hábiles. No se pueden recuperar.',
@@ -116,6 +124,7 @@ export const ELIMINAR = {
   descargar: 'Descargar mis datos', si: 'Eliminar mi cuenta', no: 'Cancelar',
   listo: 'Listo. Eliminamos tu cuenta. Tus datos de reputación se borrarán en un máximo de 5 días hábiles.',
   correo: 'También se puede pedir por correo a business.applockumi@gmail.com desde el correo registrado.',
+  noDisponible: 'Este perfil ya no está disponible',
 }
 // Redacción nuestra (LEGAL: revisar): fecha límite visible y salida de la sesión en la demo.
 export const ELIMINAR_UI = {
@@ -124,26 +133,37 @@ export const ELIMINAR_UI = {
   enCurso: 'Ya pediste eliminar tu cuenta. Tu perfil ya no se muestra.',
 }
 
-// LEGAL: revisar · C.5.2
+// LEGAL: revisar · REP-10
 export const MIS_DATOS = {
   boton: 'Ver mis datos de reputación',
   titulo: 'Tus datos de reputación',
-  texto: 'Aquí ves todo lo que guardamos para tu reputación: cada alquiler cerrado que cuenta, si tuvo un descuento del depósito y de cuánto (si eres inquilino) o qué parte de lo que reclamaste se devolvió al inquilino (si eres dueño), cómo afecta tu puntaje, tus insignias y en qué vitrinas apareces. Se guardan mientras exista tu cuenta. Es gratis (Ley 8968, art. 7).',
+  texto: 'Aquí ves todo lo que guardamos para tu reputación: cada alquiler cerrado que cuenta, si tuvo un descuento del depósito y de cuánto (si eres inquilino) o qué parte de lo que reclamaste se devolvió al inquilino (si eres dueño), cómo afecta tu puntaje, tus insignias y en qué vitrinas apareces. Se guardan mientras exista tu cuenta. Puedes descargarlos en un archivo cuando quieras. Es gratis.',
   descargar: 'Descargar mis datos', corregir: 'Corregir o pedir revisión', eliminar: 'Eliminar mi cuenta',
 }
 
-// LEGAL: revisar · C.6
+// LEGAL: revisar · REP-11
 export const CORREGIR = {
   titulo: '¿Ves un error en tu puntaje o en tus insignias?',
+  boton: 'Corregir o pedir revisión',
+  intro: 'Toca [Corregir o pedir revisión], elige el alquiler, explica qué está mal y adjunta pruebas si las tienes.',
+  puntos: [
+    '**Al instante:** te enviamos un acuse con la fecha y la hora, y tu puntaje público pasa a decir «En revisión». Mientras lo revisamos, ese alquiler no cuenta.',
+    '**En un máximo de 5 días hábiles:** te respondemos por escrito. Si tenías razón, corregimos o borramos el dato ese mismo día y te avisamos.',
+    '**Si no estás de acuerdo con la respuesta:** puedes presentar una denuncia ante la PRODHAB (www.prodhab.go.cr) o acudir a los tribunales.',
+  ],
   parrafos: [
-    'Toca [Corregir o responder], elige el alquiler, explica qué está mal y adjunta pruebas si las tienes. Te enviamos un acuse con la fecha. Mientras lo revisamos, tu puntaje público dice «En revisión» y el alquiler en disputa no cuenta. Te respondemos por escrito en un máximo de **5 días hábiles**. Si tenías razón, corregimos el dato y te avisamos. Si no estás de acuerdo con la respuesta, puedes presentar una denuncia ante la PRODHAB (www.prodhab.go.cr) o acudir a los tribunales.',
+    '**Pedir revisión de un hecho:** aunque el cálculo esté bien, puedes pedir que revisemos un hecho concreto (por ejemplo, un descuento del depósito o un reclamo que crees que se registró mal). Seguimos el mismo trámite y los mismos plazos.',
     '**Derecho de respuesta:** si un dato publicado sobre ti afecta tu reputación, puedes pedir que junto a tu perfil se muestre una nota breve tuya (hasta 300 caracteres) mientras lo revisamos, o que se oculte ese dato hasta resolver.',
-    '**Pedir revisión de un evento:** aunque el cálculo esté bien, puedes pedir que revisemos un evento concreto (por ejemplo, un descuento del depósito o un reclamo que crees que se registró mal). Seguimos el mismo trámite y el mismo plazo.',
     'Escríbenos también a business.applockumi@gmail.com desde tu correo registrado.',
   ],
 }
 
-// LEGAL: revisar · C.7 (sin «verificado»)
+// LEGAL: revisar · REP-12 Avisos de cambio de puntaje y de los 10 años.
+export const AVISO_CAMBIO = { titulo: 'Tu puntaje cambió', texto: 'Tu puntaje pasó de {antes} a {después} por el cierre del alquiler {alquiler} el {fecha}.',
+  porque: 'Ver por qué', revision: 'Pedir revisión', nota: 'Si crees que hay un error, pide una revisión: mientras la revisamos, tu puntaje dice «En revisión».' }
+export const AVISO_VENCIDO = { titulo: 'Un hecho dejó de contar en tu puntaje', texto: 'Pasaron 10 años desde {hecho} y lo borramos de tu reputación. Tu puntaje ahora es {después}.' }
+
+// LEGAL: revisar · REP-05 Insignias y Llave Lockumi (sin «verificado»)
 export const INSIGNIAS: Record<string, { nombre: string; descripcion: string }> = {
   contrato: { nombre: 'Contrato firmado en Lockumi', descripcion: 'Firmó en la app el contrato de al menos un alquiler.' },
   deposito: { nombre: 'Depósito guardado en Lockumi', descripcion: 'El depósito de al menos un alquiler se guardó en la cuenta segura de la app.' },
@@ -155,11 +175,11 @@ export const INSIGNIAS: Record<string, { nombre: string; descripcion: string }> 
 export const LLAVE_DESCRIPCION = 'Se muestra a quien tiene en Lockumi 10 o más alquileres cerrados, un puntaje de 4,8 o más y fotos de entrada y salida completas en todos sus alquileres, y que en los últimos 12 meses no tuvo: si es inquilino, ningún descuento del depósito; si es dueño, ningún reclamo en el que se devolvió al inquilino el 90 % o más de lo reclamado. Se revisa cada 3 meses. No es una garantía ni una recomendación.'
 export const NUEVO_DESCRIPCION = 'Tiene de 0 a 2 alquileres cerrados en Lockumi.'
 
-// LEGAL: revisar · C.9, D5 y D7/D14
+// LEGAL: revisar · REP-07 (pie) y C.9
 export const VITRINA = {
   orden: 'Ordenado por cantón y rango de precio, no por puntaje. Una de cada tres tarjetas es para personas nuevas en Lockumi.',
   espacio: 'Espacio para nuevos',
-  pie: (quienes: 'dueños' | 'inquilinos') => `Solo aparecen ${quienes} que eligieron aparecer. Destacados: 3 o más alquileres cerrados. Espacios para nuevos: de 0 a 2 alquileres cerrados. Publicamos la vitrina si en el cantón hay al menos 10 personas.`,
+  pie: (quienes: 'dueños' | 'inquilinos') => `Solo aparecen ${quienes} que eligieron aparecer. Destacados: 3 o más alquileres cerrados. Espacios para nuevos: de 0 a 2 alquileres cerrados. Todos los perfiles muestran su puntaje desde el 3.er alquiler cerrado. Publicamos la vitrina si en el cantón hay al menos 10 personas.`,
   nuevos: 'Una de cada tres tarjetas es un Espacio para nuevos: personas con 0 a 2 alquileres cerrados que eligieron aparecer. Todavía no tienen puntaje; eso no dice nada malo de ellas.',
   vacio: 'Todavía no hay suficientes personas en esta zona para mostrar una lista.',
 }
@@ -168,7 +188,7 @@ export const VITRINA = {
 export const UI = {
   entradaTitulo: ENTRADA.titulo,
   miPerfil: 'Mi perfil · solo lo ves tú',   // maqueta, sección 7
-  asiTeVen: 'Así te ven en tu perfil público, si lo activas.',   // maqueta, sección 7
+  asiTeVen: 'Así te ven en tu perfil público.',
   perfilEnLockumi: 'Perfil en Lockumi',
   privado: 'Tu perfil no es público.',
   publico: 'Tu perfil es público.',
@@ -176,7 +196,7 @@ export const UI = {
   hacerPublico: 'Hacer público mi perfil',
   comoSeCalcula: 'Cómo se calcula',
   queEsLlave: `Qué es la ${NOMBRE_LLAVE}`,
-  corregir: 'Corregir o responder',
+  corregir: CORREGIR.boton,
   verVitrina: 'Ver la vitrina de ejemplo',
   enLockumiDesde: (f: string) => `En Lockumi desde ${f}`,
   segunLockumi: 'Según lo registrado en Lockumi',
@@ -196,20 +216,33 @@ export const UI = {
   errNombre: 'Escribe tu nombre y la inicial de tu apellido, por ejemplo «Laura V.».',
   errNombreLargo: 'Usa solo tu nombre y la inicial del apellido, por ejemplo «Laura V.». Máximo 30 letras.',
   errCanton: 'Elige tu cantón en la lista. Está ordenada por provincia.',
-  errCasillas: 'Marca las dos casillas para continuar. Sin ellas no puedes usar Lockumi; si no estás de acuerdo, puedes salir o eliminar tu cuenta.',
+  errRep01: 'Marca las dos casillas para continuar. Si no estás de acuerdo, toca «No crear mi cuenta».',
+  errRep01Cuenta: 'Marca las dos casillas para continuar. Si no estás de acuerdo, puedes eliminar tu cuenta sin costo.',
   errCasilla: 'Para aparecer, marca la casilla. Si prefieres no aparecer, toca «Ahora no».',
   activar: 'Activar',
-  opcion: { perfil: 'Perfil público', destacados: 'Destacados', nuevos: 'Nuevos en Lockumi' } as Record<'perfil' | 'destacados' | 'nuevos', string>,
-  // Puerta obligatoria (decisión de Katherine, 2:24 p. m.). Redacción nuestra, LEGAL: revisar.
-  puertaNota: 'Para usar Lockumi, activa tu perfil público como dueño y como inquilino. Son 3 pasos.',
-  aceptarYSeguir: 'Aceptar y continuar',
-  obligatoria: 'Sin esta aceptación no puedes usar Lockumi.',
+  opcion: { destacados: 'Destacados', nuevos: 'Nuevos en Lockumi' } as Record<'destacados' | 'nuevos', string>,
+  // Redacción nuestra, LEGAL: revisar.
+  noCreasTitulo: 'No creaste tu cuenta',
+  noCreasTexto: 'No guardamos ningún dato. Si cambias de opinión, vuelve cuando quieras.',
+  datosNota: 'Último paso: elige cómo te verán en tu perfil.',
+  ahoraNoCuenta: 'Ahora no',
+  aceptadoEl: (f: string, h: string) => `Aceptaste tu perfil de reputación el ${f} a las ${h}.`,
+  revTitulo: 'Pedir revisión',
+  revAlquiler: 'Alquiler', revElegir: 'Elige el alquiler', revTexto: 'Qué está mal', revNota: 'Nota para tu perfil (opcional, hasta 300 caracteres)',
+  revEnviar: 'Pedir revisión',
+  revAcuse: (f: string, h: string, l: string) => `Recibimos tu pedido el ${f} a las ${h}. Te respondemos por escrito a más tardar el ${l}. Mientras tanto, tu puntaje dice «En revisión».`,
+  revPendientes: 'Revisiones pedidas',
+  errRevAlquiler: 'Elige el alquiler que quieres que revisemos.',
+  errRevTexto: 'Explica qué está mal para que podamos revisarlo.',
+  errRevNota: 'La nota puede tener hasta 300 caracteres. Acórtala e inténtalo otra vez.',
+  entendido: 'Entendido',
   salir: 'Salir',
   verVitrinaOpcion: 'Ver si quieres aparecer en la vitrina',
   aparecesListo: 'Listo. Ya apareces en la vitrina de tu cantón.',
   nuevoTitulo: 'Nuevo en Lockumi',
   errGuardar: 'No pudimos guardar en este navegador. Libera espacio (por ejemplo, con «Reiniciar demo») e inténtalo otra vez.',
   publicoListo: 'Listo. Tu perfil ya es público.',
+  rep13Titulo: 'Aviso',
   publicoNota: 'Tu perfil queda visible mientras exista tu cuenta. Si eliminas tu cuenta, desaparece.',
   reclamoDevuelto: (p: number) => `Reclamo devuelto al inquilino: ${p} %`,
   sinReclamo: 'Sin reclamos devueltos',
@@ -223,8 +256,8 @@ export const UI = {
   comoOrdenamos: 'Cómo ordenamos esta vitrina',
   comoOrdenamosTexto: `Mostramos las tarjetas por cantón y por rango de precio. El puntaje y la ${NOMBRE_LLAVE} no cambian el orden. Una de cada tres tarjetas es para personas nuevas en Lockumi, que todavía no tienen puntaje. Solo aparecen quienes eligieron aparecer.`,
   ejemplo: 'Ejemplo',
-  queSePublica: 'Qué se publica (desde que activas tu perfil y mientras exista tu cuenta)',   // C.2
-  queNoSePublica: 'Qué no se publica nunca',
+  queSePublica: SE_PUBLICA_TITULO,
+  queNoSePublica: NO_SE_PUBLICA_TITULO,
   datosVacio: 'Todavía no tienes alquileres cerrados en Lockumi.',
   descuento: (p: number) => `Descuento del depósito: ${p} %`,
   sinDescuento: 'Sin descuento del depósito',
