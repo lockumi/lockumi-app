@@ -1,0 +1,154 @@
+// Paso 19 · Revisión de Legal del PR #26 (legal/revision-pr26-legal.md, 25/10/2026, 3:02 p. m.): VERSIÓN, TEXTOS, REGLAS QUE NO SE
+// CUMPLEN y MENORES. Textos literales de Legal.
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+import type { Usuario } from '../../types'
+
+const mem = new Map<string, string>(), ses = new Map<string, string>()
+const almacen = (m: Map<string, string>) => ({ getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, String(v)) }, removeItem: (k: string) => { m.delete(k) },
+  clear: () => m.clear(), key: (i: number) => [...m.keys()][i] ?? null, get length() { return m.size } })
+vi.stubGlobal('localStorage', almacen(mem)); vi.stubGlobal('sessionStorage', almacen(ses))
+const U: Usuario = { email: 'demo@lockumi.com', nombre: 'Demo', metodo: 'correo' }
+const texto = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+const pantalla = async (r: string) => { const { default: R } = await import('../Pantallas'); return renderToStaticMarkup(<R u={U} r={r} salir={() => {}}><p>PANTALLA-DE-SIEMPRE</p></R>) }
+const fs = async () => await import(['node', 'fs'].join(':'))
+const leerArchivo = async (f: string) => (await fs()).readFileSync(new URL('../../../' + f, import.meta.url), 'utf8') as string
+const legal = async (f: string, rep = true) => { const { condicional } = await import('../../legal/condicional')
+  return condicional((await fs()).readFileSync(new URL('../../legal/v17/' + f, import.meta.url), 'utf8') as string, { 'dos-personas': true, correos: false, reputacion: rep }) }
+beforeEach(() => { vi.resetModules(); mem.clear(); ses.clear(); vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1')
+  vi.doMock('../../store', async (o) => { const m = await o<typeof import('../../store')>(); return { ...m, useAlquileres: () => m.store.todos() } }) })
+
+describe('VERSIÓN: 1.10-demo con la fecha real de encendido (una sola constante)', () => {
+  it('VERSION_TEXTOS = «{versión} · {fecha}»; la fecha es una sola constante, a fijar al encender', async () => {
+    const v = await import('../../legal/version17'), { VERSION_TEXTOS } = await import('../consentimiento')
+    expect(v.V_REPUTACION).toBe('1.10-demo'); expect(v.EDICION_REPUTACION).toBe(`1.10-demo · ${v.FECHA_ENCENDIDO_REPUTACION}`)
+    expect(VERSION_TEXTOS).toBe(v.EDICION_REPUTACION)
+    for (const f of ['src/reputacion/consentimiento.ts', 'src/reputacion/textos.ts', 'src/legal/condicional.ts']) expect(await leerArchivo(f)).not.toContain(v.FECHA_ENCENDIDO_REPUTACION)
+  })
+  it('con la reputación, el Aviso y los Términos dicen la 1.10-demo (nunca la etiqueta 1.7-demo ya publicada); apagada, siguen en 1.7-demo', async () => {
+    const { EDICION_REPUTACION, EDICION_V17 } = await import('../../legal/version17')
+    for (const f of ['privacidad.md', 'terminos.md']) {
+      const on = await legal(f), off = await legal(f, false)
+      expect(on).toContain(`**Versión ${EDICION_REPUTACION}**`); expect(on).not.toContain(EDICION_V17)
+      expect(off).toContain(`**Versión ${EDICION_V17}**`)
+    }
+  })
+  it('aceptar los Términos con la reputación encendida guarda la edición 1.10-demo', async () => {
+    const { guardarAceptacion } = await import('../../legal/aceptacion'), { V17, EDICION_REPUTACION } = await import('../../legal/version17')
+    expect(guardarAceptacion('terminos', V17).edicion).toBe(EDICION_REPUTACION)
+    vi.stubEnv('VITE_REPUTACION', '0'); vi.resetModules()
+    const a = await import('../../legal/aceptacion'), w = await import('../../legal/version17'); expect(a.guardarAceptacion('terminos', w.V17).edicion).toBe(w.EDICION_V17)
+  })
+  it('cuentas 1.7-demo: REP-01 trae una casilla aparte, sin marcar, para lo que agrega la versión; [Continuar] pide las tres', async () => {
+    const { EDICION_REPUTACION } = await import('../../legal/version17')
+    const h = await pantalla('/perfil/aceptar'), t = texto(h)
+    expect(t).toContain(`Acepto lo que agrega la versión ${EDICION_REPUTACION} de los Términos y del Aviso de privacidad para tener mi perfil de reputación.`)
+    expect((h.match(/type="checkbox"/g) ?? []).length).toBe(3); expect(h).not.toMatch(/type="checkbox"[^>]*checked/)
+    expect(h).toMatch(/disabled=""[^>]*>Continuar/)
+  })
+})
+
+describe('TEXTOS (literales de Legal)', () => {
+  it('REP-13 con la versión y la fecha', async () => {
+    const { EDICION_REPUTACION } = await import('../../legal/version17')
+    expect(texto(await pantalla('/'))).toContain(`Actualizamos los Términos y el Aviso de privacidad (versión ${EDICION_REPUTACION}): usar Lockumi ahora incluye un perfil de reputación público y fijo, que aceptas en una pantalla aparte. Tus alquileres abiertos siguen funcionando igual, aunque no lo aceptes. Para crear o unirte a un alquiler nuevo, primero tienes que aceptarlo. Si no estás de acuerdo, puedes eliminar tu cuenta sin costo.`)
+  })
+  it('sin «Ajustes»: la ubicación es «Tu perfil en Lockumi»', async () => {
+    const p = await legal('privacidad.md'), t = await legal('terminos.md')
+    expect(p + t).not.toContain('Ajustes')
+    expect(p).toContain('(en «Tu perfil en Lockumi» › «Eliminar mi cuenta», o por correo a business.applockumi@gmail.com)')
+    expect(p).toContain('puedes ver y descargar tus datos de reputación en «Tu perfil en Lockumi» › «Ver mis datos de reputación» › «Descargar mis datos»,')
+    expect(t).toContain('puedes hacerlo gratis en «Tu perfil en Lockumi» › «Eliminar mi cuenta» o por correo a business.applockumi@gmail.com')
+  })
+  it('{n}: nunca sale «{n}» ni «1 alquileres»; Cómo se calcula y Nuevos usan el texto de Legal', async () => {
+    const LEGAL_N = 'Todas las personas empiezan con 5,0. Lo mostramos desde el 3.er alquiler cerrado; antes se ve «Nuevo en Lockumi» con la cantidad de alquileres cerrados (por ejemplo, «Nuevo en Lockumi · 1 alquiler cerrado»).'
+    const { COMO_SE_CALCULA, TEXTO_NUEVOS } = await import('../textos')
+    expect(COMO_SE_CALCULA.puntos[0]).toBe(LEGAL_N)
+    expect(TEXTO_NUEVOS.dueno.parrafos[0]).toContain('con tu nombre visible, «Nuevo en Lockumi» con la cantidad de alquileres cerrados (por ejemplo, «Nuevo en Lockumi · 1 alquiler cerrado») y tus insignias')
+    const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Escazú')
+    mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr',
+      estado: 'cerrado', rendimiento: false, historial: [], diasSimulados: 0, resultado: { inquilino: 20, dueno: 0, via: 'acuerdo', fecha: '2026-06-01T12:00:00Z' } }]))
+    for (const r of ['/perfil/dueno', '/perfil/calculo', '/perfil/dueno/aparecer']) { const t = texto(await pantalla(r)); expect(t).not.toContain('{n}'); expect(t).not.toMatch(/\b1 alquileres/) }
+    expect(texto(await pantalla('/perfil/dueno'))).toContain('Nuevo en Lockumi · 1 alquiler cerrado')
+  })
+  it('textos de Producto', async () => {
+    const { UI, REP01 } = await import('../textos'), { ENTRADA } = await import('../entrada-textos')
+    expect(UI.noCreasTexto).toBe('No creamos tu cuenta y no guardamos ningún dato tuyo. Si cambias de opinión, vuelve cuando quieras.')
+    expect(UI.revAcuse('1 de junio de 2026', '10:00', '8 de junio de 2026')).toBe('Recibimos tu pedido el 1 de junio de 2026 a las 10:00 (hora de Costa Rica). Te respondemos por escrito a más tardar el 8 de junio de 2026. Mientras tanto, ese alquiler no cuenta y tu puntaje público dice «En revisión».')
+    expect(UI.cantonAyuda).toBe('Mostramos tu cantón, o tu provincia si en tu cantón hay menos de 10 personas. Nunca el barrio ni la dirección.')
+    expect(UI.datosNota).toBe('Último paso: estos datos se publican en tu perfil.')
+    expect(REP01.tituloCuenta).toBe('Antes de seguir: tu perfil de reputación')
+    expect(REP01.noAcuerdoCuenta).toBe('Si no estás de acuerdo, tus alquileres abiertos siguen funcionando igual, pero no podrás crear ni unirte a un alquiler nuevo. También puedes eliminar tu cuenta sin costo.')
+    expect(ENTRADA.texto).toBe('Así se ve tu perfil público: tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje.')
+    const t = texto(await pantalla('/perfil/aceptar')); expect(t).toContain(REP01.tituloCuenta); expect(t).toContain(REP01.noAcuerdoCuenta); expect(t).not.toContain('Antes de crear tu cuenta')
+  })
+  it('nombre visible: un nombre y la inicial del apellido; el error de largo solo por largo', async () => {
+    const { validarNombre } = await import('../consentimiento'), { UI } = await import('../textos')
+    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R')).toBeNull()
+    expect(validarNombre('Laura Vargas R.')).toBe(UI.errNombre); expect(validarNombre('Laura Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura')).toBe(UI.errNombre)
+    expect(validarNombre('Maximilianoalejandrotomasito V.')).toBe(UI.errNombreLargo)
+  })
+})
+
+describe('REGLAS QUE NO SE CUMPLÍAN', () => {
+  it('1) la pantalla previa tiene «Ya tengo cuenta: entrar», que abre el login SIN registrar la aceptación', async () => {
+    const { Previa } = await import('../Pantallas')
+    const h = renderToStaticMarkup(<Previa><p>LOGIN-DE-SIEMPRE</p></Previa>); expect(texto(h)).toContain('Ya tengo cuenta: entrar')
+    const { entrarSinAceptar, previa } = await import('../consentimiento')
+    entrarSinAceptar(); expect(renderToStaticMarkup(<Previa><p>LOGIN-DE-SIEMPRE</p></Previa>)).toContain('LOGIN-DE-SIEMPRE'); expect(previa()).toBeNull()
+    expect([...mem.keys()].filter(k => k.includes('previa'))).toEqual([])
+  })
+  it('2) la aceptación previa solo pasa a una cuenta recién creada en esa misma sesión del navegador', async () => {
+    const c = await import('../consentimiento')
+    c.aceptarPrevia(['x']); expect(ses.size).toBeGreaterThan(0); expect([...mem.keys()].some(k => k.includes('previa'))).toBe(false)
+    c.vincularPrevia('vieja@x.cr', false); expect(c.aceptoRep01('vieja@x.cr')).toBe(false)              // cuenta con historial: no
+    c.vincularPrevia('nueva@x.cr', true); expect(c.aceptoRep01('nueva@x.cr')).toBe(true); expect(c.previa()).toBeNull()
+    ses.clear(); c.vincularPrevia('otra@x.cr', true); expect(c.aceptoRep01('otra@x.cr')).toBe(false)     // otra sesión: no hay nada
+  })
+  it('2b) una cuenta con alquileres no recibe la aceptación previa: ve REP-13', async () => {
+    const c = await import('../consentimiento'); c.aceptarPrevia(['x'])
+    mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr', estado: 'en_curso', rendimiento: false, historial: [], diasSimulados: 0 }]))
+    expect(texto(await pantalla('/'))).toContain('Actualizamos los Términos'); expect(c.aceptoRep01(U.email)).toBe(false)
+  })
+  it('3) robots.txt existe y se sirve antes del rewrite; X-Robots-Tag noindex, nofollow en las rutas de perfil', async () => {
+    const r = await leerArchivo('public/robots.txt'); expect(r).toMatch(/^User-agent: \*$/m); expect(r).toMatch(/^Disallow: \/perfil$/m)
+    const v = JSON.parse(await leerArchivo('vercel.json')) as { rewrites: { source: string }[]; headers: { source: string; headers: { key: string; value: string }[] }[] }
+    const re = new RegExp('^' + v.rewrites[0]!.source.replace('/((?!', '/(?:(?!') + '$')
+    expect(re.test('/robots.txt')).toBe(false); expect(re.test('/alquiler/x')).toBe(true)
+    const h = v.headers.filter(x => x.headers.some(y => y.key === 'X-Robots-Tag' && y.value === 'noindex, nofollow')).map(x => x.source)
+    expect(h).toEqual(expect.arrayContaining(['/perfil', '/perfil/:path*', '/robots.txt']))
+  })
+  it('4) perfil y tarjetas con zonaVitrina: provincia si el cantón tiene menos de 10 personas', async () => {
+    const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Liberia')
+    const t = texto(await pantalla('/perfil/dueno')); expect(t).toContain('Guanacaste (provincia)'); expect(t).not.toContain('Liberia')
+    guardarDatos(U.email, 'Demo D.', 'Escazú'); expect(texto(await pantalla('/perfil/dueno'))).toContain('Escazú')
+  })
+  it('5) montos de la vitrina en «USDC de prueba»', async () => {
+    const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Escazú')
+    const t = texto(await pantalla('/perfil/vitrina')); expect(t).toMatch(/Alquila desde [\d .]+ USDC de prueba al mes/); expect(t).not.toMatch(/USDC al mes/)
+  })
+  it('7) y 8) Aviso: «la fecha, la hora y el texto»; avisos «en la app» y, solo con correos, «y por correo»', async () => {
+    const p = await legal('privacidad.md'); expect(p).toContain('Guardamos la versión, la fecha, la hora y el texto que aceptaste.')
+    expect(p).toContain('te avisamos en la app cada vez que tu puntaje cambie'); expect(p).not.toContain('en la app y por correo cada vez')
+    const { condicional } = await import('../../legal/condicional')
+    const c = condicional((await fs()).readFileSync(new URL('../../legal/v17/privacidad.md', import.meta.url), 'utf8') as string, { 'dos-personas': true, correos: true, reputacion: true })
+    expect(c).toContain('te avisamos en la app y por correo cada vez que tu puntaje cambie')
+  })
+})
+
+describe('MENORES', () => {
+  it('«Descargar mis datos» al eliminar incluye los dos papeles (también los de inquilino)', async () => {
+    const { datosParaDescargar } = await import('../Pantallas')
+    const d = datosParaDescargar(U, []) as { papeles: Record<string, unknown> }
+    expect(Object.keys(d.papeles).sort()).toEqual(['dueno', 'inquilino'])
+    expect(await pantalla('/perfil/eliminar')).not.toContain('href="#/perfil/dueno/datos"')
+  })
+  it('sin textos del perfil opcional («Hacer público mi perfil», «Tu perfil no es público.»)', async () => {
+    const src = await leerArchivo('src/reputacion/textos.ts')
+    for (const x of ['Hacer público mi perfil', 'Tu perfil no es público.', 'Tu perfil es público.\'', 'Listo. Tu perfil ya es público.']) expect(src).not.toContain(x)
+  })
+  it('REP-04: el inquilino también baja por la Regla de propuesta automática', async () => {
+    const { COMO_SE_CALCULA } = await import('../textos')
+    expect(COMO_SE_CALCULA.puntos.find(x => x.startsWith('**Si eres inquilino:**'))).toContain('o por la Regla de propuesta automática (cláusula 6.5.1), en las versiones donde se ofrece')
+  })
+})
