@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Alquiler, Foto } from '../../types'
-import { MediacionPC, GuardarDatosMediacion } from '../MediacionPC'
+import { MediacionPC, GuardarDatosMediacion, notaDatosMediacion } from '../MediacionPC'
 import { CASILLA_MEDIACION, registrarConsentimiento } from '../consentimientos'
 import { TEXTO_BORRADO, debeBorrarMediacion, guardarMediacion, textoGuardar } from '../borrado'
 import { aceptarVersion17 } from '../version'
@@ -65,6 +65,23 @@ describe('borrado a los 30 días y pedido de guardar (arreglo 3)', () => {
     const g = cerrado(); guardarMediacion(g, 'dueno', +new Date(CIERRE))
     expect(plano(renderToStaticMarkup(<GuardarDatosMediacion a={g} rol="inquilino" />))).toContain(textoGuardar('dueno'))
     expect(renderToStaticMarkup(<GuardarDatosMediacion a={cerrado({ reclamo: { monto: 5, motivo: '', fotos: [], fecha: CIERRE, mediacion: { estado: 'pedida', fecha: CIERRE, borrado: CIERRE } } })} rol="inquilino" />)).not.toContain('<button')
+  })
+})
+
+describe('nota «Datos de la mediación» (Legal, 12:52 a. m.)', () => {
+  const cerrado = (x: Partial<Alquiler> = {}) => alq({ estado: 'cerrado', resultado: { dueno: 2, inquilino: 18, via: 'simulacion', fecha: CIERRE }, ...x })
+  const LOCAL = 'Las fotos, las descripciones y los mensajes de la Mediación Lockumi (demo) se borran de tu navegador 30 días después de cerrar el caso. Se conservan los montos y el resultado. Si los necesitas para un reclamo fuera de la app, toca «Guardar los datos de la mediación» para que no se borren, y descarga el expediente.'
+  it('en un solo aparato (A), el texto exacto', () => {
+    vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
+    expect(notaDatosMediacion(cerrado())).toBe(LOCAL)
+    expect(plano(renderToStaticMarkup(<GuardarDatosMediacion a={cerrado()} rol="inquilino" />))).toContain(LOCAL)
+  })
+  it('con otra persona (C, servidor), sigue «pide que los guardemos»', async () => {
+    vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); vi.stubEnv('VITE_TRUSTLESS', '1'); vi.stubEnv('VITE_DOS_PERSONAS', '1')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon')
+    vi.resetModules(); const m = await import('../MediacionPC')
+    const n = m.notaDatosMediacion(cerrado({ dosPersonas: true }))
+    expect(n).toContain('pide que los guardemos'); expect(n).not.toContain('de tu navegador')
   })
 })
 
