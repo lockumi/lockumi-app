@@ -1,6 +1,8 @@
 // Paso 11 · Cambios de Legal del 24/10 (11:51 p. m.): consentimiento guardado en el servidor, nota de botones y Privacidad 1.7-demo sin «fase».
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import privacidad17 from '../privacidad-1.7.md?raw'
+import privacidad17 from '../../legal/v17/privacidad.md?raw'
+import { condicional } from '../../legal/condicional'
+import { interruptoresLegales } from '../../legal/documentos'
 import { atenderCorreo, armar, validar, olvidarConsentimientos, tieneConsentimiento, NOTA_CONFIRMAR, NOTA_UN_BOTON } from '../../../api/_lib/correo'
 
 const ORIGEN = 'https://app.lockumi.com', env = { RESEND_API_KEY: 'llave-de-prueba' }
@@ -53,11 +55,14 @@ describe('nota de los botones', () => {
 })
 
 describe('Privacidad 1.7-demo sin «fase»', () => {
-  const t = privacidad17, l = t.split('\n')
-  it('no menciona fases', () => { expect(t).not.toMatch(/fase/i) })
+  // paso16-unido: el archivo trae bloques condicionales; se revisa el texto armado con dos personas y correos encendidos
+  const armado = () => { for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'anon', VITE_DOS_PERSONAS: '1', VITE_CORREOS: '1' })) vi.stubEnv(k, v)
+    const t = condicional(privacidad17, interruptoresLegales()); vi.unstubAllEnvs(); return t }
+  it('no menciona fases', () => { expect(privacidad17).not.toMatch(/fase/i) })
   it('textos de Legal, palabra por palabra', () => {
-    expect(l[18]).toContain('Si simulas el alquiler en un solo aparato, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. Si simulas un alquiler con otra persona, las fotos reducidas se guardan en Supabase (ver abajo).')
-    expect(l[20]).toContain('para mantener la sesión y, si simulas un alquiler con otra persona, un identificador de sesión anónima.')
+    const t = armado()
+    expect(t).toContain('Si simulas el alquiler en un solo aparato, **el lugar y las fotos se quedan solo en el navegador de tu aparato**; a la red solo va la huella digital SHA-256 de las fotos. Si simulas un alquiler con otra persona, las fotos reducidas se guardan en Supabase (ver abajo).')
+    expect(t).toContain('para mantener la sesión y, si simulas un alquiler con otra persona, un identificador de sesión anónima.')
     expect(t).toContain('\n## Alquiler simulado con otra persona\n')
     expect(t).toContain('- El personal autorizado de Lockumi y, si simulas un alquiler con otra persona, la otra parte del alquiler simulado y, si aceptas la mediación con una persona, la persona mediadora de la demo.')
     expect(t).toContain('  - **Supabase** (base de datos del perfil y, en los alquileres simulados con otra persona, de los alquileres y las fotos).')

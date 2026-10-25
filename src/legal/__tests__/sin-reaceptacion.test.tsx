@@ -31,7 +31,7 @@ describe('sin pantalla de volver a aceptar', () => {
     const html = renderToStaticMarkup(<Login onOk={() => {}} />)
     expect(html).toContain('Acepto los'); expect(html).toContain('href="/terminos"')
     const login = readFileSync(new URL('../../screens/Login.tsx', import.meta.url), 'utf8')
-    expect(login).toContain("terminos: TERMINOS.version"); expect(login).toContain('guardarAceptacion(c, VERSION[c])')
+    expect(login).toContain("terminos: terminosActual().version"); expect(login).toContain('guardarAceptacion(c, VERSION[c])')
     expect(TERMINOS.version).toBe('1.6-demo')
   })
 })

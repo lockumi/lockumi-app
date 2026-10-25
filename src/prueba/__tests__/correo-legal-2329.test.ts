@@ -10,6 +10,8 @@ const reclamo = (regla: boolean) => ({ tipo: 'aviso' as const, consentimiento: t
   datos: { deposito: 800, reclamado: 95, venceMs: +new Date('2026-11-09T16:00:00Z'), regla, rubros: ['otro rubro'] } })
 const ok = () => vi.fn(async () => new Response(JSON.stringify({ id: 'em_1' }), { status: 200 })) as unknown as typeof fetch
 afterEach(() => vi.unstubAllEnvs())
+// paso16-unido: estos textos solo se muestran con el modo de dos personas y los correos encendidos (una sola 1.7-demo)
+const encenderTodo = () => { for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'anon', VITE_DOS_PERSONAS: '1', VITE_CORREOS: '1' })) vi.stubEnv(k, v) }
 
 describe('correo del reclamo según lo registrado al firmar', () => {
   it('aceptó la regla', () => {
@@ -59,7 +61,7 @@ describe('desmarcar la casilla detiene los envíos', () => {
 })
 describe('Privacidad 1.7-demo (Legal 11:29 p. m.)', () => {
   it('casilla, :32, :33 y fase 2 en presente', () => {
-    vi.stubEnv('VITE_PRUEBA_COMPLETA', '1'); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
+    encenderTodo(); const d = privacidadVigente()!, texto = d.html.replace(/<[^>]+>/g, '')
     expect(texto).toContain('Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo y respuesta). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.')
     expect(d.html).toContain('>Invitar a otra persona y avisos por correo<')
     expect(texto).toContain('Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuenta. Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la app.')

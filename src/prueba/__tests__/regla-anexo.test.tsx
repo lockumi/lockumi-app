@@ -17,7 +17,7 @@ describe('interruptor de la prueba completa', () => {
   })
   it('las pantallas nuevas solo se montan con el interruptor encendido', () => {
     expect(leer('../../screens/Crear.tsx')).toMatch(/pruebaCompleta\(\) && <Anexo6A/)
-    expect(leer('../../screens/Detalle.tsx')).toMatch(/pruebaCompleta\(\) && rol === 'inquilino' && !a\.regla/)
+    expect(leer('../../screens/Detalle.tsx')).toMatch(/reglas17\(a\) && rol === 'inquilino' && !a\.regla/)
   })
 })
 
@@ -56,6 +56,6 @@ describe('B.5 Anexo 6-A al crear el alquiler', () => {
     expect(registroAnexo(['Limpieza de canoas'], new Date('2026-10-24T18:00:00Z'))).toEqual({ acepta: '2026-10-24T18:00:00.000Z', reparaciones: ['Limpieza de canoas'] })
   })
   it('«Crear» queda inactivo hasta marcar el Anexo 6-A (solo con el interruptor)', () => {
-    expect(leer('../../screens/Crear.tsx')).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\)\}/)
+    expect(leer("../../screens/Crear.tsx")).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\)( \|\| \(invitar && !declara\))?\}/)   // paso16-unido: también la declaración al invitar
   })
 })
