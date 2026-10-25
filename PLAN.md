@@ -4,6 +4,8 @@
 
 ## Sin marcadores visibles (24 oct 2026, 11:08 p. m.), sin cambios visibles
 - B.6 con el texto final de Legal sobre el país (sin región); fuera los [PENDIENTE] de la B.1 y la B.7. Prueba `sin-marcadores.test.tsx`.
+## PR 7 · pasos 12 y 13 (24 oct 2026): aviso de 5 días (B.3) y fecha y hora en las fotos (6.4.2), sin cambios visibles
+- Detrás de `VITE_PRUEBA_COMPLETA`. `src/prueba/AvisoSalida.tsx` (aviso «reparacion-5» de `sincronizar`, fotos de entrada, enlace a las reglas, simulador hasta el aviso) y `src/prueba/fotosFecha.ts` (pie y sello de `FotoLista`). El PDF B.11, la B.8 y la B.13 quedan para el paso 14 (requiere Legal y Katherine).
 
 ## PR 6 · paso 10 (24 oct 2026): Mediación Lockumi (demo), B.12, B.14 y 6.3 f, sin cambios visibles
 - Detrás de `VITE_PRUEBA_COMPLETA`. Lógica en `src/prueba/mediacion.ts`, acción `resolverSimulacion` (`via: 'simulacion'`), pantalla `src/prueba/MediacionPC.tsx`. La mediación con una persona real queda fuera (condición de Legal: texto de Privacidad). El borrado a los 30 días pasa al PR 10 (va con el texto de Privacidad).

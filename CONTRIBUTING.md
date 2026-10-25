@@ -86,6 +86,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - E2E: `npm run e2e` (Playwright, `e2e/*.e2e.ts`; ver `docs/e2e.md`). Los archivos E2E no terminan en `.spec`/`.test` para que vitest no los tome.
 - Reclamos (PR 5): la lógica va en `src/prueba/reclamos.ts` (funciones puras que se prueban sin pantalla); las acciones primero llaman a la cuenta segura (`escrow`) y después cambian el estado, y usan `paso()` para que un doble toque no repita nada.
 - Sin marcadores visibles: ningún texto de la app puede tener «[REGIÓN…]», «[PENDIENTE…]», «[CONFIRMAR]», «ABIERTO» ni «[ALGO: …]» (lo revisa `src/prueba/__tests__/sin-marcadores.test.tsx`). Los pendientes van en comentarios `// LEGAL: revisar`.
+- Aviso de 5 días y fotos (PR 7): el aviso B.3 sale de `debidos`/`sincronizar` (no se crea a mano) y la fecha y hora de las fotos siempre se muestran en hora de Costa Rica con `fechaHoraCR`; nunca se guarda ni se muestra la ubicación.
 - Mediación (PR 6): en la demo no hay persona mediadora; todo reparto va por `acciones.resolverSimulacion` con confirmación (B.14) y nunca da al dueño más de lo reclamado.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 

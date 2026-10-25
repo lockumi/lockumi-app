@@ -62,6 +62,9 @@ con el simulador, salen los avisos de esos días (aprobado). Cada aviso guarda s
 
 ## Sin marcadores visibles
 Con el interruptor encendido no se ve ningún marcador de borrador. La B.6 dice: «la prepararía un sistema de inteligencia artificial de Google Cloud Vertex AI (Gemini), que no puede usar tus fotos para entrenar modelos. Antes de activarlo te diríamos en qué país se procesarían las fotos y te pediríamos permiso. …». La B.1 y la B.7 ya no muestran [PENDIENTE] (el costo del servicio real se informará antes de firmar).
+## Aviso de 5 días antes de la salida (B.3) y fecha y hora en las fotos (PR 7, pasos 12 y 13)
+1. **B.3 (6.1.1):** con el alquiler en curso, 5 días antes del fin (a las 12:00, hora de Costa Rica) `sincronizar` entrega al inquilino el aviso «reparacion-5». Debajo de «Alquiler en curso» se ve `AvisoSalida`: el texto de la B.3, el enlace «ver las reglas» dentro del texto, las fotos de entrada de cada espacio para comparar y el registro de entrega y apertura. Antes del aviso, en la red de prueba, «Ir al aviso de 5 días» adelanta el reloj de la demo (no la hora real).
+2. **6.4.2:** cada foto muestra «Tomada en la app el …, hora de Costa Rica» (o «Agregada…» si llegó como archivo) y un sello dd/mm/aa hh:mm sobre la foto. Se usa `tomadaEn` (o `fecha`). La app no registra la ubicación.
 
 ## Mediación Lockumi (demo) y «Resolver el reclamo (simulación)» (PR 6, paso 10)
 1. Al no haber acuerdo (propuesta rechazada o silencio sin la regla), el alquiler queda en `mediacion` y se ve `MediacionPC`.
