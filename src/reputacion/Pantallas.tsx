@@ -10,8 +10,9 @@ import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, f
 import { useReputacion, guardarDatos, aceptar, activa, aceptarRep01, aceptarPrevia, previa, vincularPrevia, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
+import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
-import { pedirBorrado, ejecutarBorrados, solicitudBorrado } from './borrado'
+import { pedirBorrado, ejecutarBorrados, solicitudBorrado, abiertosDe, type Solicitud } from './borrado'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
 import { REP01, REP02, REP13, BLOQUEO_NUEVO, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
@@ -98,7 +99,7 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     <h1>{UI.entradaTitulo}</h1>
     <nav className="rp-papeles" aria-label="Tu papel">{(['dueno', 'inquilino'] as Rol[]).map(r =>
       <a key={r} href={`#/perfil/${r}`} className={`rp-rol rp-rol--${r}`} aria-current={r === rol ? 'page' : undefined}><Icono n={r === 'dueno' ? 'casallave' : 'maleta'} />{NOMBRE_PAPEL[r]}</a>)}</nav>
-    {borrado && <div className="glass tarjeta" role="status"><p><strong>{ELIMINAR_UI.enCurso}</strong></p><p className="nota">{ELIMINAR_UI.limite(fechaLarga(borrado.limite))}</p></div>}
+    {borrado && <div className="glass tarjeta" role="status"><p><strong>{ELIMINAR_UI.enCurso}</strong></p><PlazoBorrado s={borrado} /></div>}
     <section className="glass tarjeta rp-perfil" aria-labelledby="rp-nombre">
       <Banda />
       <div className="rp-perfil__cuerpo">
@@ -296,13 +297,16 @@ function PedirRevision({ u }: { u: Usuario }) {
 }
 
 // ——— REP-12: avisos en la app cuando cambia el puntaje o un hecho deja de contar ———
-function useAvisos(u: Usuario): [Aviso | null, () => void] {
+function useAvisos(u: Usuario, activo = true): [Aviso | null, () => void] {
   const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0)
   const estado = (['dueno', 'inquilino'] as Rol[]).map(rol => { const xs = mios(todos, u, rol), linea = lineaPublica(puntajeDe(todos, u, rol, ahora)), v = visto(u.email, rol)
     const vencidos = hechosVencidos(xs, rol, ahora, v.vencidos ?? [])
     return { rol, linea, v, vencidos, aviso: vencidos[0] ? avisoVencido(vencidos[0], linea) : avisoCambio(v.linea, linea, xs) } })
-  useEffect(() => { for (const x of estado) if (x.v.linea === undefined) marcarVisto(u.email, x.rol, { linea: x.linea, vencidos: x.v.vencidos ?? [] }) })
-  const actual = estado.find(x => x.aviso)
+  useEffect(() => { if (activo) for (const x of estado) if (x.v.linea === undefined) marcarVisto(u.email, x.rol, { linea: x.linea, vencidos: x.v.vencidos ?? [] }) })
+  const actual = activo ? estado.find(x => x.aviso) : undefined
+  // REP-12 por correo: solo con VITE_CORREOS=1 (enviarAvisoReputacion lo revisa); una vez por cambio.
+  const correo = actual?.aviso?.correo, idCorreo = correo ? JSON.stringify(correo) : ''
+  useEffect(() => { if (idCorreo) void enviarAvisoReputacion(u.email, JSON.parse(idCorreo)) }, [idCorreo, u.email])
   return [actual?.aviso ?? null, () => { if (actual) { marcarVisto(u.email, actual.rol, { linea: actual.linea, vencidos: [...(actual.v.vencidos ?? []), ...actual.vencidos.map(a => a.id)] }); setN(n => n + 1) } }]
 }
 function AvisoPuntaje({ a, listo }: { a: Aviso; listo: () => void }) {
@@ -413,20 +417,42 @@ function Vitrina({ rol }: { rol: Rol }) {
   </main>
 }
 
-// ——— Eliminar la cuenta (REP-09): gratis, en un máximo de 5 días hábiles ———
-// TODO(Legal): qué pasa con un alquiler abierto al eliminar la cuenta. Pendiente de Legal: no mostrar ningún texto sobre eso todavía.
-function Eliminar({ u, listo, salir }: { u: Usuario; listo: boolean; salir: () => void }) {
-  const s = solicitudBorrado(u.email)
-  if (listo && s) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
-    <section className="glass tarjeta" role="status"><h1 className="h2">{ELIMINAR.listo}</h1><p className="nota" style={{ marginTop: 8 }}>{ELIMINAR_UI.limite(fechaLarga(s.limite))}</p>
-      <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => { location.hash = '/'; salir() }}>{ELIMINAR_UI.salir}</button></div></section></main>
+// ——— Eliminar la cuenta (REP-09): gratis, definitiva, en un máximo de 5 días hábiles (con un alquiler abierto, desde que se cierra) ———
+/** Fecha y hora del pedido y su plazo: la fecha límite o, con un alquiler abierto, «cuando el alquiler se cierre». */
+function PlazoBorrado({ s }: { s: Solicitud }) {
+  return <>{s.limite ? <p className="nota" style={{ marginTop: 8 }}>{ELIMINAR_UI.limite(fechaLarga(s.limite))}</p> : <p style={{ marginTop: 8 }}>{ELIMINAR_UI.esperaCierre}</p>}
+    {s.hora && <p className="nota" style={{ marginTop: 4 }}>{ELIMINAR_UI.pedido(fechaLarga(s.pedido), s.hora)}</p>}</>
+}
+/** Pedido hecho y la cuenta todavía no se elimina (espera el cierre del alquiler, o los 5 días hábiles): sin puntaje ni perfil. */
+function BorradoEnCurso({ s }: { s: Solicitud }) {
+  return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
+    <Volver />
+    <section className="glass tarjeta" role="status"><h1 className="h2">{ELIMINAR_UI.enCurso}</h1><PlazoBorrado s={s} />
+      <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/">{ELIMINAR_UI.inicio}</a></div></section></main>
+}
+function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => void }) {
+  const todos = useAlquileres(), s = solicitudBorrado(u.email), abiertos = abiertosDe(todos, u.email).length > 0
+  const pedir = () => { const ahora = Date.now(); pedirBorrado(u.email, ahora, todos); ejecutarBorrados(ahora, todos); ir('/perfil/eliminar/listo') }
+  if (s && (paso === 'listo' || !s.hecho)) {
+    if (s.hecho || s.limite) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
+      <section className="glass tarjeta" role="status"><h1 className="h2">{s.hecho ? ELIMINAR.listo : ELIMINAR_UI.enCurso}</h1><PlazoBorrado s={s} />
+        <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => { location.hash = '/'; salir() }}>{ELIMINAR_UI.salir}</button></div></section></main>
+    return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
+      <section className="glass tarjeta" role="status"><h1 className="h2">{ELIMINAR_UI.listoAbierto}</h1><PlazoBorrado s={s} />
+        <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/">{ELIMINAR_UI.inicio}</a></div></section></main>
+  }
+  if (paso === 'confirmar' && abiertos && !s) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
+    <section className="glass tarjeta rp-texto" role="alertdialog" aria-labelledby="rp-conf"><h1 id="rp-conf" className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.confirmarAbierto}</p>
+      <div className="rp-acciones">
+        <button type="button" className="boton rp-peligro" onClick={pedir}>{ELIMINAR.si}</button>
+        <a className="boton boton--secundario" href="#/perfil/eliminar">{ELIMINAR.no}</a></div></section></main>
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver a="#/perfil" t="← Tu perfil" />
     <section className="glass tarjeta rp-texto"><h1 className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.intro}</p><ul>{ELIMINAR.puntos.map((t, k) => <li key={k}>{t}</li>)}</ul>
       <p className="nota">{ELIMINAR.correo}</p>
       <div className="rp-acciones">
         <a className="boton boton--secundario" href="#/perfil/dueno/datos">{ELIMINAR.descargar}</a>
-        <button type="button" className="boton rp-peligro" onClick={() => { pedirBorrado(u.email); ejecutarBorrados(); ir('/perfil/eliminar/listo') }}>{ELIMINAR.si}</button>
+        <button type="button" className="boton rp-peligro" onClick={() => { if (abiertos) ir('/perfil/eliminar/confirmar'); else pedir() }}>{ELIMINAR.si}</button>
         <a className="boton boton--secundario" href="#/perfil">{ELIMINAR.no}</a></div></section>
   </main>
 }
@@ -450,8 +476,13 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
-  const [aviso, avisoListo] = useAvisos(u)
-  if (perfil && a === 'eliminar') return <Eliminar u={u} listo={b === 'listo'} salir={salir} />
+  const todos = useAlquileres(), borrado = solicitudBorrado(u.email), pendiente = !!borrado && !borrado.hecho
+  // Tarea programada de la demo: borra los pedidos vencidos y, con un alquiler abierto, cuando ya se cerró (nunca toca los alquileres).
+  useEffect(() => { try { ejecutarBorrados(Date.now(), todos) } catch { /* sin almacenamiento */ } }, [todos])
+  const [aviso, avisoListo] = useAvisos(u, !pendiente)
+  if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
+  // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
+  if (pendiente) return perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
   if (!e.rep01) {
     if (perfil) return <Rep01 aviso={<div className="glass tarjeta" role="note"><p>{REP13.texto}</p></div>} no={UI.ahoraNoCuenta}
       onNo={() => { try { sessionStorage.setItem(CLAVE_AHORA_NO + u.email.toLowerCase(), '1') } catch { /* nada */ } setOmitido(true); ir('/') }}

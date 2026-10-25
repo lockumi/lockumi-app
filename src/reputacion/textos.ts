@@ -109,7 +109,7 @@ export const PERFIL_FIJO = '**Tu perfil es público y fijo.** Cualquier persona 
 export const PERFIL_FIJO_BOTONES = { publica: 'Ver qué se publica', datos: 'Ver mis datos de reputación', eliminar: 'Eliminar mi cuenta' }
 
 // LEGAL: revisar · REP-09 Eliminar la cuenta. El plazo de 5 días hábiles excluye sábados, domingos y feriados de Costa Rica.
-// TODO(Legal): qué pasa con un alquiler abierto al eliminar la cuenta. Pendiente de Legal: NO escribir ningún texto hasta que lo decidan.
+// Con un alquiler abierto (respuesta final de Legal, 25/10/2026): párrafo después del de los 5 días hábiles y pantalla de confirmación.
 export const ELIMINAR = {
   boton: 'Eliminar mi cuenta',
   titulo: '¿Eliminar tu cuenta?',
@@ -117,6 +117,7 @@ export const ELIMINAR = {
   puntos: [
     'Tu perfil y tus tarjetas dejan de mostrarse al instante, y el enlace público mostrará «Este perfil ya no está disponible».',
     'Borramos tus datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje) en un máximo de 5 días hábiles. No se pueden recuperar.',
+    'Si tienes un alquiler abierto (un depósito guardado, un plazo para reclamar o una mediación en curso), tu perfil deja de mostrarse en cuanto lo pides, pero tu cuenta se elimina cuando ese alquiler se cierre, en un máximo de 5 días hábiles después del cierre. Mientras tanto, solo usamos tus datos para cerrar el alquiler, y la otra parte sigue viendo el contrato y el historial. Esta solicitud no se puede deshacer.',
     'Los datos del contrato y del depósito siguen la regla general del Aviso de privacidad. Lo registrado en la red de prueba de Stellar no se puede borrar.',
     'No podemos borrar las capturas ni las imágenes que otras personas ya hayan guardado.',
     'Antes de eliminarla, puedes descargar tus datos.',
@@ -125,12 +126,18 @@ export const ELIMINAR = {
   listo: 'Listo. Eliminamos tu cuenta. Tus datos de reputación se borrarán en un máximo de 5 días hábiles.',
   correo: 'También se puede pedir por correo a business.applockumi@gmail.com desde el correo registrado.',
   noDisponible: 'Este perfil ya no está disponible',
+  // Pantalla de confirmación cuando hay un alquiler abierto (Legal, literal): [Eliminar mi cuenta] [Cancelar].
+  confirmarAbierto: 'Tienes un alquiler abierto. Tu perfil dejará de mostrarse ahora y tu cuenta se eliminará cuando el alquiler se cierre. Esta solicitud no se puede deshacer.',
 }
-// Redacción nuestra (LEGAL: revisar): fecha límite visible y salida de la sesión en la demo.
+// Redacción nuestra (LEGAL: revisar): fecha límite visible, fecha y hora del pedido, el caso del alquiler abierto y salida de la sesión en la demo.
 export const ELIMINAR_UI = {
   limite: (f: string) => `Fecha límite: ${f}.`,
+  pedido: (f: string, h: string) => `Pedido el ${f} a las ${h}.`,
   salir: 'Salir',
+  inicio: 'Ir al inicio',
   enCurso: 'Ya pediste eliminar tu cuenta. Tu perfil ya no se muestra.',
+  listoAbierto: 'Listo. Tu perfil ya no se muestra.',
+  esperaCierre: 'Tu cuenta se eliminará cuando el alquiler se cierre, en un máximo de 5 días hábiles después del cierre. Mientras tanto, puedes usar Lockumi para cerrarlo.',
 }
 
 // LEGAL: revisar · REP-10

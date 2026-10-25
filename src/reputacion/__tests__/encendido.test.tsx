@@ -149,7 +149,7 @@ describe('eliminar la cuenta con un alquiler abierto (Legal, respuesta final)', 
     const l = texto(await pantalla('/perfil/eliminar/listo'))
     expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toMatch(/Pedido el 25 de octubre de 2026 a las 14:00/)
     expect(l).not.toContain('Listo. Eliminamos tu cuenta.')
-    for (const r of ['/perfil', '/perfil/dueno', '/perfil/calculo']) { const t = texto(await pantalla(r)); expect(t).toContain('Ya pediste eliminar tu cuenta'); expect(t).not.toMatch(/de 5|Nuevo en Lockumi/) }
+    for (const r of ['/perfil', '/perfil/dueno', '/perfil/calculo']) { const t = texto(await pantalla(r)); expect(t).toContain('Ya pediste eliminar tu cuenta'); expect(t).not.toMatch(/\d,\d de 5|Nuevo en Lockumi/) }
     expect(texto(await pantalla('/perfil/eliminar'))).not.toMatch(/<button[^>]*>Eliminar mi cuenta/)
     const t = texto(await pantalla('/')); expect(t).toContain('PANTALLA-DE-SIEMPRE'); expect(t).not.toContain('Tu puntaje cambió')
   })

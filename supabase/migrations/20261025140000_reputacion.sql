@@ -78,8 +78,10 @@ create policy lk_rep_eventos_propios on public.lk_reputacion_eventos for select 
 -- 3. Eliminar la cuenta en un máximo de 5 días hábiles -------------------------------------------------------------------
 create table if not exists public.lk_solicitudes_borrado (
   usuario uuid primary key,                     -- sin FK: la fila queda como constancia (sin datos personales) después del borrado
-  pedido_en timestamptz not null default now(),
-  fecha_limite timestamptz not null,
+  pedido_en timestamptz not null default now(), -- fecha y hora del pedido (definitivo: no hay forma de deshacerlo)
+  alquiler_abierto boolean not null default false, -- tenía un alquiler abierto al pedirlo (REP-09, respuesta final de Legal)
+  cierre_en timestamptz,                         -- con alquiler abierto: cuándo se cerró el último; desde ahí corren los 5 días hábiles
+  fecha_limite timestamptz,                      -- null mientras espera el cierre del alquiler abierto
   hecho_en timestamptz
 );
 alter table public.lk_solicitudes_borrado enable row level security;
@@ -110,15 +112,27 @@ begin
   return ((d + 1)::timestamp at time zone 'America/Costa_Rica') - interval '1 millisecond';
 end $$;
 
--- TODO(Legal): qué pasa con un alquiler abierto al eliminar la cuenta. Pendiente de Legal; no hay regla ni texto todavía.
--- La persona pide eliminar su cuenta (gratis). El perfil deja de mostrarse al instante: se borran ya el perfil y los consentimientos.
+-- Alquiler abierto (REP-09, respuesta final de Legal): depósito guardado, plazo para reclamar o mediación en curso
+-- (igual que ESTADOS_ABIERTOS en src/reputacion/borrado.ts).
+create or replace function public.lk_tiene_alquiler_abierto(p_usuario uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lk_participantes p join public.lk_contratos c on c.id = p.contrato_id
+    where p.usuario = p_usuario and c.estado in ('fotos_entrada', 'en_curso', 'salida', 'ventana_reclamo', 'reclamo', 'mediacion'))
+$$;
+revoke all on function public.lk_tiene_alquiler_abierto(uuid) from public, anon, authenticated;
+
+-- La persona pide eliminar su cuenta (gratis y DEFINITIVO: no hay función para deshacerlo). El perfil deja de mostrarse al instante:
+-- se borran ya el perfil y los consentimientos. Sin alquiler abierto, la fecha límite es de 5 días hábiles desde el pedido; con uno,
+-- queda en null y la tarea la fija cuando se cierra el último (5 días hábiles desde el cierre). Devuelve la fecha límite (o null).
 create or replace function public.lk_pedir_borrado_cuenta() returns timestamptz
 language plpgsql security definer set search_path = public as $$
-declare u uuid := auth.uid(); lim timestamptz;
+declare u uuid := auth.uid(); lim timestamptz; abierto boolean;
 begin
   if u is null then raise exception 'Entra a tu cuenta para eliminarla.' using errcode = '28000'; end if;
-  insert into public.lk_solicitudes_borrado(usuario, fecha_limite) values (u, public.lk_fecha_limite_borrado(now()))
-  on conflict (usuario) do nothing;                         -- un segundo pedido no corre el plazo
+  abierto := public.lk_tiene_alquiler_abierto(u);
+  insert into public.lk_solicitudes_borrado(usuario, alquiler_abierto, fecha_limite)
+  values (u, abierto, case when abierto then null else public.lk_fecha_limite_borrado(now()) end)
+  on conflict (usuario) do nothing;                         -- un segundo pedido no cambia nada del primero
   delete from public.lk_reputacion_consentimientos where usuario = u;
   delete from public.lk_reputacion_aceptaciones where usuario = u;
   delete from public.lk_reputacion_perfiles where usuario = u;
@@ -130,11 +144,19 @@ grant execute on function public.lk_pedir_borrado_cuenta() to authenticated;
 
 -- Tarea programada (cada hora): termina los borrados pedidos y borra lo negativo de más de 10 años.
 -- Corre mucho antes del límite: el plazo de 5 días hábiles es el máximo, no una espera.
+-- Con un alquiler abierto no borra nada hasta que se cierra el último (los datos solo sirven para cerrarlo). Nunca borra los contratos
+-- ni sus participantes: la otra parte sigue viendo el contrato y el historial.
 create or replace function public.lk_borrar_cuentas_pedidas() returns int
 language plpgsql security definer set search_path = public as $$
-declare s record; n int := 0;
+declare s record; n int := 0; cierre timestamptz;
 begin
-  for s in select usuario from public.lk_solicitudes_borrado where hecho_en is null for update skip locked loop
+  for s in select usuario, fecha_limite from public.lk_solicitudes_borrado where hecho_en is null for update skip locked loop
+    if s.fecha_limite is null then
+      if public.lk_tiene_alquiler_abierto(s.usuario) then continue; end if;
+      select coalesce(max(c.actualizado_en), now()) into cierre from public.lk_participantes p join public.lk_contratos c on c.id = p.contrato_id
+        where p.usuario = s.usuario and c.estado = 'cerrado';
+      update public.lk_solicitudes_borrado set cierre_en = cierre, fecha_limite = public.lk_fecha_limite_borrado(cierre) where usuario = s.usuario;
+    end if;
     delete from public.lk_reputacion_eventos where usuario = s.usuario;
     delete from public.lk_reputacion_consentimientos where usuario = s.usuario;
     delete from public.lk_reputacion_aceptaciones where usuario = s.usuario;

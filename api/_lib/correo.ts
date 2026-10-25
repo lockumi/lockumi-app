@@ -13,7 +13,8 @@ const NOMBRE = /^[\p{L} .'-]{1,60}$/u
 /** Orígenes permitidos para el enlace a la app: app.lockumi.com (red de prueba, paso 11), las vistas previas y la app local. */
 export const origenPermitido = (o: string) => o === 'https://app.lockumi.com' || /^https:\/\/lockumi-app-demo-[a-z0-9-]+\.vercel\.app$/.test(o) || /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/.test(o)
 
-export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string }
+export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento' | 'reputacion'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string
+  /** Solo en tipo 'reputacion' (paso 19, REP-12): qué aviso, las líneas públicas del puntaje y la fecha de cierre. */ aviso?: 'cambio' | 'vencido'; antes?: string; despues?: string; fechaMs?: number }
 
 // LEGAL: revisado (24/10) · pie común (LEGAL-correos-2104.md, punto 3)
 export const PIE = 'Lockumi · Demo en la red de prueba de Stellar, sin dinero real. Nada de lo que pasa en esta demo tiene efecto legal. Este es un aviso del servicio, no publicidad. Lockumi nunca te pedirá por correo tu contraseña, tu frase secreta ni tus claves. Esta dirección no recibe respuestas; para consultas: business.applockumi@gmail.com.'
@@ -63,9 +64,32 @@ async function registrarInvitacion(env: Record<string, string | undefined>, p: P
   invitacionesEnviadas.add(p.alquiler)
 }
 
+// Paso 19 · REP-12 por correo (decisión del 25/10, 2:57 p. m.; solo con VITE_CORREOS=1 en la app). Mismos textos que en la app
+// (src/reputacion/textos.ts, AVISO_CAMBIO y AVISO_VENCIDO; una prueba revisa que sean iguales). Sin dirección del lugar: el alquiler va
+// como «n.º» y los 8 primeros caracteres de su código (LEGAL: revisar). Es un aviso que Legal exige (regla 8), así que no pide casilla
+// (LEGAL: revisar). Solo acepta las líneas públicas del puntaje, nunca texto libre.
+export const REP12 = {
+  cambio: { titulo: 'Tu puntaje cambió', texto: 'Tu puntaje pasó de {antes} a {después} por el cierre del alquiler {alquiler} el {fecha}.',
+    nota: 'Si crees que hay un error, pide una revisión: mientras la revisamos, tu puntaje dice «En revisión».' },
+  vencido: { titulo: 'Un hecho dejó de contar en tu puntaje', texto: 'Pasaron 10 años desde {hecho} y lo borramos de tu reputación. Tu puntaje ahora es {después}.' },
+  porque: 'Ver por qué', revision: 'Pedir revisión',
+}
+const LINEA = /^(?:[0-5],\d de 5|En revisión|Nuevo en Lockumi · (?:1 alquiler cerrado|\d{1,3} alquileres cerrados))$/
+const AVISO_REP = 'Aviso de puntaje inválido. El aviso sigue en la app; vuelve a abrirla para reintentarlo.'
+const fechaCR = (ms: number) => new Date(ms).toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Costa_Rica' })
+const vars = (t: string, v: Record<string, string>) => t.replace(/\{([^}]+)\}/g, (_, k: string) => v[k] ?? '')
+function validarReputacion(p: PedidoCorreo): PedidoCorreo {
+  exigir(typeof p.para === 'string' && EMAIL.test(p.para.trim()), 400, 'Revisa el correo: tiene que ser como nombre@correo.com.')
+  exigir(typeof p.alquiler === 'string' && ID.test(p.alquiler), 400, AVISO_REP)
+  exigir((p.aviso === 'cambio' || p.aviso === 'vencido') && typeof p.despues === 'string' && LINEA.test(p.despues), 400, AVISO_REP)
+  if (p.aviso === 'cambio') exigir(typeof p.antes === 'string' && LINEA.test(p.antes) && num(p.fechaMs, 4_102_444_800_000), 400, AVISO_REP)
+  return { tipo: 'reputacion', para: p.para.trim(), alquiler: p.alquiler, aviso: p.aviso, despues: p.despues, ...(p.aviso === 'cambio' ? { antes: p.antes, fechaMs: p.fechaMs } : {}) }
+}
+
 const num = (n: unknown, max = 50_000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max
 /** Valida el pedido; devuelve el pedido limpio. */
 export function validar(p: PedidoCorreo): PedidoCorreo {
+  if (p?.tipo === 'reputacion') return validarReputacion(p)
   exigir(p && (p.tipo === 'aviso' || p.tipo === 'invitacion'), 400, 'Pedido de correo inválido.')
   exigir(p.consentimiento === true, 400, 'Marca la casilla «Acepto que Lockumi me envíe avisos por correo» para recibir los avisos. Sin ella, los avisos siguen solo en la app.')
   exigir(typeof p.para === 'string' && EMAIL.test(p.para.trim()), 400, 'Revisa el correo: tiene que ser como nombre@correo.com.')
@@ -87,7 +111,13 @@ const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt
 export function armar(p: PedidoCorreo, origen: string) {
   const base = `${origen}/#/alquiler/${encodeURIComponent(p.alquiler)}`
   let asunto: string, cuerpo: string, botones: { texto: string; url: string }[]
-  if (p.tipo === 'invitacion') {
+  if (p.tipo === 'reputacion') {
+    const alquiler = `n.º ${p.alquiler.slice(0, 8)}`
+    if (p.aviso === 'cambio') { asunto = REP12.cambio.titulo
+      cuerpo = vars(REP12.cambio.texto, { antes: p.antes!, 'después': p.despues!, alquiler, fecha: fechaCR(p.fechaMs!) }) + ' ' + REP12.cambio.nota }
+    else { asunto = REP12.vencido.titulo; cuerpo = vars(REP12.vencido.texto, { hecho: `el cierre del alquiler ${alquiler}`, 'después': p.despues! }) }
+    botones = [{ texto: REP12.porque, url: `${origen}/#/perfil/calculo` }, { texto: REP12.revision, url: `${origen}/#/perfil/revision` }]
+  } else if (p.tipo === 'invitacion') {
     // LEGAL: revisar · asunto de la invitación (Legal no lo dio)
     asunto = 'Te invitaron a un alquiler de ejemplo en la demo de Lockumi'
     cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: 'Abrir la demo de Lockumi', url: `${origen}/` }]
@@ -132,7 +162,7 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
   limite('ip:' + ip, 40); limite('para:' + p.para.toLowerCase(), 15)
   if (p.tipo === 'invitacion') await registrarInvitacion(env, p, f)
   const c = armar(p, origen)
-  const clave = p.tipo === 'invitacion' ? `inv:${p.alquiler}` : `aviso:${p.alquiler}:${p.plantilla}:${p.para}`
+  const clave = p.tipo === 'invitacion' ? `inv:${p.alquiler}` : p.tipo === 'reputacion' ? `rep:${p.para.toLowerCase()}:${p.aviso}:${p.alquiler}:${p.despues}` : `aviso:${p.alquiler}:${p.plantilla}:${p.para}`
   const r = await f('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': clave.slice(0, 256) },

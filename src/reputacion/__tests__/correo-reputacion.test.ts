@@ -18,6 +18,11 @@ describe('servidor: correo REP-12 (sin texto libre, sin dirección)', () => {
     expect(c.texto).toContain(`Ver por qué: ${ORIGEN}/#/perfil/calculo`); expect(c.texto).toContain(`Pedir revisión: ${ORIGEN}/#/perfil/revision`)
     expect(c.texto).toContain(PIE); expect(c.texto).not.toMatch(/Casa de prueba|desmarca la casilla/)
   })
+  it('mismos textos que en la app (AVISO_CAMBIO y AVISO_VENCIDO de textos.ts)', async () => {
+    const { AVISO_CAMBIO, AVISO_VENCIDO } = await import('../textos'), { REP12 } = await import('../../../api/_lib/correo')
+    expect(REP12.cambio).toEqual({ titulo: AVISO_CAMBIO.titulo, texto: AVISO_CAMBIO.texto, nota: AVISO_CAMBIO.nota })
+    expect(REP12.vencido).toEqual(AVISO_VENCIDO); expect([REP12.porque, REP12.revision]).toEqual([AVISO_CAMBIO.porque, AVISO_CAMBIO.revision])
+  })
   it('aviso de los 10 años', () => {
     const c = armar(validar(pedido({ aviso: 'vencido', antes: undefined })), ORIGEN)
     expect(c.asunto).toBe('Un hecho dejó de contar en tu puntaje')
