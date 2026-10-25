@@ -2,16 +2,14 @@
 // entrada para comparar. Solo con el interruptor encendido. El aviso lo entrega `sincronizar` (avisos.ts: «reparacion-5»).
 import './prueba.css'
 import type { Alquiler, Rol } from '../types'
-import { store, ahoraDe, DIA } from '../store'
+import { store, ahoraDe } from '../store'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 import { FotoLista } from '../screens/Acta'
-import { finAlquiler } from './avisos'
+import { diasHastaAvisoSalida } from './avisos'
 import { abrirAviso, simularDias } from './dueno'
 
 const cr = (iso?: string) => iso ? `${fechaHoraCR(+new Date(iso))}, hora de Costa Rica` : '—'
-/** Días que faltan (redondeados hacia arriba) para que salga el aviso de 5 días. */
-export const diasHastaAvisoSalida = (a: Alquiler, ahora: number) => Math.max(0, Math.ceil((finAlquiler(a) - 5 * DIA - ahora) / DIA))
 
 export function AvisoSalida({ a, rol }: { a: Alquiler; rol: Rol }) {
   const v = a.avisos?.find(x => x.id === 'reparacion-5' && x.para === rol)

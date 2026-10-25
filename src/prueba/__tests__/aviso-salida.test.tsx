@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Alquiler } from '../../types'
 import { sincronizar } from '../dueno'
-import { AvisoSalida, diasHastaAvisoSalida } from '../AvisoSalida'
+import { AvisoSalida } from '../AvisoSalida'
+import { diasHastaAvisoSalida } from '../avisos'
 
 const DIA = 86_400_000
 const foto = { src: 'data:,', por: 'dueno' as const, fecha: '2026-11-01T18:00:00.000Z', tomadaEn: +new Date('2026-11-01T18:00:00Z'), origen: 'camara' as const }
