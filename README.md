@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (PR 7, pasos 12 y 13, sin cambios visibles)**
+- Prueba completa (detrás del interruptor): aviso en la app 5 días antes de la salida (B.3, 6.1.1) con las fotos de entrada para comparar y el enlace a las reglas, y fecha y hora de Costa Rica en cada foto, con un sello sobre la foto (6.4.2; la app no registra la ubicación). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+
 **24 de octubre de 2026 (PR 6, paso 10, sin cambios visibles)**
 - Mediación Lockumi (demo) de la prueba completa (detrás del interruptor): pedirla con la B.7 (cupo de 10, B.12 sin cupo), «Resolver el reclamo (simulación)» con confirmación y aviso del resultado (B.14), la parte no reclamada (6.3 f) y «Otras vías (fuera de la app)». Nadie del equipo atiende casos en la demo. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
