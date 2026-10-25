@@ -2,7 +2,7 @@
 // LEGAL: revisado (25/10, lista de Legal) · 2.2 b) y Privacidad (sección C de dos-personas-textos.md): «el reparto que las dos partes acepten en la mediación».
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { terminosActual, privacidadActual } from '../documentos'
-import { versionVigente, edicionDe, VERSIONES, avisoNuevaVersion, casillaDeFuncion, ordenVersion } from '../versiones'
+import { versionVigente, edicionDe, VERSIONES, casillaDeFuncion, ordenVersion } from '../versiones'
 import { condicional } from '../condicional'
 import { aceptarVersion, puedeCambiarA } from '../../prueba/version'
 import type { Alquiler } from '../../types'
@@ -106,16 +106,7 @@ describe('una versión por escenario, cada una con su fecha', () => {
   })
 })
 
-describe('aviso no bloqueante y casilla dentro de cada función', () => {
-  it('quien aceptó una versión 1.7 o posterior más vieja ve un aviso que no bloquea; si no, nada', () => {
-    const s = { 'dos-personas': false, correos: true }
-    const t = avisoNuevaVersion('1.7-demo', s)!
-    expect(t).toContain(edicionDe('1.8-demo')); expect(t).toMatch(/Puedes seguir usando la app/); expect(t).not.toMatch(/\[|LEGAL|PENDIENTE/)
-    expect(avisoNuevaVersion('1.8-demo', s)).toBeNull()
-    expect(avisoNuevaVersion('1.7-demo', { 'dos-personas': false, correos: false })).toBeNull()
-    expect(avisoNuevaVersion(undefined, s)).toBeNull()      // sin aceptación: la pide «Entrar», como siempre
-    expect(avisoNuevaVersion('1.6-demo', s)).toBeNull()     // 1.6-demo: casillas de «Entrar» (paso 16), sin cambios
-  })
+describe('casilla dentro de cada función (sin aviso de nueva versión)', () => {
   it('lo nuevo se acepta con una casilla dentro de su función (correos en B, mediación con otra persona en C)', () => {
     expect(casillaDeFuncion('correos')).toMatchObject({ version: '1.8-demo' })
     expect(casillaDeFuncion('dos-personas')).toMatchObject({ version: '1.9-demo' })
@@ -137,18 +128,5 @@ describe('los alquileres firmados conservan su versión salvo que los dos acepte
     encender({ dos: false, correos: true })
     expect(puedeCambiarA(alq('1.8-demo'), '1.7-demo')).toBe(false)
     expect(puedeCambiarA(alq('1.7-demo'), '1.9-demo')).toBe(false)
-  })
-})
-
-describe('AvisoVersion en «Tus alquileres»', () => {
-  it('con B encendido y la 1.7-demo aceptada se ve el aviso (con enlace); con solo A no se ve nada', async () => {
-    const { renderToStaticMarkup } = await import('react-dom/server')
-    const { createElement } = await import('react')
-    const { AvisoVersion } = await import('../AvisoVersion')
-    const u = { email: 'a@b.cr', nombre: 'A', metodo: 'correo' as const, terminos: { version: '1.7-demo', fecha: '2026-10-25T06:00:00Z' } }
-    encender({ dos: false, correos: false }); expect(renderToStaticMarkup(createElement(AvisoVersion, { u }))).toBe('')
-    encender({ dos: false, correos: true })
-    const h = renderToStaticMarkup(createElement(AvisoVersion, { u }))
-    expect(h).toContain('role="status"'); expect(h).toContain('href="/terminos"'); expect(h).toContain(edicionDe('1.8-demo'))
   })
 })

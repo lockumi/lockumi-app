@@ -1,7 +1,8 @@
 // Escenario C (preparación) · Una versión de los Términos y del Aviso de privacidad por escenario encendido, cada una con su fecha.
 // Cuando un interruptor cambia el texto visible, sube la versión: A (prueba completa) → 1.7-demo; B (A + VITE_CORREOS) → 1.8-demo;
-// C (A + B + VITE_DOS_PERSONAS) → 1.9-demo. Al subir no hay pantalla que bloquee: un aviso en la app (avisoNuevaVersion) y una
-// casilla dentro de la función nueva (casillaDeFuncion). Un alquiler firmado conserva su versión salvo que los dos acepten.
+// C (A + B + VITE_DOS_PERSONAS) → 1.9-demo. Al subir no hay aviso ni pantalla de volver a aceptar (decisión de Katherine, 25/10):
+// una cuenta nueva acepta la versión vigente en «Entrar» y cada función nueva tiene su casilla (casillaDeFuncion). Un alquiler
+// firmado conserva su versión salvo que los dos acepten.
 import type { Interruptor, Interruptores } from './condicional'
 import { V17, FECHA_V17 } from './version17'
 
@@ -26,15 +27,6 @@ export const versionVigente = (s: Interruptores): string => s['dos-personas'] ? 
 /** «1.8-demo · 1 de noviembre de 2026»; solo para la 1.7-demo y posteriores. */
 export const edicionDe = (v: string): string | undefined => { const d = datosVersion(v); return d && `${d.version} · ${d.fecha}` }
 export const desde17 = (v: string) => ordenVersion(v) >= ordenVersion(V17)
-
-/** Aviso que no bloquea (tarjeta en «Tus alquileres») para quien aceptó una 1.7-demo o posterior más vieja que la vigente.
- *  Sin aceptación o con la 1.6-demo: lo pide «Entrar», como en el paso 16. */
-// LEGAL: revisado (25/10, lista de Legal) · aviso de nueva versión (texto propio basado en la cláusula 12)
-export function avisoNuevaVersion(aceptada: string | undefined, s: Interruptores): string | null {
-  const vig = versionVigente(s)
-  if (!aceptada || !desde17(aceptada) || ordenVersion(aceptada) >= ordenVersion(vig)) return null
-  return `Actualizamos los Términos y el Aviso de privacidad (versión ${edicionDe(vig)}). Puedes seguir usando la app. Cuando uses una función nueva, te pediremos que la aceptes con una casilla. Tus alquileres ya firmados siguen con su versión, salvo que el dueño y el inquilino acepten el cambio.`
-}
 
 /** Casilla, dentro de cada función nueva, que acepta lo que agrega su versión (sin marcar; la función no sigue sin ella). */
 // LEGAL: revisado (25/10, lista de Legal) · textos de las casillas dentro de cada función

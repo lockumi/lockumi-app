@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import { estadoAceptaciones } from '../../servidor/aceptaciones'
 import { declaracionInvitacion } from '../invitacion'
 import { TEXTO_GUARDA_DOS, TEXTO_APROBAR_DOS, TEXTO_APROBADO_DOS } from '../dosPersonas'
-import { avisoNuevaVersion, casillaDeFuncion, FECHA_V19 } from '../../legal/versiones'
+import { casillaDeFuncion, FECHA_V19 } from '../../legal/versiones'
 import { validarMonto } from '../../validacion'
 
 const raw = async (p: string) => (await import(/* @vite-ignore */ p + '?raw')).default as string
@@ -88,8 +88,7 @@ describe('2) correcciones de Legal, palabra por palabra', () => {
     expect(plano(await raw('../invitacion.ts'))).toContain("'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.'")
     expect(declaracionInvitacion()).toBe('Declaro que esta persona sabe que la invito.')
   })
-  it('versiones: aviso de nueva versión; en C la casilla de correos usa FECHA_V19 (nunca la fecha futura de la 1.8-demo)', () => {
-    expect(avisoNuevaVersion('1.7-demo', { 'dos-personas': true, correos: true })).toBe(`Actualizamos los Términos y el Aviso de privacidad (versión 1.9-demo · ${FECHA_V19}). Puedes seguir usando la app. Cuando uses una función nueva, te pediremos que la aceptes con una casilla. Tus alquileres ya firmados siguen con su versión, salvo que el dueño y el inquilino acepten el cambio.`)
+  it('versiones: en C la casilla de correos usa FECHA_V19 (nunca la fecha futura de la 1.8-demo)', () => {
     expect(casillaDeFuncion('correos', { 'dos-personas': true, correos: true }).texto).toContain(`versión 1.8-demo · ${FECHA_V19} de los Términos`)
     expect(casillaDeFuncion('correos', { 'dos-personas': true, correos: true }).texto).not.toContain('1 de noviembre')
   })

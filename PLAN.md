@@ -45,6 +45,10 @@
 - **La versión se ve en el contrato de cada alquiler** (la que rige ese alquiler).
 - Cambia lo planeado antes: el PR 10 suponía volver a aceptar con la pantalla (`Reaceptacion.tsx`); ya no.
 
+## Escenario C (PR #22, 25 oct 2026): 1.9-demo sin aviso de volver a aceptar (decisión de Katherine)
+- Katherine aprobó las pantallas del modo de dos personas con un cambio: se quita el aviso de «Términos actualizados» de «Tus alquileres» (`AvisoVersion`). Solo Katherine tiene cuenta, así que nadie tiene que volver a aceptar.
+- Una cuenta nueva acepta la 1.9-demo en «Entrar», como siempre, sin aviso ni pantalla de volver a aceptar (la misma decisión que con la 1.6-demo). Sigue la casilla de los Términos dentro de cada alquiler, al crear invitando y al unirse.
+
 ## E2E automática (24 oct 2026)
 - Playwright + workflow post-despliegue, cada 6 h y a pedido; E2E.md en la rama e2e-resultados. Ver docs/e2e.md.
 

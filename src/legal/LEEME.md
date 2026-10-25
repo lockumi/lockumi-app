@@ -78,8 +78,8 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   «Acepto los Términos 1.9-demo y el Aviso de privacidad» (`CasillaVersion`) se marca al crear invitando y al unirse; quién y cuándo, en
   `lk_aceptaciones_terminos`. `// LEGAL: revisar`.
 - **Marcas (lista de Legal del 25/10, `legal/revision-marcas-pr22.md`):** lo que Legal dio por bueno lleva `// LEGAL: revisado (25/10, lista de Legal)`; las 19 correcciones van literales. Los errores nuevos del servidor (migraciones 030000–070000 y `api/_lib/tw.ts`) tienen el texto final de Legal del 25/10, 4:56 a. m., y la marca `LEGAL: revisado (25/10, 4:56 a. m., Legal)` (lista en `legal/errores-servidor-c.md`). En `src` y `api` solo queda `src/alertas.ts:5`. «Todo bien, devolver» y el texto de después de aprobar («en cuanto la red de prueba lo confirme») quedaron revisados por Legal el 25/10, 4:33 a. m. `src/prueba/__tests__/c-lista-marcas.test.tsx` las cuenta.
-- Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: aviso que no bloquea en «Tus alquileres» y una
-  casilla dentro de cada función nueva. Un alquiler firmado sigue con su versión salvo que los dos acepten.
+- Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: sin aviso de «Términos actualizados» en «Tus alquileres»
+  ni pantalla de volver a aceptar (decisión de Katherine, 25/10). Una cuenta nueva acepta la 1.9-demo en «Entrar» y cada función nueva tiene su casilla. Un alquiler firmado sigue con su versión salvo que los dos acepten.
 - **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b): primero el párrafo exacto de Legal y, después, sin cambios, la b) de antes (registro en la red de prueba, «simulados», «Nada de esto tiene efecto legal»; Legal, 25/10, 1:24 a. m.)
   (fase 2, la mediación no decide, excepciones 5.3 d y 6.5.1). Sin dos personas (A y B), la b) no cambia. Prueba: `escenario-c.test.ts`.
 

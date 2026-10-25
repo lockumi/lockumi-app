@@ -6,6 +6,9 @@
 > y guarda la versión vigente (1.6-demo). Legal confirmó publicarlo así (10:05 p. m.) y propuso un mínimo que no bloquea,
 > por ahora solo en imágenes: un aviso que se puede cerrar y una línea sobre el botón de crear o firmar (ver PLAN.md).
 > Lo de abajo es la historia de la pantalla.
+>
+> **1.9-demo (escenario C, PR #22, 25/10/2026, decisión de Katherine):** tampoco hay aviso de «Términos actualizados» en «Tus alquileres»
+> (se quitó `AvisoVersion`) ni pantalla de volver a aceptar. Una cuenta nueva acepta la 1.9-demo en «Entrar», como siempre.
 
 Estado (24/10/2026, 9:20 p. m. CR): **programada en el PR 1** (`src/legal/Reaceptacion.tsx`, conexión en `App.tsx`, pruebas en `src/legal/__tests__/reaceptacion.test.tsx`). En vez de la casita animada se usa solo el logo estático (`/img/logo-lockumi.svg`), por la decisión de Katherine de no usar ilustraciones. Antes: **solo imagen v2** (con los 3 ajustes de Legal del 24/10), esperando el OK de Katherine
 (`/workspace/lockumi/diseno/envio/contrato-compacto/reaceptacion.jpg`; la v1 quedó en `reaceptacion-v1.jpg`). Legal aprobó la idea. Debe salir **junto con 1.6-demo**: sin esto,
