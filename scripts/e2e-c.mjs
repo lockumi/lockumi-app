@@ -128,7 +128,8 @@ const fTw = REAL ? fetch : twFalso(D)
 const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
-const tw = (cta, pedido) => enFila(() => atender(env, pedido, 'Bearer ' + cta.token, fTw))
+const twDirecto = (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
+const tw = (cta, pedido) => enFila(() => twDirecto(cta, pedido))
 const mig = await D.migraciones()
 log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'}`)
 if (!mig.m060) log('  (sin 20261025060000, «Todo bien, devolver» no libera al aprobar: el flujo «aprobada» falla)')
@@ -165,8 +166,9 @@ async function hastaPlazo(k, conPago) {
   let pago = null
   if (conPago) {
     const d = await tw(dueno, { accion: 'desplegar', contrato: id }); paso(k, 'Trustless Work: se crea la cuenta segura (deploy)', d.tx)
-    const { unsignedXdr } = await tw(inquilino, { accion: 'fondear', contrato: id })
-    pago = (await tw(inquilino, { accion: 'enviar', contrato: id, paso: 'fondear', signedXdr: firmar(kpI, unsignedXdr) })).tx; paso(k, `el inquilino deposita ${MONTO} USDC`, pago)
+    // La cuenta del inquilino es la misma en los cuatro casos: pedir y enviar el depósito en el mismo turno de la fila (si no, tx_bad_seq)
+    pago = (await enFila(async () => { const { unsignedXdr } = await twDirecto(inquilino, { accion: 'fondear', contrato: id }); return twDirecto(inquilino, { accion: 'enviar', contrato: id, paso: 'fondear', signedXdr: firmar(kpI, unsignedXdr) }) })).tx
+    paso(k, `el inquilino deposita ${MONTO} USDC`, pago)
   }
   await inquilino.rpc('lk_registrar_pago', { p_contrato: id, p_tx: pago })
   await fotos(inquilino, id, 'entrada'); await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' })
