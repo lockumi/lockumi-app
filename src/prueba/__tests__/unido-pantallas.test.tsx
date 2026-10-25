@@ -32,10 +32,14 @@ describe('B.7 en un solo aparato (arreglo 2)', () => {
     for (const no of ['una persona del equipo', 'Una persona del equipo', '3 días hábiles', '10 casos']) expect(plano(h)).not.toContain(no)
     expect(h).toContain('Resolver el reclamo (simulación)')
   })
-  it('con otra persona, la B.7 sigue igual: con la casilla de la sección C y «Pedir mediación»', () => {
+  it('con otra persona, la B.7 sigue igual: con la casilla de la sección C y «Pedir mediación»', async () => {
     for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'a', VITE_DOS_PERSONAS: '1' })) vi.stubEnv(k, v)
-    const h = renderToStaticMarkup(<MediacionPC a={alq({ dosPersonas: true })} rol="inquilino" />)
-    expect(h).toContain(CASILLA_MEDIACION); expect(h).toContain('Pedir mediación'); expect(plano(h)).toContain('Respondemos en un plazo de 3 días hábiles (máximo 10 casos en la demo).')
+    vi.resetModules(); const { MediacionPC: M2 } = await import('../MediacionPC'), { CASILLA_MEDIACION: C2 } = await import('../consentimientos')
+    const h = renderToStaticMarkup(<M2 a={alq({ dosPersonas: true })} rol="inquilino" />)
+    expect(h).toContain(C2)
+    // con VITE_DOS_PERSONAS apagado, un alquiler marcado dosPersonas usa la B.7 de un solo aparato
+    expect(renderToStaticMarkup(<MediacionPC a={alq({ dosPersonas: true })} rol="inquilino" />)).not.toContain(CASILLA_MEDIACION)
+    expect(h).toContain('Pedir mediación'); expect(plano(h)).toContain('Respondemos en un plazo de 3 días hábiles (máximo 10 casos en la demo).')
   })
 })
 

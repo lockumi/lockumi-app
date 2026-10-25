@@ -30,6 +30,8 @@ const DOS: Omit<Modos, 'dosPersonas'> = { servidor: true, trustless: true, prueb
 /** Modos de un alquiler: el de dos personas usa el servidor; los demás, los de la app. */
 export const modoDeCon = (m: Modos, a?: { dosPersonas?: boolean }): Modos => m.dosPersonas && a?.dosPersonas === true ? { ...DOS, dosPersonas: true } : m
 export const modoDe = (a?: { dosPersonas?: boolean }) => modoDeCon(M, a)
+/** Este alquiler es del modo de dos personas (interruptor encendido y alquiler creado invitando a la otra persona). */
+export const deDosPersonas = (a?: { dosPersonas?: boolean }) => M.dosPersonas && a?.dosPersonas === true
 
 export const modoServidor = M.servidor
 /** Trustless Work real por /api/tw: solo en los alquileres con otra persona (ver modoDe). */

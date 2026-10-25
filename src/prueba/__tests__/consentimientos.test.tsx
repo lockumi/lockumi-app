@@ -4,7 +4,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Alquiler } from '../../types'
 import { registrarConsentimiento, consentimientoCorreo, CASILLA_MEDIACION } from '../consentimientos'
-import { MediacionPC } from '../MediacionPC'
 afterEach(() => vi.unstubAllEnvs())
 const T = '2026-10-24T18:00:00.000Z'
 const acta = { cuartos: [], firmas: { dueno: T, inquilino: T } }
@@ -23,9 +22,10 @@ describe('consentimiento al usar la función', () => {
     const x = alq(); const c = consentimientoCorreo(x, 'dueno', 'Quiero recibir los avisos por correo.', +new Date(T))
     expect(c.tipo).toBe('correo'); expect(c.cuenta).toBe('d@x'); expect(x.consentimientos).toHaveLength(1)
   })
-  it('B.7 con otra persona (paso16-unido: en un solo aparato no hay casilla): empieza sin marcar y «Pedir mediación» está inactivo hasta marcarla', () => {
+  it('B.7 con otra persona (paso16-unido: en un solo aparato no hay casilla): empieza sin marcar y «Pedir mediación» está inactivo hasta marcarla', async () => {
     for (const [k, v] of Object.entries({ VITE_PRUEBA_COMPLETA: '1', VITE_TRUSTLESS: '1', VITE_SUPABASE_URL: 'https://x.supabase.co', VITE_SUPABASE_ANON_KEY: 'a', VITE_DOS_PERSONAS: '1' })) vi.stubEnv(k, v)
-    const h = renderToStaticMarkup(<MediacionPC a={{ ...alq(), dosPersonas: true }} rol="inquilino" />)
+    vi.resetModules(); const { MediacionPC: M2 } = await import('../MediacionPC')
+    const h = renderToStaticMarkup(<M2 a={{ ...alq(), dosPersonas: true }} rol="inquilino" />)
     expect(h).toContain(CASILLA_MEDIACION); expect(h).toMatch(/<input type="checkbox"(?![^>]*checked)[^>]*\/?>/)
     expect(h).toMatch(/<button[^>]*disabled=""[^>]*>Pedir mediación<\/button>/)
   })

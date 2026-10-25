@@ -24,6 +24,8 @@ export interface Calculo {
   id: string; referencia: number | null; tope: number | null; factura: number | null; base: number
   depreciacion: number; reclamado: number; cotizacion: number | null; propuesto: number; razones: string[]
 }
+/** Nombre del documento del inquilino, con tilde (Legal 24/10). */
+const SOPORTE: Record<string, string> = { factura: 'factura', cotizacion: 'cotización' }
 /** Cálculo de un rubro. `resp`: respuesta del inquilino (si rechazó con factura o cotización). */
 export function calcular(a: Pick<Alquiler, 'inicio' | 'fin'>, r: Rubro, resp?: RespuestaRubro): Calculo {
   const ref = referencia(r), tope = ref === null ? null : r2(ref * (1 + MARGEN)), fac = r.factura?.monto ?? null
@@ -41,8 +43,8 @@ export function calcular(a: Pick<Alquiler, 'inicio' | 'fin'>, r: Rubro, resp?: R
   let propuesto = reclamado; let cot: number | null = null
   if (resp && !resp.acepta && resp.soporte) {
     cot = resp.soporte.monto
-    if (cot < reclamado) { propuesto = r2((cot + reclamado) / 2); razones.push(`El inquilino presentó una ${resp.soporte.tipo} de ${fmt(cot)}: se propone el punto medio (${fmt(propuesto)}).`) }
-    else razones.push(`La ${resp.soporte.tipo} del inquilino (${fmt(cot)}) no es menor: se mantiene ${fmt(reclamado)}.`)
+    if (cot < reclamado) { propuesto = r2((cot + reclamado) / 2); razones.push(`El inquilino presentó una ${SOPORTE[resp.soporte.tipo]} de ${fmt(cot)}: se propone el punto medio (${fmt(propuesto)}).`) }
+    else razones.push(`La ${SOPORTE[resp.soporte.tipo]} del inquilino (${fmt(cot)}) no es menor: se mantiene ${fmt(reclamado)}.`)
   }
   return { id: r.id, referencia: ref, tope, factura: fac, base: r2(base), depreciacion: dep, reclamado, cotizacion: cot, propuesto, razones }
 }

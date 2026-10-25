@@ -15,7 +15,7 @@ import { VerTx } from '../screens/Real'
 import { pedirMediacion, noUsarMediacion, plazoMediacion, repartoValido, textoConfirmar, textoResultado, textoNoReclamado } from './mediacion'
 import { AvisosApp } from './AvisosApp'
 import { registrarConsentimiento, CASILLA_MEDIACION } from './consentimientos'
-import { esDosPersonas } from './dosPersonas'
+import { deDosPersonas } from '../servidor/config'
 import { versionAlquiler, V17 } from './version'
 import { pasoPorMediacion, datosMediacion, guardarMediacion, textoGuardar, DIAS_BORRADO } from './borrado'
 
@@ -85,7 +85,7 @@ export function MediacionPC({ a, rol }: { a: Alquiler; rol: Rol }) {
     {/* LEGAL: revisar · título y resumen (texto propio) */}
     <div className="cab"><h2>Sin acuerdo: reclamo de {u(rec.monto)}</h2><Simulado texto="Mediación y reparto simulados" /></div>
     {rec.propuesta && <p className="nota">Propuesta automática (simulación): dueño {u(rec.propuesta.alDueno)} · inquilino {u(r2(a.monto - rec.propuesta.alDueno))}. No hubo acuerdo.</p>}
-    {esDosPersonas(a) ? <B7 a={a} rol={rol} /> : <B7UnAparato />}
+    {deDosPersonas(a) ? <B7 a={a} rol={rol} /> : <B7UnAparato />}
     <B14 a={a} />
     {/* LEGAL: revisado (24/10) · B.7, tarjetas */}
     <section className="pila" aria-labelledby="t-vias"><h3 id="t-vias">Otras vías (fuera de la app)</h3>
@@ -108,7 +108,7 @@ export function ResueltoSimulacion({ a }: { a: Alquiler }) {
 /** paso16-unido (arreglo 3): en «Terminado», una parte puede pedir que se guarden los datos de la mediación para un reclamo fuera
  *  de la app (si no, se borran 30 días después de cerrar el caso). Queda en el historial. */
 export function GuardarDatosMediacion({ a, rol }: { a: Alquiler; rol: Rol }) {
-  if (versionAlquiler(a) !== V17 || esDosPersonas(a) || !pasoPorMediacion(a)) return null   // con otra persona: lo hace el servidor
+  if (versionAlquiler(a) !== V17 || deDosPersonas(a) || !pasoPorMediacion(a)) return null   // con otra persona: lo hace el servidor
   const d = datosMediacion(a)
   if (d.borrado) return null
   // LEGAL: revisar · texto propio basado en la Privacidad 1.7-demo (conservación); la línea del historial es de Legal
