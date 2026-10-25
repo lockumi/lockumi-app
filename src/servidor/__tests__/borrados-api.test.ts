@@ -16,9 +16,9 @@ function falso(respuestas: Record<string, unknown>, fallar: string[] = []) {
 
 describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arreglos 5 y 6)', () => {
   it('borra los correos de invitaciones vencidas, las fotos del bucket lk-fotos y marca la mediación como borrada', async () => {
-    const f = falso({ '/rpc/lk_vencimientos': { automatico: 1, regla_651: 0, mediacion: 1 }, '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
+    const f = falso({ '/rpc/lk_vencimientos': { automatico: 1, mediacion: 1 }, '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
     const r = await ejecutarBorrados(ENV, f)
-    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, regla_651: 0, mediacion: 1 } })
+    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, mediacion: 1 } })
     const llamadas = f.mock.calls.map(([u, i]) => [u.replace(URL_SB, ''), i.method, i.body ? JSON.parse(String(i.body)) : null])
     expect(llamadas).toEqual([
       ['/rest/v1/rpc/lk_vencimientos', 'POST', {}],

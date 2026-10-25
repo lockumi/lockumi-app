@@ -8,7 +8,7 @@
 import { servicio, rpc, borrarObjetos } from './supabase.js'
 
 export const DIAS_MEDIACION = 30
-export interface Vencimientos { automatico: number; regla_651: number; mediacion: number }
+export interface Vencimientos { automatico: number; mediacion: number }
 export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null }
 
 export async function ejecutarBorrados(env: Record<string, string | undefined>, f: typeof fetch = fetch): Promise<ResultadoBorrados> {

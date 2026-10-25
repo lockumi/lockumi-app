@@ -133,8 +133,8 @@ export const servidor = {
   aceptarAcuerdo: (id: string, montoDueno: number) => tras(rpc('lk_aceptar_acuerdo_mediacion', { p_contrato: id, p_monto_dueno: montoDueno })),
   /** 6.5 b: el inquilino abrió el aviso o la pantalla del reclamo (solo cuenta la primera vez). */
   abrirAvisoReclamo: (id: string) => tras(rpc('lk_abrir_aviso_reclamo', { p_contrato: id })),
-  /** 6.5 c y 6.5.1: vencido el plazo del inquilino sin respuesta, el servidor aplica la regla o pasa a la mediación. */
-  aplicarSilencio: (id: string) => tras(rpc<'regla_651' | 'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
+  /** 6.5 c: vencido el plazo del inquilino sin respuesta, el servidor pasa el caso a la mediación (en dos personas la 6.5.1 no se aplica sola). */
+  aplicarSilencio: (id: string) => tras(rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
   esMediador: () => rpc<boolean>('lk_es_mediador', {}),
   registrarLiquidacion: (id: string, tx: string) => tras(rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }
