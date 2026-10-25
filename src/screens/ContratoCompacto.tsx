@@ -4,6 +4,7 @@
 // hoja desde abajo; la hoja se cierra deslizándola hacia abajo. Solo se dibuja UNA de las dos variantes según el ancho de la pantalla.
 // El texto del contrato es el mismo componente de siempre (ContratoDoc → Documento, con sus partes «LEGAL»), sin cambios.
 // Imprimir: «Descargar o imprimir» dentro del panel y el menú del navegador dan siempre el contrato completo.
+import { pruebaCompleta } from '../prueba/interruptor'
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type PointerEvent as EventoPuntero, type KeyboardEvent as EventoTecla } from 'react'
 import { modoPrueba } from '../servidor/config'
 import type { Alquiler } from '../types'
@@ -70,7 +71,7 @@ export function ContratoCompacto({ a, como }: { a: Alquiler; como: 'tarjeta' | '
   const papel = <div className="cc-papel" aria-hidden="true"><Documento a={a} impresion /></div>
   if (como === 'barra') return <div className="cc-barra-caja">
     <button ref={boton} type="button" className="cc-barra" aria-haspopup="dialog" aria-expanded={abierto} onClick={() => setAbierto(true)}>
-      <span className="cc-barra__txt"><small>Contrato</small><strong>{a.direccion} · {usd(a.monto)}</strong></span>
+      <span className={'cc-barra__txt' + (pruebaCompleta() ? ' cc-barra__txt--ajusta' : '')}><small>Contrato</small><strong>{a.direccion} · {usd(a.monto)}</strong></span>
       <span className="cc-barra__ver">{TEXTO_VER_CONTRATO}</span>
     </button>{panel}{papel}</div>
   return <section className="glass tarjeta cc-tarjeta" aria-labelledby={tid}>
