@@ -12,12 +12,19 @@ import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { textoContador, textoRecibir, CONFIRMAR_DEVOLVER, botonRecibir, botonDevolver, recibirCasa, inicioAuto, finVentana, vencido, simularDias } from './dueno'
 import { AvisosApp } from './AvisosApp'
 import { AvisosCorreo } from './AvisosCorreo'
+import { esDosPersonas, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO } from './dosPersonas'
+
+/** Paso 7: recuadro de la devolución automática (paleta del logo, pastilla del papel). */
+const Auto = ({ rol, texto }: { rol: Rol; texto: string }) => <div className="auto-dos" role="note">
+  <span className={'pill-rol pill-rol--' + rol}>{rol === 'dueno' ? 'Dueño' : 'Inquilino'}</span>
+  <p><strong>Devolución automática.</strong> {texto}</p></div>
 
 const cr = (t: number) => `${fechaHoraCR(t)}, hora de Costa Rica`
 
 export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Rol; reclamo: (cerrar: () => void) => ReactNode; children?: ReactNode }) {
   const [, tick] = useState(0); const [confirmar, setConfirmar] = useState(false); const [form, setForm] = useState(false); const p = useProceso()
   useEffect(() => { const t = setInterval(() => tick(k => k + 1), 30_000); return () => clearInterval(t) }, [])
+  const dos = esDosPersonas(a)
   const ahora = ahoraDe(a), simulado = modoPrueba, fin = finVentana(a), termino = vencido(a, ahora)
   const devolver = () => p.correr(av => acciones.cerrarSinReclamo(a, av))
   // Al vencer el plazo sin reclamo, se devuelve todo (con escrow real: lo firma la cuenta de Lockumi en la red de prueba).
@@ -41,7 +48,8 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
     cuerpo = form ? reclamo(() => setForm(false)) : confirmacion || <div className="pila" id="plazo-acciones">
       {!a.ventanaInicio ? <><h2>¿Recibiste la casa?</h2><p>{textoRecibir(a).replace('¿Recibiste la casa? ', '')}</p></>
         : <><h2>Tu plazo para revisar y reclamar</h2><p className="cuenta-texto" role="timer">{textoContador('dueno', a, ahora)}</p>
-          <p className="nota">Solo se puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si el plazo vence sin reclamo, se devuelve todo el depósito al inquilino.</p>{/* LEGAL: revisado (24/10) · frases de la B.2b */}</>}
+          <p className="nota">Solo se puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si el plazo vence sin reclamo, se devuelve todo el depósito al inquilino.</p>{/* LEGAL: revisado (24/10) · frases de la B.2b */}
+          {dos && <Auto rol="dueno" texto={TEXTO_AUTO_DUENO} />}</>}
       {simulado && <p className="nota">El dueño es una cuenta de prueba de Lockumi: estos botones simulan lo que haría.</p>}{/* LEGAL: revisar */}
       {!a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => store.cambiar(a.id, x => recibirCasa(x, ahoraDe(x)))}>{botonRecibir(simulado)}</button>}
       {a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => setForm(true)}>{simulado ? 'Simular: el dueño hace un reclamo' : 'Revisar y reclamar'}</button>}{/* LEGAL: revisar (simulado) · revisado (24/10) · B.2b «Revisar y reclamar» */}
@@ -52,6 +60,7 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
     cuerpo = <div className="pila" id="plazo-acciones"><h2>El dueño revisa la casa</h2>
       {!a.ventanaInicio ? <p>Entregaste la casa el {cr(+new Date(a.entrega!))}. El dueño tiene 7 días naturales para revisar y reclamar: empiezan cuando toque «Recibí la casa» o, si no lo toca, el {cr(inicioAuto(a)!)}.</p>
         : <p className="cuenta-texto" role="timer">El dueño puede reclamar hasta el {cr(fin!)}. Si no reclama, se te devuelve todo el depósito{modoPrueba ? ' de prueba' : ''}.</p>}
+      {dos && <Auto rol="inquilino" texto={TEXTO_AUTO_INQUILINO} />}
       {simulado && <p className="nota">Para probar lo que hace el dueño, toca «Ver la pantalla del dueño de prueba».</p>}
     </div>
   }
