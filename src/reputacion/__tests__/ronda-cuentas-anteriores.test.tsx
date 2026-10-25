@@ -26,6 +26,7 @@ beforeEach(() => { vi.resetModules(); mem.clear(); ses.clear(); vi.unstubAllEnvs
 
 describe('Coordinador: las cuentas que ya existían no vuelven a aceptar nada', () => {
   it('sin REP-01, la cuenta sigue igual: ni REP-13, ni REP-01, ni tarjeta de bloqueo, en ninguna ruta', async () => {
+    sembrar([alq('ya1', U.email, 'otra@x.cr')])   // cuenta anterior: ya tiene alquileres (Legal, 3:47 p. m.: sin REP-01 y sin alquileres → pantalla previa)
     for (const r of ['/', '/crear', '/invitacion/00000000-0000-4000-8000-000000000999/abc', '/alquiler/x', '/perfil', '/perfil/aceptar', '/perfil/dueno']) {
       const h = await pantalla(r), t = texto(h)
       expect(h, r).toContain('PANTALLA-DE-SIEMPRE')
@@ -98,9 +99,10 @@ describe('Legal: guarda de encendido (la fecha real de publicación)', () => {
     expect(revisarEncendido({ VITE_REPUTACION: '1' }, '[fecha de encendido]')).toMatch(/FECHA_ENCENDIDO_REPUTACION/)
     expect(revisarEncendido({ VITE_REPUTACION: '1' }, '2 de noviembre de 2026')).toBeNull()
     expect(revisarEncendido({}, '[fecha de encendido]')).toBeNull()
-    // Borrador local (capturas, E2E): solo fuera de producción de Vercel.
+    // Borrador local (capturas, E2E): solo fuera de Vercel (ni producción ni preview).
     expect(revisarEncendido({ VITE_REPUTACION: '1', LOCKUMI_REPUTACION_BORRADOR: '1' }, '[fecha de encendido]')).toBeNull()
-    expect(revisarEncendido({ VITE_REPUTACION: '1', LOCKUMI_REPUTACION_BORRADOR: '1', VERCEL_ENV: 'production' }, '[fecha de encendido]')).toMatch(/FECHA_ENCENDIDO_REPUTACION/)
+    expect(revisarEncendido({ VITE_REPUTACION: '1', LOCKUMI_REPUTACION_BORRADOR: '1', VERCEL: '1', VERCEL_ENV: 'production' }, '[fecha de encendido]')).toMatch(/FECHA_ENCENDIDO_REPUTACION/)
+    expect(revisarEncendido({ VITE_REPUTACION: '1', LOCKUMI_REPUTACION_BORRADOR: '1', VERCEL: '1', VERCEL_ENV: 'preview' }, '[fecha de encendido]')).toMatch(/FECHA_ENCENDIDO_REPUTACION/)
   })
   it('vite.config.ts usa la guarda en el build', async () => {
     const { guardaEncendido } = await import('../../legal/encendido'), g = guardaEncendido({ VITE_REPUTACION: '1' })
@@ -140,15 +142,15 @@ describe('Legal: la 1.10-demo solo la guardan las cuentas nuevas (desde la panta
 })
 
 describe('Legal: textos literales', () => {
-  it('Términos 15.1 y Aviso: las cuentas anteriores a la 1.10-demo no tienen perfil (con marca LEGAL: revisar)', async () => {
+  it('Términos 15.1 y Aviso: las cuentas anteriores a la 1.10-demo no tienen perfil (LEGAL: revisado (25/10); guion U+2011 que no se corta)', async () => {
     const t = await legal('terminos.md'), p = await legal('privacidad.md')
-    const T = 'Las cuentas creadas antes de la versión 1.10-demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.'
-    const P = 'Si tu cuenta es anterior a la versión 1.10-demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.'
+    const T = 'Las cuentas creadas antes de la versión 1.10\u2011demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.'
+    const P = 'Si tu cuenta es anterior a la versión 1.10\u2011demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.'
     expect(t.split('\n').find(l => l.startsWith('15.1 '))!.endsWith(T)).toBe(true)
     const sec = p.slice(p.indexOf('## Perfil de reputación')).split('\n').filter(l => l.trim() && !l.startsWith('<!--'))
     expect(sec[1]!.startsWith('Usar Lockumi incluye un perfil de reputación')).toBe(true); expect(sec[2]).toBe(P)
     expect(await legal('terminos.md', false)).not.toContain(T); expect(await legal('privacidad.md', false)).not.toContain(P)
-    for (const f of ['terminos.md', 'privacidad.md']) expect(await leerArchivo('src/legal/v17/' + f)).toMatch(/LEGAL: revisar[^\n]*1\.10-demo/)
+    for (const f of ['terminos.md', 'privacidad.md']) expect(await leerArchivo('src/legal/v17/' + f)).toMatch(/LEGAL: revisado \(25\/10\)[^\n]*1\.10-demo/)
   })
   it('sin restos de REP-13, la tercera casilla ni [Ver y aceptar] en los textos legales ni en la documentación', async () => {
     for (const f of ['src/legal/v17/privacidad.md', 'src/legal/v17/terminos.md', 'docs/reputacion.md']) {
@@ -158,8 +160,8 @@ describe('Legal: textos literales', () => {
     const { ELIMINAR, ELIMINAR_UI } = await import('../textos'), { horaCR } = await import('../consentimiento')
     expect(ELIMINAR.listo).toBe('Listo. Pediste eliminar tu cuenta: tu perfil ya no se muestra y la eliminamos en un máximo de 5 días hábiles.')
     expect(ELIMINAR_UI.pedido('25 de octubre de 2026', '3:21 p. m.')).toBe('Lo pediste el 25 de octubre de 2026 a las 3:21 p. m. (hora de Costa Rica).')
-    expect(horaCR('2026-10-25T21:21:00Z')).toBe('3:21 p. m.'); expect(horaCR('2026-10-25T16:05:00Z')).toBe('10:05 a. m.')
-    expect(horaCR('2026-10-25T18:00:00Z')).toBe('12:00 p. m.'); expect(horaCR('2026-10-26T06:30:00Z')).toBe('12:30 a. m.')
+    expect(horaCR('2026-10-25T21:21:00Z')).toBe('3:21\u00a0p.\u00a0m.'); expect(horaCR('2026-10-25T16:05:00Z')).toBe('10:05\u00a0a.\u00a0m.')
+    expect(horaCR('2026-10-25T18:00:00Z')).toBe('12:00\u00a0p.\u00a0m.'); expect(horaCR('2026-10-26T06:30:00Z')).toBe('12:30\u00a0a.\u00a0m.')
   })
   it('perfil con una revisión pedida: la nota de Legal', async () => {
     const L = 'Pediste una revisión. Mientras la revisamos, tu puntaje público dice «En revisión».'
@@ -175,12 +177,13 @@ describe('Legal: textos literales', () => {
   })
   it('nombre visible: nombres compuestos («Ana María V.»), siempre con la inicial del apellido', async () => {
     const { validarNombre } = await import('../consentimiento'), { UI } = await import('../textos')
-    for (const n of ['Ana María V.', 'Laura V.', 'María-José R', 'José Pablo M.']) expect(validarNombre(n), n).toBeNull()
+    for (const n of ['Ana María V.', 'Laura V.', 'María-José R.', 'José Pablo M.']) expect(validarNombre(n), n).toBeNull()
     for (const n of ['Ana María Vargas', 'Laura Vargas', 'Laura', 'Ana María Vargas Rojas']) expect(validarNombre(n), n).toBe(UI.errNombre)
   })
   it('se quitan las marcas «LEGAL: revisar» que Legal aprobó', async () => {
     for (const f of ['src/reputacion/textos.ts', 'src/reputacion/entrada-textos.ts', 'src/reputacion/puntaje.ts', 'supabase/migrations/20261025140000_reputacion.sql']) {
-      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !l.includes('ronda 25/10 3:27'))
+      // Siguen «LEGAL: revisar» solo los textos nuevos de la ronda de las 3:42/3:47 (ayuda del nombre y mensaje del servidor).
+      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !/ronda 25\/10 3:4[27]/.test(l))
       expect(nuevas, f).toEqual([]) }
     // correo.ts: solo el bloque de REP-12 es del paso 19 (las demás marcas son de otros pasos).
     const rep12 = (await leerArchivo('api/_lib/correo.ts')).split('\n').filter(l => /n\.º|Legal exige|líneas públicas del puntaje/.test(l))

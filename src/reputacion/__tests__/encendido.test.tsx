@@ -45,7 +45,8 @@ describe('reputación encendida', () => {
     const t = texto(await pantalla('/'))
     expect(aceptoRep01(U.email)).toBe(true); expect(t).toContain('¿Cómo te verán?'); expect(t).toContain('Nombre visible'); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
   })
-  it('cuentas que ya existían (sin REP-01): la app de siempre, sin aviso, sin bloqueo y sin perfil', async () => {
+  it('cuentas que ya existían (sin REP-01, con alquileres): la app de siempre, sin aviso, sin bloqueo y sin perfil', async () => {
+    abierto()
     for (const r of ['/', '/crear', '/invitacion/00000000-0000-0000-0000-000000000000/' + 'a'.repeat(64), '/alquiler/x', '/perfil']) {
       const t = texto(await pantalla(r)); expect(t).toContain('PANTALLA-DE-SIEMPRE'); expect(t).not.toMatch(/Actualizamos|Ver cambios|Ver y aceptar|Antes de seguir/) }
   })
@@ -136,7 +137,7 @@ describe('eliminar la cuenta con un alquiler abierto (Legal, respuesta final)', 
     pedirBorrado(U.email, '2026-10-25T20:00:00Z', store.todos()); ejecutarBorrados(Date.now(), store.todos())
     expect(perfilDisponible(U.email)).toBe(false)
     const l = texto(await pantalla('/perfil/eliminar/listo'))
-    expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toContain('Lo pediste el 25 de octubre de 2026 a las 2:00 p. m. (hora de Costa Rica).')
+    expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toContain('Lo pediste el 25 de octubre de 2026 a las 2:00 p. m. (hora de Costa Rica).')   // texto() junta los espacios (también U+00A0)
     expect(l).not.toContain('Listo. Pediste eliminar tu cuenta')
     for (const r of ['/perfil', '/perfil/dueno', '/perfil/calculo']) { const t = texto(await pantalla(r)); expect(t).toContain('Ya pediste eliminar tu cuenta'); expect(t).not.toMatch(/\d,\d de 5|Nuevo en Lockumi/) }
     expect(texto(await pantalla('/perfil/eliminar'))).not.toMatch(/<button[^>]*>Eliminar mi cuenta/)

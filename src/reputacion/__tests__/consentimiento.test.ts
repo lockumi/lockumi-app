@@ -16,11 +16,11 @@ describe('REP-01: aceptación previa a crear la cuenta', () => {
   })
   it('guarda la versión, la fecha, la hora (Costa Rica) y el texto aceptado', () => {
     aceptarRep01(E, ['Entiendo…', 'Confirmo que soy mayor de 18 años.'], F)
-    expect(leer(E).rep01).toEqual({ version: VERSION_TEXTOS, fecha: F, hora: '10:00 a. m.', texto: ['Entiendo…', 'Confirmo que soy mayor de 18 años.'] })
+    expect(leer(E).rep01).toEqual({ version: VERSION_TEXTOS, fecha: F, hora: '10:00\u00a0a.\u00a0m.', texto: ['Entiendo…', 'Confirmo que soy mayor de 18 años.'] })
     expect(aceptoRep01(E)).toBe(true)
   })
   it('antes de tener cuenta se guarda en esta sesión y se pasa a la cuenta nueva al entrar (una sola vez)', () => {
-    aceptarPrevia(['Entiendo…', 'Confirmo…'], F); expect(previa()?.hora).toBe('10:00 a. m.')
+    aceptarPrevia(['Entiendo…', 'Confirmo…'], F); expect(previa()?.hora).toBe('10:00\u00a0a.\u00a0m.')
     vincularPrevia(E, true); expect(aceptoRep01(E)).toBe(true); expect(leer(E).rep01?.fecha).toBe(F); expect(previa()).toBeNull()
     vincularPrevia('otra@x.cr', true); expect(aceptoRep01('otra@x.cr')).toBe(false)
   })
@@ -50,7 +50,7 @@ describe('REP-01: aceptación previa a crear la cuenta', () => {
 
 describe('cada error dice cómo arreglarlo', () => {
   it('nombre visible: nombre y la inicial del apellido', () => {
-    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R')).toBeNull(); expect(validarNombre('María José R')).toBeNull()   // nombre compuesto (Legal, 25/10)
+    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R.')).toBeNull(); expect(validarNombre('María José R.')).toBeNull(); expect(validarNombre('Ana R')).toMatch(/inicial de tu apellido/)   // nombre compuesto (Legal, 25/10)
     expect(validarNombre('')).toMatch(/Escribe tu nombre y la inicial de tu apellido/)
     expect(validarNombre('Laura Vargas')).toMatch(/inicial de tu apellido/)
     expect(validarNombre('Laura V. ' + 'x'.repeat(30))).toMatch(/Máximo 30/)

@@ -13,7 +13,7 @@ const alq = (id: string, inquilino: number, dueno: number) => ({ id, monto: 20, 
 describe('pedir revisión', () => {
   it('acuse al instante con fecha, hora y fecha límite de respuesta (5 días hábiles)', () => {
     const r = pedirRevision(E, { alquilerId: 'a2', rol: 'inquilino', texto: 'El descuento no corresponde.' }, F)
-    expect(r.fecha).toBe(F); expect(r.hora).toBe('9:30 a. m.'); expect(r.limite).toBe('2026-11-03T05:59:59.999Z')
+    expect(r.fecha).toBe(F); expect(r.hora).toBe('9:30\u00a0a.\u00a0m.'); expect(r.limite).toBe('2026-11-03T05:59:59.999Z')
     expect(revisiones(E)).toHaveLength(1); expect([...enRevisionIds(E, 'inquilino')]).toEqual(['a2']); expect([...enRevisionIds(E, 'dueno')]).toEqual([])
   })
   it('mientras se revisa, ese alquiler no cuenta y el puntaje público dice «En revisión»', () => {

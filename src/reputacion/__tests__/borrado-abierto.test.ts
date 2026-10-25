@@ -28,12 +28,12 @@ describe('alquiler abierto = depósito guardado, plazo para reclamar o mediació
 describe('pedir eliminar la cuenta', () => {
   it('sin alquiler abierto: plazo de 5 días hábiles desde el pedido; se guarda la fecha y la hora (Costa Rica)', () => {
     const s = B.pedirBorrado(E, '2026-10-25T20:00:00Z', [])
-    expect(s).toMatchObject({ pedido: '2026-10-25T20:00:00Z', hora: '2:00 p. m.', abierto: false, limite: B.fechaLimiteBorrado('2026-10-25T20:00:00Z') })
+    expect(s).toMatchObject({ pedido: '2026-10-25T20:00:00Z', hora: '2:00\u00a0p.\u00a0m.', abierto: false, limite: B.fechaLimiteBorrado('2026-10-25T20:00:00Z') })
     expect(B.perfilDisponible(E)).toBe(false)
   })
   it('con un alquiler abierto: el perfil deja de mostrarse al instante, pero todavía no hay fecha límite', () => {
     const s = B.pedirBorrado(E, '2026-10-25T20:00:00Z', [alq('1', 'ventana_reclamo')])
-    expect(s).toMatchObject({ abierto: true, limite: null, hora: '2:00 p. m.' }); expect(B.perfilDisponible(E)).toBe(false)
+    expect(s).toMatchObject({ abierto: true, limite: null, hora: '2:00\u00a0p.\u00a0m.' }); expect(B.perfilDisponible(E)).toBe(false)
     expect(B.esperandoCierre(E)).toBe(true)
   })
   it('es definitiva: no hay forma de deshacerla ni de volver a mostrar el perfil; un segundo pedido no cambia nada', () => {

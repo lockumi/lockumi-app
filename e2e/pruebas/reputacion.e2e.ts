@@ -31,7 +31,7 @@ const ALQ = [
 // Con la cuenta anterior: otro reclamo indebido que, si contara, le bajaría el puntaje al dueño. No cuenta (Legal, 25/10).
 const CON_VIEJA = cerrado(4, { inquilino: 20, dueno: 0, via: 'mediacion' }, { monto: 10 }, VIEJA)
 const BORRADO = 'Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.'
-const HORA = /\d{1,2}:\d\d [ap]\. m\./
+const HORA = /\d{1,2}:\d\d\s[ap]\.\sm\./
 
 async function cuenta(browser: Browser, email: string, rol: 'dueno' | 'inquilino', conSesion: boolean, alq: object[] = ALQ): Promise<Page> {
   const ctx = await browser.newContext({ baseURL: BASE, locale: 'es-CR', timezoneId: 'America/Costa_Rica', viewport: { width: 420, height: 900 } })
@@ -108,6 +108,13 @@ test.describe('reputación con dos cuentas (local, nunca producción)', () => {
     await vieja.goto('/#/crear'); await expect(vieja.getByText(BORRADO)).toHaveCount(0); await expect(vieja.getByRole('checkbox', { name: /1\.10-demo/ })).toHaveCount(0)
     await expect(vieja.getByRole('heading', { name: /Antes de/ })).toHaveCount(0)
     expect(await vieja.evaluate(e => localStorage.getItem('lockumi.reputacion.v1.' + e), VIEJA)).toBeNull()
+    // Sin REP-01 y sin alquileres (entró por «Ya tengo cuenta: entrar»): antes de crear, la pantalla previa de siempre (Legal, 3:47 p. m.).
+    const SIN = 'sin-alquileres@lockumi.com', sin = await cuenta(browser, SIN, 'dueno', false, [])
+    await sin.getByRole('button', { name: 'Ya tengo cuenta: entrar' }).click()
+    await sin.evaluate(({ SIN, v16 }) => localStorage.setItem('lockumi.usuario', JSON.stringify({ email: SIN, nombre: 'Ejemplo', metodo: 'correo', terminos: v16, privacidad: v16 })), { SIN, v16 })
+    await sin.reload(); await sin.goto('/#/crear')
+    await expect(sin.getByRole('heading', { name: 'Antes de crear tu cuenta: tu perfil de reputación' })).toBeVisible()
+    await expect(sin.getByRole('checkbox')).toHaveCount(2); for (const c of await sin.getByRole('checkbox').all()) await expect(c).not.toBeChecked()
     // Puntajes.
     await dueno.goto('/#/perfil/dueno'); await expect(dueno.getByText('4,2 de 5').first()).toBeVisible()          // solo le bajó el reclamo indebido (no el de la cuenta anterior)
     await inq.goto('/#/perfil/inquilino'); await expect(inq.getByText('4,6 de 5').first()).toBeVisible()        // solo le bajó el descuento
@@ -117,7 +124,7 @@ test.describe('reputación con dos cuentas (local, nunca producción)', () => {
     await inq.goto('/#/perfil/revision'); await inq.getByRole('button', { name: 'Pedir revisión' }).click()
     await expect(inq.getByText('Elige el alquiler que quieres que revisemos.')).toBeVisible()
     await inq.getByLabel('Alquiler', { exact: true }).selectOption({ label: 'Casa de prueba 2 · Inquilino' }); await inq.getByLabel('Qué está mal').fill('El descuento no corresponde.')
-    await inq.getByRole('button', { name: 'Pedir revisión' }).click(); await expect(inq.getByText(/Recibimos tu pedido el .* a las \d{1,2}:\d\d [ap]\. m\./)).toBeVisible()
+    await inq.getByRole('button', { name: 'Pedir revisión' }).click(); await expect(inq.getByText(/Recibimos tu pedido el .* a las \d{1,2}:\d\d\s[ap]\.\sm\./)).toBeVisible()
     await inq.goto('/#/perfil/inquilino'); await expect(inq.getByText('En revisión').first()).toBeVisible()
     await expect(inq.getByText('Pediste una revisión. Mientras la revisamos, tu puntaje público dice «En revisión».')).toBeVisible()
     // Vitrina opcional del dueño (3 alquileres cerrados → Dueños destacados).
@@ -146,7 +153,7 @@ test.describe('reputación con dos cuentas (local, nunca producción)', () => {
     await dueno.getByRole('link', { name: 'Cancelar' }).click(); await expect(dueno.getByRole('alertdialog')).toHaveCount(0)
     expect(await dueno.evaluate(e => localStorage.getItem('lockumi.borrado.v1.' + e), DUENO)).toBeNull()
     await dueno.getByRole('button', { name: 'Eliminar mi cuenta' }).click(); await dueno.getByRole('alertdialog').getByRole('button', { name: 'Eliminar mi cuenta' }).click()
-    await expect(dueno.getByText('Listo. Tu perfil ya no se muestra.')).toBeVisible(); await expect(dueno.getByText(/Lo pediste el .* a las \d{1,2}:\d\d [ap]\. m\. \(hora de Costa Rica\)\./)).toBeVisible()
+    await expect(dueno.getByText('Listo. Tu perfil ya no se muestra.')).toBeVisible(); await expect(dueno.getByText(/Lo pediste el .* a las \d{1,2}:\d\d\s[ap]\.\sm\. \(hora de Costa Rica\)\./)).toBeVisible()
     expect(await dueno.evaluate(e => localStorage.getItem('lockumi.reputacion.v1.' + e), DUENO)).not.toBeNull()   // nada se borra mientras siga abierto
     await dueno.goto('/#/perfil/dueno'); await expect(dueno.getByText('Ya pediste eliminar tu cuenta').first()).toBeVisible(); await expect(dueno.getByText('4,2 de 5')).toHaveCount(0)
     await dueno.goto('/#/'); await expect(dueno.getByText('Casa abierta').first()).toBeVisible()        // puede cerrar su alquiler

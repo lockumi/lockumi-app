@@ -44,7 +44,7 @@ describe('plazo: 5 días hábiles, contados desde el día siguiente al pedido (h
 describe('pedir el borrado (demo en este navegador)', () => {
   it('guarda el pedido con su fecha límite y es gratis (no pide nada más)', () => {
     const s = pedirBorrado(E, '2026-10-25T20:00:00Z')
-    expect(s).toEqual({ pedido: '2026-10-25T20:00:00Z', hora: '2:00 p. m.', abierto: false, limite: '2026-10-31T05:59:59.999Z', conPerfil: false })
+    expect(s).toEqual({ pedido: '2026-10-25T20:00:00Z', hora: '2:00\u00a0p.\u00a0m.', abierto: false, limite: '2026-10-31T05:59:59.999Z', conPerfil: false })
     expect(solicitudBorrado(E)).toEqual(s)
   })
   it('desde el pedido, el perfil de reputación ya no se muestra', () => {

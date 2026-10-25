@@ -73,7 +73,7 @@ describe('TEXTOS (literales de Legal)', () => {
   })
   it('nombre visible: el nombre (también compuesto) y la inicial del apellido; el error de largo solo por largo', async () => {
     const { validarNombre } = await import('../consentimiento'), { UI } = await import('../textos')
-    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R')).toBeNull()
+    expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R.')).toBeNull()
     expect(validarNombre('Ana María V.')).toBeNull(); expect(validarNombre('Ana María Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura')).toBe(UI.errNombre)
     expect(validarNombre('Maximilianoalejandrotomasito V.')).toBe(UI.errNombreLargo)
   })
