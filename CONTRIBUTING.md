@@ -81,6 +81,8 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Textos de Legal con `// LEGAL: revisado (24/10)`; textos propios con `// LEGAL: revisar`.
 - Para ver las pantallas nuevas en local: `VITE_TRUSTLESS=1 VITE_PRUEBA_COMPLETA=1 npm run dev`. En pruebas: `vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')`.
 - Colores nuevos solo en `src/prueba/prueba.css` (texto café sobre el degradado #FFB08A → #FF6B35; nunca texto blanco sobre naranja). Sin animaciones ni ilustraciones.
+- Botones de red: usa `useProceso` de `src/proceso.tsx` (no se toca dos veces, muestra el avance y el error). Los mensajes de acción no cambian.
+- Simulador de días: los avisos salen al adelantar el reloj de la demo (`src/prueba/sincronizar.ts`); no hay tareas en el servidor.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
 ## Proponer cambios

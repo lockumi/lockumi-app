@@ -162,11 +162,11 @@ describe('aviso v2: textos aprobados por Legal (23/10) y montos del reparto real
   it('error de red: «No se pudo completar» con el texto A12 sin cambios (el mismo de services/escrow.ts); sin acción', () => {
     const e = al.alertaErrorRed(); expect(e).toMatchObject({ tipo: 'error', titulo: 'No se pudo completar', hecho: al.ERROR_RED }); expect(e.accion).toBeUndefined()
     expect(leer('../services/escrow.ts')).toContain(`'${al.ERROR_RED}'`)
-    const d = leer('../screens/Detalle.tsx'); expect(d).toContain('if (m === ERROR_RED) avisar(alertaErrorRed())')
+    const d = leer('../proceso.tsx'); expect(d).toContain('if (m === ERROR_RED) avisar(alertaErrorRed())')   // useProceso se movió a src/proceso.tsx (PR 4)
   })
   it('los textos nuevos del aviso v2 están marcados «LEGAL: revisado el 23/10»', () => {
     const src = leer('../alertas.ts').split('\n')
-    for (const l of src.filter(l => /^\s+linea: \{/.test(l))) expect(l).toMatch(/LEGAL: revisado (el 23\/10|\(24\/10\))/)
+    for (const l of src.filter(l => /^\s+linea: \{/.test(l))) expect(l).toMatch(/LEGAL: revisado (el 23\/10|\(24\/10\))|LEGAL: revisar · prueba completa/)   // prueba completa: detrás del interruptor, Legal los revisa antes del PR 10
   })
 })
 

@@ -30,16 +30,19 @@ export function datosAviso(a: Alquiler, p: Plantilla): DatosAviso {
 }
 export const contenido = (a: Alquiler, p: Plantilla) => textoAviso(p, datosAviso(a, p))
 
-/** Hora de entrega de los días 1, 4 y 6 dentro de un plazo (con plazos cortos de prueba, proporcional). */
-const horaDia = (inicio: number, ms: number, dia: number) => inicio + ms * (dia - 1) / 7
+/** Hora de entrega de los días 1, 4 y 6 dentro de un plazo. El día 1 empieza con el plazo; los días 4 y 6 se cuentan hacia atrás
+ *  desde el vencimiento (el 6 es la víspera del último día), así «vence mañana» sigue siendo cierto si el plazo se movió por un
+ *  domingo o feriado. Con plazos cortos de prueba (no en días enteros), proporcional. */
+const horaDia = (inicio: number, ms: number, dia: number, fin = inicio + ms) =>
+  dia === 1 ? inicio : ms % DIA_MS === 0 ? fin - (8 - dia) * DIA_MS : inicio + ms * (dia - 1) / 7
 export interface Debido { id: Plantilla; para: Rol; dia: Aviso['dia']; hora: number }
 /** Avisos que ya deberían estar entregados a la hora `ahora` y todavía no lo están. */
 export function debidos(a: Alquiler, ahora: number): Debido[] {
   const r: Debido[] = [], ms = plazoMs(a)
   const pd = plazoDueno(a)
-  if (a.estado === 'ventana_reclamo' && pd && a.entrega) for (const d of DIAS_AVISO) { const h = horaDia(pd.inicio, ms, d); if (h <= ahora && h < pd.fin) r.push({ id: `dueno-${d}`, para: 'dueno', dia: d, hora: h }) }
+  if (a.estado === 'ventana_reclamo' && pd && a.entrega) for (const d of DIAS_AVISO) { const h = horaDia(pd.inicio, ms, d, pd.fin); if (h <= ahora && h < pd.fin) r.push({ id: `dueno-${d}`, para: 'dueno', dia: d, hora: h }) }
   const pi = plazoInquilino(a)
-  if (a.estado === 'reclamo' && pi) for (const d of DIAS_AVISO) { const h = horaDia(pi.inicio, ms, d); if (h <= ahora && h < pi.fin) r.push({ id: `reclamo-${d}`, para: 'inquilino', dia: d, hora: h }) }
+  if (a.estado === 'reclamo' && pi) for (const d of DIAS_AVISO) { const h = horaDia(pi.inicio, ms, d, pi.fin); if (h <= ahora && h < pi.fin) r.push({ id: `reclamo-${d}`, para: 'inquilino', dia: d, hora: h }) }
   if (a.estado === 'en_curso') { const h = finAlquiler(a) - 5 * DIA_MS; if (h <= ahora) r.push({ id: 'reparacion-5', para: 'inquilino', dia: 'reparacion', hora: h }) }
   return r.filter(x => !(a.avisos ?? []).some(v => v.id === x.id))
 }

@@ -4,3 +4,10 @@
 .boton--pc:hover{background:linear-gradient(135deg,#FFB08A,#E8531F)}
 .anexo__b{border:0;padding:0;margin:0;display:grid;gap:8px}
 .cuadro-real{border:1.5px dashed var(--borde);border-radius:var(--r-campo);padding:var(--s4);background:var(--alterna)}
+.fila-botones{display:flex;flex-wrap:wrap;gap:8px}
+.aviso-app{border:1.5px solid var(--linea);border-radius:var(--r-campo);padding:var(--s3) var(--s4);background:var(--glass-fuerte)}
+.aviso-app summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.aviso-app[open] summary{margin-bottom:var(--s2)}
+.cuenta-texto{font-weight:600}
+.simulador{border-top:1px solid var(--linea);padding-top:var(--s4)}
+.confirmar{border:1.5px solid var(--cafe);border-radius:var(--r-campo);padding:var(--s4)}
