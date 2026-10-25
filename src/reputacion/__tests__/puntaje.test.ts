@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Alquiler, Resultado } from '../../types'
 import { cuentaParaPuntaje, fraccionDescontada, valorDelAlquiler, calcularPuntaje, formatoPuntaje, lineaPublica, insignias, tieneLlave,
-  zonaVitrina, ordenarVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON } from '../puntaje'
+  zonaVitrina, ordenarVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, UMBRAL_CASI_TODO, fraccionReclamoDevuelta, reclamoIndebido, eventoNegativo } from '../puntaje'
 
 const DIA = 86_400_000, AHORA = Date.parse('2026-11-16T16:00:00Z')
 const hace = (d: number) => new Date(AHORA - d * DIA).toISOString()
@@ -159,5 +159,59 @@ describe('tope de la ley (Ley 8968, art. 6.1; sección E, medida a): un descuent
   })
   it('no hay ningún otro plazo: un alquiler sin descuento de hace 12 años sigue contando', () => {
     expect(calcularPuntaje([alq({ resultado: res(0, 800, 'automatico', 365 * 12) }), alq(), alq()], 'dueno', AHORA).cerrados).toBe(3)
+  })
+})
+
+// Decisión de Katherine (25/10/2026, 2:10 p. m.): al dueño solo le baja un reclamo indebido (terminó en mediación o acuerdo devolviendo
+// al inquilino todo o casi todo lo reclamado); al inquilino solo un descuento del depósito. Lo negativo se borra a los 10 años.
+describe('reclamo justo e indebido (decisión del 25/10/2026)', () => {
+  const rec = (monto: number) => ({ monto, motivo: 'Daños', fotos: [], fecha: hace(20) })
+  const cerrado = (reclamado: number, alDueno: number, via: Resultado['via'], d = 10) => alq({ reclamo: rec(reclamado), resultado: res(alDueno, 800 - alDueno, via, d) })
+  it('descuento justo: al dueño no le baja; al inquilino sí', () => {
+    const a = cerrado(400, 400, 'acuerdo')
+    expect(reclamoIndebido(a, AHORA)).toBe(false)
+    expect(valorDelAlquiler(a, 'dueno', AHORA)).toBe(5)
+    expect(valorDelAlquiler(a, 'inquilino', AHORA)).toBeCloseTo(2.5)
+  })
+  it('reclamo indebido en la mediación (se devolvió todo lo reclamado): al dueño le baja; al inquilino no', () => {
+    const a = cerrado(400, 0, 'mediacion')
+    expect(fraccionReclamoDevuelta(a)).toBe(1)
+    expect(reclamoIndebido(a, AHORA)).toBe(true)
+    expect(valorDelAlquiler(a, 'dueno', AHORA)).toBeCloseTo(2.5)   // baja en proporción a lo reclamado sin razón: 400 de 800 del depósito
+    expect(valorDelAlquiler(a, 'inquilino', AHORA)).toBe(5)
+  })
+  it('también si terminó en un acuerdo', () => { expect(reclamoIndebido(cerrado(400, 0, 'acuerdo'), AHORA)).toBe(true) })
+  it('solo cuenta un reclamo que terminó en mediación o acuerdo', () => {
+    expect(reclamoIndebido(cerrado(400, 0, 'automatico'), AHORA)).toBe(false)
+    expect(reclamoIndebido(cerrado(400, 0, 'devuelto'), AHORA)).toBe(false)
+    expect(reclamoIndebido(cerrado(400, 0, 'simulacion'), AHORA)).toBe(false)
+    expect(reclamoIndebido(alq({ resultado: res(0, 800, 'acuerdo') }), AHORA)).toBe(false)   // sin reclamo
+  })
+  it('borde del umbral «casi todo»: justo en el umbral cuenta; un poco menos, no', () => {
+    expect(UMBRAL_CASI_TODO).toBeGreaterThan(0.5); expect(UMBRAL_CASI_TODO).toBeLessThanOrEqual(1)
+    const enUmbral = 400 * (1 - UMBRAL_CASI_TODO)   // al dueño le queda solo lo que permite el umbral
+    expect(fraccionReclamoDevuelta(cerrado(400, enUmbral, 'mediacion'))).toBeCloseTo(UMBRAL_CASI_TODO)
+    expect(reclamoIndebido(cerrado(400, enUmbral, 'mediacion'), AHORA)).toBe(true)
+    expect(reclamoIndebido(cerrado(400, enUmbral + 4, 'mediacion'), AHORA)).toBe(false)   // 1 % menos de lo reclamado devuelto
+  })
+  it('con la comisión de la red los montos no suman el depósito: se usa la proporción', () => {
+    const a = alq({ reclamo: rec(400), resultado: { dueno: 0, inquilino: 797.6, via: 'mediacion', fecha: hace(10) } })
+    expect(reclamoIndebido(a, AHORA)).toBe(true)
+  })
+  it('lo negativo se borra a los 10 años: el reclamo indebido deja de bajarle al dueño', () => {
+    const viejo = cerrado(400, 0, 'mediacion', 3653 + 1)
+    expect(reclamoIndebido(viejo, AHORA)).toBe(false); expect(valorDelAlquiler(viejo, 'dueno', AHORA)).toBe(5)
+    expect(reclamoIndebido(cerrado(400, 0, 'mediacion', 3653 - 1), AHORA)).toBe(true)
+  })
+  it('evento negativo por papel', () => {
+    expect(eventoNegativo(cerrado(400, 400, 'acuerdo'), 'dueno', AHORA)).toBe(false)
+    expect(eventoNegativo(cerrado(400, 400, 'acuerdo'), 'inquilino', AHORA)).toBe(true)
+    expect(eventoNegativo(cerrado(400, 0, 'mediacion'), 'dueno', AHORA)).toBe(true)
+    expect(eventoNegativo(cerrado(400, 0, 'mediacion'), 'inquilino', AHORA)).toBe(false)
+  })
+  it('Llave Lockumi del dueño: un descuento justo no la quita; un reclamo indebido en 12 meses, sí', () => {
+    const diez = () => Array.from({ length: 10 }, () => alq())
+    expect(tieneLlave([...diez(), cerrado(8, 8, 'acuerdo', 100)], 'dueno', AHORA)).toBe(true)
+    expect(tieneLlave([...diez(), cerrado(8, 0, 'mediacion', 100)], 'dueno', AHORA)).toBe(false)
   })
 })
