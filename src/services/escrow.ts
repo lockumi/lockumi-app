@@ -61,7 +61,7 @@ async function depositarPropio(a: Alquiler, monto: number, guardar: Guardar, ava
       avance('Preparando al dueño de prueba…')
       const d = await solo.prepararDueno(a.id); guardar({ duenoTrustline: d.trustlineTx ?? undefined }, { dueno: d.dueno })
       avance('Creando la cuenta segura del depósito…')
-      const e = await solo.desplegar(a.id, g, monto, 'propia'); escrow = e.escrow; guardar({ escrow: e.tx }, { escrow })
+      const e = await solo.desplegar(a.id, g, monto, 'propia'); escrow = e.escrow; guardar({ escrow: e.tx }, { escrow, permiso: e.permiso })
     }
     let xdr: string
     try { xdr = (await solo.fondearPropio(escrow, g)).unsignedXdr }
@@ -107,7 +107,7 @@ const real: EscrowService = {
         avance('Creando la cuenta segura del depósito…')
         // Con «origen: lockumi» el servidor vuelve a completar la cuenta de prueba justo antes de revisar el saldo (no se envía nada si ya alcanza).
         const e = await solo.desplegar(a.id, g, monto, 'lockumi'); escrow = e.escrow
-        guardar({ trustline: e.trustlineTx ?? undefined, compra: e.compraTx ?? undefined, escrow: e.tx }, { escrow })
+        guardar({ trustline: e.trustlineTx ?? undefined, compra: e.compraTx ?? undefined, escrow: e.tx }, { escrow, permiso: e.permiso })
       }
       avance('Guardando el depósito en la cuenta segura…')
       try { const f = await solo.fondearPrueba(escrow); guardar({ compra: f.compraTx ?? undefined, deposito: f.tx }) }
@@ -136,14 +136,15 @@ const real: EscrowService = {
     const red = a.red ?? { txs: {} }; if (red.txs.disputa) return
     if (!red.escrow) throw new solo.ErrorSolo('Este alquiler no tiene cuenta segura en la red de prueba.')
     avance('Registrando el reclamo en la cuenta segura…')
-    try { const r = await solo.disputar(red.escrow); guardar({ disputa: r.tx ?? 'ya-disputado' }) } catch (x) { throw claro(x) }
+    try { const r = await solo.disputar(red.escrow, solo.autorizacion(red)); guardar({ disputa: r.tx ?? 'ya-disputado' }) } catch (x) { throw claro(x) }
   },
   async resolver(a, alDueno, guardar, avance) {
-    const red = a.red ?? { txs: {} }; const m = montoDeposito(a), d = r7(Math.min(Math.max(alDueno, 0), m))
+    // Repartos de la fase 1: el dueño recibe entre 0 y lo reclamado, y lo reclamado no supera el depósito (el servidor lo vuelve a revisar).
+    const red = a.red ?? { txs: {} }; const m = montoDeposito(a), reclamado = r7(Math.min(a.reclamo?.monto ?? m, m)), d = r7(Math.min(Math.max(alDueno, 0), reclamado))
     if (!red.txs.resolucion) {
       if (!red.escrow) throw new solo.ErrorSolo('Este alquiler no tiene cuenta segura en la red de prueba.')
       avance('Repartiendo el depósito en la red de prueba…')
-      try { const r = await solo.resolver(red.escrow, d); guardar({ resolucion: r.tx ?? 'ya-resuelto' }) } catch (x) { throw claro(x) }
+      try { const r = await solo.resolver(red.escrow, d, reclamado, solo.autorizacion(red)); guardar({ resolucion: r.tx ?? 'ya-resuelto' }) } catch (x) { throw claro(x) }
     }
     return { dueno: neto(d), inquilino: neto(r7(m - d)) }
   },

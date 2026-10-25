@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
-import { atenderSolo, conReintento, hmacSha256, configSolo, duenoDe, inquilinoPruebaDe, limitar, reiniciarLimites, type Entorno, type Escrow } from '../../../api/_lib/solo'
+import { atenderSolo, conReintento, hmacSha256, configSolo, duenoDe, inquilinoPruebaDe, permisoDe, limitar, reiniciarLimites, type Entorno, type Escrow } from '../../../api/_lib/solo'
 import { PASSPHRASE_TESTNET, PASSPHRASE_MAINNET, TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, exigirTestnet, USDC } from '../../../api/_lib/red'
 import { TEXTO_ONCHAIN } from '../../../api/_lib/tw'
 
@@ -231,23 +231,24 @@ describe('fase 1 · validaciones contra el escrow', () => {
 
 describe('parte 2 · reclamo y reparto en la cuenta segura', () => {
   const enviadas = (s: ReturnType<typeof simular>) => s.llamadas.filter(l => l.url.endsWith('/helper/send-transaction')).map(l => TransactionBuilder.fromXDR(String(l.cuerpo!.signedXdr), Networks.TESTNET) as unknown as { source: string })
+  const PER = { permiso: permisoDe(C, ESC) }
   it('el reclamo lo firma el dueño de prueba y solo con el depósito completo', async () => {
-    await expect(ir({ accion: 'disputar', escrow: ESC })).rejects.toThrow(/depósito completo/)
-    const s = simular(escrow({ balance: 2 })); expect((await ir({ accion: 'disputar', escrow: ESC }, s)).tx).toMatch(/^[0-9a-f]{64}$/)
+    await expect(ir({ accion: 'disputar', escrow: ESC, ...PER })).rejects.toThrow(/depósito completo/)
+    const s = simular(escrow({ balance: 2 })); expect((await ir({ accion: 'disputar', escrow: ESC, ...PER }, s)).tx).toMatch(/^[0-9a-f]{64}$/)
     expect(enviadas(s).map(t => t.source)).toEqual([DUENO.publicKey()])
-    expect(await ir({ accion: 'disputar', escrow: ESC }, simular(escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })))).toEqual({ yaDisputado: true })
+    expect(await ir({ accion: 'disputar', escrow: ESC, ...PER }, simular(escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })))).toEqual({ yaDisputado: true })
   })
   it('el reparto lo firma la plataforma, suma el saldo y no se repite', async () => {
-    await expect(ir({ accion: 'resolver', escrow: ESC, alDueno: 1 }, simular(escrow({ balance: 2 })))).rejects.toThrow(/reclamo abierto/)
+    await expect(ir({ accion: 'resolver', escrow: ESC, alDueno: 1, reclamado: 2, ...PER }, simular(escrow({ balance: 2 })))).rejects.toThrow(/reclamo abierto/)
     const disputado = escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })
-    await expect(ir({ accion: 'resolver', escrow: ESC, alDueno: 2.5 }, simular(disputado))).rejects.toThrow(/entre 0 y 2/)
-    const s = simular(disputado); const r = await ir({ accion: 'resolver', escrow: ESC, alDueno: 0.4 }, s)
+    await expect(ir({ accion: 'resolver', escrow: ESC, alDueno: 2.5, reclamado: 2, ...PER }, simular(disputado))).rejects.toThrow(/más de lo que reclamó/)
+    const s = simular(disputado); const r = await ir({ accion: 'resolver', escrow: ESC, alDueno: 0.4, reclamado: 2, ...PER }, s)
     expect(r).toMatchObject({ alDueno: 0.4, alInquilino: 1.6 }); expect(enviadas(s).map(t => t.source)).toEqual([P.publicKey()])
     const cuerpo = s.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!
     expect(cuerpo.distributions).toEqual([{ address: DUENO.publicKey(), amount: 0.4 }, { address: INQ.publicKey(), amount: 1.6 }])
-    const todo = simular(disputado); await ir({ accion: 'resolver', escrow: ESC, alDueno: 0 }, todo)
+    const todo = simular(disputado); await ir({ accion: 'resolver', escrow: ESC, alDueno: 0, reclamado: 2, ...PER }, todo)
     expect(todo.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!.distributions).toEqual([{ address: INQ.publicKey(), amount: 2 }])
-    expect(await ir({ accion: 'resolver', escrow: ESC, alDueno: 1 }, simular(escrow({ balance: 0, flags: { disputed: true, released: false, resolved: true } })))).toEqual({ yaResuelto: true })
+    expect(await ir({ accion: 'resolver', escrow: ESC, alDueno: 1, reclamado: 2, ...PER }, simular(escrow({ balance: 0, flags: { disputed: true, released: false, resolved: true } })))).toEqual({ yaResuelto: true })
   })
 })
 describe('parte 2 · concurrencia (tx_bad_seq)', () => {
@@ -287,8 +288,55 @@ describe('modo con dos personas (LOCKUMI_DOS_PERSONAS=1): la persona mediadora r
   it('el reparto lo firma la persona mediadora', async () => {
     const e = escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })
     e.roles.disputeResolver = M.publicKey()
-    const s = simular(e); await atenderSolo(ENV2, { accion: 'resolver', escrow: ESC, alDueno: 0.4 } as never, '1.2.3.4', s.f, { espera: 0 })
+    const s = simular(e); await atenderSolo(ENV2, { accion: 'resolver', escrow: ESC, alDueno: 0.4, reclamado: 1, permiso: permisoDe(configSolo(ENV2), ESC) } as never, '1.2.3.4', s.f, { espera: 0 })
     expect(s.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!.disputeResolver).toBe(M.publicKey())
     expect(enviadas(s).map(t => t.source)).toEqual([M.publicKey()])
+  })
+})
+
+// Legal (25/10, 1:24 a. m.): /api/solo «resolver» solo para quien está autorizado y solo con repartos de la fase 1.
+// Modelo de un aparato: el navegador que creó el depósito. Prueba de eso: el «permiso» que devuelve «desplegar» (HMAC de la semilla
+// del servidor con el escrow) o, en los depósitos con «USDC de prueba de Lockumi», el token de la cuenta de prueba que recibe el depósito.
+// Repartos de la fase 1 (Términos 1.7-demo 6.3 e y f, 6.6, 6.7; repartoValido): el dueño recibe entre 0 y lo reclamado, y lo
+// reclamado no supera el depósito; el inquilino recibe el resto.
+describe('A1 · /api/solo resolver: solo el aparato autorizado y solo repartos de la fase 1', () => {
+  const disputado = () => escrow({ balance: 2, flags: { disputed: true, released: false, resolved: false } })
+  const resolvio = (s: ReturnType<typeof simular>) => s.llamadas.some(l => l.url.endsWith('resolve-dispute'))
+  const TOKEN = 'ab'.repeat(32)
+  it('«desplegar» devuelve el permiso de ese escrow (64 hex, distinto por escrow, sin llaves ni semilla)', async () => {
+    const r = await ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 2 })
+    expect(r.permiso).toBe(permisoDe(C, ESC)); expect(r.permiso).toMatch(/^[0-9a-f]{64}$/)
+    expect(permisoDe(C, 'C'.padEnd(56, 'A'))).not.toBe(r.permiso)
+    expect(JSON.stringify(r)).not.toContain(SEED); expect(JSON.stringify(r)).not.toContain(P.secret())
+    expect(permisoDe(configSolo({ ...ENV, LOCKUMI_DEMO_SEED: 'otra-semilla-'.padEnd(48, 'y') }), ESC)).not.toBe(r.permiso)
+  })
+  it('sin permiso ni token, o con uno ajeno, no reparte (403) y no llama a Trustless Work', async () => {
+    for (const auth of [{}, { permiso: '0'.repeat(64) }, { permiso: permisoDe(C, 'C'.padEnd(56, 'B')) }, { token: TOKEN }, { permiso: 'x' }]) {
+      const s = simular(disputado())
+      await expect(ir({ accion: 'resolver', escrow: ESC, alDueno: 0.4, reclamado: 1, ...auth }, s)).rejects.toMatchObject({ estado: 403 })
+      expect(resolvio(s)).toBe(false)
+    }
+  })
+  it('con el token de la cuenta de prueba que recibe el depósito (depósitos ya creados con «USDC de prueba de Lockumi»), sí reparte', async () => {
+    const e = disputado(); e.roles.receiver = inquilinoPruebaDe(C, TOKEN).publicKey()
+    const s = simular(e); const r = await ir({ accion: 'resolver', escrow: ESC, alDueno: 0.5, reclamado: 1, token: TOKEN }, s)
+    expect(r).toMatchObject({ alDueno: 0.5, alInquilino: 1.5 }); expect(resolvio(s)).toBe(true)
+  })
+  it('el dueño nunca recibe más de lo reclamado; lo reclamado es mayor que 0 y no supera el depósito', async () => {
+    const PER = { permiso: permisoDe(C, ESC) }
+    for (const [alDueno, reclamado] of [[1.5, 1], [-0.1, 1], [0.5, 0], [0.5, 2.5], [0.5, undefined], [0.5, Number.NaN], [0.12345678, 1]] as const) {
+      const s = simular(disputado())
+      await expect(ir({ accion: 'resolver', escrow: ESC, alDueno, reclamado, ...PER }, s)).rejects.toMatchObject({ estado: 400 })
+      expect(resolvio(s)).toBe(false)
+    }
+    for (const [alDueno, reclamado] of [[1, 1], [0, 1], [2, 2], [0.25, 0.5]] as const) {
+      const s = simular(disputado()); await ir({ accion: 'resolver', escrow: ESC, alDueno, reclamado, ...PER }, s); expect(resolvio(s)).toBe(true)
+    }
+  })
+  it('abrir el reclamo (disputar) también exige el permiso o el token: nadie más bloquea un depósito ajeno', async () => {
+    const s = simular(escrow({ balance: 2 }))
+    await expect(ir({ accion: 'disputar', escrow: ESC }, s)).rejects.toMatchObject({ estado: 403 })
+    expect(s.llamadas.some(l => l.url.endsWith('dispute-escrow'))).toBe(false)
+    expect((await ir({ accion: 'disputar', escrow: ESC, permiso: permisoDe(C, ESC) }, simular(escrow({ balance: 2 })))).tx).toMatch(/^[0-9a-f]{64}$/)
   })
 })
