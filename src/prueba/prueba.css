@@ -11,3 +11,6 @@
 .cuenta-texto{font-weight:600}
 .simulador{border-top:1px solid var(--linea);padding-top:var(--s4)}
 .confirmar{border:1.5px solid var(--cafe);border-radius:var(--r-campo);padding:var(--s4)}
+.rubro{border:1.5px solid var(--linea);border-radius:var(--r-campo);padding:var(--s3) var(--s4)}
+.antes-despues{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rubros-lista{list-style:none;padding:0;margin:0}

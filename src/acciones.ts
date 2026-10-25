@@ -6,12 +6,13 @@ import { NOMBRE_PASO, ORDEN, esHash } from './services/comprobantes'
 import { unaVez } from './services/pasos'
 import { firmar as firmarLocal, ambos, NOMBRE, plazoMs, textoPlazo } from './flujo'
 import { usd } from './ui'
-import type { Alquiler, Foto, Rol } from './types'
+import type { Alquiler, Foto, Rol, Rubro, RespuestaRubro } from './types'
 import { modoServidor, modoTrustless, modoSolo } from './servidor/config'
 import { trustless } from './services/trustless'
 import { servidor } from './servidor/repositorio'
 import { pruebaCompleta } from './prueba/interruptor'
 import { registrarEntrega, finVentana } from './prueba/dueno'
+import { nuevoReclamo, responderRubros as responderLocal, votarPropuesta as votarLocal, silencio } from './prueba/reclamos'
 
 type Etapa = 'contrato' | 'entrada' | 'salida'
 const iso = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -23,6 +24,11 @@ export interface Acciones {
   firmar(a: Alquiler, etapa: Etapa, rol: Rol): Promise<void>
   /** Prueba completa (B.4): devolver todo el depósito ahora, después de la confirmación. */
   devolverTodo?(a: Alquiler, avance?: Avance): Promise<void>
+  /** Prueba completa (6.4): reclamo por rubros; respuesta del inquilino por rubro; propuesta automática (6.7); regla del silencio (6.5 c). */
+  reclamarRubros?(a: Alquiler, rubros: Rubro[], avance?: Avance): Promise<void>
+  responderRubros?(a: Alquiler, resp: Record<string, RespuestaRubro>, avance?: Avance): Promise<void>
+  votarPropuesta?(a: Alquiler, rol: Rol, si: boolean, avance?: Avance): Promise<void>
+  aplicarSilencio?(a: Alquiler, avance?: Avance): Promise<void>
   marcar(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, item: number, estado: 'bien' | 'detalle'): Promise<void>
   nota(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, nota: string): Promise<void>
   agregarFoto(a: Alquiler, etapa: 'entrada' | 'salida', cuarto: number, f: Foto): Promise<void>
@@ -127,6 +133,45 @@ const local: Acciones = {
       // LEGAL: revisar · historial
       y.historial.push({ fecha: iso(y), texto: `El dueño tocó «Todo bien, devolver»: ${usd(r.inquilino)} devueltos al inquilino` })
     })
+  }),
+  // Prueba completa · reclamo por rubros: primero la disputa en la cuenta segura, después cambia la pantalla.
+  reclamarRubros: (a, rubros, avance = nada) => paso(a, 'reclamo', async x => {
+    if (x.estado !== 'ventana_reclamo' || x.reclamo) return
+    await escrow.disputar(x, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => { if (y.estado === 'ventana_reclamo' && !y.reclamo) nuevoReclamo(y, rubros, ahoraDe(y)) })
+  }),
+  responderRubros: (a, resp, avance = nada) => paso(a, 'reparto', async x => {
+    if (x.estado !== 'reclamo' || !x.reclamo || x.reclamo.respuestas) return
+    const prueba = structuredClone(x)
+    if (responderLocal(prueba, resp, ahoraDe(x)) === 'propuesta') { store.cambiar(a.id, y => { if (y.estado === 'reclamo' && !y.reclamo!.respuestas) responderLocal(y, resp, ahoraDe(y)) }); return }
+    const r = await escrow.resolver(x, x.reclamo.monto, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; responderLocal(y, resp, ahoraDe(y)); y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
+      y.historial.push({ fecha: iso(y), texto: `El inquilino aceptó el reclamo: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+  }),
+  votarPropuesta: (a, rol, si, avance = nada) => paso(a, 'reparto', async x => {
+    if (x.estado !== 'reclamo' || !x.reclamo?.propuesta || x.reclamo.propuesta[rol]) return
+    const que = votarLocal(structuredClone(x), rol, si, ahoraDe(x))
+    if (que !== 'aplicar') {
+      // LEGAL: revisar · historial
+      store.cambiar(a.id, y => { if (y.estado !== 'reclamo' || y.reclamo!.propuesta![rol]) return; if (votarLocal(y, rol, si, ahoraDe(y)) === 'mediacion') { y.estado = 'mediacion'; y.historial.push({ fecha: iso(y), texto: 'No hubo acuerdo con la propuesta automática. Pasa a la Mediación Lockumi (demo)' }) } })
+      return
+    }
+    const r = await escrow.resolver(x, x.reclamo.propuesta.alDueno, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; votarLocal(y, rol, si, ahoraDe(y)); y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
+      // LEGAL: revisar · historial
+      y.historial.push({ fecha: iso(y), texto: `Los dos aceptaron la propuesta automática: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+  }),
+  aplicarSilencio: (a, avance = nada) => paso(a, 'reparto', async x => {
+    const s = silencio(x, ahoraDe(x)); if (!s) return
+    if (s.tipo === 'mediacion') {
+      // LEGAL: revisar · historial (6.5 c: el silencio no es aceptación)
+      store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'mediacion'; y.historial.push({ fecha: iso(y), texto: `El inquilino no respondió en 7 días naturales. ${s.motivo} Pasa a la Mediación Lockumi (demo)` }) })
+      return
+    }
+    const r = await escrow.resolver(x, s.alDueno, guardarEn(a.id), avance)
+    store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'propuesta', fecha: iso(y) }
+      // LEGAL: revisar · historial
+      y.historial.push({ fecha: iso(y), texto: `Se aplicó la propuesta automática (Regla 6.5.1): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
   }),
   decidir: (a, aDueno, _motivo, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'mediacion') return

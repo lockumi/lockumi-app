@@ -267,6 +267,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**24 de octubre de 2026 (PR 5, paso 9, sin cambios visibles)**
+- Reclamo por rubros de la prueba completa (detrás del interruptor): monto por rubro con motivo, fotos y factura o precio de referencia; respuesta del inquilino por rubro con cotización; propuesta automática simulada (sin inteligencia artificial) que solo se aplica si los dos aceptan; regla del silencio (6.5 c). Ver [docs/prueba-completa.md](docs/prueba-completa.md).
+
 **24 de octubre de 2026 (PR 4, sin cambios visibles)**
 - Flujo del dueño de la prueba completa (detrás del interruptor): «Recibí la casa», inicio automático a los 2 días, plazo con domingos y feriados, avisos en la app días 1, 4 y 6, «Todo bien, devolver» con confirmación y simulador de días. Ver [docs/prueba-completa.md](docs/prueba-completa.md).
 
