@@ -21,7 +21,8 @@ export const TEXTO_CERRADO_AUTO = 'El dueño no aprobó ni reclamó dentro de su
 /** Comisión de Trustless Work en la red de prueba: 0,3 % también al resolver una disputa (medido en testnet el 24/10/2026:
  *  resolve_dispute 3a1c92a7…, eeca5f43…, cd92c786…: 1 USDC → 0,003 a la cuenta de comisión de Trustless Work). */
 const COMISION_TW = 0.003
-const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 7 })
+// Legal 25/10 5:09 p. m. (punto 8): hora en 12 h («4:44 p. m.», espacios duros) y montos con 2 decimales («0,50»).
+const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** «800 USDC de prueba» (Legal 24/10: los montos dicen «de prueba»). */
 export const montoPrueba = (n: number) => `${fmt(n)} USDC de prueba`
 /** Lo que llega de verdad al inquilino en la devolución automática (100 % menos la comisión de la red de prueba). */
@@ -59,9 +60,9 @@ export const TEXTO_PAGO_DOS = 'Tu cuenta Lockumi te pedirá confirmar el pago en
 // Aprobado por Legal (25/10, 3:34 a. m.) · contrato y «En curso» de C: quién maneja las cuentas y cuándo reparte el servidor.
 export const TEXTO_SOLOS_DOS = 'Ni el dueño ni el inquilino pueden tomarlo solos. Lockumi maneja en su servidor la cuenta que libera el depósito y la cuenta mediadora, y el servidor solo reparte cuando las dos partes aceptan el mismo reparto.'
 export const TEXTO_ESCROW_DOS = 'El depósito queda guardado en una cuenta de garantía (escrow) de Trustless Work en la red de prueba, y se libera según las reglas de los Términos (cláusulas 5 y 6).'
-// C: «Qué sigue» del reclamo; la propuesta automática solo se aplica si las dos partes la aceptan (Legal, 25/10, 2:53 a. m.; aprobado a las 3:16 a. m.)
-export const SIGUE_RECLAMO_DOS = { inquilino: 'Si no aceptas todo, verás una propuesta automática (simulación), que solo se aplica si las dos partes la aceptan. Si no hay acuerdo, pasa a la Mediación Lockumi (demo).',
-  dueno: 'Si no acepta todo, verán una propuesta automática (simulación), que solo se aplica si las dos partes la aceptan. Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }
+// C: «Qué sigue» del reclamo. Texto literal de Legal (25/10, 5:09 p. m., punto 6): en C no hay propuesta automática (6.5.1 d).
+export const SIGUE_RECLAMO_DOS = { inquilino: 'Si no aceptas el reclamo o no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan.',
+  dueno: 'Si el inquilino no acepta el reclamo o no responde a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan.' }
 // C: al vencer el plazo del inquilino, el servidor pasa el caso a la mediación (6.5.1 d); no aplica ninguna regla (Legal, 25/10, 3:16 a. m.)
 export const TEXTO_SILENCIO_DOS = 'Venció el plazo para responder. El caso pasa a la Mediación Lockumi (demo).'
 // C: el expediente descarga los datos reales de la prueba (PDF armado en el navegador con este alquiler). Aprobado (25/10, 3:16 a. m.)

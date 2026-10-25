@@ -18,7 +18,9 @@ describe('Legal 25/10, 4:33 a. m.', () => {
   it('3) Privacidad: invitada como inquilino y «el correo de invitación de Lockumi»', async () => {
     const p = await raw('../../legal/v17/privacidad.md')
     expect(p).not.toContain('el papel de la persona invitada (dueño o inquilino)')
-    expect(p).toContain('Solo contiene quién invita, que la invitan como inquilino, un resumen')
+    // Legal 25/10, 5:09 p. m. (punto 5): :51 dice solo lo que trae la invitación (sin «monto y fechas»)
+    expect(p).toContain('Solo contiene quién invita, que la invitan como inquilino y un enlace para abrir la demo de Lockumi. **No incluye la dirección ni el nombre del lugar, ni fotos.**')
+    expect(p).not.toContain('monto y fechas')
     expect(p).toContain('{{correos: y que acepta recibir el correo de invitación de Lockumi}}')
   })
   it('6) «liberar» en el historial: USDC de prueba', async () => {

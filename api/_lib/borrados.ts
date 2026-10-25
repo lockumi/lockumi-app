@@ -6,11 +6,11 @@
 // Escenario C (B2): corrida diaria en vercel.json («crons», 09:00 UTC = 3:00 a. m. de Costa Rica). Sin CRON_SECRET responde 401 y
 // no hace nada. Antes de publicar: aplicar 20261025030000 y 20261025040000 (si no, lk_vencimientos falla y solo corren los borrados).
 import { servicio, rpc, borrarObjetos } from './supabase.js'
-import { procesarCorreos, type Resultado } from './correos-c.js'
+import { procesarCorreos, vencerMediaciones, type Resultado } from './correos-c.js'
 
 export const DIAS_MEDIACION = 30
 export interface Vencimientos { automatico: number; mediacion: number }
-export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; correos?: { enviados: number; omitidos: number; vencidas: number } | { error: string } }
+export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; vencidas?: number | { error: string }; correos?: { enviados: number; omitidos: number; vencidas: number } | { error: string } }
 
 export async function ejecutarBorrados(env: Record<string, string | undefined>, f: typeof fetch = fetch): Promise<ResultadoBorrados> {
   const s = servicio(env)
@@ -28,7 +28,9 @@ export async function ejecutarBorrados(env: Record<string, string | undefined>, 
     if (await rpc<boolean>(s, 'lk_marcar_mediacion_borrada', { p_contrato: c.contrato_id, p_dias: DIAS_MEDIACION }, f)) mediaciones++
   }
   const r: ResultadoBorrados = { invitaciones: invitaciones ?? 0, mediaciones, fallidos, vencimientos }
-  // Escenario C (docs/correos-c.md): con CORREOS_C=1, la corrida diaria vence la mediación (P-06) y envía los correos pendientes.
+  // Escenario C (docs/correos-c.md): la corrida diaria vence el plazo de la mediación (P-06) SIEMPRE, con o sin CORREOS_C (Legal 25/10,
+  // 5:09 p. m., punto 3; Vercel Hobby solo permite un cron diario). Con CORREOS_C=1, además envía los correos pendientes.
+  r.vencidas = await vencerMediaciones(env, {}, f).catch((e: unknown) => ({ error: e instanceof Error ? e.message : 'error' }))
   if (env.CORREOS_C === '1') r.correos = await procesarCorreos(env, {}, f).then((x: Resultado) => ({ enviados: x.enviados.length, omitidos: x.omitidos.length, vencidas: x.vencidas }), (e: unknown) => ({ error: e instanceof Error ? e.message : 'error' }))
   return r
 }

@@ -41,7 +41,7 @@ describe('entrega y plazo del dueño', () => {
     const t = +new Date('2026-10-25T09:00:00-06:00'); d.recibirCasa(a, t)   // domingo 25 → 7 días = domingo 1 nov → lunes 2 nov
     expect(d.finVentana(a)).toBe(+new Date('2026-11-02T09:00:00-06:00'))
     const c = d.textoContador('dueno', a, t)
-    expect(c).toBe('Te quedan 8 días y 0 horas para reclamar (vence el 2 nov 2026, 09:00, hora de Costa Rica). (se movió al siguiente día hábil porque el día 7 cae en domingo)')
+    expect(c).toBe('Te quedan 8 días y 0 horas para reclamar (vence el 2 nov 2026, 9:00 a. m., hora de Costa Rica). (se movió al siguiente día hábil porque el día 7 cae en domingo)')
   })
   it('(a) el día 7 cae en feriado: pasa al siguiente día hábil', () => {
     const a = base(); d.registrarEntrega(a, new Date(ENTREGA).toISOString())
@@ -82,7 +82,7 @@ describe('avisos 1, 4 y 6 con registro de entrega y apertura', () => {
 describe('textos (B.4, B.9)', () => {
   it('pantalla «¿Recibiste la casa?» con la fecha del inicio automático', () => {
     const a = base(); d.registrarEntrega(a, new Date(ENTREGA).toISOString())
-    expect(d.textoRecibir(a)).toBe('¿Recibiste la casa? Tus 7 días naturales para reclamar empiezan cuando toques «Recibí la casa». Si no lo tocas, empiezan solos el 24 oct 2026, 10:00, hora de Costa Rica. Si el día 7 cae en domingo o en feriado, tu plazo termina el siguiente día hábil. Te avisamos en la app los días 1, 4 y 6. Toma las fotos de salida en la app: se guardan con la fecha y la hora.')
+    expect(d.textoRecibir(a)).toBe('¿Recibiste la casa? Tus 7 días naturales para reclamar empiezan cuando toques «Recibí la casa». Si no lo tocas, empiezan solos el 24 oct 2026, 10:00 a. m., hora de Costa Rica. Si el día 7 cae en domingo o en feriado, tu plazo termina el siguiente día hábil. Te avisamos en la app los días 1, 4 y 6. Toma las fotos de salida en la app: se guardan con la fecha y la hora.')
     expect(d.CONFIRMAR_DEVOLVER).toBe('Se devolverá todo el depósito al inquilino ahora. Después de esto no podrás reclamar en la app. Fuera de la app, conservas tus derechos según la ley.')
   })
   it('fase 1: los botones del dueño de prueba dicen «Simular: …»', () => {

@@ -13,7 +13,7 @@ describe('privacidad de los correos (1.7-demo)', () => {
     expect(d.version).toBe('1.9-demo')   // escenario C: con dos personas y correos, la 1.9-demo
     for (const t of ['Invitaciones y avisos por correo: el correo de la persona que invitas y su papel en el alquiler simulado.',
       'Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.',
-      'Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre).',
+      'Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos).',   // :52, Legal 25/10 5:09 p. m. (punto 5)
       'Mostrar a la otra parte lo necesario para la simulación y enviar por correo la invitación y los avisos del alquiler simulado.',
       'Envía los correos de invitación y de avisos', 'Puedes invitar', 'Al invitarla, declaras', 'El correo lo envía Resend']) expect(texto).toContain(t)
     expect(texto).not.toContain('Solo en la fase 2, cuando se active; todavía no está disponible.')

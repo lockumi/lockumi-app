@@ -120,8 +120,9 @@ async function subirFoto(id: string, etapa: 'entrada' | 'salida' | 'reclamo', cu
 const tras = async <T>(p: Promise<T>) => { const r = await p; await recargar(); return r }
 /** Escenario C (docs/correos-c.md): después de un paso, se le pide al servidor que envíe los correos que tocan de ESE alquiler.
  *  El navegador no elige textos ni destinatarios; si el servidor tiene los correos apagados, no pasa nada. Nunca frena la app. */
+// Después de cada paso: el servidor revisa el plazo de la mediación (siempre, Legal 25/10 punto 3) y, solo con CORREOS_C=1, envía los correos.
 export function avisarCorreos(id: string) {
-  if (import.meta.env.VITE_CORREOS !== '1' || !dosPersonas) return
+  if (!dosPersonas) return
   void tokenSesion().then(t => fetch('/api/correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + t }, body: JSON.stringify({ tipo: 'avisos', alquiler: id }) })).catch(() => {})
 }
 const yAvisar = async <T>(id: string, p: Promise<T>) => { const r = await tras(p); avisarCorreos(id); return r }

@@ -24,7 +24,7 @@ describe('paso 7 · modo de dos personas', () => {
 // Legal 24/10 23:29: en la red de prueba Trustless Work descuenta 0,3 % también en resolve_dispute (medido en testnet).
 describe('paso 7 · monto real que recibe el inquilino', () => {
   it('montos «… USDC de prueba» y el neto con la comisión de 0,3 %', () => {
-    expect(montoPrueba(800)).toBe('800 USDC de prueba')
+    expect(montoPrueba(800)).toBe('800,00 USDC de prueba'); expect(montoPrueba(0.5)).toBe('0,50 USDC de prueba')   // 2 decimales (Legal 25/10, punto 8)
     expect(montoPrueba(797.6)).toBe('797,60 USDC de prueba')
     expect(recibeInquilino(800)).toBe(797.6)
     expect(recibeInquilino(1)).toBe(0.997)

@@ -161,7 +161,8 @@ export function sinDatosPersonales(textos: string[], k: Pick<Contrato, 'direccio
 }
 
 export const APROBADO = 'El dueño aprobó en la cadena devolver el depósito completo'
-export const DEVUELTO_AUTO = 'Devolución automática: la cuenta que resuelve disputas entregó el 100 % del depósito al inquilino'
+// Legal 25/10 5:09 p. m. (punto 7): «de prueba» en los textos del historial
+export const DEVUELTO_AUTO = 'Devolución automática: la cuenta que resuelve disputas entregó el 100 % del depósito de prueba al inquilino'
 /** Paso 7 (Términos 1.7-demo 4.2 e): en la devolución automática el reparto es SIEMPRE el 100 % al inquilino. No recibe montos ni
  *  destinatarios, así que no se le puede pedir otro reparto. TW exige que la suma sea el saldo del escrow (Resolve Dispute). */
 export function repartoAutomatico(k: Contrato): { address: string; amount: number }[] {
@@ -169,9 +170,12 @@ export function repartoAutomatico(k: Contrato): { address: string; amount: numbe
 }
 /** PR #22 · cierres de dos personas que se pagan con «repartir»: acuerdo (el inquilino aceptó) y mediación con las dos aceptaciones.
  *  Nunca la Regla 6.5.1 (Legal, 25/10, 1:50 a. m., opción 1) ni un caso abierto. */
-export const REPARTO_DISPUTA = 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado'
+export const REPARTO_DISPUTA = 'Se abrió la disputa en Trustless Work (red de prueba) para pagar el reparto aceptado'
+/** El texto de antes (casos que abrieron la disputa antes del cambio): un reintento no vuelve a abrirla. */
+const REPARTO_DISPUTA_ANTES = 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado'
 const centavos = (x: unknown) => Math.round(Number(x) * 100)
-const textoReparto = (k: Contrato) => { const r = k.resultado!; return `Se pagó el reparto aceptado desde Trustless Work: ${centavos(r.dueno) / 100} USDC al dueño y ${centavos(r.inquilino) / 100} al inquilino (cada monto menos la comisión de 0,3 % de Trustless Work)` }
+const dosDecimales = (x: unknown) => (Math.round(Number(x) * 100) / 100).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const textoReparto = (k: Contrato) => { const r = k.resultado!; return `Se pagó el reparto aceptado desde Trustless Work: ${dosDecimales(r.dueno)} USDC de prueba al dueño y ${dosDecimales(r.inquilino)} USDC de prueba al inquilino (cada monto menos el 0,3 % de comisión de Trustless Work).` }
 function cierreAceptado(k: Contrato) {
   const r = k.resultado
   if (k.estado !== 'cerrado' || !r) return false
@@ -319,7 +323,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(await tomar(c, k.id, f), 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
       let disputaTx: string | null = null
       try {
-        if (!(await hayEvento(c, k.id, REPARTO_DISPUTA, f))) {   // en un reintento la disputa ya está abierta
+        if (!(await hayEvento(c, k.id, REPARTO_DISPUTA, f)) && !(await hayEvento(c, k.id, REPARTO_DISPUTA_ANTES, f))) {   // en un reintento la disputa ya está abierta
           const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: k.escrow_contract_id, signer: P }, f)
           const abierta = firmarComoPlataforma(c, sinFirmar(d)); await enviar(c, abierta, f)
           disputaTx = hashTx(abierta); await anotar(c, k.id, {}, REPARTO_DISPUTA, disputaTx, f)

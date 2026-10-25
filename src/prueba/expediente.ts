@@ -8,6 +8,7 @@ import { MOTIVOS, propuesta, referencia } from './propuesta'
 import { nombreRubro } from './reclamos'
 import { leerAceptacion } from '../legal/aceptacion'
 import { esDosPersonas, EXPEDIENTE_REGLA_DOS } from './dosPersonas'
+import { fechaHoraCR } from '../../api/_lib/plazos'
 
 // LEGAL: revisado (25/10, lista de Legal) · B.11
 export const BOTON_EXPEDIENTE = 'Descargar el expediente (demo)'
@@ -26,8 +27,9 @@ export interface Aceptaciones { terminos?: { version: string; fecha: string } | 
 export interface ImagenPdf { ancho: number; alto: number; jpeg: Uint8Array }
 const ROL: Record<Rol, string> = { dueno: 'Dueño', inquilino: 'Inquilino' }
 const VIA: Record<string, string> = { automatico: 'Sin reclamo en el plazo', acuerdo: 'Acuerdo en la app', mediacion: 'Mediación Lockumi (demo)', propuesta: 'Propuesta automática', devuelto: 'El dueño devolvió todo', simulacion: 'Resolver el reclamo (simulación)' }
-const usdc = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
-const cr = (s?: string | number) => s === undefined || s === '' ? '—' : new Date(s).toLocaleString('es-CR', { timeZone: 'America/Costa_Rica', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' (hora de Costa Rica)'
+// Legal 25/10 5:09 p. m. (punto 8): montos con 2 decimales y hora en 12 h
+const usdc = (n: number) => `${n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC de prueba`
+const cr = (s?: string | number) => s === undefined || s === '' ? '—' : fechaHoraCR(+new Date(s)) + ' (hora de Costa Rica)'
 const dia = (s: string) => new Date(s).toLocaleDateString('es-CR', { timeZone: /^\d{4}-\d\d-\d\d$/.test(s) ? 'UTC' : 'America/Costa_Rica', day: 'numeric', month: 'long', year: 'numeric' })
 /** Quita del texto libre correos, teléfonos y números de identificación que alguien haya escrito. */
 export const sinDatos = (s: string) => s.replace(/[^\s@]+@[^\s@]+/g, '(dato quitado)').replace(/\+?\d[\d\s-]{6,}\d/g, '(dato quitado)')

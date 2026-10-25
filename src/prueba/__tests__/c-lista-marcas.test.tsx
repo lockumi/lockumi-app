@@ -32,7 +32,8 @@ describe('1) marcas: las 109 OK se quitan; solo quedan las de textos nuevos', ()
     // la casilla de C (AvisosCorreo.tsx) y en la línea nueva de la Privacidad 1.9-demo. La guarda impide enviarlos y publicarlos.
     const CORREOS_C = ['api/_lib/textos-correos.ts', 'api/_lib/correos-c.ts', 'api/_lib/guarda-correos.ts', 'src/prueba/AvisosCorreo.tsx', 'src/legal/v17/privacidad.md']
     expect(hallados.filter(h => !CORREOS_C.includes(h.split(':')[0]))).toEqual(['src/alertas.ts:5'])
-    expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toHaveLength(2)
+    // Legal 25/10, 5:09 p. m.: la casilla de C (AvisosCorreo.tsx) ya está revisada; queda solo la línea de la Privacidad 1.9-demo.
+    expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toEqual(['src/legal/v17/privacidad.md:71'])
   })
 })
 

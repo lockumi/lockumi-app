@@ -32,14 +32,18 @@ export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito sim
 export const Fondo = ({ children }: { children: ReactNode }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>
   {(modoPrueba || pruebaCompleta()) && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}{children}</>
 // LEGAL: revisado (24/10, 11:25 p. m.) · con la prueba completa, todos los montos dicen «USDC de prueba» (también la cabecera del detalle)
-export const usd = (n: number) => pruebaCompleta() ? new Intl.NumberFormat('es-CR', { maximumFractionDigits: 7 }).format(n) + ' USDC de prueba'
-  : escrowReal ? new Intl.NumberFormat('es-CR', { maximumFractionDigits: 7 }).format(n) + ' USDC'
+// Legal 25/10 5:09 p. m. (punto 8): hora en 12 h («4:44 p. m.», espacios duros) y montos con 2 decimales («0,50»).
+const dos = (n: number) => new Intl.NumberFormat('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+export const usd = (n: number) => pruebaCompleta() ? dos(n) + ' USDC de prueba'
+  : escrowReal ? dos(n) + ' USDC'
   : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code' }).format(n)
 /** Rótulo siempre visible para lo que sigue simulado en la fase 1 (reglas, reclamos y mediador). */
 export const Simulado = ({ texto = 'Simulado' }: { texto?: string }) => <span className="demo demo--simulado">{texto}</span>
 const d = (s: string | number) => typeof s === 'string' && s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s)
 export const fecha = (s: string | number) => d(s).toLocaleDateString('es-CR', { day:'numeric', month:'short', year:'numeric' })
-export const fechaHora = (s: string | number) => d(s).toLocaleString('es-CR', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+/** «a. m.» / «p. m.» con espacios duros (U+00A0), como horaCR de api/_lib/plazos.ts. */
+export const ampm = (s: string) => s.replace(/\s*([ap])\.\s*m\./g, '\u00a0$1.\u00a0m.')
+export const fechaHora = (s: string | number) => ampm(d(s).toLocaleString('es-CR', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit', hour12: true }))
 
 /** Campo de fecha en formato dd/mm/aa o dd/mm/aaaa (consistente en cualquier navegador). Valor: ISO aaaa-mm-dd (aunque sea un día
  *  imposible, para que la validación lo explique) o '' si está incompleta. */

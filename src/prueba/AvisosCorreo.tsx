@@ -13,7 +13,7 @@ async function guardarEnServidor(a: Alquiler, para: string, acepta: boolean): Pr
   try { const { servidor } = await import('../servidor/repositorio'); await servidor.guardarCasillaCorreo(a.id, para.trim(), acepta, CASILLA_CORREO); return { ok: true } }
   catch (e) { return { ok: false, error: e instanceof Error && e.message ? e.message : 'No pudimos guardar la casilla. Los avisos siguen en la app; vuelve a intentarlo en unos minutos.' } }
 }
-// LEGAL: revisar · qué avisos salen por correo en los alquileres con otra persona (escenario C)
+// LEGAL: revisado (25/10) · qué avisos salen por correo en los alquileres con otra persona (escenario C)
 export const AVISOS_CORREO_C = 'Opcional. Te escribimos cuando empieza el plazo, para recordarte los días que quedan, si hay un reclamo o una mediación y cuando se cierra el alquiler. Sin la dirección ni fotos; solo montos de prueba, fechas y un enlace a la app.'
 
 export function AvisosCorreo({ a, rol }: { a: Alquiler; rol: Rol }) {

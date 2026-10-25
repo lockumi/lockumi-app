@@ -21,6 +21,10 @@ export interface Filas {
 
 const firmasDe = (f: Filas['firmas'], etapa: string) => Object.fromEntries(f.filter(x => x.etapa === etapa).map(x => [x.rol, x.firmado_en])) as Partial<Record<Rol, string>>
 
+/** Legal 25/10 5:09 p. m. (punto 8): los montos del historial con 2 decimales y coma («300,00 USDC de prueba», «… y 500,00 al
+ *  inquilino»). El servidor los guarda como número (300 o 30.5); solo cambia cómo se muestran. */
+export const montosDosDecimales = (t: string) => t.replace(/(?<![\d.,])(\d+(?:\.\d+)?)(?= USDC| al (?:dueño|inquilino))/g,
+  x => Number(x).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
 export function aFoto(f: Filas['fotos'][number], url: (ruta: string) => string): Foto {
   const tomadaEn = Date.parse(f.tomada_en)
   return { id: f.id, ruta: f.ruta, src: url(f.ruta), por: f.por_rol, fecha: f.subido_en, tomadaEn, fechaArchivo: f.fecha_archivo ? Date.parse(f.fecha_archivo) : undefined,
@@ -59,7 +63,7 @@ export function aAlquiler(f: Filas, yo: string, url: (ruta: string) => string, a
     resultado: c.resultado ? { via: c.resultado.via, ...(c.resultado.cierre ? { cierre: c.resultado.cierre } : {}), dueno: Number(c.resultado.dueno), inquilino: Number(c.resultado.inquilino), fecha: c.actualizado_en } : undefined,
     liquidacionTx: comprobanteLiquidacion(c.liquidacion_tx),
     ...terminosDe(f.terminos),
-    historial: f.eventos.map(e => ({ fecha: e.creado_en, texto: e.texto, tx: e.tx_hash ?? undefined })),
+    historial: f.eventos.map(e => ({ fecha: e.creado_en, texto: montosDosDecimales(e.texto), tx: e.tx_hash ?? undefined })),
   }
 }
 

@@ -85,7 +85,7 @@ const firmadaPorM = (ll: Llamada[]) => ll.filter(l => l.url.endsWith('/helper/se
   .find(x => (TransactionBuilder.fromXDR(x, Networks.TESTNET) as unknown as { source: string }).source === M.publicKey())!
 
 describe('(b) cada firma de la llave mediadora queda en el historial con el hash de la transacción', () => {
-  it.each([['repartir', mediado, /^Se pagó el reparto aceptado desde Trustless Work: 30 USDC al dueño y 70 al inquilino/], ['devolver-automatico', automatico, new RegExp('^' + DEVUELTO_AUTO)]] as const)(
+  it.each([['repartir', mediado, /^Se pagó el reparto aceptado desde Trustless Work: 30,00 USDC de prueba al dueño y 70,00 USDC de prueba al inquilino \(cada monto menos el 0,3 % de comisión de Trustless Work\)\.$/], ['devolver-automatico', automatico, new RegExp('^' + DEVUELTO_AUTO)]] as const)(
     '%s: un evento con el hash de la transacción que firmó la mediadora', async (accion, k, texto) => {
       const s = simular(k); const x = await atender(ENV, { accion, contrato: ID }, 'Bearer t', s.f)
       const tx = hashTx(firmadaPorM(s.llamadas)); expect(x.tx).toBe(tx)

@@ -11,19 +11,19 @@ afterEach(() => vi.unstubAllEnvs())
 
 describe('fecha y hora de las fotos', () => {
   it('pie con fecha y hora de Costa Rica según el origen', () => {
-    expect(textoFotoPC(f())).toBe('Tomada en la app el 24 oct 2026, 12:05, hora de Costa Rica')
-    expect(textoFotoPC(f({ origen: 'archivo' }))).toBe('Agregada en la app el 24 oct 2026, 12:05, hora de Costa Rica')
-    expect(textoFotoPC(f({ origen: 'ejemplo' }))).toBe('Foto de ejemplo · registrada el 24 oct 2026, 12:05, hora de Costa Rica')
-    expect(textoFotoPC(f({ tomadaEn: undefined }))).toBe('Tomada en la app el 24 oct 2026, 12:05, hora de Costa Rica')
+    expect(textoFotoPC(f())).toBe('Tomada en la app el 24 oct 2026, 12:05 p. m., hora de Costa Rica')
+    expect(textoFotoPC(f({ origen: 'archivo' }))).toBe('Agregada en la app el 24 oct 2026, 12:05 p. m., hora de Costa Rica')
+    expect(textoFotoPC(f({ origen: 'ejemplo' }))).toBe('Foto de ejemplo · registrada el 24 oct 2026, 12:05 p. m., hora de Costa Rica')
+    expect(textoFotoPC(f({ tomadaEn: undefined }))).toBe('Tomada en la app el 24 oct 2026, 12:05 p. m., hora de Costa Rica')
   })
   it('sello corto dd/mm/aa hh:mm (hora de Costa Rica), sin ubicación', () => {
-    expect(selloFoto(f())).toBe('24/10/26 12:05')
+    expect(selloFoto(f())).toBe('24/10/26 12:05 p. m.')
   })
   it('con el interruptor encendido, la lista muestra el sello y el pie nuevos', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
     const h = renderToStaticMarkup(<FotoLista fotos={[f()]} />)
-    expect(h).toContain('<span class="foto__sello" aria-hidden="true">24/10/26 12:05</span>')
-    expect(h).toContain('Tomada en la app el 24 oct 2026, 12:05, hora de Costa Rica · Inquilino')
+    expect(h).toContain('<span class="foto__sello" aria-hidden="true">24/10/26 12:05 p. m.</span>')
+    expect(h).toContain('Tomada en la app el 24 oct 2026, 12:05 p. m., hora de Costa Rica · Inquilino')
   })
   it('con el interruptor apagado, la lista queda como siempre', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '0')

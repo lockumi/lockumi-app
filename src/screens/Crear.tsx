@@ -206,7 +206,7 @@ export function Crear({ u }: { u: Usuario }) {
   const tope = !escrowReal ? MONTO_MAX : origen === 'lockumi' ? TOPE_USDC : Math.min(propia?.saldo ?? MONTO_MAX_USDC, MONTO_MAX_USDC)
   const mActual = montoNumero(f.monto) || 0
   const paso = (d: number) => { const n = Math.round((mActual + d) * 100) / 100; poner('monto', String(Math.max(1, Math.min(tope, n)))); tocar('monto')() }
-  const etMonto = !escrowReal ? (invitar ? 'USDC de prueba' : 'USD') : origen === 'lockumi' ? `Máximo ${TOPE_USDC}` : propia?.saldo != null ? `Saldo ${propia.saldo.toLocaleString('es-CR', { maximumFractionDigits: 7 })}` : 'Hasta tu saldo'
+  const etMonto = !escrowReal ? (invitar ? 'USDC de prueba' : 'USD') : origen === 'lockumi' ? `Máximo ${TOPE_USDC}` : propia?.saldo != null ? `Saldo ${(Math.floor(propia.saldo * 100) / 100).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Hasta tu saldo'
   const errMonto = ver('monto')
   const cuantos = Object.keys(errores).length
   const hoy = hoyISO(), le = limitesEntrada(hoy), ls = f.inicio ? limitesSalida(f.inicio) : null
@@ -247,7 +247,7 @@ export function Crear({ u }: { u: Usuario }) {
         {origen === 'propia' && (propia
           ? <p className="na-saldo" id="saldo-propio" role="status"><Ico n="check" />{propia.saldo === null
               ? <span>Tu cuenta ({abreviar(propia.g)}) todavía no tiene USDC de prueba. Carga USDC de prueba o elige «USDC de prueba de Lockumi».</span>
-              : <span>Cuenta {abreviar(propia.g)} · {NOMBRE_FIRMA[propia.firma]}: <strong>{propia.saldo.toLocaleString('es-CR', { maximumFractionDigits: 7 })} USDC de prueba</strong></span>}</p>
+              : <span>Cuenta {abreviar(propia.g)} · {NOMBRE_FIRMA[propia.firma]}: <strong>{(Math.floor(propia.saldo * 100) / 100).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC de prueba</strong></span>}</p>
           : <div className="na-conectar">
               {hayCavos() && <button type="button" className="boton boton--secundario boton--ancho" disabled={!!conectando} onClick={() => void usar('cavos')}>{conectando === 'cavos' ? 'Conectando…' : 'Usar mi cuenta Lockumi'}</button>}
               {freighter && <button type="button" className="boton boton--secundario boton--ancho" disabled={!!conectando} onClick={() => void usar('freighter')}>{conectando === 'freighter' ? 'Conectando…' : 'Usar Freighter'}</button>}

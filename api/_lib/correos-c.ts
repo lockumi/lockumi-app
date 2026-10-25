@@ -99,6 +99,15 @@ const destinoPermitido = (env: Env, borrador: boolean, para: string) => EMAIL.te
 
 export interface Resultado { apagado?: true; enviados: { clave: string; correo: string; plantilla: string; para: string; id: string }[]; omitidos: { clave: string; motivo: string }[]; vencidas: number }
 
+/** Vence el plazo de 3 días hábiles de la mediación (P-06): guarda el plazo, marca los vencidos y deja el evento en el historial.
+ *  Corre SIEMPRE, con o sin CORREOS_C (Legal 25/10, 5:09 p. m., punto 3): en la corrida diaria (api/_lib/borrados.ts), después de
+ *  cada paso con un alquiler en /api/tw y en cada aviso de la app (/api/correo { tipo: 'avisos' }). No envía correos. */
+export async function vencerMediaciones(env: Env, op: { contrato?: string; ahora?: string } = {}, f: typeof fetch = fetch): Promise<number> {
+  if (op.contrato !== undefined && !UUID.test(op.contrato)) throw new ErrorCorreo(400, 'Alquiler inválido.')
+  const s = servicio(env); if (!s) throw new ErrorCorreo(503, 'Faltan SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en el servidor.')
+  return Number(await rpc<number>(s, 'lk_mediacion_vencimientos', { p_contrato: op.contrato ?? null, ...(op.ahora ? { p_ahora: op.ahora } : {}) }, f)) || 0
+}
+
 /** Envía lo que toca (de un alquiler o de todos). `ahora`: reloj de prueba para los recordatorios (solo lo usa el servidor). */
 export async function procesarCorreos(env: Env, op: { contrato?: string; ahora?: string; origen?: string; pausaMs?: number } = {}, f: typeof fetch = fetch): Promise<Resultado> {
   if (env.CORREOS_C !== '1') return { apagado: true, enviados: [], omitidos: [], vencidas: 0 }
@@ -152,7 +161,27 @@ export async function enviarCorreoCuenta(env: Env, p: { correo: 'COR-C-08' | 'CO
   return { clave, plantilla, id: r.id ?? null, yaEnviado: r.motivo === 'ya-enviado' }
 }
 
-/** Enlace de COR-C-03: registra la apertura y devuelve el alquiler (o null si el enlace no existe). */
+// LEGAL: revisar · página del enlace de COR-C-03 (texto nuevo, Legal 25/10 5:09 p. m., punto 4: la apertura se registra solo al tocar el botón)
+export const PAGINA_ABRIR = {
+  titulo: 'Aviso de reclamo · Lockumi (demo)',
+  texto: 'Para ver el reclamo en la app, toca el botón. Al tocarlo, queda registrado que abriste el aviso.',
+  boton: 'Ver el reclamo en la app',
+}
+const escHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+/** GET /api/correo?abrir=<enlace>: solo muestra esta página (no registra nada; los programas que revisan enlaces en los correos
+ *  también hacen GET). El botón hace POST a la misma dirección y ahí se registra la apertura (6.5 b). */
+export function paginaAbrir(token: string): string {
+  const t = PAGINA_ABRIR
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>${escHtml(t.titulo)}</title></head>
+<body style="font-family:Arial,sans-serif;color:#3D2A22;background:#FFF5EE;max-width:560px;margin:0 auto;padding:24px 16px">
+<h1 style="font-size:20px;margin:0 0 12px">${escHtml(t.titulo)}</h1>
+<p style="line-height:1.5">${escHtml(t.texto)}</p>
+<form method="post" action="/api/correo?abrir=${escHtml(token)}"><button type="submit" style="background:#FF6B35;color:#3D2A22;font-weight:bold;font-size:16px;padding:12px 18px;border-radius:8px;border:1px solid #E8531F;cursor:pointer">${escHtml(t.boton)}</button></form>
+</body></html>`
+}
+
+/** Enlace de COR-C-03: registra la apertura y devuelve el alquiler (o null si el enlace no existe). Solo con el POST del botón. */
 export async function abrirCorreo(env: Env, token: string, f: typeof fetch = fetch): Promise<string | null> {
   if (!/^[0-9a-f]{64}$/.test(token)) return null
   const s = servicio(env); if (!s) return null
@@ -162,7 +191,6 @@ export async function abrirCorreo(env: Env, token: string, f: typeof fetch = fet
 /** POST /api/correo { tipo: 'avisos', alquiler } · la app avisa después de cada paso; el servidor envía lo que toque de ESE
  *  alquiler. Solo una persona del alquiler (la sesión de Supabase en Authorization). El navegador no elige textos ni destinatarios. */
 export async function atenderAvisos(env: Env, p: { alquiler?: unknown }, bearer: string | null, origen: string, f: typeof fetch = fetch) {
-  if (env.CORREOS_C !== '1') return { apagado: true, enviados: 0 }
   const alquiler = typeof p?.alquiler === 'string' ? p.alquiler : ''
   if (!UUID.test(alquiler)) throw new ErrorCorreo(400, 'Alquiler inválido.')
   if (!bearer) throw new ErrorCorreo(401, 'Falta la sesión.')
@@ -173,6 +201,9 @@ export async function atenderAvisos(env: Env, p: { alquiler?: unknown }, bearer:
   if (!UUID.test(uid)) throw new ErrorCorreo(401, 'La sesión no es válida.')
   const q = await f(`${s.url}/rest/v1/lk_participantes?select=rol&contrato_id=eq.${alquiler}&usuario=eq.${uid}`, { headers: { apikey: s.llave, authorization: `Bearer ${s.llave}` } })
   if (!q.ok || !((await q.json()) as unknown[]).length) throw new ErrorCorreo(403, 'No participas en este alquiler.')
+  // El plazo de la mediación vence aunque los correos estén apagados (punto 3); después, solo con CORREOS_C=1, los correos.
+  const vencidas = await vencerMediaciones(env, { contrato: alquiler }, f)
+  if (env.CORREOS_C !== '1') return { apagado: true, enviados: 0, vencidas }
   const r = await procesarCorreos(env, { contrato: alquiler, origen: origenPermitido(origen) ? origen : undefined }, f)
   return { enviados: r.enviados.length }
 }

@@ -18,8 +18,12 @@ const falso = (participa: boolean, sesion = true) => { const urls: string[] = []
   return { f: f as unknown as typeof fetch, urls } }
 
 describe('POST /api/correo { tipo: avisos }', () => {
-  it('apagado (sin CORREOS_C=1) no hace nada', async () => {
-    const x = falso(true); expect(await atenderAvisos({ ...ENV, CORREOS_C: undefined }, { alquiler: ID }, 'Bearer t', 'https://app.lockumi.com', x.f)).toEqual({ apagado: true, enviados: 0 }); expect(x.urls).toEqual([])
+  it('apagado (sin CORREOS_C=1) no envía nada, pero SÍ revisa el plazo de la mediación de ese alquiler (Legal 25/10, punto 3)', async () => {
+    const x = falso(true); expect(await atenderAvisos({ ...ENV, CORREOS_C: undefined }, { alquiler: ID }, 'Bearer t', 'https://app.lockumi.com', x.f)).toEqual({ apagado: true, enviados: 0, vencidas: 0 })
+    expect(x.urls.filter(u => u.includes('/rpc/'))).toEqual(['https://p.supabase.co/rest/v1/rpc/lk_mediacion_vencimientos'])
+    // sin sesión o sin participar, ni eso
+    const y = falso(false); await expect(atenderAvisos({ ...ENV, CORREOS_C: undefined }, { alquiler: ID }, 'Bearer t', '', y.f)).rejects.toMatchObject({ estado: 403 })
+    expect(y.urls.some(u => u.includes('/rpc/'))).toBe(false)
   })
   it('sin sesión 401; si no participa 403; con alquiler inválido 400', async () => {
     await expect(atenderAvisos(ENV, { alquiler: ID }, null, '', falso(true).f)).rejects.toMatchObject({ estado: 401 })
@@ -29,18 +33,26 @@ describe('POST /api/correo { tipo: avisos }', () => {
   })
   it('una persona del alquiler: el servidor procesa SOLO ese alquiler', async () => {
     const x = falso(true); expect(await atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', 'https://app.lockumi.com', x.f)).toEqual({ enviados: 0 })
-    expect(x.urls.filter(u => u.includes('/rpc/'))).toEqual(['https://p.supabase.co/rest/v1/rpc/lk_mediacion_vencimientos', 'https://p.supabase.co/rest/v1/rpc/lk_correos_pendientes'])
+    expect(x.urls.filter(u => u.includes('/rpc/')).every(u => /lk_mediacion_vencimientos|lk_correos_pendientes/.test(u))).toBe(true)
+    expect(x.urls.filter(u => u.includes('/rpc/')).at(-1)).toBe('https://p.supabase.co/rest/v1/rpc/lk_correos_pendientes')
   })
-  it('la guarda de Legal también corta este camino (textos «LEGAL: revisar», sin borrador)', async () => {
-    await expect(atenderAvisos({ ...ENV, LOCKUMI_CORREOS_BORRADOR: undefined }, { alquiler: ID }, 'Bearer t', '', falso(true).f)).rejects.toMatchObject({ estado: 503 })
+  it('la guarda de Legal también corta este camino (textos «LEGAL: revisar», sin borrador); el plazo de la mediación se revisó antes', async () => {
+    const x = falso(true)
+    await expect(atenderAvisos({ ...ENV, LOCKUMI_CORREOS_BORRADOR: undefined }, { alquiler: ID }, 'Bearer t', '', x.f)).rejects.toMatchObject({ estado: 503 })
+    expect(x.urls).toContain('https://p.supabase.co/rest/v1/rpc/lk_mediacion_vencimientos')
   })
 })
 
 describe('corrida diaria (/api/borrados)', () => {
   const sb = (url: string) => url.includes('lk_mediacion_por_borrar') ? Response.json([]) : url.includes('lk_correos_pendientes') ? Response.json([]) : Response.json(0)
-  it('sin CORREOS_C no toca los correos', async () => {
+  it('sin CORREOS_C no toca los correos, pero SÍ vence el plazo de la mediación (Legal 25/10, punto 3)', async () => {
     const urls: string[] = []; const r = await ejecutarBorrados({ SUPABASE_URL: 'https://p.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srv' }, (async (u: string) => { urls.push(u); return sb(u) }) as never)
-    expect(r.correos).toBeUndefined(); expect(urls.some(u => u.includes('correo') || u.includes('lk_mediacion_vencimientos'))).toBe(false)
+    expect(r.correos).toBeUndefined(); expect(urls.some(u => u.includes('correo'))).toBe(false)
+    expect(r.vencidas).toBe(0); expect(urls).toContain('https://p.supabase.co/rest/v1/rpc/lk_mediacion_vencimientos')
+  })
+  it('si falla el vencimiento de la mediación, los borrados siguen', async () => {
+    const r = await ejecutarBorrados({ SUPABASE_URL: 'https://p.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srv' }, (async (u: string) => u.includes('lk_mediacion_vencimientos') ? new Response('x', { status: 500 }) : sb(u)) as never)
+    expect(r.vencidas).toMatchObject({ error: expect.any(String) }); expect(r.invitaciones).toBe(0)
   })
   it('con CORREOS_C=1 vence la mediación y envía; un error de correos no rompe los borrados', async () => {
     const ok = await ejecutarBorrados(ENV, (async (u: string) => sb(u)) as never); expect(ok.correos).toEqual({ enviados: 0, omitidos: 0, vencidas: 0 })

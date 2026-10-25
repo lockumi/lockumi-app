@@ -51,10 +51,12 @@ describe('1) C, pantalla de firmar: sin la Regla 6.5.1; nota «Si hay un reclamo
 describe('2) «Qué sigue» y otros textos de C: la propuesta solo se aplica si las dos partes la aceptan', () => {
   const r = A({ estado: 'reclamo' })
   it.each(['inquilino', 'dueno'] as const)('reclamo abierto (%s)', rol => {
+    // Legal 25/10, 5:09 p. m. (punto 6): texto literal; en C no hay propuesta automática
     const t = turno(r, rol)
-    expect(t.sigue).toContain('propuesta automática (simulación)'); expect(t.sigue).toContain('Mediación Lockumi (demo)')
-    expect(t.sigue).toContain('solo se aplica si las dos partes la aceptan')
-    expect(t.sigue).not.toMatch(/se aplica sola|por su cuenta|si no respond/)
+    expect(t.sigue).toBe(rol === 'inquilino'
+      ? 'Si no aceptas el reclamo o no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan.'
+      : 'Si el inquilino no acepta el reclamo o no responde a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan.')
+    expect(t.sigue).not.toMatch(/propuesta automática|se aplica sola|por su cuenta/)
   })
   it('sin dos personas, «Qué sigue» no cambia', () => {
     expect(turno(A({ estado: 'reclamo', dosPersonas: false }), 'inquilino').sigue).toBe('Si no aceptas todo, verás una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).')
@@ -116,7 +118,7 @@ describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «na
     for (const h of hs.slice(0, 2)) expect(h).not.toMatch(SOLOS)   // el pago no lo dice; contrato y en curso: ver 8)
     for (const red of [true, false]) {
       const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago' })), A({ estado: 'fotos_entrada' }), 'inquilino', { prueba: false, video: false, red })!
-      expect(al.titulo).toBe('¡Depósito guardado!'); expect(al.hecho).toMatch(/^800 USDC( de prueba)? guardados en una cuenta segura de la red de prueba\.$/); expect(al.hecho).not.toMatch(SOLOS)
+      expect(al.titulo).toBe('¡Depósito guardado!'); expect(al.hecho).toMatch(/^800,00 USDC( de prueba)? guardados en una cuenta segura de la red de prueba\.$/); expect(al.hecho).not.toMatch(SOLOS)
     }
   })
   it('sin dos personas, esas pantallas no cambian', () => {
@@ -176,7 +178,7 @@ describe('8) Legal 3:34: contrato y «En curso» de C con el texto de Legal; el 
   })
   it('el aviso del pago de C sigue igual', () => {
     const al = alertaPorCambio(instantanea(A({ estado: 'pendiente_pago' })), A({ estado: 'fotos_entrada' }), 'inquilino', { prueba: false, video: false, red: true })!
-    expect(al.hecho).toBe('800 USDC de prueba guardados en una cuenta segura de la red de prueba.')
+    expect(al.hecho).toBe('800,00 USDC de prueba guardados en una cuenta segura de la red de prueba.')
   })
   it('sin dos personas, contrato y «En curso» no cambian', () => {
     const k = renderToStaticMarkup(<ContratoDoc a={A({ dosPersonas: false })} completo />), e = renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso', dosPersonas: false })} rol="inquilino" />)

@@ -10,7 +10,7 @@ const base = (reclamo: Partial<NonNullable<Alquiler['reclamo']>>, historial: Alq
 
 describe('Plazo de la mediación en C (P-06, texto de Legal)', () => {
   it('texto literal, con la fecha como el resto de la app', () => {
-    expect(textoPlazoMediacionC(Date.parse('2026-11-04T21:00:00Z'))).toBe('La mediación tiene un plazo de 3 días hábiles, hasta el 4 nov 2026, 15:00, hora de Costa Rica. Si para entonces no aceptan el mismo reparto, no se paga nada: el monto reclamado sigue retenido y pueden seguir buscando un acuerdo.')
+    expect(textoPlazoMediacionC(Date.parse('2026-11-04T21:00:00Z'))).toBe('La mediación tiene un plazo de 3 días hábiles, hasta el 4 nov 2026, 3:00 p. m., hora de Costa Rica. Si para entonces no aceptan el mismo reparto, no se paga nada: el monto reclamado sigue retenido y pueden seguir buscando un acuerdo.')
   })
   it('rechazo: cuenta desde la respuesta del inquilino (viernes → miércoles, sin fin de semana)', () => {
     expect(venceMediacionC(base({ respuesta: 'rechazado', respondido: '2026-10-30T21:00:00Z' }))).toBe(Date.parse('2026-11-04T21:00:00Z'))

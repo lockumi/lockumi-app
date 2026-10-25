@@ -30,7 +30,7 @@ function simular(contrato: Record<string, unknown>, o: { eventos?: { texto: stri
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([contrato])
     // Bloqueo: PATCH condicionado a liquidacion_tx vacío; devuelve la fila si lo tomó, [] si otro ya lo tiene.
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && url.includes('liquidacion_tx=is.null') && init?.method === 'PATCH') return ok(bloqueo ? [{ id: ID }] : [])
-    if (url.includes('/rest/v1/lk_eventos?') && !init?.method) return ok(eventos)
+    if (url.includes('/rest/v1/lk_eventos?') && !init?.method) { const t = new URL(url).searchParams.get('texto'); return ok(t ? eventos.filter(e => 'eq.' + e.texto === t) : eventos) }
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS' })
     if (url.endsWith('/dispute-escrow')) return ok({ unsignedTransaction: xdrDe(P.publicKey()) })
@@ -56,7 +56,7 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
     const guardado = llamadas.find(l => l.metodo === 'PATCH' && l.cuerpo?.liquidacion_tx === x.tx); expect(guardado).toBeTruthy()
     const ev = llamadas.filter(l => l.url.endsWith('/rest/v1/lk_eventos') && l.metodo === 'POST').map(l => String(l.cuerpo!.texto))
     expect(ev).toContain(REPARTO_DISPUTA)
-    expect(ev.some(t => /30 USDC al dueño y 70 al inquilino.*0,3 %/.test(t))).toBe(true)
+    expect(ev.some(t => /30,00 USDC de prueba al dueño y 70,00 USDC de prueba al inquilino.*0,3 %/.test(t))).toBe(true)
     expect(JSON.stringify(x)).not.toContain(M.secret())
   })
   it('acuerdo (el inquilino aceptó el reclamo): mismo flujo con su reparto', async () => {
@@ -95,6 +95,10 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
     await expect(a.r).rejects.toMatchObject({ estado: 502 })
     expect(a.llamadas.some(l => l.metodo === 'PATCH' && l.cuerpo && 'liquidacion_tx' in l.cuerpo && l.cuerpo.liquidacion_tx === null)).toBe(true)
     const b = repartir(mediado, { eventos: [{ texto: REPARTO_DISPUTA }] }); await b.r
+    expect(acciones(b.llamadas)).toEqual(['resolve-dispute', 'send-transaction'])
+  })
+  it('un caso con la disputa abierta con el texto de antes (sin «red de prueba») tampoco abre otra al reintentar', async () => {
+    const b = repartir(mediado, { eventos: [{ texto: 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado' }] }); await b.r
     expect(acciones(b.llamadas)).toEqual(['resolve-dispute', 'send-transaction'])
   })
   it('sin la cuenta mediadora no abre ninguna disputa', async () => {

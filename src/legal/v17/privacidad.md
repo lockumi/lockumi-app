@@ -48,8 +48,8 @@ Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuen
 <!-- si: correos -->
 - Le enviamos **un solo correo de invitación**, sin recordatorios.
 - El correo lo envía **Resend** desde invitaciones@lockumi.com. **Esa dirección es solo para enviar y no recibe respuestas**; para cualquier consulta, escribe a business.applockumi@gmail.com.
-- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, que la invitan como inquilino, un resumen del alquiler simulado (monto y fechas) y el enlace para unirse. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
-- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
+- Es un **correo transaccional, sin publicidad**. Solo contiene quién invita, que la invitan como inquilino y un enlace para abrir la demo de Lockumi. **No incluye la dirección ni el nombre del lugar, ni fotos.** Los avisos de plazos y de reclamos tampoco incluirán la dirección ni el nombre del lugar, ni fotos: solo montos de prueba, fechas y un enlace a la app.
+- Usaremos ese correo solo para la invitación y para los avisos de ese alquiler simulado (plazos, reclamo, respuesta, mediación y cierre) y, aunque no marques la casilla, para los correos de servicio sobre tu cuenta (recibimos tu solicitud para eliminarla y ya la eliminamos). No lo agregaremos a ninguna lista ni le enviaremos novedades. Los avisos por correo solo se envían si marcas la casilla «Acepto que Lockumi me envíe avisos por correo». Puedes desmarcarla cuando quieras.
 <!-- fin -->
 <!-- si no: correos -->
 - Lockumi no le envía ningún correo: tú le compartes el enlace para unirse.

@@ -18,7 +18,7 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
   it('borra los correos de invitaciones vencidas, las fotos del bucket lk-fotos y marca la mediación como borrada', async () => {
     const f = falso({ '/rpc/lk_vencimientos': { automatico: 1, mediacion: 1 }, '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
     const r = await ejecutarBorrados(ENV, f)
-    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, mediacion: 1 } })
+    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, mediacion: 1 }, vencidas: 0 })
     const llamadas = f.mock.calls.map(([u, i]) => [u.replace(URL_SB, ''), i.method, i.body ? JSON.parse(String(i.body)) : null])
     expect(llamadas).toEqual([
       ['/rest/v1/rpc/lk_vencimientos', 'POST', {}],
@@ -27,6 +27,7 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
       ['/storage/v1/object/lk-fotos', 'DELETE', { prefixes: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }],
       ['/rest/v1/rpc/lk_marcar_mediacion_borrada', 'POST', { p_contrato: 'c1', p_dias: 30 }],
       ['/rest/v1/rpc/lk_marcar_mediacion_borrada', 'POST', { p_contrato: 'c2', p_dias: 30 }],
+      ['/rest/v1/rpc/lk_mediacion_vencimientos', 'POST', { p_contrato: null }],   // plazo de la mediación, con o sin CORREOS_C (Legal 25/10, punto 3)
     ])
     expect((f.mock.calls[0][1].headers as Record<string, string>).authorization).toBe(`Bearer ${LLAVE}`)
     expect(JSON.stringify(r)).not.toContain(LLAVE)
@@ -38,7 +39,7 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
   })
   it('B2 · si lk_vencimientos falla (migración del escenario C sin aplicar), los borrados siguen y se informa vencimientos: null', async () => {
     const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 1, '/rpc/lk_mediacion_por_borrar': [] }, ['/rpc/lk_vencimientos'])
-    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null })
+    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null, vencidas: 0 })
   })
   it('B2 · vercel.json programa /api/borrados una vez al día', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }

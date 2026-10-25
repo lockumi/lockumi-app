@@ -15,7 +15,7 @@ Desde el 20 de octubre de 2026, **todo cambio publicado en app.lockumi.com tiene
 - `PLAN.md` (sección «Estado actual»).
 - `docs/` (por ejemplo, [`docs/correo-resend.md`](docs/correo-resend.md)) y `src/legal/LEEME.md` si cambian los textos legales.
 
-Textos de correos: todos van en `api/_lib/textos-correos.ts` y en la lista de [`docs/correos-c.md`](docs/correos-c.md). Un texto nuevo se marca `legal: 'revisar'` con el comentario «LEGAL: revisar» encima; mientras quede uno, el servidor no envía y el build de producción falla. Para probarlos solo existe `LOCKUMI_CORREOS_BORRADOR=1` en tu máquina (nunca en Vercel) y solo al buzón de prueba `lockumi@mail.grokbot.com`.
+Textos de correos: todos van en `api/_lib/textos-correos.ts` y en la lista de [`docs/correos-c.md`](docs/correos-c.md). Un texto nuevo se marca `legal: 'revisar'` con el comentario «LEGAL: revisar» encima; mientras quede uno, el servidor no envía y el build de producción falla. Para probarlos solo existe `LOCKUMI_CORREOS_BORRADOR=1` en tu máquina (nunca en Vercel) y solo al buzón de prueba `lockumi@mail.grokbot.com`. La guarda (`api/_lib/guarda-correos.ts`) también busca cualquier comentario «LEGAL: revisar» en `src/`, `api/` y `supabase/migrations/`: el build de producción falla mientras quede uno. Formatos: la hora siempre en 12 h con espacio fijo («9:00 a. m.», `horaCR`/`fechaHoraCR` en `api/_lib/plazos.ts`, `fechaHora` en `src/ui.tsx`) y los montos siempre con 2 decimales. Si cambias un texto, corre `node scripts/textos-correos-doc.mjs` para regenerar la sección «Textos» de `docs/correos-c.md`.
 
 Nunca pongas valores de secretos en la documentación: solo el nombre de la variable y dónde está (por ejemplo, «Vercel, solo Preview, sensible»).
 

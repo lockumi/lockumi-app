@@ -58,12 +58,13 @@ beforeAll(async () => {
   fs = await import(['node', 'fs'].join(':')) as typeof fs
   db = new PGlite(); await db.exec(PRELUDIO)
   const todas = fs.readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort()
-  for (const m of todas.filter(f => f !== MIG)) await db.exec(fs.readFileSync('supabase/migrations/' + m, 'utf8'))
+  for (const m of todas.filter(f => f < MIG)) await db.exec(fs.readFileSync('supabase/migrations/' + m, 'utf8'))
   await como(null); await crear()   // un alquiler de antes, para ver que la migración no lo toca
   huellaAntes = (await uno<{ h: string }>(HUELLA))!.h
   funcionesAntes = (await filas<{ f: string }>(`select p.oid::regprocedure::text f from pg_proc p where p.pronamespace = 'public'::regnamespace order by 1`)).map(r => r.f)
   await db.exec(fs.readFileSync('supabase/migrations/' + MIG, 'utf8'))
   await db.exec(fs.readFileSync('supabase/migrations/' + MIG, 'utf8'))   // idempotente
+  for (const m of todas.filter(f => f > MIG)) { await db.exec(fs.readFileSync('supabase/migrations/' + m, 'utf8')); await db.exec(fs.readFileSync('supabase/migrations/' + m, 'utf8')) }
 }, 60_000)
 
 describe('20261025090000 · solo agrega (tablas, funciones y permisos), sin cambiar datos', () => {
@@ -114,16 +115,15 @@ describe('Pendientes por evento (COR-C-01 a COR-C-07) con reloj de prueba', () =
     const id = await entregada()
     expect(await claves(id)).toEqual(['COR-C-01:X:dueno', 'COR-C-01:X:inquilino'])
     expect((await pendientes(id))[0].datos.auto).toBe(false)
-    const t0 = Date.now()
-    expect((await claves(id, new Date(t0 + 1.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual([])
-    // el día 4 empieza 3 días después del inicio (día 1 = las primeras 24 h)
-    expect((await claves(id, new Date(t0 + 2.99 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual([])
-    expect((await claves(id, new Date(t0 + 3.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual(['COR-C-02:X:dueno:d4'])
-    expect((await claves(id, new Date(t0 + 4.99 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual(['COR-C-02:X:dueno:d4'])
-    expect((await claves(id, new Date(t0 + 5.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual(['COR-C-02:X:dueno:d6'])
-    const d6 = await pendientes(id, new Date(t0 + 6.01 * DIA))
+    // hacia atrás desde el vencimiento real {vence} (Legal 25/10, 5:09 p. m.): «día 4» = quedan 3 días, «día 6» = vence mañana
+    const fin = Date.parse(String((await pendientes(id))[0].datos.fin))
+    expect((await claves(id, new Date(Date.now() + 1.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual([])
+    expect((await claves(id, new Date(fin - 3.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual([])
+    expect((await claves(id, new Date(fin - 2.99 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual(['COR-C-02:X:dueno:d4'])
+    expect((await claves(id, new Date(fin - 1.01 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual(['COR-C-02:X:dueno:d4'])
+    const d6 = await pendientes(id, new Date(fin - 0.99 * DIA))
     expect(d6.filter(p => p.correo === 'COR-C-02').map(p => [p.rol, p.para, p.datos.dia])).toEqual([['dueno', 'dueno@correo.com', 6]])
-    expect((await claves(id, new Date(t0 + 8 * DIA))).filter(c => c.startsWith('COR-C-02'))).toEqual([])   // plazo vencido
+    expect((await claves(id, new Date(fin + 1000))).filter(c => c.startsWith('COR-C-02'))).toEqual([])   // plazo vencido
   })
   it('sin «Recibí la casa», el plazo empieza 2 días después de la entrega (y ahí sale COR-C-01)', async () => {
     const id = await entregada(604800, false)
@@ -140,13 +140,41 @@ describe('Pendientes por evento (COR-C-01 a COR-C-07) con reloj de prueba', () =
     const id = await entregada(); await reclamo(id)
     const p = await pendientes(id)
     expect(p.map(x => [x.correo, x.rol, x.datos.reclamado])).toEqual([['COR-C-03', 'inquilino', 30]])
-    expect(await claves(id, new Date(Date.now() + 2.99 * DIA))).toEqual(['COR-C-03:X:inquilino'])
-    expect(await claves(id, new Date(Date.now() + 3.01 * DIA))).toEqual(['COR-C-03:X:inquilino', 'COR-C-04:X:inquilino:d4'])
+    const fin = Date.parse(String(p[0].datos.fin))   // fin del plazo del inquilino; los avisos se cuentan hacia atrás desde ahí
+    expect(await claves(id, new Date(fin - 3.01 * DIA))).toEqual(['COR-C-03:X:inquilino'])
+    expect(await claves(id, new Date(fin - 2.99 * DIA))).toEqual(['COR-C-03:X:inquilino', 'COR-C-04:X:inquilino:d4'])
     await como(INQ); await db.query('select public.lk_abrir_aviso_reclamo($1)', [id])
-    const d6 = (await pendientes(id, new Date(Date.now() + 6.01 * DIA))).filter(x => x.correo === 'COR-C-04')
+    const d6 = (await pendientes(id, new Date(fin - 0.99 * DIA))).filter(x => x.correo === 'COR-C-04')
     expect(d6.map(x => [x.clave.replace(id, 'X'), x.datos.dia, x.datos.abierto])).toEqual([['COR-C-04:X:inquilino:d6', 6, true]])
     await como(INQ); await db.query('select public.lk_responder_reclamo($1, false)', [id])
-    expect((await claves(id, new Date(Date.now() + 6.01 * DIA))).some(c => /COR-C-0[34]/.test(c))).toBe(false)
+    expect((await claves(id, new Date(fin - 0.99 * DIA))).some(c => /COR-C-0[34]/.test(c))).toBe(false)
+  })
+  it('recordatorios hacia atrás cuando el fin se corre por un feriado (25 dic) o un domingo: «vence mañana» llega el día antes del vencimiento real', async () => {
+    // Dueño: plazo desde el viernes 18 dic 2026, 10:00 a. m. CR → el 25 dic es feriado → vence el sábado 26 dic, 10:00 a. m. CR.
+    const id = await entregada()
+    await db.query(`update public.lk_contratos set ventana_inicio = '2026-12-18T16:00:00Z' where id = $1`, [id])
+    const c02 = async (t: string) => (await claves(id, new Date(t))).filter(c => c.startsWith('COR-C-02'))
+    expect(Date.parse(String((await pendientes(id, '2026-12-18T16:00:00Z'))[0].datos.fin))).toBe(Date.parse('2026-12-26T16:00:00Z'))
+    expect(await c02('2026-12-21T17:00:00Z')).toEqual([])                         // contado desde el inicio ya tocaba el día 4
+    expect(await c02('2026-12-23T15:59:00Z')).toEqual([])
+    expect(await c02('2026-12-23T16:01:00Z')).toEqual(['COR-C-02:X:dueno:d4'])    // quedan 3 días
+    expect(await c02('2026-12-24T16:01:00Z')).toEqual(['COR-C-02:X:dueno:d4'])    // desde el inicio aquí ya salía «vence mañana»
+    expect(await c02('2026-12-25T16:01:00Z')).toEqual(['COR-C-02:X:dueno:d6'])    // vence mañana, 26 dic
+    expect(await c02('2026-12-26T16:01:00Z')).toEqual([])
+    // Inquilino: reclamo enviado el domingo 1 nov 2026, 9:00 a. m. CR → el 8 nov es domingo → vence el lunes 9 nov, 9:00 a. m. CR.
+    const r = await entregada(); await reclamo(r)
+    await db.query(`update public.lk_reclamos set entregado_en = '2026-11-01T15:00:00Z' where contrato_id = $1`, [r])
+    const c04 = async (t: string) => (await pendientes(r, t)).filter(x => x.correo === 'COR-C-04').map(x => [x.datos.dia, new Date(String(x.datos.fin)).toISOString()])
+    expect(await c04('2026-11-05T15:01:00Z')).toEqual([])                          // contado desde la entrega ya tocaba el día 4
+    expect(await c04('2026-11-06T15:01:00Z')).toEqual([[4, '2026-11-09T15:00:00.000Z']])
+    expect(await c04('2026-11-07T15:01:00Z')).toEqual([[4, '2026-11-09T15:00:00.000Z']])   // desde la entrega aquí ya salía «vence mañana»
+    expect(await c04('2026-11-08T15:01:00Z')).toEqual([[6, '2026-11-09T15:00:00.000Z']])
+    expect(await c04('2026-11-09T15:01:00Z')).toEqual([])
+  })
+  it('20261025100000 solo reemplaza lk_correos_por_estado (sin cambios de datos ni de tablas)', () => {
+    const sql = fs.readFileSync('supabase/migrations/20261025100000_c_recordatorios_hacia_atras.sql', 'utf8')
+    expect([...sql.matchAll(/create or replace function public\.(\w+)/g)].map(m => m[1])).toEqual(['lk_correos_por_estado'])
+    expect(sql.replace(/\$\$[\s\S]*?\$\$/g, '').replace(/--.*$/gm, '')).not.toMatch(/\b(create table|alter|drop|truncate|delete|update|insert|grant|revoke)\b/i)
   })
   it('COR-C-05 al pasar a la mediación: los dos y la persona mediadora (sin correo: lo pone el servidor)', async () => {
     const id = await entregada(); await reclamo(id)

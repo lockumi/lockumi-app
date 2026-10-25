@@ -132,7 +132,7 @@ const firmar = (kp, xdr) => { const t = TransactionBuilder.fromXDR(xdr, Networks
 // ── Corrida ──
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
 const { atender } = await vite.ssrLoadModule('/api/_lib/tw.ts'), { atenderCorreo } = await vite.ssrLoadModule('/api/_lib/correo.ts')
-const { procesarCorreos, enviarCorreoCuenta, abrirCorreo } = await vite.ssrLoadModule('/api/_lib/correos-c.ts')
+const { procesarCorreos, enviarCorreoCuenta, abrirCorreo, paginaAbrir } = await vite.ssrLoadModule('/api/_lib/correos-c.ts')
 const D = REAL ? await destinoReal() : await destinoSimulado()
 if (LIMPIAR) { log('Borrados', await D.limpiar(), 'alquileres marcados E2E-C en', D.nombre); await vite.close(); process.exit(0) }
 if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (CORREOS && !env.RESEND_API_KEY) falta.push('RESEND_API_KEY'); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
@@ -162,6 +162,9 @@ async function correosC(k, id, esperado, ahora) {
 }
 const CASILLA = 'Acepto que Lockumi me envíe avisos por correo'
 const masDias = (t, d) => new Date(+new Date(t) + d * 864e5).toISOString()
+/** Vencimiento real del plazo (con domingos y feriados), igual que lk_fin_plazo. Los recordatorios se cuentan HACIA ATRÁS desde aquí (Legal 25/10, 5:09 p. m.). */
+const { vencimiento } = await vite.ssrLoadModule('/api/_lib/plazos.ts')
+const finPlazo = (t, seg) => new Date(vencimiento(+new Date(t), seg * 1000).fin).toISOString()
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
 const twDirecto = (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
@@ -279,10 +282,13 @@ const flujos = {
     await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
     await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Mancha en la pared de la sala (prueba)' }); paso('mediacion', `el dueño reclama ${RECLAMO} USDC`)
     await correosC('mediacion', id, ['COR-C-03'])
-    // El inquilino toca «Ver el reclamo» en el correo: GET /api/correo?abrir=<enlace> registra la apertura (6.5 b) una sola vez.
+    // El inquilino toca «Ver el reclamo» en el correo: GET /api/correo?abrir=<enlace> solo muestra una página con un botón; al tocar
+    // el botón (POST) se registra la apertura (6.5 b), una sola vez (Legal 25/10, 5:09 p. m., punto 4).
     const aviso = htmls.filter(h => h.to?.[0] === correoPrueba('mediacion', 'inquilino') && /\/api\/correo\?abrir=/.test(h.html)).pop()
     const token = aviso?.html.match(/\/api\/correo\?abrir=([0-9a-f]{64})/)?.[1]; exigir(token, 'COR-C-03 no trae el enlace de apertura')
-    exigir(await abrirCorreo(envC, token, fC) === id, 'el enlace de COR-C-03 no abrió el alquiler'); await abrirCorreo(envC, token, fC)
+    exigir(paginaAbrir(token).includes(`<form method="post" action="/api/correo?abrir=${token}">`), 'la página del enlace no trae el botón')
+    exigir(!(await D.leer('lk_reclamos', id))[0].abierto_en, 'abrir la página (GET) registró la apertura')
+    exigir(await abrirCorreo(envC, token, fC) === id, 'el botón de la página no abrió el alquiler'); await abrirCorreo(envC, token, fC)
     const [rec] = await D.leer('lk_reclamos', id); exigir(rec.abierto_en, 'no quedó registrada la apertura del aviso')
     exigir((await D.leer('lk_eventos', id)).filter(e => e.texto === 'El inquilino abrió el aviso del reclamo').length === 1, 'la apertura no quedó una sola vez en el historial')
     paso('mediacion', 'el inquilino abre el aviso del reclamo desde el correo: queda la hora (una sola vez en el historial)')
@@ -323,18 +329,20 @@ const flujos = {
     exigir((await D.leer('lk_eventos', id)).some(x => x.texto.startsWith('Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo)')), 'el vencimiento no quedó en el historial')
     paso('silencio-inquilino', 'vence la mediación (reloj de prueba): queda en el historial, no se paga nada y la mediación sigue abierta')
   },
-  async recordatorios() {   // plazo de 7 días: recordatorios del dueño (días 4 y 6) y del inquilino tras el reclamo (días 4 y 6), con el reloj de prueba
+  async recordatorios() {   // plazo de 7 días: recordatorios del dueño (quedan 3 días / vence mañana) y del inquilino tras el reclamo, con el reloj de prueba
     const id = ids.recordatorios = await hastaPlazo('recordatorios', true, 7 * 86400)
     const inicio = (await estado(id)).ventana_inicio; exigir(inicio, 'no empezó el plazo del dueño')
-    await correosC('recordatorios', id, ['COR-C-02/d4'], masDias(inicio, 3.5))
-    await correosC('recordatorios', id, ['COR-C-02/d6'], masDias(inicio, 5.5))
+    const fin = finPlazo(inicio, 7 * 86400)
+    await correosC('recordatorios', id, ['COR-C-02/d4'], masDias(fin, -2.5))   // quedan 3 días
+    await correosC('recordatorios', id, ['COR-C-02/d6'], masDias(fin, -0.5))   // vence mañana
     const ruta = `${id}/reclamo/${randomUUID()}.jpg`; await dueno.subirFoto(ruta, FOTO)
     await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
     await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Vidrio de la ventana rajado (prueba)' }); paso('recordatorios', `el dueño reclama ${RECLAMO} USDC`)
     await correosC('recordatorios', id, ['COR-C-03'])
     const [rec] = await D.leer('lk_reclamos', id); exigir(rec?.entregado_en, 'el reclamo no tiene hora de entrega')
-    await correosC('recordatorios', id, ['COR-C-04/d4'], masDias(rec.entregado_en, 3.5))
-    await correosC('recordatorios', id, ['COR-C-04/d6'], masDias(rec.entregado_en, 5.5))
+    const finInq = finPlazo(rec.entregado_en, 7 * 86400)
+    await correosC('recordatorios', id, ['COR-C-04/d4'], masDias(finInq, -2.5))
+    await correosC('recordatorios', id, ['COR-C-04/d6'], masDias(finInq, -0.5))
     // 6.5 c) el inquilino acepta el reclamo: cierre por acuerdo, «repartir» en la red de prueba y COR-C-07 «acuerdo» a los dos
     await inquilino.rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: true }); paso('recordatorios', 'el inquilino acepta el reclamo: cierre por acuerdo')
     const r = await tw(inquilino, { accion: 'repartir', contrato: id }); paso('recordatorios', `«repartir» del acuerdo: ${RECLAMO} USDC al dueño y ${MONTO - RECLAMO} al inquilino (menos 0,3 %)`, r.tx)

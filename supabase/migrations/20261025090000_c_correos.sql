@@ -1,4 +1,5 @@
--- Escenario C (PR #22) · Correos del servidor COR-C-01 a COR-C-09 (lista de Legal: legal/correos-escenario-c.md). Sin aplicar.
+-- Escenario C (PR #22) · Correos del servidor COR-C-01 a COR-C-09 (lista de Legal: legal/correos-escenario-c.md). Aplicada en producción el 25/10/2026 (4:25 p. m. y 4:31 p. m., hora de Costa Rica).
+-- lk_correos_por_estado fue reemplazada por 20261025100000_c_recordatorios_hacia_atras.sql (recordatorios contados hacia atrás).
 -- SOLO AGREGA: 3 tablas nuevas, 9 funciones nuevas (ningún nombre existía antes) y permisos sobre ellas. No cambia ni borra
 -- ningún dato ni ninguna función existente. Idempotente: se puede volver a aplicar.
 --
@@ -178,7 +179,7 @@ begin
     update public.lk_mediacion_plazos set vencido_en = p_ahora where contrato_id = c.id and vencido_en is null and vence <= p_ahora;
     if found then
       n := n + 1;
-      -- LEGAL: revisar · evento del historial al vencer el plazo de la mediación (P-06)
+      -- LEGAL: revisado (25/10) · evento del historial al vencer el plazo de la mediación (P-06)
       perform public.lk_evento(c.id, 'Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo) sin el mismo reparto aceptado por las dos partes. No se pagó nada: el monto reclamado sigue retenido y la mediación sigue abierta.');
     end if;
   end loop;
