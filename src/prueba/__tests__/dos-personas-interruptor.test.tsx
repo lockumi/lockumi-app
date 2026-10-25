@@ -7,6 +7,9 @@ import detalleFuente from '../../screens/Detalle.tsx?raw'
 import migracion7 from '../../../supabase/migrations/20261025000000_invitacion_7_dias.sql?raw'
 
 vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
+// Interruptor encendido para los textos del contrato (los modos se prueban aparte con calcularModos).
+vi.stubEnv('VITE_TRUSTLESS', '1'); vi.stubEnv('VITE_DOS_PERSONAS', '1')
+vi.stubEnv('VITE_SUPABASE_URL', 'http://localhost:54321'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'falsa')
 const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
 
