@@ -1,5 +1,5 @@
 // Paso 19 · Reputación ENCENDIDA (VITE_REPUTACION=1), según legal/reputacion-textos-para-producto.md: REP-01 en una pantalla aparte ANTES
-// de crear la cuenta (sin tocar el login), REP-13 + REP-01 para las cuentas 1.7-demo, la tarjeta de bloqueo para alquileres nuevos,
+// de crear la cuenta (sin tocar el login); las cuentas que ya existían siguen igual, sin perfil ni pantallas extra (Coordinador, 25/10);
 // pantallas sin casitas, solo con cantón, sin números de posición, sin «Dejar de mostrar», revisión, noindex y eliminación en 5 días hábiles.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -15,17 +15,16 @@ const sinNavegador = () => vi.doMock('../../store', async (o) => { const m = awa
 const pantalla = async (r: string) => { const { default: R } = await import('../Pantallas'); return renderToStaticMarkup(<R u={U} r={r} salir={() => {}}><p>PANTALLA-DE-SIEMPRE</p></R>) }
 const aceptarTodo = async () => { const { guardarDatos, aceptarRep01 } = await import('../consentimiento')
   aceptarRep01(U.email, ['x', 'y']); guardarDatos(U.email, 'Demo D.', 'Escazú') }
-const BLOQUEO = 'Para crear o unirte a un alquiler nuevo, primero acepta tu perfil de reputación. Tus alquileres abiertos siguen funcionando igual.'
-const omitir = () => { const m = new Map<string, string>([['lockumi.reputacion.ahora-no.demo@lockumi.com', '1']])
-  vi.stubGlobal('sessionStorage', { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) }, removeItem: (k: string) => { m.delete(k) } }) }
+const BLOQUEO = 'Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos.'
 const texto = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
 
 beforeEach(() => { vi.resetModules(); mem.clear(); ses.clear(); sesion(); vi.unstubAllEnvs(); vi.stubEnv('VITE_REPUTACION', '1'); sinNavegador() })
 
 describe('reputación encendida', () => {
-  it('Inicio muestra la tarjeta «Tu perfil en Lockumi»', async () => {
+  it('Inicio muestra la tarjeta «Tu perfil en Lockumi» (solo con REP-01 aceptado)', async () => {
     const { Inicio } = await import('../../screens/Inicio')
-    const h = renderToStaticMarkup(<Inicio u={U} />)
+    expect(renderToStaticMarkup(<Inicio u={U} />)).not.toContain('Tu perfil en Lockumi')
+    await aceptarTodo(); const h = renderToStaticMarkup(<Inicio u={U} />)
     expect(h).toContain('Tu perfil en Lockumi'); expect(h).toContain('href="#/perfil"')
   })
   it('REP-01 antes del login: pantalla aparte, dos casillas sin marcar, [Continuar] desactivado, enlaces y «No crear mi cuenta»', async () => {
@@ -46,21 +45,9 @@ describe('reputación encendida', () => {
     const t = texto(await pantalla('/'))
     expect(aceptoRep01(U.email)).toBe(true); expect(t).toContain('¿Cómo te verán?'); expect(t).toContain('Nombre visible'); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
   })
-  it('cuentas 1.7-demo sin REP-01: al entrar ven el aviso REP-13 con [Ver cambios] (REP-01 aparte)', async () => {
-    const t = texto(await pantalla('/'))
-    expect(t).toContain((await import('../textos')).REP13.texto); expect(t).toContain('Actualizamos los Términos y el Aviso de privacidad (versión 1.10-demo · ')
-    expect(t).toContain('Ver cambios'); expect(t).toContain('Eliminar mi cuenta'); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
-    const h = await pantalla('/perfil/aceptar')
-    expect(texto(h)).toContain('Antes de seguir: tu perfil de reputación'); expect(h).toMatch(/disabled=""[^>]*>Continuar/)
-  })
-  it('regla provisional: sin REP-01, crear o unirse a un alquiler NUEVO muestra la tarjeta con [Ver y aceptar]; los abiertos siguen igual', async () => {
-    omitir()
-    for (const r of ['/crear', '/invitacion/00000000-0000-0000-0000-000000000000/' + 'a'.repeat(64)]) {
-      const h = await pantalla(r), t = texto(h)
-      expect(t).toContain(BLOQUEO); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
-      expect(h).toContain('class="glass tarjeta"'); expect(h).toMatch(/<a class="boton boton--primario" href="#\/perfil\/aceptar">Ver y aceptar<\/a>/)
-    }
-    for (const r of ['/', '/alquiler/x']) expect(texto(await pantalla(r))).toContain('PANTALLA-DE-SIEMPRE')
+  it('cuentas que ya existían (sin REP-01): la app de siempre, sin aviso, sin bloqueo y sin perfil', async () => {
+    for (const r of ['/', '/crear', '/invitacion/00000000-0000-0000-0000-000000000000/' + 'a'.repeat(64), '/alquiler/x', '/perfil']) {
+      const t = texto(await pantalla(r)); expect(t).toContain('PANTALLA-DE-SIEMPRE'); expect(t).not.toMatch(/Actualizamos|Ver cambios|Ver y aceptar|Antes de seguir/) }
   })
   it('con REP-01 y los datos, la app se usa igual que siempre (también crear y unirse)', async () => {
     await aceptarTodo()
@@ -120,7 +107,7 @@ describe('reputación encendida', () => {
     pedirBorrado(U.email, '2026-10-25T20:00:00Z'); ejecutarBorrados()
     expect(perfilDisponible(U.email)).toBe(false)
     const t = texto(await pantalla('/perfil/eliminar/listo'))
-    expect(t).toContain('Listo. Eliminamos tu cuenta.'); expect(t).toContain('30 de octubre de 2026')
+    expect(t).toContain('Listo. Pediste eliminar tu cuenta: tu perfil ya no se muestra y la eliminamos en un máximo de 5 días hábiles.'); expect(t).toContain('30 de octubre de 2026')
   })
 })
 
@@ -149,8 +136,8 @@ describe('eliminar la cuenta con un alquiler abierto (Legal, respuesta final)', 
     pedirBorrado(U.email, '2026-10-25T20:00:00Z', store.todos()); ejecutarBorrados(Date.now(), store.todos())
     expect(perfilDisponible(U.email)).toBe(false)
     const l = texto(await pantalla('/perfil/eliminar/listo'))
-    expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toMatch(/Pedido el 25 de octubre de 2026 a las 14:00/)
-    expect(l).not.toContain('Listo. Eliminamos tu cuenta.')
+    expect(l).toContain('Tu perfil ya no se muestra'); expect(l).toContain('cuando el alquiler se cierre'); expect(l).toContain('Lo pediste el 25 de octubre de 2026 a las 2:00 p. m. (hora de Costa Rica).')
+    expect(l).not.toContain('Listo. Pediste eliminar tu cuenta')
     for (const r of ['/perfil', '/perfil/dueno', '/perfil/calculo']) { const t = texto(await pantalla(r)); expect(t).toContain('Ya pediste eliminar tu cuenta'); expect(t).not.toMatch(/\d,\d de 5|Nuevo en Lockumi/) }
     expect(texto(await pantalla('/perfil/eliminar'))).not.toMatch(/<button[^>]*>Eliminar mi cuenta/)
     const t = texto(await pantalla('/')); expect(t).toContain('PANTALLA-DE-SIEMPRE'); expect(t).not.toContain('Tu puntaje cambió')

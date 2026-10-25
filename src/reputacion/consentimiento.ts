@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react'
 import type { Rol } from '../types'
 import { provinciaDe } from './cantones'
 import { UI } from './textos'
-import { EDICION_REPUTACION } from '../legal/version17'
+import { EDICION_REPUTACION, CLAVE_PREVIA_REPUTACION, claveReputacion } from '../legal/version17'
 
 /** Versión de los textos (Legal, revisión del PR #26): «{versión} · {fecha}» = 1.10-demo y la fecha real de encendido (version17.ts). */
 export const VERSION_TEXTOS = EDICION_REPUTACION
@@ -16,11 +16,14 @@ export type Opcion = 'destacados' | 'nuevos'
 const OPCIONES: Opcion[] = ['destacados', 'nuevos']
 export interface Registro { version: string; fecha: string; hora?: string; texto: string[] }
 export interface EstadoReputacion { nombre?: string; canton?: string; rep01?: Registro; roles: Record<Rol, Partial<Record<Opcion, Registro>>> }
-/** Hora de Costa Rica (UTC−6 todo el año), «HH:MM». */
-export const horaCR = (iso: string) => new Date(Date.parse(iso) - 6 * 3600_000).toISOString().slice(11, 16)
+/** Hora de Costa Rica (UTC−6 todo el año), en 12 horas como pide Legal: «3:21 p. m.», «10:05 a. m.», «12:00 p. m.». */
+export function horaCR(iso: string) {
+  const d = new Date(Date.parse(iso) - 6 * 3600_000), h = d.getUTCHours()
+  return `${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, '0')} ${h < 12 ? 'a. m.' : 'p. m.'}`
+}
 const registro = (texto: string[], fecha: string): Registro => ({ version: VERSION_TEXTOS, fecha, hora: horaCR(fecha), texto })
 
-const clave = (email: string) => 'lockumi.reputacion.v1.' + email.trim().toLowerCase()
+const clave = claveReputacion
 const vacio = (): EstadoReputacion => ({ roles: { dueno: {}, inquilino: {} } })
 const subs = new Set<() => void>()
 const cache = new Map<string, { raw: string | null; v: EstadoReputacion }>()
@@ -60,8 +63,8 @@ export const perfilCompleto = (email: string) => { const s = leer(email); return
 
 // ——— Antes de crear la cuenta (pantalla previa al login, sin tocar el login) ———
 // Legal (revisión del PR #26, regla 2): la aceptación previa vive solo en esta sesión del navegador (sessionStorage) y pasa solo a una
-// cuenta recién creada: sin REP-01 y sin alquileres. Una cuenta con historial ve REP-13 y acepta REP-01 con la casilla de la 1.10-demo.
-const PREVIA = 'lockumi.reputacion.previa.v2', ENTRAR = 'lockumi.reputacion.entrar.v1'
+// cuenta recién creada: sin REP-01 y sin alquileres. Una cuenta que ya existía no acepta nada: sigue sin perfil (Coordinador, 25/10).
+const PREVIA = CLAVE_PREVIA_REPUTACION, ENTRAR = 'lockumi.reputacion.entrar.v1'
 const sesion = () => { try { return sessionStorage } catch { return null } }
 export function previa(): Registro | null { try { const x = sesion()?.getItem(PREVIA); return x ? JSON.parse(x) : null } catch { return null } }
 export function aceptarPrevia(texto: string[], fecha = new Date().toISOString()) {
@@ -90,7 +93,8 @@ export function validarNombre(n: string): string | null {
   const t = n.trim().replace(/\s+/g, ' ')
   if (!t) return UI.errNombre
   if (t.length > 30) return UI.errNombreLargo
-  // Legal (revisión del PR #26): un nombre y la inicial del apellido («Laura V.»); «Laura Vargas R.» no.
-  return /^\p{L}[\p{L}'-]* \p{L}\.?$/u.test(t) ? null : UI.errNombre
+  // Legal (revisión del PR #26 y ronda del 25/10): el nombre (también compuesto, «Ana María V.») y SOLO la inicial del apellido;
+  // nunca un apellido completo al final («Ana María Vargas» no). Hasta dos nombres antes de la inicial.
+  return /^\p{L}[\p{L}'-]*(?: \p{L}[\p{L}'-]+)? \p{L}\.?$/u.test(t) ? null : UI.errNombre
 }
 export const validarCanton = (c: string): string | null => c && provinciaDe(c) ? null : UI.errCanton

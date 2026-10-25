@@ -18,7 +18,7 @@ const DIA = 86_400_000
 /** Ley 8968, art. 6.1: lo negativo deja de contar 10 años después de que ocurrió. */
 export const TOPE_LEGAL_DIAS = 3653
 /** Regla 1 de legal/reputacion-textos-para-producto.md (aprobada): un alquiler del dueño baja solo si se devolvió al inquilino el 90 % o
- *  más de lo reclamado. Base: el monto reclamado (no el depósito), antes del 0,3 % de Trustless Work. LEGAL: revisar */
+ *  más de lo reclamado. Base: el monto reclamado (no el depósito), antes del 0,3 % de Trustless Work. LEGAL: revisado (25/10) */
 export const UMBRAL_CASI_TODO = 0.9
 const vigente = (fecha: string, ahora: number) => ahora - Date.parse(fecha) <= TOPE_LEGAL_DIAS * DIA
 
@@ -26,6 +26,12 @@ export interface Puntaje { cerrados: number; valor: number | null; enRevision: b
 
 /** ¿Cuenta este alquiler? Solo los cerrados en la app con resultado; las simulaciones y mediaciones simuladas no cuentan. */
 export const cuentaParaPuntaje = (a: Alquiler): boolean => a.estado === 'cerrado' && !!a.resultado && a.resultado.via !== 'simulacion'
+
+const igual = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
+/** Legal (ronda del 25/10): los alquileres de esta persona en este papel que entran en su reputación. Un alquiler cuenta solo si LAS
+ *  DOS partes tienen perfil (`conPerfil`); uno entre una cuenta anterior a la 1.10-demo y una nueva no cuenta para ninguna de las dos. */
+export const alquileresDeReputacion = (xs: readonly Alquiler[], email: string, rol: 'dueno' | 'inquilino', conPerfil: (email: string) => boolean): Alquiler[] =>
+  xs.filter(a => igual(rol === 'dueno' ? a.duenoEmail : a.inquilinoEmail, email) && !!a.duenoEmail && !!a.inquilinoEmail && conPerfil(a.duenoEmail) && conPerfil(a.inquilinoEmail))
 
 /** Parte del depósito que se descontó (0 a 1). 0 si el reclamo se cerró sin descontar nada o si no hubo reclamo. */
 export function fraccionDescontada(a: Alquiler, ahora = Date.now()): number {

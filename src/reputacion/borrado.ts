@@ -53,7 +53,9 @@ export const abiertosDe = (alquileres: readonly Alquiler[], email: string) =>
  *  pedido + hora: fecha y hora del pedido (hora de Costa Rica). abierto: tenía un alquiler abierto al pedirla; entonces `limite` es null
  *  hasta que se cierra el último (`cierre`), y desde ahí corren los 5 días hábiles. Mientras tanto los datos solo sirven para cerrar el
  *  alquiler: el perfil no se muestra, el puntaje no se recalcula ni se avisa, y la otra parte sigue viendo el contrato y el historial. */
-export interface Solicitud { pedido: string; hora: string; abierto: boolean; limite: string | null; cierre?: string; hecho?: string }
+export interface Solicitud { pedido: string; hora: string; abierto: boolean; limite: string | null; cierre?: string; hecho?: string
+  /** Tenía perfil de reputación (REP-01) al pedirlo: sus alquileres pasados siguen contando para la otra parte (Legal, 25/10). */
+  conPerfil?: boolean }
 const PREFIJO = 'lockumi.borrado.v1.'
 const clave = (email: string) => PREFIJO + email.trim().toLowerCase()
 export function solicitudBorrado(email: string): Solicitud | null {
@@ -67,7 +69,7 @@ export function pedirBorrado(email: string, ahora: string | number = Date.now(),
   const ya = solicitudBorrado(email)
   if (ya) return ya
   const pedido = typeof ahora === 'string' ? ahora : new Date(ahora).toISOString(), abierto = abiertosDe(alquileres, email).length > 0
-  const s: Solicitud = { pedido, hora: horaCR(pedido), abierto, limite: abierto ? null : fechaLimiteBorrado(pedido) }
+  const s: Solicitud = { pedido, hora: horaCR(pedido), abierto, limite: abierto ? null : fechaLimiteBorrado(pedido), conPerfil: !!leer(email).rep01 }
   localStorage.setItem(clave(email), JSON.stringify(s))
   return s
 }
@@ -98,5 +100,7 @@ export function ejecutarBorrados(ahora = Date.now(), alquileres?: readonly Alqui
   }
   return hechos
 }
+/** Legal (25/10): ¿tiene (o tenía, si pidió eliminar su cuenta) perfil de reputación? Las cuentas anteriores a la 1.10-demo no. */
+export const tienePerfilReputacion = (email: string) => !!leer(email).rep01 || !!solicitudBorrado(email)?.conPerfil
 /** El perfil existe si la persona aceptó REP-01 y no pidió eliminar su cuenta. Si no: «Este perfil ya no está disponible» (REP-09). */
 export const perfilDisponible = (email: string) => !solicitudBorrado(email) && !!leer(email).rep01

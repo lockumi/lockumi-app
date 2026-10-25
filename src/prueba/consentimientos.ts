@@ -7,7 +7,7 @@ import { versionAlquiler, edicionDe } from './version'
 export const CASILLA_MEDIACION = 'Entiendo esto y quiero usar la Mediación Lockumi (demo).'
 
 export function registrarConsentimiento(x: Alquiler, tipo: Consentimiento['tipo'], rol: Rol, texto: string, ahora: number): Consentimiento {
-  const c: Consentimiento = { tipo, cuenta: rol === 'dueno' ? x.duenoEmail : x.inquilinoEmail, rol, alquiler: x.id, version: versionAlquiler(x), ...edicionDe(versionAlquiler(x)), texto, fecha: new Date(ahora).toISOString() }
+  const c: Consentimiento = { tipo, cuenta: rol === 'dueno' ? x.duenoEmail : x.inquilinoEmail, rol, alquiler: x.id, version: versionAlquiler(x), ...edicionDe(versionAlquiler(x), rol === 'dueno' ? x.duenoEmail : x.inquilinoEmail), texto, fecha: new Date(ahora).toISOString() }
   ;(x.consentimientos ??= []).push(c); return c
 }
 /** Gancho para el paso 11 (correos de los avisos): llamarlo cuando quien prueba marque su casilla del correo. */

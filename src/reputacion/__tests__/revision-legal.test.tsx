@@ -33,26 +33,16 @@ describe('VERSIÓN: 1.10-demo con la fecha real de encendido (una sola constante
       expect(off).toContain(`**Versión ${EDICION_V17}**`)
     }
   })
-  it('aceptar los Términos con la reputación encendida guarda la edición 1.10-demo', async () => {
+  it('aceptar los Términos con la reputación encendida guarda la edición 1.10-demo (cuenta nueva, desde la pantalla previa)', async () => {
     const { guardarAceptacion } = await import('../../legal/aceptacion'), { V17, EDICION_REPUTACION } = await import('../../legal/version17')
+    ;(await import('../consentimiento')).aceptarPrevia(['x'])
     expect(guardarAceptacion('terminos', V17).edicion).toBe(EDICION_REPUTACION)
     vi.stubEnv('VITE_REPUTACION', '0'); vi.resetModules()
     const a = await import('../../legal/aceptacion'), w = await import('../../legal/version17'); expect(a.guardarAceptacion('terminos', w.V17).edicion).toBe(w.EDICION_V17)
   })
-  it('cuentas 1.7-demo: REP-01 trae una casilla aparte, sin marcar, para lo que agrega la versión; [Continuar] pide las tres', async () => {
-    const { EDICION_REPUTACION } = await import('../../legal/version17')
-    const h = await pantalla('/perfil/aceptar'), t = texto(h)
-    expect(t).toContain(`Acepto lo que agrega la versión ${EDICION_REPUTACION} de los Términos y del Aviso de privacidad para tener mi perfil de reputación.`)
-    expect((h.match(/type="checkbox"/g) ?? []).length).toBe(3); expect(h).not.toMatch(/type="checkbox"[^>]*checked/)
-    expect(h).toMatch(/disabled=""[^>]*>Continuar/)
-  })
 })
 
 describe('TEXTOS (literales de Legal)', () => {
-  it('REP-13 con la versión y la fecha', async () => {
-    const { EDICION_REPUTACION } = await import('../../legal/version17')
-    expect(texto(await pantalla('/'))).toContain(`Actualizamos los Términos y el Aviso de privacidad (versión ${EDICION_REPUTACION}): usar Lockumi ahora incluye un perfil de reputación público y fijo, que aceptas en una pantalla aparte. Tus alquileres abiertos siguen funcionando igual, aunque no lo aceptes. Para crear o unirte a un alquiler nuevo, primero tienes que aceptarlo. Si no estás de acuerdo, puedes eliminar tu cuenta sin costo.`)
-  })
   it('sin «Ajustes»: la ubicación es «Tu perfil en Lockumi»', async () => {
     const p = await legal('privacidad.md'), t = await legal('terminos.md')
     expect(p + t).not.toContain('Ajustes')
@@ -66,6 +56,7 @@ describe('TEXTOS (literales de Legal)', () => {
     expect(COMO_SE_CALCULA.puntos[0]).toBe(LEGAL_N)
     expect(TEXTO_NUEVOS.dueno.parrafos[0]).toContain('con tu nombre visible, «Nuevo en Lockumi» con la cantidad de alquileres cerrados (por ejemplo, «Nuevo en Lockumi · 1 alquiler cerrado») y tus insignias')
     const { guardarDatos, aceptarRep01 } = await import('../consentimiento'); aceptarRep01(U.email, ['x']); guardarDatos(U.email, 'Demo D.', 'Escazú')
+    aceptarRep01('o@x.cr', ['x'])   // la otra parte también tiene perfil (si no, el alquiler no cuenta: Legal, 25/10)
     mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr',
       estado: 'cerrado', rendimiento: false, historial: [], diasSimulados: 0, contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, resultado: { inquilino: 20, dueno: 0, via: 'acuerdo', fecha: '2026-06-01T12:00:00Z' } }]))
     for (const r of ['/perfil/dueno', '/perfil/calculo', '/perfil/dueno/aparecer']) { const t = texto(await pantalla(r)); expect(t).not.toContain('{n}'); expect(t).not.toMatch(/\b1 alquileres/) }
@@ -74,18 +65,16 @@ describe('TEXTOS (literales de Legal)', () => {
   it('textos de Producto', async () => {
     const { UI, REP01 } = await import('../textos'), { ENTRADA } = await import('../entrada-textos')
     expect(UI.noCreasTexto).toBe('No creamos tu cuenta y no guardamos ningún dato tuyo. Si cambias de opinión, vuelve cuando quieras.')
-    expect(UI.revAcuse('1 de junio de 2026', '10:00', '8 de junio de 2026')).toBe('Recibimos tu pedido el 1 de junio de 2026 a las 10:00 (hora de Costa Rica). Te respondemos por escrito a más tardar el 8 de junio de 2026. Mientras tanto, ese alquiler no cuenta y tu puntaje público dice «En revisión».')
+    expect(UI.revAcuse('1 de junio de 2026', '10:00 a. m.', '8 de junio de 2026')).toBe('Recibimos tu pedido el 1 de junio de 2026 a las 10:00 a. m. (hora de Costa Rica). Te respondemos por escrito a más tardar el 8 de junio de 2026. Mientras tanto, ese alquiler no cuenta y tu puntaje público dice «En revisión».')
     expect(UI.cantonAyuda).toBe('Mostramos tu cantón, o tu provincia si en tu cantón hay menos de 10 personas. Nunca el barrio ni la dirección.')
     expect(UI.datosNota).toBe('Último paso: estos datos se publican en tu perfil.')
-    expect(REP01.tituloCuenta).toBe('Antes de seguir: tu perfil de reputación')
-    expect(REP01.noAcuerdoCuenta).toBe('Si no estás de acuerdo, tus alquileres abiertos siguen funcionando igual, pero no podrás crear ni unirte a un alquiler nuevo. También puedes eliminar tu cuenta sin costo.')
+    expect(REP01.noAcuerdo).toBe('Si no estás de acuerdo, puedes no crear tu cuenta. No tiene ningún costo.')
     expect(ENTRADA.texto).toBe('Así se ve tu perfil público: tus insignias y, desde tu 3.er alquiler cerrado, tu puntaje.')
-    const t = texto(await pantalla('/perfil/aceptar')); expect(t).toContain(REP01.tituloCuenta); expect(t).toContain(REP01.noAcuerdoCuenta); expect(t).not.toContain('Antes de crear tu cuenta')
   })
-  it('nombre visible: un nombre y la inicial del apellido; el error de largo solo por largo', async () => {
+  it('nombre visible: el nombre (también compuesto) y la inicial del apellido; el error de largo solo por largo', async () => {
     const { validarNombre } = await import('../consentimiento'), { UI } = await import('../textos')
     expect(validarNombre('Laura V.')).toBeNull(); expect(validarNombre('María-José R')).toBeNull()
-    expect(validarNombre('Laura Vargas R.')).toBe(UI.errNombre); expect(validarNombre('Laura Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura')).toBe(UI.errNombre)
+    expect(validarNombre('Ana María V.')).toBeNull(); expect(validarNombre('Ana María Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura Vargas')).toBe(UI.errNombre); expect(validarNombre('Laura')).toBe(UI.errNombre)
     expect(validarNombre('Maximilianoalejandrotomasito V.')).toBe(UI.errNombreLargo)
   })
 })
@@ -107,10 +96,10 @@ describe('REGLAS QUE NO SE CUMPLÍAN', () => {
     c.aceptarPrevia(['x']); c.vincularPrevia('nueva@x.cr', true); expect(c.aceptoRep01('nueva@x.cr')).toBe(true); expect(c.previa()).toBeNull()
     ses.clear(); c.vincularPrevia('otra@x.cr', true); expect(c.aceptoRep01('otra@x.cr')).toBe(false)     // otra sesión: no hay nada
   })
-  it('2b) una cuenta con alquileres no recibe la aceptación previa: ve REP-13', async () => {
+  it('2b) una cuenta con alquileres no recibe la aceptación previa: sigue igual, sin perfil (Coordinador, 25/10)', async () => {
     const c = await import('../consentimiento'); c.aceptarPrevia(['x'])
     mem.set('lockumi.alquileres.v3', JSON.stringify([{ id: 'c1', direccion: 'Casa 1', monto: 20, moneda: 'USDC', inicio: '2026-01-01', fin: '2026-06-01', reglas: [], duenoEmail: U.email, inquilinoEmail: 'o@x.cr', estado: 'en_curso', rendimiento: false, historial: [], diasSimulados: 0, contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} } }]))
-    expect(texto(await pantalla('/'))).toContain('Actualizamos los Términos'); expect(c.aceptoRep01(U.email)).toBe(false)
+    expect(texto(await pantalla('/'))).toContain('PANTALLA-DE-SIEMPRE'); expect(c.aceptoRep01(U.email)).toBe(false)
   })
   it('3) robots.txt existe y se sirve antes del rewrite; X-Robots-Tag noindex, nofollow en las rutas de perfil', async () => {
     const r = await leerArchivo('public/robots.txt'); expect(r).toMatch(/^User-agent: \*$/m); expect(r).toMatch(/^Disallow: \/perfil$/m)

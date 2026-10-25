@@ -108,7 +108,7 @@ describe('Legal: guarda de encendido (la fecha real de publicación)', () => {
     expect(() => g.configResolved!({ command: 'serve' } as never)).not.toThrow()
     expect(await leerArchivo('vite.config.ts')).toMatch(/guardaEncendido\(/)
   })
-  it.runIf(process.env.VITE_REPUTACION === '1')('con el interruptor encendido, la fecha es real («2 de noviembre de 2026»)', async () => {
+  it.runIf(import.meta.env.VITE_REPUTACION === '1')('con el interruptor encendido, la fecha es real («2 de noviembre de 2026»)', async () => {
     const { FECHA_ENCENDIDO_REPUTACION } = await import('../../legal/version17'); expect(FECHA_ENCENDIDO_REPUTACION).toMatch(RE)
   })
   it('la expresión de Legal acepta una fecha real y rechaza la de borrador', () => {
@@ -179,9 +179,12 @@ describe('Legal: textos literales', () => {
     for (const n of ['Ana María Vargas', 'Laura Vargas', 'Laura', 'Ana María Vargas Rojas']) expect(validarNombre(n), n).toBe(UI.errNombre)
   })
   it('se quitan las marcas «LEGAL: revisar» que Legal aprobó', async () => {
-    for (const f of ['src/reputacion/textos.ts', 'src/reputacion/entrada-textos.ts', 'src/reputacion/puntaje.ts', 'supabase/migrations/20261025140000_reputacion.sql', 'api/_lib/correo.ts']) {
+    for (const f of ['src/reputacion/textos.ts', 'src/reputacion/entrada-textos.ts', 'src/reputacion/puntaje.ts', 'supabase/migrations/20261025140000_reputacion.sql']) {
       const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !l.includes('ronda 25/10 3:27'))
       expect(nuevas, f).toEqual([]) }
+    // correo.ts: solo el bloque de REP-12 es del paso 19 (las demás marcas son de otros pasos).
+    const rep12 = (await leerArchivo('api/_lib/correo.ts')).split('\n').filter(l => /n\.º|Legal exige|líneas públicas del puntaje/.test(l))
+    expect(rep12.length).toBeGreaterThan(1); expect(rep12.filter(l => l.includes('LEGAL: revisar'))).toEqual([])
   })
 })
 

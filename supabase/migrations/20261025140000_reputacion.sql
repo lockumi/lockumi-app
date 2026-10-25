@@ -26,7 +26,7 @@ create table if not exists public.lk_reputacion_aceptaciones (
   texto text[] not null,                        -- el texto exacto que vio y aceptó
   aceptado_en timestamptz not null default now() -- fecha y hora
 );
--- Vitrinas (REP-06, opcionales): una fila por papel y opción. LEGAL: revisar
+-- Vitrinas (REP-06, opcionales): una fila por papel y opción. LEGAL: revisado (25/10)
 create table if not exists public.lk_reputacion_consentimientos (
   usuario uuid not null references auth.users(id) on delete cascade,
   rol text not null check (rol in ('dueno','inquilino')),
@@ -82,7 +82,8 @@ create table if not exists public.lk_solicitudes_borrado (
   alquiler_abierto boolean not null default false, -- tenía un alquiler abierto al pedirlo (REP-09, respuesta final de Legal)
   cierre_en timestamptz,                         -- con alquiler abierto: cuándo se cerró el último; desde ahí corren los 5 días hábiles
   fecha_limite timestamptz,                      -- null mientras espera el cierre del alquiler abierto
-  hecho_en timestamptz
+  hecho_en timestamptz,
+  con_perfil boolean not null default false      -- tenía perfil de reputación (REP-01) al pedirlo: sus alquileres pasados siguen contando
 );
 alter table public.lk_solicitudes_borrado enable row level security;
 drop policy if exists lk_borrado_propio on public.lk_solicitudes_borrado;
@@ -140,8 +141,9 @@ declare u uuid := auth.uid(); lim timestamptz; abierto boolean;
 begin
   if u is null then raise exception 'Entra a tu cuenta para eliminarla.' using errcode = '28000'; end if;
   abierto := public.lk_tiene_alquiler_abierto(u);
-  insert into public.lk_solicitudes_borrado(usuario, alquiler_abierto, fecha_limite)
-  values (u, abierto, case when abierto then null else public.lk_fecha_limite_borrado(now()) end)
+  insert into public.lk_solicitudes_borrado(usuario, alquiler_abierto, fecha_limite, con_perfil)
+  values (u, abierto, case when abierto then null else public.lk_fecha_limite_borrado(now()) end,
+          exists (select 1 from public.lk_reputacion_aceptaciones where usuario = u))
   on conflict (usuario) do nothing;                         -- un segundo pedido no cambia nada del primero
   -- El perfil deja de mostrarse al instante (lk_perfil_visible). Con un alquiler abierto NO se borra nada de la cuenta hasta que se
   -- cierra (Legal, revisión del PR #26, regla 6); sin alquiler abierto, se borra ya lo público y la cuenta en la tarea programada.
@@ -185,6 +187,45 @@ begin
   return n;
 end $$;
 revoke all on function public.lk_borrar_cuentas_pedidas() from public, anon, authenticated;
+
+-- 4. Cuentas anteriores a la 1.10-demo y borrados pendientes (Legal, ronda del 25/10/2026) ------------------------------------
+-- Una cuenta anterior (sin aceptación de REP-01) no tiene perfil. Un alquiler cuenta para la reputación solo si LAS DOS partes tienen
+-- (o tenían, si pidieron eliminar su cuenta) perfil: un alquiler entre una cuenta anterior y una nueva no cuenta para ninguna.
+create or replace function public.lk_tiene_perfil_reputacion(p_usuario uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lk_reputacion_aceptaciones where usuario = p_usuario)
+      or exists (select 1 from public.lk_solicitudes_borrado where usuario = p_usuario and con_perfil)
+$$;
+create or replace function public.lk_cuenta_para_reputacion(p_contrato uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lk_participantes where contrato_id = p_contrato and rol = 'dueno')
+     and exists (select 1 from public.lk_participantes where contrato_id = p_contrato and rol = 'inquilino')
+     and not exists (select 1 from public.lk_participantes where contrato_id = p_contrato and not public.lk_tiene_perfil_reputacion(usuario))
+$$;
+revoke all on function public.lk_tiene_perfil_reputacion(uuid) from public, anon, authenticated;
+revoke all on function public.lk_cuenta_para_reputacion(uuid) from public, anon, authenticated;
+-- Ningún evento de un alquiler que no cuenta llega a guardarse (se descarta en silencio, para las dos partes).
+create or replace function public.lk_rep_evento_cuenta() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if not public.lk_cuenta_para_reputacion(new.contrato_id) then return null; end if;
+  return new;
+end $$;
+drop trigger if exists lk_rep_evento_cuenta on public.lk_reputacion_eventos;
+create trigger lk_rep_evento_cuenta before insert on public.lk_reputacion_eventos for each row execute function public.lk_rep_evento_cuenta();
+
+-- Con un pedido de borrado pendiente, la cuenta no crea ni se une a alquileres nuevos (lk_crear_contrato, lk_crear_contrato_invitando
+-- y lk_aceptar_invitacion agregan participantes). Los alquileres abiertos siguen igual: sus filas ya existen.
+-- LEGAL: revisar · ronda 25/10 3:27 · texto literal de Legal (d)
+create or replace function public.lk_sin_alquileres_nuevos_si_borra() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from public.lk_solicitudes_borrado where usuario = new.usuario and hecho_en is null) then
+    raise exception 'Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.'
+      using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists lk_sin_alquileres_nuevos_si_borra on public.lk_participantes;
+create trigger lk_sin_alquileres_nuevos_si_borra before insert on public.lk_participantes for each row execute function public.lk_sin_alquileres_nuevos_si_borra();
 
 -- Programación con pg_cron si la extensión está instalada; si no, se deja escrito y hay que programarla a mano (docs/reputacion.md).
 do $$ begin

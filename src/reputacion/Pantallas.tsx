@@ -3,18 +3,18 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres, rolDe, store } from '../store'
+import { useAlquileres, store } from '../store'
 import { ir } from '../router'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
-  valorDelAlquiler, ordenarVitrina, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
-import { useReputacion, guardarDatos, aceptar, activa, aceptarRep01, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
+  valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
+import { useReputacion, guardarDatos, aceptar, activa, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
-import { pedirBorrado, ejecutarBorrados, solicitudBorrado, abiertosDe, type Solicitud } from './borrado'
+import { pedirBorrado, ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, type Solicitud } from './borrado'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
-import { REP01, REP02, REP13, BLOQUEO_NUEVO, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
+import { REP01, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
 // ——— Piezas ———
@@ -80,7 +80,8 @@ const usd = (n: number) => `${n.toLocaleString('es-CR')} USDC de prueba`   // Le
 export const zonaDe = (canton: string) => zonaVitrina(canton, provinciaDe(canton) ?? '', EJEMPLOS.filter(x => x.canton === canton).length)
 const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
-const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => todos.filter(a => rolDe(a, u.email) === rol)
+/** Los alquileres de esta persona en este papel que cuentan para su reputación (los dos con perfil: Legal, 25/10). */
+const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion)
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
@@ -113,7 +114,7 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
         <div className="rp-puntaje">
           {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
           <div><div className="rp-linea">{lineaPublica(p)}</div>
-            <p className="nota">{p.enRevision ? AVISO_CAMBIO.nota : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
+            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
         </div>
         {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
@@ -164,37 +165,33 @@ const TextoBloque = ({ b, vars }: { b: Bloque; vars: Record<string, string> }) =
   <div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={conVars(t, vars)} /></p>)}</div>
 const lista = (xs: string[]) => <ul>{xs.map((t, k) => <li key={k}><Md t={t} /></li>)}</ul>
 
-// ——— REP-01: pantalla aparte, antes de crear la cuenta (y para cuentas 1.7-demo, al entrar) ———
+// ——— REP-01: pantalla aparte, antes de crear la cuenta (las cuentas que ya existían no la ven: Coordinador, 25/10) ———
 // Dos casillas sin marcar (REP-01 y REP-01b); [Continuar] desactivado hasta marcar las dos. Se guarda versión, fecha, hora y texto.
 /** Texto exacto que la persona aceptó (va al registro del consentimiento). */
 export const TEXTO_REP01 = [REP01.titulo, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad]
-/** Lo que se guarda como aceptado por una cuenta que ya existía (1.7-demo): título, casillas (con la de la versión) y cierre propios. */
-export const TEXTO_REP01_CUENTA = [REP01.tituloCuenta, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad, REP01.casillaVersion]
-/** `cuenta`: la persona ya tiene cuenta (1.7-demo): otro título y otro cierre, y una tercera casilla aparte, sin marcar (Legal, VERSIÓN). */
-export function Rep01({ aviso, onAceptar, onNo, no, extra, pie, cuenta = false }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode; cuenta?: boolean }) {
-  const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [version, setVersion] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
+export function Rep01({ aviso, onAceptar, onNo, no, extra, pie }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode }) {
+  const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
   const atras = <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setVista('rep01')}>{REP02.volver}</button></div>
   if (vista === 'ejemplo') return <Ejemplo02 atras={atras} />
   if (vista === 'calculo') return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}><TextoCalculo />{atras}</main>
-  const listas = casilla && edad && (!cuenta || version)
+  const listas = casilla && edad
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     {aviso}
     <section className="glass tarjeta rp-perfil" aria-labelledby="rp-rep01"><Banda mini /><div className="rp-perfil__cuerpo">
-      <h1 id="rp-rep01" className="h2">{cuenta ? REP01.tituloCuenta : REP01.titulo}</h1>
+      <h1 id="rp-rep01" className="h2">{REP01.titulo}</h1>
       <div className="rp-texto" style={{ marginTop: 10 }}><h2 className="h3">{REP01.subtitulo}</h2><p><Md t={REP01.intro} /></p>{lista(REP01.puntos)}</div>
       <ul className="rp-enlaces" style={{ marginTop: 6 }}>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('ejemplo')}>{REP01.enlaces.ejemplo}<Icono n="der" /></button></li>
         <li><button type="button" className="rp-enlace" onClick={() => setVista('calculo')}>{REP01.enlaces.calculo}<Icono n="der" /></button></li>
         <li><a href="#/privacidad">{REP01.enlaces.privacidad}<Icono n="der" /></a></li></ul>
-      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{cuenta ? REP01.tituloCuenta : REP01.titulo}</legend>
+      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{REP01.titulo}</legend>
         <label className="check"><input type="checkbox" checked={casilla} onChange={ev => setCasilla(ev.target.checked)} /><span>{REP01.casilla}</span></label>
         <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={edad} onChange={ev => setEdad(ev.target.checked)} /><span>{REP01.edad}</span></label>
-        {cuenta && <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={version} onChange={ev => setVersion(ev.target.checked)} /><span>{REP01.casillaVersion}</span></label>}
       </fieldset>
-      <p className="nota" style={{ marginTop: 10 }}>{cuenta ? REP01.noAcuerdoCuenta : REP01.noAcuerdo}</p>
+      <p className="nota" style={{ marginTop: 10 }}>{REP01.noAcuerdo}</p>
       <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" disabled={!listas} aria-describedby={listas ? undefined : 'rp-rep01-falta'} onClick={onAceptar}>{REP01.continuar}</button>
         <button type="button" className="boton boton--secundario" onClick={onNo}>{no}</button></div>
-      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{cuenta ? UI.errRep01Cuenta : UI.errRep01}</p>}
+      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{UI.errRep01}</p>}
       {extra}{pie}
     </div></section>
   </main>
@@ -236,24 +233,12 @@ export function Previa({ children }: { children: ReactNode }) {
     pie={<div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => { entrarSinAceptar(); setHecha(true) }}>{REP01.entrar}</button></div>} />
 }
 
-// ——— Cuentas 1.7-demo sin REP-01 (regla provisional de Katherine, 25/10/2026, 2:33 p. m.) ———
-const CLAVE_AHORA_NO = 'lockumi.reputacion.ahora-no.'
-const ahoraNo = (email: string) => { try { return sessionStorage.getItem(CLAVE_AHORA_NO + email.toLowerCase()) === '1' } catch { return false } }
-/** REP-13: aviso al entrar; [Ver cambios] abre REP-01 (pantalla aparte). */
-function Rep13({ u, salir, onAhoraNo }: { u: Usuario; salir: () => void; onAhoraNo: () => void }) {
-  void u
-  return <Pantalla titulo={UI.rep13Titulo}><p style={{ marginTop: 8 }}>{REP13.texto}</p>
-    <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/perfil/aceptar">{REP13.verCambios}</a>
-      <button type="button" className="boton boton--secundario" onClick={onAhoraNo}>{UI.ahoraNoCuenta}</button></div>
-    <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={salir}>{UI.salir}</button>
-      <a className="rp-enlace-peligro" href="#/perfil/eliminar">{ELIMINAR.boton}</a></div></Pantalla>
-}
-/** Tarjeta al intentar crear o unirse a un alquiler nuevo sin REP-01 (texto literal; estilos de siempre: glass tarjeta + boton). */
-export function BloqueoNuevo() {
+// ——— Pedido de borrado pendiente (Legal, ronda del 25/10, d) ———
+/** Al intentar crear o unirse a un alquiler nuevo con un pedido de borrado pendiente (texto literal; estilos de siempre: glass tarjeta). */
+export function BloqueoBorrado() {
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/" className="volver">← Tus alquileres</a>
-    <section className="glass tarjeta" role="status"><p>{BLOQUEO_NUEVO.texto}</p>
-      <div style={{ marginTop: 'var(--s4)' }}><a className="boton boton--primario" href="#/perfil/aceptar">{BLOQUEO_NUEVO.boton}</a></div></section>
+    <section className="glass tarjeta" role="status"><p>{BLOQUEO_BORRADO}</p></section>
   </main>
 }
 /** Último paso al crear el perfil: nombre visible y cantón (lo que se publica). */
@@ -476,7 +461,7 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
   </main>
 }
 
-/** Rutas que crean o unen a un alquiler NUEVO (bloqueadas sin REP-01 para las cuentas 1.7-demo). */
+/** Rutas que crean o unen a un alquiler NUEVO (bloqueadas mientras hay un pedido de borrado pendiente). */
 const esNuevo = (r: string) => r === '/crear' || r.startsWith('/invitacion/')
 /** Regla 6: los perfiles no aparecen en buscadores (noindex en todas las rutas #/perfil). */
 function useNoIndex(activo: boolean) {
@@ -486,13 +471,13 @@ function useNoIndex(activo: boolean) {
 }
 
 /** Con VITE_REPUTACION=1, App.tsx pasa por aquí TODAS las pantallas con sesión:
- *  1) la aceptación previa (REP-01 antes del login) pasa a la cuenta; 2) sin REP-01 (cuentas 1.7-demo): REP-13 al entrar y REP-01 aparte,
- *  y mientras no acepte, crear o unirse a un alquiler nuevo muestra la tarjeta de bloqueo (los abiertos siguen igual);
- *  3) con REP-01, el último paso (nombre visible y cantón); 4) las rutas #/perfil/… o la pantalla de siempre (children). */
+ *  1) la aceptación previa (REP-01 antes del login) pasa a la cuenta; 2) con un pedido de borrado pendiente, crear o unirse a un
+ *  alquiler nuevo muestra el aviso de Legal (los abiertos siguen igual); 3) sin REP-01 (cuentas que ya existían): la app de siempre, sin
+ *  perfil público, sin bloqueo y sin pantallas extra (Coordinador, 25/10); 4) con REP-01, el último paso (nombre visible y cantón); 4) las rutas #/perfil/… o la pantalla de siempre (children). */
 export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: string; salir: () => void; children?: ReactNode }) {
   // Legal (regla 2): la aceptación previa de esta sesión solo pasa a una cuenta recién creada (sin alquileres en Lockumi).
   useState(() => { try { olvidarEntrar(); const m = u.email.toLowerCase(); vincularPrevia(u.email, !store.todos().some(x => [x.duenoEmail, x.inquilinoEmail].some(c => c?.toLowerCase() === m))) } catch { /* sin almacenamiento */ } return 0 })
-  const e = useReputacion(u.email), [omitido, setOmitido] = useState(() => ahoraNo(u.email))
+  const e = useReputacion(u.email)
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -502,15 +487,9 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
-  if (pendiente) return perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
-  if (!e.rep01) {
-    if (perfil) return <Rep01 aviso={<div className="glass tarjeta" role="note"><p>{REP13.texto}</p></div>} no={UI.ahoraNoCuenta}
-      onNo={() => { try { sessionStorage.setItem(CLAVE_AHORA_NO + u.email.toLowerCase(), '1') } catch { /* nada */ } setOmitido(true); ir('/') }}
-      onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01_CUENTA) } catch { /* sin almacenamiento */ } }} cuenta
-      extra={<div className="rp-acciones"><a className="rp-enlace-peligro" href="#/perfil/eliminar">{ELIMINAR.boton}</a></div>} />
-    if (!omitido) return <Rep13 u={u} salir={salir} onAhoraNo={() => { try { sessionStorage.setItem(CLAVE_AHORA_NO + u.email.toLowerCase(), '1') } catch { /* nada */ } setOmitido(true) }} />
-    return esNuevo(r) ? <BloqueoNuevo /> : <>{children}</>
-  }
+  if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
+  // Cuenta que ya existía (sin REP-01): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
+  if (!e.rep01) return <>{children}</>
   if (!e.nombre || !e.canton) return <Datos u={u} e={e} salir={salir} />
   const avisoEl = aviso && !(perfil && a === 'revision') ? <AvisoPuntaje a={aviso} listo={avisoListo} /> : null
   if (!perfil) return <>{avisoEl}{children}</>

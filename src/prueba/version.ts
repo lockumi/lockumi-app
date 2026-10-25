@@ -2,11 +2,12 @@
 // (pantallas y plazos de siempre) salvo que los dos acepten la 1.7-demo. Los nuevos, con el interruptor encendido, nacen en la 1.7-demo.
 import type { Alquiler, Rol } from '../types'
 import { pruebaCompleta } from './interruptor'
-import { V17, edicionVigente } from '../legal/version17'
+import { V17, EDICION_V17, edicionDeCuenta } from '../legal/version17'
 export { V17 }
 export const V16 = '1.6-demo'
-/** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; solo la 1.7-demo la lleva. */
-export const edicionDe = (version: string) => version === V17 ? { edicion: edicionVigente() } : {}
+/** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; solo la 1.7-demo la lleva.
+ *  Paso 19 (Legal, bloqueo 2): la 1.10-demo solo para una cuenta nueva con perfil de reputación; las demás, la 1.7-demo. */
+export const edicionDe = (version: string, cuenta?: string) => version === V17 ? { edicion: edicionDeCuenta(cuenta) } : {}
 /** Sin versión guardada: el alquiler es de antes del paso 16, o sea 1.6-demo. */
 export const versionAlquiler = (a?: Pick<Alquiler, 'terminos'>) => a?.terminos?.version ?? V16
 /** Reglas de la prueba completa (Términos 1.7-demo): interruptor encendido y alquiler en la 1.7-demo. */
@@ -26,7 +27,7 @@ export function aceptarVersion17(x: Alquiler, rol: Rol, ahora: number) {
   // LEGAL: revisar · historial (texto propio)
   x.historial.push({ fecha: f, texto: `El ${NOMBRE[rol]} aceptó pasar este alquiler a los Términos ${V17}` })
   if (t.acepta.dueno && t.acepta.inquilino) {
-    t.version = V17; t.desde = f; t.edicion = edicionVigente()
+    t.version = V17; t.desde = f; t.edicion = EDICION_V17   // un alquiler 1.6-demo pasa a la 1.7-demo (Legal, bloqueo 2)
     x.historial.push({ fecha: f, texto: `Los dos aceptaron: este alquiler sigue ahora los Términos ${V17}` })
   }
 }

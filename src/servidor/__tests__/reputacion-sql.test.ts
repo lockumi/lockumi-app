@@ -91,9 +91,13 @@ describe('migración de reputación (archivo; no aplicada a producción)', () =>
     await db.query(`insert into public.lk_reputacion_revisiones(usuario, rol, contrato_id, texto, nota, limite) values ($1, 'dueno', gen_random_uuid(), 'x', repeat('n', 300), now())`, [B])
   })
   it('lo negativo de más de 10 años se borra; lo reciente queda', async () => {
+    // Alquileres entre dos cuentas con perfil (los de una cuenta anterior no cuentan: reputacion-cuentas-anteriores-sql.test.ts).
+    const c1 = '00000000-0000-4000-9000-0000000000a1', c2 = '00000000-0000-4000-9000-0000000000a2'
+    for (const c of [c1, c2]) { await db.query(`insert into public.lk_contratos(id, estado) values ($1, 'cerrado')`, [c])
+      await db.query(`insert into public.lk_participantes values ($1, 'dueno', $2), ($1, 'inquilino', $3)`, [c, A, B]) }
     await db.query(`insert into public.lk_reputacion_eventos(usuario, rol, contrato_id, tipo, valor, ocurrio_en) values
-      ($1, 'inquilino', gen_random_uuid(), 'descuento_deposito', 4, now() - interval '10 years 1 day'),
-      ($1, 'inquilino', gen_random_uuid(), 'descuento_deposito', 4, now() - interval '9 years 364 days')`, [B])
+      ($1, 'inquilino', $2, 'descuento_deposito', 4, now() - interval '10 years 1 day'),
+      ($1, 'inquilino', $3, 'descuento_deposito', 4, now() - interval '9 years 364 days')`, [B, c1, c2])
     await db.query('select public.lk_borrar_cuentas_pedidas()')
     expect(await cuenta('public.lk_reputacion_eventos', B)).toBe(1)
   })

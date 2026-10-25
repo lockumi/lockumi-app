@@ -66,8 +66,8 @@ async function registrarInvitacion(env: Record<string, string | undefined>, p: P
 
 // Paso 19 · REP-12 por correo (decisión del 25/10, 2:57 p. m.; solo con VITE_CORREOS=1 en la app). Mismos textos que en la app
 // (src/reputacion/textos.ts, AVISO_CAMBIO y AVISO_VENCIDO; una prueba revisa que sean iguales). Sin dirección del lugar: el alquiler va
-// como «n.º» y los 8 primeros caracteres de su código (LEGAL: revisar). Es un aviso que Legal exige (regla 8), así que no pide casilla
-// (LEGAL: revisar). Solo acepta las líneas públicas del puntaje, nunca texto libre.
+// como «n.º» y los 8 primeros caracteres de su código (LEGAL: revisado, 25/10). Es un aviso que Legal exige (regla 8), así que no pide casilla
+// (LEGAL: revisado, 25/10). Solo acepta las líneas públicas del puntaje, nunca texto libre.
 export const REP12 = {
   cambio: { titulo: 'Tu puntaje cambió', texto: 'Tu puntaje pasó de {antes} a {después} por el cierre del alquiler {alquiler} el {fecha}.',
     nota: 'Si crees que hay un error, pide una revisión: mientras la revisamos, tu puntaje dice «En revisión».' },
