@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { servidor } from '../servidor/repositorio'
-import { modoServidor } from '../servidor/config'
+import { conServidor as modoServidor } from '../servidor/config'
+import { activarServidor } from '../store'
 import { modoReal } from '../services/auth'
 import { conectarBilletera } from '../services/billetera'
 import { ir } from '../router'
@@ -20,7 +21,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
   if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')
-    try { await servidor.aceptarInvitacion(id, token, u.email, await cuentaPropia()); ir('/alquiler/' + id) }
+    try { await servidor.aceptarInvitacion(id, token, u.email, await cuentaPropia()); activarServidor(); ir('/alquiler/' + id) }
     catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos aceptar la invitación. Intenta de nuevo.'); setOcupado(false) }
   }
   return <main id="contenido" tabIndex={-1} className="cont cont--form" style={{ paddingBottom: 48 }}>

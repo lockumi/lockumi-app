@@ -5,13 +5,13 @@ import './prueba.css'
 import type { Alquiler, Rol } from '../types'
 import { store, ahoraDe, DIA } from '../store'
 import { acciones } from '../acciones'
-import { modoPrueba, escrowReal } from '../servidor/config'
+import { modoPrueba, modoDe } from '../servidor/config'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { textoContador, textoRecibir, CONFIRMAR_DEVOLVER, botonRecibir, botonDevolver, recibirCasa, inicioAuto, finVentana, vencido, simularDias } from './dueno'
 import { AvisosApp } from './AvisosApp'
-import { esDosPersonas, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO } from './dosPersonas'
+import { esDosPersonas, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_APROBAR_DOS, TEXTO_APROBADO_DOS, APROBADO_DUENO } from './dosPersonas'
 
 /** Paso 7: recuadro de la devolución automática (paleta del logo, pastilla del papel). */
 const Auto = ({ rol, texto }: { rol: Rol; texto: string }) => <div className="auto-dos" role="note">
@@ -24,7 +24,9 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
   const [, tick] = useState(0); const [confirmar, setConfirmar] = useState(false); const [form, setForm] = useState(false); const p = useProceso()
   useEffect(() => { const t = setInterval(() => tick(k => k + 1), 30_000); return () => clearInterval(t) }, [])
   const dos = esDosPersonas(a)
-  const ahora = ahoraDe(a), simulado = modoPrueba, fin = finVentana(a), termino = vencido(a, ahora)
+  // Alquiler con otra persona (servidor compartido): nada simulado; el dueño aprueba en la red de prueba y el plazo no se adelanta.
+  const m = modoDe(a), enServidor = m.servidor, escrowReal = m.escrowReal || m.trustless, aprobado = a.historial.some(e => e.texto === APROBADO_DUENO)
+  const ahora = ahoraDe(a), simulado = m.prueba, fin = finVentana(a), termino = vencido(a, ahora)
   const devolver = () => p.correr(av => acciones.cerrarSinReclamo(a, av))
   // Al vencer el plazo sin reclamo, se devuelve todo (con escrow real: lo firma la cuenta de Lockumi en la red de prueba).
   useEffect(() => { if (termino && !a.reclamo && a.estado === 'ventana_reclamo') void devolver() }, [termino, a.id, a.reclamo]) // eslint-disable-line
@@ -33,9 +35,9 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
 
   const confirmacion = confirmar && <div className="pila confirmar" role="group" aria-labelledby="t-confirmar">
     {/* LEGAL: revisado (24/10) · B.4, confirmación */}
-    <p id="t-confirmar"><strong>Se devolverá todo el depósito al inquilino ahora.</strong> {CONFIRMAR_DEVOLVER.replace('Se devolverá todo el depósito al inquilino ahora. ', '').split('no podrás reclamar en la app').reduce<ReactNode[]>((r, t, i) => i ? [...r, <strong key={i}>no podrás reclamar en la app</strong>, t] : [t], [])}</p>
+    {enServidor ? <p id="t-confirmar">{TEXTO_APROBAR_DOS}</p> : <p id="t-confirmar"><strong>Se devolverá todo el depósito al inquilino ahora.</strong> {CONFIRMAR_DEVOLVER.replace('Se devolverá todo el depósito al inquilino ahora. ', '').split('no podrás reclamar en la app').reduce<ReactNode[]>((r, t, i) => i ? [...r, <strong key={i}>no podrás reclamar en la app</strong>, t] : [t], [])}</p>}
     {p.error}
-    <button type="button" className="boton boton--pc boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(av => acciones.devolverTodo!(a, av))}>{p.texto('Sí, devolver todo')}</button>
+    <button type="button" className="boton boton--pc boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(av => enServidor ? acciones.aprobarDevolucion!(a).then(() => setConfirmar(false)) : acciones.devolverTodo!(a, av))}>{p.texto(enServidor ? 'Sí, aprobar la devolución' : 'Sí, devolver todo')}</button>
     <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => setConfirmar(false)}>Cancelar</button>
     {escrowReal && p.ocupado && NOTA_TIEMPO}
   </div>
@@ -50,9 +52,10 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
           <p className="nota">Solo se puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si el plazo vence sin reclamo, se devuelve todo el depósito al inquilino.</p>{/* LEGAL: revisado (24/10) · frases de la B.2b */}
           {dos && <Auto rol="dueno" texto={TEXTO_AUTO_DUENO} />}</>}
       {simulado && <p className="nota">El dueño es una cuenta de prueba de Lockumi: estos botones simulan lo que haría.</p>}{/* LEGAL: revisar */}
-      {!a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => store.cambiar(a.id, x => recibirCasa(x, ahoraDe(x)))}>{botonRecibir(simulado)}</button>}
+      {!a.ventanaInicio && !enServidor && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => store.cambiar(a.id, x => recibirCasa(x, ahoraDe(x)))}>{botonRecibir(simulado)}</button>}
       {a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => setForm(true)}>{simulado ? 'Simular: el dueño hace un reclamo' : 'Revisar y reclamar'}</button>}{/* LEGAL: revisar (simulado) · revisado (24/10) · B.2b «Revisar y reclamar» */}
-      <button type="button" className="boton boton--secundario boton--ancho" onClick={() => setConfirmar(true)}>{botonDevolver(simulado)}</button>
+      {enServidor && aprobado ? <p className="nota" role="status">{TEXTO_APROBADO_DOS}</p>
+        : <button type="button" className="boton boton--secundario boton--ancho" onClick={() => setConfirmar(true)}>{botonDevolver(simulado)}</button>}
     </div>
   } else {
     // LEGAL: revisar · textos del inquilino durante el plazo del dueño
@@ -66,7 +69,7 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
   return <section className="pila plazo-dueno">
     {cuerpo}
     <AvisosApp a={a} rol={rol} onAccion={acc => acc === 'confirmar-devolver' ? (setForm(false), setConfirmar(true)) : irA()} />
-    {adelantoPermitido() && !termino && <section className="pila simulador" aria-labelledby="t-simulador">
+    {adelantoPermitido() && !termino && !enServidor && <section className="pila simulador" aria-labelledby="t-simulador">
       {/* LEGAL: revisar · simulador de días (aprobado: los avisos salen al adelantar) */}
       <h3 id="t-simulador">Simulador de días (solo red de prueba)</h3>
       <p className="nota">Reloj de la demo: {cr(ahora)}. Adelántalo para ver los avisos de cada día; no cambia la hora real.</p>

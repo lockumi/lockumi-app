@@ -31,3 +31,13 @@ export const notaComisionAuto = (monto: number) =>
   `Llegaron ${montoPrueba(recibeInquilino(monto))}: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(Math.round((monto - recibeInquilino(monto)) * 1e7) / 1e7)}). El dueño y Lockumi no reciben nada.`
 // LEGAL: revisar · Términos 1.7-demo, 4.2 e) (texto de Legal del 24/10, 11:29 p. m.; se publica en el paso 16)
 export const TERMINOS_42E = 'En la devolución automática de la cláusula 5.3 d), la cuenta de Lockumi que resuelve disputas entrega al inquilino el 100 % del saldo del depósito, menos solo la comisión de la red de prueba de Trustless Work. No puede entregar nada al dueño ni a Lockumi.'
+
+// LEGAL: revisar · vencimiento de la invitación: 7 días (el texto aprobado por Legal; el servidor lo recorta a 7 días en
+// supabase/migrations/20261025000000_invitacion_7_dias.sql)
+export const TEXTO_INVITACION_VENCE = 'El link sirve una sola vez y vence en 7 días.'
+// LEGAL: revisar · pie del contrato en un alquiler con otra persona (no se guarda solo en el navegador)
+export const TEXTO_GUARDA_DOS = 'Este contrato se guarda en el servidor de Lockumi para que lo vean las dos personas. Las fotos se guardan en un espacio privado.'
+// LEGAL: revisar · alquiler con otra persona: el dueño aprueba en la red de prueba la devolución completa (no se puede adelantar el plazo)
+export const TEXTO_APROBAR_DOS = 'Vas a aprobar en la red de prueba que se devuelva todo el depósito al inquilino. Se le entrega cuando termine tu plazo de reclamos, menos el 0,3 % de comisión de la red de prueba de Trustless Work.'
+// LEGAL: revisar · después de aprobar
+export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa. El depósito se le entrega al inquilino cuando termine tu plazo de reclamos.'

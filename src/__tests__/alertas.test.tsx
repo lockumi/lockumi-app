@@ -215,7 +215,7 @@ describe('cada paso del flujo dispara su aviso', () => {
     expect(al.alertaPorCambio(a, { ...(a as object), id: '2', estado: 'salida' } as never, 'dueno', VIDEO)).toBeNull()
   })
   it('las pantallas llaman a los avisos', () => {
-    expect(leer('../screens/Detalle.tsx')).toContain('avisar(alertaPorCambio(x, a, rol))')
+    expect(leer('../screens/Detalle.tsx')).toContain('avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))')
     expect(leer('../screens/Crear.tsx')).toContain("avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))\n      ir('/alquiler/' + r.id)")
     const app = leer('../App.tsx')
     expect(app).toContain('avisar(alertaIngreso(modoReal))'); expect(app).toContain("setRegreso('fallo'); avisar(alertaIngresoFallo())")

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { modoTrustless } from '../servidor/config'
+import { dosPersonas as modoTrustless } from '../servidor/config'
 import { Dibujo } from './dibujos'
 import { abrirTrustlineUsdc, consultarUsdc, mensajeFirma, olvidarBilletera, abreviar, conectarBilletera, detalleError, consultarSaldo, enlaceExplorer, fondear, formatoXlm, type Billetera as B } from '../services/billetera'
 
