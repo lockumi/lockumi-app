@@ -16,7 +16,9 @@ import { Inicio } from './screens/Inicio'
 import { Crear } from './screens/Crear'
 import { Detalle } from './screens/Detalle'
 import { ConfirmarAlquiler, ConfirmarReinicio } from './prueba/Eliminar'
-import { modoPrueba } from './servidor/config'
+import { modoPrueba, conServidor } from './servidor/config'
+import { usarCuenta, salirDeCuenta } from './servidor/repositorio'
+import { otraPestanaCambio } from './servidor/cuenta-sesion'
 import { Invitacion } from './screens/Invitacion'
 import { Ejemplo, useRecorridoPrimeraVez } from './screens/Ejemplo'
 import { RUTA_EJEMPLO } from './recorrido'
@@ -30,6 +32,15 @@ const Reputacion = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('
 const volver = tomarRegreso
 export default function App() {
   const [u, setU] = useState(auth.actual()); const r = useHash()
+  // La sesión del servidor es de la cuenta que entró (cuenta-sesion.ts): con otra cuenta se termina la anterior. Si otra pestaña entra
+  // con otra cuenta, esta se recarga para no mostrar la lista ni el rol de una cuenta con el nombre de otra.
+  const correoU = u?.email ?? ''
+  if (conServidor && correoU) void usarCuenta(correoU)   // en el render (idempotente): antes de que la lista lea con la sesión anterior
+  useEffect(() => {
+    if (!conServidor || !correoU) return
+    const f = (e: StorageEvent) => { if (otraPestanaCambio(e.key, e.newValue, correoU)) location.reload() }
+    addEventListener('storage', f); return () => removeEventListener('storage', f)
+  }, [correoU])
   useSincronizarPrueba()   // prueba completa (interruptor apagado en producción): avisos e inicio automático del plazo
   // Regreso de Google o Apple: mientras se confirma la sesión se ve «Entrando…» (no la pantalla Entrar);
   // si no termina, el error queda escrito en Entrar hasta que la persona vuelve a intentar o entra bien.
@@ -54,7 +65,7 @@ export default function App() {
   const conf = modoPrueba ? r.match(/^\/alquiler\/(.+)\/(eliminar|ocultar)$/) : null   // PROTOTIPO eliminar-alquiler
   const m = conf ? null : r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
-  const salir = () => { auth.salir(); olvidarBilletera(); setU(null) }
+  const salir = () => { auth.salir(); olvidarBilletera(); if (conServidor) void salirDeCuenta(); setU(null) }
   const pantalla = conf ? <ConfirmarAlquiler id={conf[1]} u={u} que={conf[2] as 'eliminar' | 'ocultar'} /> : modoPrueba && r === '/reiniciar' ? <ConfirmarReinicio u={u} /> : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   return <Fondo comision={!!(inv || m)}>{skip}

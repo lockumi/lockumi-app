@@ -260,5 +260,13 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   (devuelve cada lugar movido a su sesión de antes). Código: `git revert -m 1 <merge>`.
 - [x] Pruebas: `vincular-alquileres-sql.test.ts` (PGlite) y `verificar-correo-api.test.ts` (servidor). Detalle y prueba en producción:
   `docs/prueba-completa.md`.
+- [x] Una sesión por cuenta (Katherine, iPhone Safari: Gmail en una pestaña y Apple en otra mostraban «Eres dueño» con la cuenta de
+  Apple): la sesión anónima queda atada al correo de la cuenta (`lockumi.sesion-correo`, `src/servidor/cuenta-sesion.ts`). Al entrar
+  con otra cuenta o al «Salir» se termina (signOut, se borra `lockumi.sesion-servidor`) y la lista se vacía; la sesión nueva recibe los
+  alquileres del correo verificado por Cavos. Otra pestaña que cambia de cuenta recarga esta. Lista y rol salen de la cuenta actual.
+- [x] Misma cuenta dueña e inquilina del mismo alquiler: se trae el lugar de **dueño** (una sesión tiene un solo lugar por alquiler).
+- [x] Pie (Katherine, único cambio visible): «Tus alquileres de prueba se guardan en tu cuenta.» en el modo de dos personas.
+- [x] E2E sin correos reales: `node scripts/e2e-vincular.mjs [--app URL]` (re-vincular, código de Lockumi no vale, cambio de cuenta,
+  rol, «Salir», limpieza y waitlist).
 - [ ] Pendiente (después): login con código por correo (enclave, aud «cavos-email») no trae alquileres de otro navegador: el correo
   queda verificado con el código de Lockumi y la base no lo distingue.

@@ -4,8 +4,8 @@
 -- valida en el servidor; el correo sale del token, nunca del cliente), el servidor llama a lk_vincular_alquileres y los lugares de esa
 -- persona (dueño e inquilino) pasan a la sesión actual. NO vale un correo verificado solo con el código de Lockumi (metodo 'email', que
 -- la base no distingue del enclave) ni uno sin verificar. Idempotente: la segunda vez no hay nada que mover. Solo la clave de servicio.
--- Se salta un alquiler si la sesión ya es parte de él (no se juntan los dos lugares en una sesión) o si los dos lugares tienen ese
--- correo. Cada cambio queda en lk_vinculaciones (sin correos). Volver atrás: supabase/revert/20261026060000_vincular_alquileres_revert.sql.
+-- Se salta un alquiler si la sesión ya es parte de él (no se juntan los dos lugares en una sesión). Si los dos lugares tienen ese
+-- correo, se trae solo el de dueño. Cada cambio queda en lk_vinculaciones (sin correos). Volver atrás: supabase/revert/20261026060000_vincular_alquileres_revert.sql.
 create table if not exists public.lk_vinculaciones (
   id bigserial primary key,
   contrato_id uuid not null references public.lk_contratos(id) on delete cascade,
@@ -30,8 +30,9 @@ begin
     select p.contrato_id, p.rol, p.usuario from public.lk_participantes p
     where public.lk_normalizar_correo(p.email_cavos) = v_correo and p.usuario <> p_usuario
       and not exists (select 1 from public.lk_participantes q where q.contrato_id = p.contrato_id and q.usuario = p_usuario)
-      and (select count(*) from public.lk_participantes q where q.contrato_id = p.contrato_id
-           and public.lk_normalizar_correo(q.email_cavos) = v_correo) = 1
+      -- Si la misma cuenta es dueña e inquilina del alquiler (una sesión solo puede tener un lugar): se trae el de DUEÑO (quien lo creó).
+      and (p.rol = 'dueno' or not exists (select 1 from public.lk_participantes q where q.contrato_id = p.contrato_id and q.rol = 'dueno'
+           and public.lk_normalizar_correo(q.email_cavos) = v_correo))
     order by p.contrato_id for update of p
   loop
     update public.lk_participantes set usuario = p_usuario where contrato_id = r.contrato_id and rol = r.rol;

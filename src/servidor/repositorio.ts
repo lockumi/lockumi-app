@@ -9,14 +9,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS, dosPer
 import { linkInvitacion } from './origen'
 import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
 import type { Aceptacion } from './aceptaciones'
+import { usarCuentaCon, salirCon, K_SESION } from './cuenta-sesion'
 
 export class ErrorServidor extends Error {}
 let cliente: Promise<SupabaseClient> | null = null
 export const supabase = () => cliente ??= import('@supabase/supabase-js').then(({ createClient }) =>
-  createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: 'lockumi.sesion-servidor' } }))
+  createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: K_SESION } }))
 
 /** Sesión anónima por aparato: la identidad de Supabase que RLS usa (auth.uid()). Se vincula al alquiler al crearlo o aceptar la invitación. */
 export async function sesion(): Promise<string> {
+  if (cambio) await cambio.p
   const sb = await supabase()
   const { data } = await sb.auth.getSession()
   if (data.session) return data.session.user.id
@@ -36,6 +38,19 @@ const rpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Prom
 // ── Caché y suscripción ──
 let datos: Alquiler[] = []; let yo = ''; let cargado = false
 const subs = new Set<() => void>(); const avisar = () => subs.forEach(f => f())
+// Cuenta de esta sesión (cuenta-sesion.ts): al cambiar de cuenta o salir, la lista de la cuenta anterior se borra de inmediato.
+let cambio: { c: string; p: Promise<boolean> } | null = null
+const deps = { get storage() { return localStorage }, salir: async () => (await supabase()).auth.signOut() }
+const vaciar = () => { datos = []; yo = ''; cargado = false; avisar() }
+/** Llamar con el correo de la cuenta que entró (al entrar y al cargar la app). Si la sesión era de otra cuenta, la termina. */
+export function usarCuenta(correo: string): Promise<boolean> {
+  const c = correo.trim().toLowerCase()
+  if (cambio?.c === c) return cambio.p
+  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(() => { cargado = true; avisar() }) } return otra }).catch(() => false)
+  cambio = { c, p }; return p
+}
+/** Al salir: termina la sesión anónima de esta cuenta y borra su lista. */
+export async function salirDeCuenta() { cambio = null; await salirCon(deps).catch(() => {}); vaciar() }
 const urls = new Map<string, string>()
 const INV = 'lockumi.invitaciones'
 const invitaciones = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(INV) || '{}') } catch { return {} } }

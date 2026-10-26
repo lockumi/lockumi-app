@@ -75,13 +75,16 @@ describe('lk_vincular_alquileres', () => {
     expect(await vincular(nuevo, 'otro@ejemplo.com')).toBe(0)
     expect(await usuarioDe(c, 'inquilino')).toBe(viejo)
   })
-  it('no junta los dos lugares en una sesión: se salta si ya es parte del alquiler o si los dos tienen ese correo', async () => {
+  it('no junta los dos lugares en una sesión: se salta si ya es parte; si es dueña e inquilina con el mismo correo, trae el de dueño', async () => {
     const yo = id(), otro = id()
     const c1 = await alquiler(yo, 'mismo@ejemplo.com', otro, 'mismo@ejemplo.com')   // la sesión ya es dueña
-    const c2 = await alquiler(id(), 'doble@ejemplo.com', id(), 'doble@ejemplo.com')
-    await verificar(yo, 'mismo@ejemplo.com', 'google'); await verificar(yo, 'doble@ejemplo.com', 'google')
-    expect(await vincular(yo, 'mismo@ejemplo.com')).toBe(0); expect(await vincular(yo, 'doble@ejemplo.com')).toBe(0)
-    expect(await usuarioDe(c1, 'inquilino')).toBe(otro); expect(await ve(yo)).toEqual([c1]); void c2
+    const viejoD = id(), viejoI = id(), nueva = id()
+    const c2 = await alquiler(viejoD, 'doble@ejemplo.com', viejoI, 'doble@ejemplo.com')
+    await verificar(yo, 'mismo@ejemplo.com', 'google'); await verificar(nueva, 'doble@ejemplo.com', 'google')
+    expect(await vincular(yo, 'mismo@ejemplo.com')).toBe(0)
+    expect(await usuarioDe(c1, 'inquilino')).toBe(otro); expect(await ve(yo)).toEqual([c1])
+    expect(await vincular(nueva, 'doble@ejemplo.com')).toBe(1); expect(await vincular(nueva, 'doble@ejemplo.com')).toBe(0)
+    expect(await usuarioDe(c2, 'dueno')).toBe(nueva); expect(await usuarioDe(c2, 'inquilino')).toBe(viejoI)
   })
   it('solo la clave de servicio: anon y authenticated no pueden llamarla ni leer lk_vinculaciones', async () => {
     for (const rol of ['anon', 'authenticated']) {

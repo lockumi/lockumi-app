@@ -295,6 +295,13 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   método `google`/`apple` en los últimos 10 minutos y mueve los lugares con ese `email_cavos` (y sus filas en firmas, aceptaciones,
   consentimiento, ocultos, reputación) a la sesión nueva. Se salta un alquiler si la sesión ya es parte de él o si los dos lugares tienen
   ese correo. La respuesta trae `vinculados` (sin texto); la app recarga la lista y conecta el servidor.
+- **Una sesión por cuenta:** `src/servidor/cuenta-sesion.ts` ata la sesión anónima al correo de la cuenta (`lockumi.sesion-correo`).
+  Con otra cuenta (o una sesión vieja sin correo guardado) y al «Salir»: signOut, se borra `lockumi.sesion-servidor` y la lista se vacía
+  antes de leer; otra pestaña que cambia de cuenta recarga esta. Así «Eres dueño» / «Eres inquilino» y la lista son de la cuenta actual.
+  Si la misma cuenta es dueña e inquilina del mismo alquiler, se trae el lugar de dueño.
+- **Pie:** «Tus alquileres de prueba se guardan en tu cuenta.» (antes «…solo en este navegador», ya no era cierto).
+- **E2E:** `node scripts/e2e-vincular.mjs [--app https://app.lockumi.com]` (cuentas …@lockumi.test, sin correos; el registro del correo
+  verificado se hace con la clave de servicio porque un token real de Cavos no se puede fabricar).
 - **No cubre:** login con código por correo (método `email`, verificado con el código de Lockumi).
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).
