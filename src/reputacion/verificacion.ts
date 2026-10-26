@@ -7,7 +7,7 @@
 // · Límite 4: la pantalla previa de REP-01 en otro aparato se decide con lk_necesita_rep01 (por el correo verificado).
 import type { Alquiler } from '../types'
 import { conServidor } from '../servidor/config'
-import { servidor, usarCuenta } from '../servidor/repositorio'
+import { servidor, usarCuenta, recargar } from '../servidor/repositorio'
 import { authCavos } from '../services/auth'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
 import { confirmarCodigo, pedirCodigo, ErrorCodigo, type MotivoCodigo } from './segundo-factor'
@@ -62,6 +62,8 @@ export async function confirmarCorreoConCodigo(codigo: string) {
   const r = await confirmarCodigo('verificar_correo', codigo)
   if (normalizar(String(r.correo ?? '')) !== p.c) throw new ErrorCodigo('correo')
   activo = { c: p.c, p: Promise.resolve(true) }; porConfirmar = null; avisar()
+  // Alquileres traídos de otro navegador (20261026070000): se recarga la lista y se conecta el servidor, sin aviso.
+  if (Number(r.vinculados) > 0) { await recargar().catch(() => {}); void import('../store').then(m => m.activarServidor()).catch(() => {}) }
 }
 /** «Reenviar código» de «Revisa tu correo»: otro código al correo por confirmar (mismos límites: 1 por minuto y 5 por hora). */
 export async function reenviarCodigoCorreo() {
