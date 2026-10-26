@@ -11,6 +11,10 @@
 //   node scripts/e2e-c.mjs --real --correos      Además, el correo de invitación de cada caso sale de verdad (Resend, RESEND_API_KEY) por el
 //                                                mismo atenderCorreo de /api/correo, SOLO al buzón de prueba lockumi+e2ec-<caso>-<papel>@mail.grokbot.com
 //                                                (scripts/correos-e2e.mjs corta cualquier otro destinatario). En --simulado siempre, con Resend falso.
+//   node scripts/e2e-c.mjs --real --correos --app https://app.lockumi.com
+//                                                Contra la app publicada: cada paso de Trustless Work va por POST <app>/api/tw (el servidor de
+//                                                producción, con sus llaves y CORREOS_C), no por api/_lib/tw.ts en el proceso. Los correos que ya
+//                                                mandó el servidor (cierres COR-C-07) se cuentan desde lk_correos_enviados.
 //   node scripts/e2e-c.mjs --limpiar --real      Borra los datos de prueba marcados («E2E-C …») del destino.
 // Salida: <DIR>/estado.json (ids, hashes, enlaces) e informe.md. Los datos de prueba llevan la marca «E2E-C <corrida>» en la dirección
 // y correos @lockumi.test. Cada corrida crea alquileres nuevos: nunca reintenta un pago ya hecho (y «repartir» es idempotente).
@@ -21,6 +25,7 @@ import { BUZON, correoPrueba, fetchSoloBuzon } from './correos-e2e.mjs'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, Asset, Horizon, nativeToScVal, BASE_FEE } from '@stellar/stellar-sdk'
 
 const A = process.argv.slice(2), REAL = A.includes('--real'), LIMPIAR = A.includes('--limpiar'), CORREOS = !REAL || A.includes('--correos')
+const APP = A.includes('--app') ? String(A[A.indexOf('--app') + 1] || '').replace(/\/$/, '') : ''
 const SALIDA = (A[A.indexOf('--salida') + 1] && A.includes('--salida') ? A[A.indexOf('--salida') + 1] : 'e2e-c-salida').replace(/\/$/, '')
 const CORRIDA = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13) + '-' + randomBytes(2).toString('hex'), MARCA = 'E2E-C ' + CORRIDA
 const VENTANA = 60, MONTO = Number(process.env.E2E_C_MONTO || 2), RECLAMO = MONTO / 2, ACORDADO = MONTO / 4
@@ -148,7 +153,7 @@ const t0 = Date.now(), pasos = [], fallas = [], omitidos = []
 const CORREO_MEDIADOR = 'lockumi+e2ec-mediador@mail.grokbot.com'
 const envC = { ...env, CORREOS_C: '1', LOCKUMI_CORREOS_BORRADOR: '1', CORREOS_SOLO_BUZON: '1', CORREO_MEDIACION: CORREO_MEDIADOR, CORREOS_ORIGEN: ORIGEN_CORREO }
 delete envC.VERCEL; delete envC.VERCEL_ENV
-const htmls = [], enviadosC = []
+const htmls = [], enviadosC = [], vistos = new Set()
 const fC = async (url, init) => { if (/^https:\/\/api\.resend\.com\//.test(String(url))) { const b = JSON.parse(init.body); htmls.push({ to: b.to, subject: b.subject, html: b.html, text: b.text }) } return fCorreo(url, init) }
 let filaCorreos = Promise.resolve(); const enFilaCorreos = fn => { const p = filaCorreos.then(fn, fn); filaCorreos = p.catch(() => {}); return p }
 /** Corre el envío del servidor para ESE alquiler (con el reloj de prueba `ahora` para los recordatorios) y exige exactamente `esperado`. */
@@ -157,6 +162,14 @@ async function correosC(k, id, esperado, ahora) {
   for (const e of r.enviados) { enviadosC.push({ caso: k, ...e, resend_id: REAL ? e.id : 'simulado', enviado_en: new Date().toISOString(), reloj: ahora ?? null }); paso(k, `${e.plantilla} → ${e.para}${ahora ? ` (reloj de prueba ${ahora})` : ''}`) }
   const malos = r.omitidos.filter(o => o.motivo !== 'ya-enviado'); exigir(!malos.length, 'correos omitidos: ' + JSON.stringify(malos))
   const hechos = r.enviados.map(e => e.plantilla).sort(), quiero = [...esperado].sort()
+  if (APP) {   // la app publicada ya pudo mandar algunos (p. ej. COR-C-07 al pagar): se cuentan los registros nuevos del alquiler
+    const filas = (await D.leer('lk_correos_enviados', id)).filter(f => f.estado === 'enviado' && !vistos.has(f.clave))
+    for (const f of filas) vistos.add(f.clave)
+    const delServidor = filas.length - r.enviados.length
+    for (const f of filas.filter(f => !r.enviados.some(e => e.clave === f.clave))) paso(k, `${f.correo} (${f.clave.replace(id, '…')}) → ${f.para}, enviado por ${APP}`)
+    exigir(hechos.every(h => quiero.includes(h)) && hechos.length + delServidor === quiero.length, `correos: se esperaba ${quiero.join(', ') || 'ninguno'}; el script mandó ${hechos.join(', ') || 'ninguno'} y la app ${delServidor}`)
+    return r
+  }
   exigir(JSON.stringify(hechos) === JSON.stringify(quiero), `correos: se esperaba ${quiero.join(', ') || 'ninguno'} y salió ${hechos.join(', ') || 'ninguno'}`)
   return r
 }
@@ -169,7 +182,10 @@ const { vencimiento } = await vite.ssrLoadModule('/api/_lib/plazos.ts')
 const finPlazo = (t, seg) => new Date(vencimiento(+new Date(t), seg * 1000).fin).toISOString()
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
-const twDirecto = (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
+const twDirecto = APP ? async (cta, pedido) => {
+  const r = await fetch(APP + '/api/tw', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + cta.token, origin: APP }, body: JSON.stringify(pedido) })
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(`${APP}/api/tw ${pedido.accion}: ${r.status} ${j.error ?? ''}`); return j
+} : (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
 const tw = (cta, pedido) => enFila(() => twDirecto(cta, pedido))
 const mig = await D.migraciones()
 log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'}`)
