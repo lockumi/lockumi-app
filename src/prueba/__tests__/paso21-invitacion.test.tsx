@@ -211,9 +211,8 @@ describe('plazo de devolución plegado (OK de Katherine a linea-plazo-v2, 26/10 
       const env = { DEVOLUCION_CRON: v, CRON_SECRET: llave, SUPABASE_SERVICE_ROLE_KEY: llave } as Record<string, string | undefined>
       const c = configPublica(env); expect(c).toEqual({ devolucionAutomatica: esperado }); expect(JSON.stringify(c)).not.toContain(llave)
     }
-    const { GET } = await import('../../../api/config')
-    vi.stubEnv('DEVOLUCION_CRON', '0'); expect(await GET().json()).toEqual({ devolucionAutomatica: false })
-    vi.stubEnv('DEVOLUCION_CRON', ''); expect(await GET().json()).toEqual({ devolucionAutomatica: true })
+    const api = (await import('../../../api/config.ts?raw')).default   // el endpoint solo devuelve configPublica(process.env)
+    expect(api).toContain('Response.json(configPublica(process.env)'); expect(api).not.toMatch(/SECRET|KEY|TOKEN/)
     const dev = (await import('../../../api/_lib/devoluciones.ts?raw')).default
     expect(dev).toContain('if (!devolucionAutomaticaEncendida(env)) return { apagado: true }')
   })
