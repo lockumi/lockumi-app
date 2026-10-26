@@ -1,4 +1,12 @@
-# Paso 21 · El link del correo de invitación (25/10/2026, rama local `paso21-invitacion-fix`, sin publicar; v2 10:10 p. m.)
+# Paso 21 · El link del correo de invitación (25/10/2026; v2 10:10 p. m., v3 10:30 p. m.; publicado sobre la reputación el 25/10)
+
+> **Publicación (25/10/2026, con el OK de Katherine, 10:40 p. m. CR):** rama `paso21-sobre-reputacion` = master con la reputación ya
+> encendida (merge `f87c8b8`, PR #26) + los commits de `paso21-invitacion-fix` (7f30f1e, 5f8ba02, 96eb146; aprobados por Legal) traídos con
+> cherry-pick; choques en `api/_lib/correo.ts` y `src/App.tsx` resueltos quedándose con las dos ramas (el enlace de la invitación y REP-12;
+> `Previa` de REP-01 envolviendo a `Login` con el título de la invitación). `Invitacion.tsx` llama `asegurarCorreo(u.email)` antes de
+> aceptar (`aceptarConCorreo`; solo con `VITE_REPUTACION=1`, con import diferido; prueba `src/prueba/__tests__/paso21-asegurar-correo.test.ts`).
+> Las pruebas SQL de PGlite y `supabase-local.mjs` crean `auth.users` (con la reputación, `lk_correos_verificados` la referencia).
+> Merge, deploy y migración `20261025230000` en producción: ver «Publicado» al final.
 
 ## Qué pasaba
 - La persona invitada abría el botón del correo y la app se abría **sin la invitación**: después de entrar caía en Inicio, sin alquileres.
@@ -29,7 +37,7 @@
 - **Cómo se llena `lk_correos_verificados`** (solo en la rama `paso19-reputacion`): `api/verificar-correo` (token de Cavos con el correo, Google/Apple) y `api/codigo-correo` (código de 6 números, `lk_confirmar_correo_pendiente`, migración `20261025210000`), con la clave de servicio (`lk_registrar_correo_verificado`). La app los llama (`asegurarCorreo`) solo con `VITE_REPUTACION=1`. Nada de esto está en master.
 - **Dependencia:** con master solo, después de aplicar 230000 **ninguna persona invitada real puede aceptar** (nadie llena la tabla). Por eso la migración no se aplica sola.
 
-## Orden para publicar
+## Orden para publicar (hecho el 25/10/2026)
 1. Encender la reputación (PR #26, `VITE_REPUTACION=1`, migraciones `20261025140000` y `20261025210000`, variables `CAVOS_AUD_*`).
 2. Rebasar `paso21-invitacion-fix` sobre `paso19-reputacion` y, en `Invitacion.tsx`, llamar `asegurarCorreo(u.email)` antes de aceptar (quien entró con correo y código termina «Revisa tu correo»).
 3. Publicar la app y, enseguida, con el OK de Katherine, aplicar `20261025230000`. El orden de migraciones 140000 < 210000 < 230000 sirve: 230000 crea la tabla solo si falta, con la misma definición.
@@ -55,3 +63,12 @@
 ## Reglas: solo el dueño
 - Servidor: `lk_contratos` solo tiene `select` para `authenticated` (`20261017000000_lockumi_e2e.sql:384-395`), y las reglas solo se escriben al crear (`lk_crear_contrato`, `:155-175`, quien crea queda como dueño). El inquilino no tiene cómo cambiarlas.
 - App: el inquilino ve las reglas como texto en la invitación (`Invitacion.tsx:59`, plegado) y en el contrato (`ContratoDoc.tsx:32-33`). No hay botón de **rechazar** la invitación (solo «Aceptar invitación»): queda para una segunda vuelta (PLAN.md).
+
+## Volver atrás (invitación v3)
+1. Base: `supabase/revert/20261025230000_invitacion_correo_verificado_revert.sql` (una transacción: restaura `lk_aceptar_invitacion` como estaba en
+   producción antes de 230000, mismos permisos, y quita su fila de `schema_migrations`). Mismo mecanismo que las migraciones: `POST /v1/projects/<ref>/database/query`.
+2. Código: `git revert -m 1 <merge del paso 21>` en master y esperar el deploy (o promover el deploy de la reputación en Vercel).
+- Volver atrás la reputación obliga a hacer esto antes: sin la reputación nadie llena `lk_correos_verificados` y, con 230000, nadie podría aceptar.
+
+## Publicado
+- (se completa al publicar: merge, deploy, migración, prueba en app.lockumi.com)

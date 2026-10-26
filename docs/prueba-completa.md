@@ -251,3 +251,12 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 - **Apagar C:** borrar (o poner en 0) `CORREOS_C` y `VITE_DOS_PERSONAS` en Vercel Production (`DELETE /v9/projects/<proyecto>/env/<id>`, o Settings → Environment Variables) y volver a desplegar; o promover de nuevo `dpl_7znx5gexZooekP23bt8DvLGVswYY` (sin las variables nuevas no cambia nada: las variables se leen al desplegar). Código: `git revert -m 1 a5a88ff31c179517f252aa389b3b15bb09a89418` (bloqueantes) y `git revert -m 1 f9489a6d8ea568fa2899b500f20a088a0148b462` (C).
 
 **Ensayo sin llaves:** `./correr-c.sh --simulado` hace el mismo recorrido con PGlite (todas las migraciones), el `/api/tw` de verdad y Trustless Work falso. Los hashes simulados nunca se muestran como enlaces. La prueba `scripts/__tests__/e2e-c-simulado.test.ts` lo mantiene verde en CI.
+
+## Reputación encendida en app.lockumi.com (25/10/2026, 10:45 p. m. CR)
+- `./encender-reputacion.sh 'cavos-email'` (ensayo y luego `--si`; el equipo de Vercel ya está en Pro: el script lee el plan real): migración `20261025210000` aplicada (10:43 p. m.), `VITE_REPUTACION=1` y `CAVOS_AUD_EMAIL`, commit de la fecha `429f1ab`, merge del PR #26 `f87c8b86ec727e976191b99729f9cc1f52417795`, deploy `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP` (READY 10:45 p. m.), fila de `lk_reputacion_encendido` (10:45:45 p. m.); `/terminos` y `/privacidad` en 1.10-demo · 25 de octubre de 2026.
+- E2E de producción `prueba-completa/e2e-reputacion-produccion.sh` (10:48–10:51 p. m.): **TODO OK**. La primera corrida (10:46 p. m.) falló por el propio script: pedía el código de «eliminar» sin esperar el minuto entre códigos (límite del servidor, a propósito) y leía columnas en camelCase que Postgres devuelve en minúsculas; arreglado en `prueba-completa/scripts/e2e-reputacion.mjs` (espera 65 s, alias entre comillas). Hoja: `prueba-completa/capturas/encendido-reputacion-20261025/hoja-encendido-reputacion.jpg` (en la caja). Waitlist igual antes y después.
+- Volver atrás: docs/reputacion.md («Volver atrás»); primero la invitación v3 si ya se publicó.
+
+## Invitación v3 sobre la reputación (paso 21, 25/10/2026)
+- Local: suite completa, `tsc -b`, `oxlint`, build (también con `VITE_REPUTACION=1`) y `CHROME=/usr/bin/google-chrome npm run e2e:invitacion` en verde (capturas en `prueba-completa/capturas/paso21-invitacion/sobre-reputacion/`).
+- Producción: ver docs/invitacion-enlace.md («Publicado»). La prueba con dos cuentas reales queda **PENDIENTE** (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).

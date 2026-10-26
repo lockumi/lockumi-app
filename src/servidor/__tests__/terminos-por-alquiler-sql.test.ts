@@ -43,6 +43,7 @@ describe('Términos por alquiler (C)', () => {
     const r = await crear('1.9-demo')
     await como(INQ)
     // Paso 21 (20261025230000): la sesión que acepta tiene el correo invitado verificado (lo escribe el servidor con la clave de servicio).
+    await db.query(`insert into auth.users(id) values ($1) on conflict do nothing`, [INQ])   // con la reputación (20261025140000) la tabla referencia auth.users
     await db.query(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, 'invitada@correo.com', 'email') on conflict do nothing`, [INQ])
     await expect(db.query(`select public.lk_aceptar_invitacion_con_terminos($1, $2, 'invitada@correo.com', null)`, [r.id, r.token])).rejects.toThrow(/Términos/)
     await expect(db.query(`select public.lk_aceptar_invitacion_con_terminos($1, $2, 'invitada@correo.com', '1.6-demo')`, [r.id, r.token])).rejects.toThrow(/Términos/)

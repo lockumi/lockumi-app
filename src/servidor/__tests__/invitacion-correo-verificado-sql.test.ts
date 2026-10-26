@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
+  create schema auth; create table auth.users (id uuid primary key, email text); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean, file_size_limit int, allowed_mime_types text[]);
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
@@ -20,7 +20,7 @@ let db: PGlite
 const como = (uid: string | null) => db.query(`select set_config('test.uid', $1, false)`, [uid ?? ''])
 const uno = async <T>(sql: string, p: unknown[] = []) => (await db.query<T>(sql, p)).rows[0]
 /** Lo que hace el servidor (api/verificar-correo.ts / api/codigo-correo.ts, clave de servicio) después de comprobar el inicio de sesión. */
-const verificar = (uid: string, correo: string) => db.query(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, $2, 'email') on conflict do nothing`, [uid, correo])
+const verificar = async (uid: string, correo: string) => { await db.query(`insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); return db.query(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, $2, 'email') on conflict do nothing`, [uid, correo]) }
 const aceptar = async (uid: string, id: string, token: string, correoApp: string) => {
   await como(uid); await db.exec('set role authenticated')
   try { await db.query(`select public.lk_aceptar_invitacion($1, $2, $3)`, [id, token, correoApp]) } finally { await db.exec('reset role') }

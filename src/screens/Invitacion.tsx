@@ -26,6 +26,21 @@ export function ZonaAceptar({ marcada, onMarcar, ocupado, onAceptar, casilla = t
     <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || (casilla && !marcada)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
 }
 
+/** Paso 21 (orden de publicación, docs/invitacion-enlace.md): antes de aceptar, el correo de la sesión se verifica en el servidor
+ *  (api/verificar-correo; con correo y código de Cavos termina en «Revisa tu correo»). Solo con VITE_REPUTACION=1: apagado, el código
+ *  de la reputación no entra en el build. Nunca lanza: si no se pudo, el servidor rechaza con un texto que dice cómo seguir. */
+export async function asegurarCorreo(email: string) {
+  if (import.meta.env.VITE_REPUTACION !== '1') return
+  const { asegurarCorreo: asegurar } = await import('../reputacion/verificacion')
+  await asegurar(email).catch(() => false)
+}
+
+/** Aceptar = primero asegurar el correo verificado en el servidor y después lk_aceptar_invitacion_con_terminos (migración 20261025230000). */
+export async function aceptarConCorreo(id: string, token: string, email: string) {
+  await asegurarCorreo(email)
+  await servidor.aceptarInvitacion(id, token, email, await cuentaPropia(), dosPersonas ? versionActual() : undefined)
+}
+
 export function Invitacion({ id, token, u }: { id: string; token: string; u: Usuario }) {
   const [d, setD] = useState<Datos | null>(null); const [err, setErr] = useState(''); const [ocupado, setOcupado] = useState(false)
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
@@ -33,7 +48,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
   if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')
-    try { await servidor.aceptarInvitacion(id, token, u.email, await cuentaPropia(), dosPersonas ? versionActual() : undefined); activarServidor(); ir('/alquiler/' + id) }
+    try { await aceptarConCorreo(id, token, u.email); activarServidor(); ir('/alquiler/' + id) }
     catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos aceptar la invitación. Intenta de nuevo.'); setOcupado(false) }
   }
   return <main id="contenido" tabIndex={-1} className="cont cont--form" style={{ paddingBottom: 48 }}>

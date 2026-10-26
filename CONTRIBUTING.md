@@ -110,6 +110,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Estilos solo en `src/reputacion/reputacion.css` (clases `.rp-*`), sin casitas ni ilustraciones, nunca texto blanco sobre naranja. La tarjeta de bloqueo usa solo `glass tarjeta` y `boton`.
 - Nunca: rankings, números de posición, filtros por puntaje, barrio, distancia, «verificado», «Llave de Oro» (es «Llave Lockumi»), ni un botón para ocultar el perfil.
 - Pruebas: `src/reputacion/__tests__/` (apagado = mismas pantallas, con instantáneas), SQL con PGlite y E2E con dos cuentas solo en local (`e2e/pruebas/reputacion.e2e.ts`).
+- Pruebas SQL con PGlite que escriben en `lk_correos_verificados`: el preludio crea `auth.users` y la prueba inserta antes la sesión (la tabla la referencia desde `20261025140000`). Código nuevo que llama a la reputación desde fuera de `src/reputacion/` (p. ej. `asegurarCorreo` en `Invitacion.tsx`): import diferido detrás de `import.meta.env.VITE_REPUTACION === '1'`.
 - Segundo factor (`src/reputacion/segundo-factor.ts`, `api/_lib/codigo-correo.ts`, sección 7 de la migración): el código NUNCA se guarda ni se registra en la consola; solo su HMAC con `LOCKUMI_CODIGO_PEPPER` y sal. Comparar huellas solo con `mismaHuella` (tiempo constante), nunca con `===`. Una acción nueva que borre o entregue datos de la persona debe llamar a `lk_usar_codigo` en la base, no solo pedir el código en la pantalla. Correos de prueba reales: solo a lockumi@mail.grokbot.com.
 
 ## Proponer cambios

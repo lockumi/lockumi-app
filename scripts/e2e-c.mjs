@@ -77,7 +77,7 @@ async function destinoSimulado() {
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
     // Paso 21 (20261025230000): lo que hace /api/verificar-correo con la clave de servicio después de comprobar el inicio de sesión.
-    verificarCorreo: async (uid, correo) => { await q(null, `insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, lower(btrim($2)), 'email') on conflict do nothing`, [uid, correo]) },
+    verificarCorreo: async (uid, correo) => { await q(null, `insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); await q(null, `insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, lower(btrim($2)), 'email') on conflict do nothing`, [uid, correo]) },
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
     migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true }), limpiar: async () => 0 }

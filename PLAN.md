@@ -2,7 +2,8 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
-## Paso 21 (25 oct 2026, rama local `paso21-invitacion-fix`, sin publicar): el link del correo de invitación abre la invitación
+## Paso 21 (25 oct 2026, publicado sobre la reputación): el link del correo de invitación abre la invitación
+- [x] Publicación (OK de Katherine 10:40 p. m. CR; Legal aprobó 96eb146): rama `paso21-sobre-reputacion` (cherry-pick sobre master con la reputación), `asegurarCorreo(u.email)` antes de aceptar, migración `20261025230000` en producción después del deploy. Volver atrás: docs/invitacion-enlace.md. Pendiente: prueba con dos cuentas reales (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).
 - Causa: el botón del correo de invitación llevaba a la raíz de la app (`api/_lib/correo.ts:81` en f6e3254) y la app no mandaba el token; la persona invitada caía en Inicio después de entrar.
 - Arreglo: botón a `#/invitacion/<alquiler>/<token>` (token comprobado contra el link vigente antes de enviar), regreso guardado también en localStorage 30 min, título de Legal en Entrar sin sesión y mensaje de Legal en la tarjeta del dueño con «Compartir por WhatsApp». Sin migraciones en la v1.
 - E2E nuevo `npm run e2e:invitacion`: abre el link REAL del correo en un navegador sin sesión. Detalle en [`docs/invitacion-enlace.md`](docs/invitacion-enlace.md).
@@ -186,7 +187,7 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [ ] Entrada en el menú de la cuenta (avatar) de la maqueta: la app todavía no tiene ese menú.
 - [x] Publicado en `master` el 24 oct 2026 (OK de Katherine).
 
-## Paso 19 · Reputación (25 oct 2026, rama `paso19-reputacion`, borrador)
+## Paso 19 · Reputación (25 oct 2026; encendida en app.lockumi.com, PR #26, merge `f87c8b8`, deploy `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP`, 10:45 p. m. CR)
 
 - [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
 - [x] REP-01 en una pantalla aparte antes de crear la cuenta (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.

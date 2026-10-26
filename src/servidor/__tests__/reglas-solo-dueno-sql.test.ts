@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite'
 
 const PRELUDIO = `
   create role anon; create role authenticated; create role service_role;
-  create schema auth; create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
+  create schema auth; create table auth.users (id uuid primary key, email text); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean, file_size_limit int, allowed_mime_types text[]);
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
@@ -33,6 +33,7 @@ beforeAll(async () => {
 describe('reglas: solo el dueño', () => {
   it('el inquilino unido NO puede cambiar las reglas por la API (update directo rechazado) y siguen iguales', async () => {
     const r = await crear()
+    await db.query(`insert into auth.users(id) values ($1) on conflict do nothing`, [INQ])   // con la reputación (20261025140000) la tabla referencia auth.users
     await db.query(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, 'luis.demo@lockumi.com', 'email') on conflict do nothing`, [INQ])   // paso 21: correo verificado
     await como(INQ); await db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, r.token])
     expect((await uno<{ rol: string }>(`select rol from public.lk_participantes where contrato_id = $1 and usuario = $2`, [r.id, INQ]))!.rol).toBe('inquilino')
