@@ -15,7 +15,7 @@ Desde el 20 de octubre de 2026, **todo cambio publicado en app.lockumi.com tiene
 - `PLAN.md` (sección «Estado actual»).
 - `docs/` (por ejemplo, [`docs/correo-resend.md`](docs/correo-resend.md)) y `src/legal/LEEME.md` si cambian los textos legales.
 
-Links a los textos legales: si una pantalla nombra una versión («Términos 1.9-demo») o la guarda (casilla, línea de versión del contrato, «ver las reglas» de un alquiler), el link tiene que abrir **esa** versión: usa `rutaTerminos(v)` / `rutaPrivacidad(v)` de `src/legal/documentos.ts`, nunca `/terminos` fijo (con la reputación, `/terminos` es la edición de la cuenta, hoy la 1.11-demo).
+Links a los textos legales: si una pantalla nombra una versión («Términos 1.9-demo») o la guarda (casilla, línea de versión del contrato, «ver las reglas» de un alquiler), el link tiene que abrir **esa** versión: usa `rutaTerminos(v)` / `rutaPrivacidad(v)` de `src/legal/documentos.ts`, nunca `/terminos` fijo (con la reputación, `/terminos` es la edición de la cuenta, hoy la 1.12-demo).
 
 **Regla de archivo (Legal, PR #33, 25/10/2026):** una versión publicada no se vuelve a editar nunca y queda en su propia ruta (`/terminos-1-9`, `/terminos-1-10`, …). Para cambiar un texto visible ya publicado:
 1. Crea una versión nueva (p. ej. 1.12-demo) en `src/legal/versiones.ts` (`VERSIONES` si es la de un escenario, `EDICIONES_CUENTA` si es la edición de la cuenta) y en `src/legal/version17.ts`, con su fecha.

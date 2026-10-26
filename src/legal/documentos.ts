@@ -3,7 +3,7 @@ import { pruebaCompleta, correosActivos } from '../prueba/interruptor'
 import { calcularModos } from '../servidor/config'
 import { condicional, type Interruptores } from './condicional'
 import { versionVigente, datosVersion, desde17, ordenVersion, VERSIONES } from './versiones'
-import { V110, EDICION_V110, V_REPUTACION } from './version17'
+import { V110, EDICION_V110, V111, EDICION_V111, V_REPUTACION } from './version17'
 
 /** Textos legales: cada `*.md` de esta carpeta es una página (`terminos.md` → `/terminos`).
  *  Para cambiar un texto basta con reemplazar su archivo (ver LEEME.md). */
@@ -64,7 +64,7 @@ const sufijo = (v: string) => '-' + v.replace(/-demo$/, '').replace('.', '-')
 // Legal (PR #33, 25/10/2026, 11:33 p. m.) · REGLA DE ARCHIVO: una versión publicada no cambia nunca y queda en su propia ruta.
 // Las versiones 1.7-demo a 1.10-demo se arman SIEMPRE desde la copia exacta de src/legal/v17/ en master 8790b52 (antes de la ronda 1.10),
 // guardada en src/legal/archivo/8790b52/ (pruebas: archivo-versiones.test.ts compara byte a byte con lo publicado). src/legal/v17/ es
-// solo la edición vigente con la reputación (1.11-demo); sin la reputación, la vigente es una versión ya publicada (1.7, 1.8 o 1.9).
+// solo la edición vigente con la reputación (1.12-demo desde la revisión de c97585b; la 1.11-demo, en archivo/04e4424/); sin la reputación, la vigente es una versión ya publicada (1.7, 1.8 o 1.9).
 const archivosPublicados = import.meta.glob('./archivo/8790b52/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 const cachePublicados = new Map<string, Record<string, DocLegal>>()
 /** Términos y Privacidad publicados (archivo 8790b52) armados para unos interruptores y, si se da, una edición fija. */
@@ -77,22 +77,28 @@ function armarPublicado(s: Interruptores, edicion?: string): Record<string, DocL
   }
   return d
 }
-/** Una versión publicada (1.7-demo a 1.10-demo), con sus interruptores y su edición (la 1.10-demo, con su fecha del 25/10/2026). */
-const publicada = (version: string) => armarPublicado(datosVersion(version)!.interruptores, version === V110 ? EDICION_V110 : undefined)
-/** Los dos textos (terminos, privacidad) de una versión 1.7-demo o posterior: las publicadas desde el archivo; la 1.11-demo, de v17/. */
+// Legal (revisión de c97585b, 26/10/2026) · misma regla para la 1.11-demo: copia exacta de src/legal/v17/ en master 04e4424 (PR #33
+// publicado), en src/legal/archivo/04e4424/. src/legal/v17/ pasa a ser la 1.12-demo.
+const archivosV111 = import.meta.glob('./archivo/04e4424/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+let cacheV111: Record<string, DocLegal> | undefined
+const armarV111 = () => cacheV111 ??= armar(Object.fromEntries(Object.entries(archivosV111).map(([r, t]) => [r.replace('archivo/04e4424/', ''), condicional(t, datosVersion(V111)!.interruptores, EDICION_V111)])))
+/** Una versión publicada (1.7-demo a 1.11-demo), con sus interruptores y su edición (la 1.10-demo y la 1.11-demo, con su fecha). */
+const publicada = (version: string) => version === V111 ? armarV111() : armarPublicado(datosVersion(version)!.interruptores, version === V110 ? EDICION_V110 : undefined)
+/** Los dos textos (terminos, privacidad) de una versión 1.7-demo o posterior: las publicadas desde el archivo; la 1.12-demo, de v17/. */
 const textosDe = (version: string): Record<string, DocLegal> => version === V_REPUTACION ? armar17(datosVersion(version)!.interruptores) : publicada(version)
 const enSuRuta = (version: string) => Object.fromEntries(Object.entries(textosDe(version)).filter(([k]) => k === 'terminos' || k === 'privacidad')
   .map(([k, d]) => [k + sufijo(version), { ...d, slug: k + sufijo(version) }]))
 /** Vigentes según lo encendido, más cada versión ya publicada en su ruta (/terminos-1-6 … /terminos-1-10). */
 function docs17(): Record<string, DocLegal> {
   const s = interruptoresLegales(), vig = versionVigente(s)
-  // La vigente: con la reputación, la edición de la cuenta (1.11-demo, de v17/); sin ella, la del escenario, tal como se publicó.
+  // La vigente: con la reputación, la edición de la cuenta (1.12-demo, de v17/); sin ella, la del escenario, tal como se publicó.
   const vigente = s.reputacion ? armar17(s) : armarPublicado(s)
   let archivo: Record<string, DocLegal> = {}
   for (const v of VERSIONES) if (ordenVersion(v.version) < ordenVersion(vig)) archivo = { ...archivo, ...enSuRuta(v.version) }
   // Con dos personas: la 1.9-demo (la de cada alquiler, versiones.ts:28, migración 20261025050000) y la 1.10-demo (publicada el 25/10 con
-  // la reputación; la guardaron los alquileres de una persona de esas cuentas) siempre tienen su ruta; la 1.11-demo también, si es la vigente.
-  if (s['dos-personas']) archivo = { ...archivo, ...enSuRuta('1.9-demo'), ...enSuRuta(V110), ...(s.reputacion ? enSuRuta(V_REPUTACION) : {}) }
+  // la reputación; la guardaron los alquileres de una persona de esas cuentas) siempre tienen su ruta; con la reputación, la 1.11-demo
+  // (archivada, master 04e4424) y la 1.12-demo (la vigente) también.
+  if (s['dos-personas']) archivo = { ...archivo, ...enSuRuta('1.9-demo'), ...enSuRuta(V110), ...(s.reputacion ? { ...enSuRuta(V111), ...enSuRuta(V_REPUTACION) } : {}) }
   return { ...DOCS, ...vigente, ...DOCS_16_EN_17, ...archivo }
 }
 /** Textos legales vigentes en la app (según el interruptor). */

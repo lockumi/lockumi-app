@@ -65,6 +65,8 @@ export const store = {
       return c
     }); guardar()
   },
+  /** PROTOTIPO eliminar-alquiler: quita un alquiler de este navegador (solo lo llama prueba/eliminar.ts, que revisa las reglas). */
+  quitar(id: string) { recargar(); datos = datos.filter(a => a.id !== id); guardar() },
   reiniciar() { datos = semilla(); localStorage.removeItem('lockumi.vista'); guardar() },
   subscribe(f: () => void) { subs.add(f); return () => { subs.delete(f) } },
 }
@@ -97,6 +99,8 @@ const KV = 'lockumi.vista'
 export const rolDe = (a: Alquiler, email?: string): Rol => a.miRol ?? (email && email.toLowerCase() === a.inquilinoEmail.toLowerCase() ? 'inquilino' : 'dueno')
 /** Demo en un solo dispositivo: vista elegida con «Ver como…» para un alquiler (si no hay, el rol real). */
 export const vistaDe = (a: Alquiler, email?: string): Rol => { if (a.miRol) return a.miRol; try { const v = JSON.parse(localStorage.getItem(KV) || '{}')[a.id]; return v ?? rolDe(a, email) } catch { return rolDe(a, email) } }
+/** Eliminar un alquiler (prueba/eliminar.ts): borra también su «Ver como» guardado. */
+export const olvidarVista = (id: string) => { try { const m = JSON.parse(localStorage.getItem(KV) || '{}'); if (id in m) { delete m[id]; localStorage.setItem(KV, JSON.stringify(m)) } } catch { /* sin almacenamiento */ } }
 export const fijarVista = (id: string, r: Rol) => { let m: Record<string, Rol> = {}; try { m = JSON.parse(localStorage.getItem(KV) || '{}') } catch { /* vacío */ } m[id] = r; localStorage.setItem(KV, JSON.stringify(m)); datos = [...datos]; subs.forEach(f => f()) }
 export const actaCompleta = (a: Acta) => a.cuartos.every(c => c.fotos.length > 0 && c.items.every(i => i.estado))
 export const firmo = (a: Acta, r: Rol) => Boolean(a.firmas[r])

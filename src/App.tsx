@@ -15,6 +15,8 @@ import { Login, Entrando } from './screens/Login'
 import { Inicio } from './screens/Inicio'
 import { Crear } from './screens/Crear'
 import { Detalle } from './screens/Detalle'
+import { ConfirmarAlquiler, ConfirmarReinicio } from './prueba/Eliminar'
+import { modoPrueba } from './servidor/config'
 import { Invitacion } from './screens/Invitacion'
 import { Ejemplo, useRecorridoPrimeraVez } from './screens/Ejemplo'
 import { RUTA_EJEMPLO } from './recorrido'
@@ -49,10 +51,11 @@ export default function App() {
   if (!u && regreso === 'esperando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
   const entrar = <Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} invitacion={invitado ? { titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION } : undefined} />
   if (!u) return <Fondo>{skip}<Alertas />{Previa ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Previa>{entrar}</Previa></Suspense> : entrar}<Pie /></Fondo>
-  const m = r.match(/^\/alquiler\/(.+)$/)
+  const conf = modoPrueba ? r.match(/^\/alquiler\/(.+)\/(eliminar|ocultar)$/) : null   // PROTOTIPO eliminar-alquiler
+  const m = conf ? null : r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
   const salir = () => { auth.salir(); olvidarBilletera(); setU(null) }
-  const pantalla = r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />
+  const pantalla = conf ? <ConfirmarAlquiler id={conf[1]} u={u} que={conf[2] as 'eliminar' | 'ocultar'} /> : modoPrueba && r === '/reiniciar' ? <ConfirmarReinicio u={u} /> : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   return <Fondo comision={!!(inv || m)}>{skip}
     <Alertas />
