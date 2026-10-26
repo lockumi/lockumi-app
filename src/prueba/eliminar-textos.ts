@@ -12,7 +12,7 @@ export const T = {
   tituloEliminar: '¿Eliminar este alquiler?',
   eliminarPuntos: (dos: boolean) => [
     'Se borra de tu lista, con su contrato sin firmar y sus datos.',
-    dos ? 'La invitación deja de funcionar. Si la otra persona abre el enlace, verá que el alquiler ya no está disponible.' : 'Todavía no hay depósito, así que no se mueve dinero.',
+    dos ? 'La invitación deja de funcionar. Si la otra persona abre el enlace, verá que ya no es válido.' : 'Todavía no hay depósito, así que no se mueve dinero.',
     'No se puede deshacer.',
   ],
   si: 'Sí, eliminar', no: 'No, volver',
