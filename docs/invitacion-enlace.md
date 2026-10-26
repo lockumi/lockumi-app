@@ -92,3 +92,20 @@ Para quien entra con otra cuenta (p. ej. Apple, con un correo `@privaterelay.app
 - **Aviso de privacidad:** solo menciona el código por correo para descargar los datos o eliminar la cuenta (`src/legal/v17/privacidad.md:107`). No se cambió.
 
 **Arreglo (26/10/2026, 20261026050000_invitacion_codigo_cuenta):** la prueba en producción devolvió 409 al aceptar después del código: con la reputación encendida, el disparador `lk_participante_correo_verificado` exige que `lk_participantes.email_cavos` sea un correo verificado de la cuenta, y se guardaba el correo invitado. Ahora, al aceptar por el código, `email_cavos` es el correo verificado activo de la cuenta que acepta (`lk_correo_activo`); el correo invitado queda en `lk_invitaciones_verificadas`. Sin cambios en el camino de siempre. Revert: `supabase/revert/20261026050000_invitacion_codigo_cuenta_revert.sql` (después, si hace falta, el de 040000). La prueba de vitest ahora enciende la reputación como en producción.
+
+## El dueño no acepta su propia invitación (26/10/2026)
+
+Aprobado por Katherine (26/10, 3:07 p. m. CR). Caso real: la persona invitada abrió el link en un aparato con la sesión del dueño abierta
+y el alquiler quedó con el correo del dueño como dueño y como inquilino.
+
+- **App** (`src/screens/Invitacion.tsx`, `src/prueba/invitacion.ts`): si la sesión es el dueño (`es_dueno` del servidor, el alquiler ya
+  es suyo como dueño, el mismo correo sin mayúsculas ni espacios, o la base rechazó por eso), en lugar de «Aceptar invitación» se ve
+  «Este link es para la otra persona. Cierra sesión o ábrelo en otro dispositivo.» y el botón «Cerrar sesión». Al salir se guarda el link
+  (`src/regreso.ts`) y, al volver a entrar, se abre el mismo link. Mismos componentes; sin cambio de diseño.
+- **Base** (migración `20261026100000_invitacion_no_dueno.sql`; vuelta atrás en `supabase/revert/`): el disparador
+  `lk_inquilino_no_dueno` en `lk_participantes` rechaza un inquilino que sea la misma cuenta que el dueño o que comparta un correo con él
+  (del dueño: su correo en el alquiler y su Apple; de quien acepta: ese correo, los de `lk_correos_verificados`, incluido el código
+  por correo de Cavos, y su Apple en `lk_correos_reales`), con el mismo texto. Solo al insertar. Vale para
+  `lk_aceptar_invitacion`, `lk_aceptar_invitacion_con_terminos` y `/api/codigo-correo` (que devuelve el texto de la base).
+  `lk_ver_invitacion` agrega `es_dueno` (solo de la sesión que pregunta; no muestra correos). Las filas que ya existían no se tocan.
+- Tests: `src/servidor/__tests__/invitacion-no-dueno-sql.test.ts` y `src/prueba/__tests__/invitacion-no-dueno.test.tsx`.

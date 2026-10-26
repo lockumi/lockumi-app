@@ -155,7 +155,7 @@ export const servidor = {
     guardarInvitacion(r.id, r.token); await recargar(); return { id: r.id, link: linkInvitacion(r.id, r.token) }
   },
   async nuevaInvitacion(id: string) { const t = await rpc<string>('lk_nueva_invitacion', { p_contrato: id }); guardarInvitacion(id, t); await recargar(); return linkInvitacion(id, t) },
-  verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
+  verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string; es_dueno?: boolean }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
   /** Escenario C: con `terminosVersion`, el inquilino se une aceptando esa versión de los Términos y el Aviso de privacidad (queda quién y cuándo). */
   aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string, terminosVersion?: string) => tras(terminosVersion
     ? rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: token, p_email_cavos: email, p_terminos_version: terminosVersion, p_direccion_stellar: cuenta ?? null })
