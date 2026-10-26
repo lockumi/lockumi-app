@@ -1,0 +1,5 @@
+# Lockumi - app.lockumi.com. Los perfiles de reputacion no van en buscadores (Legal, revision del PR #26, regla 3).
+# Cada perfil lleva la etiqueta meta "noindex, nofollow".
+User-agent: *
+Disallow: /perfil
+Disallow: /api/

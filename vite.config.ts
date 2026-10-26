@@ -1,8 +1,9 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { guardaCorreos, CARPETAS_GUARDA, revisaGuarda, type Archivo } from './api/_lib/guarda-correos.js'
+import { guardaEncendido } from './src/legal/encendido.ts'
 
 /** Archivos de src/, api/ y supabase/migrations/ para la guarda de las marcas «LEGAL: revisar». */
 function archivosGuarda(): Archivo[] {
@@ -14,9 +15,10 @@ function archivosGuarda(): Archivo[] {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // guardaCorreos: el build de producción falla mientras quede alguna marca «LEGAL: revisar» (textos de los correos y marcas en src/,
   // api/ y supabase/migrations/; api/_lib/guarda-correos.ts).
-  plugins: [react(), guardaCorreos(process.env, archivosGuarda)],
+  // Paso 19: el build falla si se enciende la reputación sin la fecha real de encendido (src/legal/encendido.ts).
+  plugins: [react(), guardaCorreos(process.env, archivosGuarda), guardaEncendido({ ...loadEnv(mode, process.cwd(), ''), ...process.env })],
   base: '/', // absoluta: la app también se sirve desde rutas como /terminos (ver vercel.json)
-})
+}))

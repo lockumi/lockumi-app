@@ -101,6 +101,17 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Versiones nuevas de los Términos (escenario C, 25/10): no agregues avisos de «Términos actualizados» ni pantallas de volver a aceptar. Una cuenta nueva acepta la versión vigente en «Entrar»; lo nuevo de cada función va con su casilla (`casillaDeFuncion`, `CasillaVersion`). Lo revisa `src/screens/__tests__/c-sin-aviso-version.test.tsx`.
 - Cómo publicar, revisar y volver atrás: `docs/despliegue.md`.
 
+## Reputación (`src/reputacion/`, paso 19, `docs/reputacion.md`)
+- Todo va detrás de `VITE_REPUTACION`, siempre con la comparación en línea `import.meta.env.VITE_REPUTACION === '1'` (así el código apagado no entra en el build). Las pantallas se cargan en diferido desde `App.tsx`.
+- La fuente única de los textos es `legal/reputacion-textos-para-producto.md` (REP-01 a REP-15), copiados al pie de la letra en `src/reputacion/textos.ts`. Textos propios con `// LEGAL: revisar`.
+- Encender y volver atrás: `docs/reputacion.md` («Encendido»). La fecha de los textos es UNA constante (`src/legal/fecha-reputacion.ts`), no una variable de entorno.
+- No se toca el login ni Cavos: REP-01 envuelve a `<Login/>` (`Previa`) y, ya con sesión, la aceptación pasa a la cuenta.
+- Reglas del puntaje solo en `src/reputacion/puntaje.ts` (funciones puras): 90 % antes del 0,3 %, 10 años, siempre visible desde el 3.er alquiler, «En revisión».
+- Estilos solo en `src/reputacion/reputacion.css` (clases `.rp-*`), sin casitas ni ilustraciones, nunca texto blanco sobre naranja. La tarjeta de bloqueo usa solo `glass tarjeta` y `boton`.
+- Nunca: rankings, números de posición, filtros por puntaje, barrio, distancia, «verificado», «Llave de Oro» (es «Llave Lockumi»), ni un botón para ocultar el perfil.
+- Pruebas: `src/reputacion/__tests__/` (apagado = mismas pantallas, con instantáneas), SQL con PGlite y E2E con dos cuentas solo en local (`e2e/pruebas/reputacion.e2e.ts`).
+- Segundo factor (`src/reputacion/segundo-factor.ts`, `api/_lib/codigo-correo.ts`, sección 7 de la migración): el código NUNCA se guarda ni se registra en la consola; solo su HMAC con `LOCKUMI_CODIGO_PEPPER` y sal. Comparar huellas solo con `mismaHuella` (tiempo constante), nunca con `===`. Una acción nueva que borre o entregue datos de la persona debe llamar a `lk_usar_codigo` en la base, no solo pedir el código en la pantalla. Correos de prueba reales: solo a lockumi@mail.grokbot.com.
+
 ## Proponer cambios
 
 1. Abre un *issue* con el problema o la idea, o comenta en uno existente.

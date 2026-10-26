@@ -89,7 +89,36 @@ Los avisos por correo son opcionales: sin la casilla, llegan solo dentro de la a
 4. Si eliges el USDC de prueba que te da Lockumi, sin valor, asignar a tu alquiler simulado una cuenta de inquilino de prueba de Lockumi.
 5. Dejar constancia de tus aceptaciones.
 6. Mejorar la demo con datos agregados.
+<!-- LEGAL: revisado · paso 19, REP-14 de legal/reputacion-textos-para-producto.md (solo con VITE_REPUTACION=1) -->
+<!-- si no: reputacion -->
 No usamos tus datos para publicidad, no los vendemos y no calculamos ningún puntaje de reputación.
+<!-- fin -->
+<!-- si: reputacion -->
+No usamos tus datos para publicidad y no los vendemos. Para usar Lockumi, calculamos un puntaje con tus alquileres cerrados en la app y lo mostramos en tu perfil de reputación público, que queda visible **mientras exista tu cuenta**.
+
+## Perfil de reputación
+Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con tu cuenta. **Cualquier persona en internet** con el enlace puede verlo. Antes de crear tu cuenta te pedimos aceptarlo en una pantalla aparte, con una casilla sin marcar. Si no lo aceptas, puedes no crear tu cuenta, sin costo.
+
+<!-- LEGAL: revisado (25/10) · cuentas anteriores a la 1.10-demo (texto literal de Legal) -->
+Si tu cuenta es anterior a la versión 1.10‑demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.
+
+<!-- LEGAL: revisado (25/10) · persona por correo (texto de Legal, con «solicitudes» en vez de «pedidos») -->
+Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus solicitudes por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos.
+
+- **Datos que se publican:** tu nombre visible, tu papel (dueño o inquilino), tu cantón o provincia, desde cuándo estás en Lockumi, cuántos alquileres cerraste, tus insignias, tu puntaje y la Llave Lockumi si la tienes (siempre desde tu 3.er alquiler cerrado) y, solo en las vitrinas en las que aparezcas, el precio desde el que alquilas o el rango que buscas.
+- **Datos que nunca se publican:** tu dirección, tu barrio, la dirección del inmueble, la distancia, tu teléfono, tu correo, tu cédula, tu billetera, fotos, montos y el detalle de tus reclamos.
+- **Finalidad:** que dueños e inquilinos conozcan el historial de la otra parte en Lockumi. No es una garantía ni una recomendación.
+- **Cómo se calcula:** solo con alquileres cerrados en la app. **Inquilino:** un alquiler baja de 5,0 solo si su reclamo terminó con un descuento del depósito, en proporción a lo descontado. **Dueño:** un alquiler baja de 5,0 solo si, en un acuerdo o en la mediación, se devolvió al inquilino el 90 % o más de lo reclamado, en proporción a lo devuelto. Los reclamos abiertos, los reclamos que el dueño no presentó a tiempo y las simulaciones no cuentan. En la demo, con datos de prueba.
+- **Protección del perfil:** no aparece en buscadores, no se puede buscar por nombre, no hay rankings ni orden o filtro por puntaje, y las vitrinas se publican por cantón solo si hay al menos 10 personas (si no, por provincia), nunca por un área menor.
+- **Consentimiento:** lo das en la pantalla previa a crear tu cuenta, separada de los Términos. Guardamos la versión, la fecha, la hora y el texto que aceptaste.
+- **Perfil fijo y retiro del consentimiento:** tu perfil no se puede ocultar. Solo deja de verse si eliminas tu cuenta (en «Tu perfil en Lockumi» › «Eliminar mi cuenta», o por correo a business.applockumi@gmail.com), y eso es también retirar el consentimiento: es gratis y borramos tus datos de reputación en un máximo de 5 días hábiles. No podemos borrar las capturas que otras personas hayan hecho. Si tienes un alquiler abierto, el plazo de 5 días hábiles corre desde que se cierra.
+- **Conservación:** los datos de reputación (puntaje, insignias, perfil, tarjetas y el historial de alquileres que alimenta el puntaje) se guardan **mientras exista tu cuenta** y se borran cuando la eliminas. Como lo exige el art. 6 de la Ley 8968, un hecho que baja el puntaje (un descuento del depósito del inquilino o un reclamo del dueño en el que se devolvió al inquilino el 90 % o más de lo reclamado) deja de contar y se borra de tu reputación 10 años después de que ocurrió. Los datos del contrato y del depósito siguen la regla general de este Aviso. En la demo, todo son datos de prueba de la red de prueba de Stellar.
+- **Acceso, corrección y revisión:** puedes ver y descargar tus datos de reputación en «Tu perfil en Lockumi» › «Ver mis datos de reputación» › «Descargar mis datos», pedir que corrijamos un dato o que revisemos un hecho; te enviamos un acuse al instante, tu puntaje dice «En revisión» y respondemos gratis en un máximo de 5 días hábiles (Ley 8968, art. 7).
+- **Avisos:** te avisamos en la app{{correos: y por correo}} cada vez que tu puntaje cambie.
+- **Uso por terceros:** quien vea un perfil no puede usarlo para discriminar ni para hacer listas de personas (ver los Términos).
+- **Mayores de 18 años:** solo personas mayores de edad pueden crear una cuenta.
+- **Cambios:** Estas reglas pueden cambiar. Si cambian, te avisaremos antes y te pediremos aceptar la nueva versión.
+<!-- fin -->
 
 ## Si es obligatorio darlos
 Darnos tus datos es voluntario, pero sin el correo, la billetera y el inventario la demo no funciona. Si no los das, la única consecuencia es que no podrás usar la demo.
@@ -116,6 +145,9 @@ Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotul
 <!-- fin -->
 - **Servicios de la red de prueba:** **Friendbot** (que entrega XLM de prueba) y el **exchange descentralizado** de la red de prueba (donde compras USDC de prueba) son servicios públicos de la red. No les enviamos datos personales; solo reciben la dirección pública de tu billetera cuando la usas.
 - Al aceptar este aviso, **autorizas de forma expresa** que tus datos se transfieran a estos proveedores (Vercel, Supabase, Cavos{{!correos: y Trustless Work}}{{correos:, Trustless Work y Resend}}), fuera de Costa Rica, solo para los fines descritos (Ley 8968, art. 14).
+<!-- si: reputacion -->
+- Cualquier persona en internet con el enlace puede ver los datos indicados en «Perfil de reputación», mientras exista tu cuenta.
+<!-- fin -->
 - Solo compartiremos tus datos con una autoridad cuando lo exijan una orden judicial fundamentada o la ley.
 
 ## Cuánto tiempo los guardamos

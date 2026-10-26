@@ -48,6 +48,6 @@ describe('versión de los Términos de cada alquiler', () => {
   })
   it('con el interruptor encendido, los alquileres nuevos quedan en la 1.7-demo', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
-    expect(fs.readFileSync('src/store.ts', 'utf8')).toMatch(/pruebaCompleta\(\) \? \{ terminos: \{ version: terminosActual\(\)\.version, \.\.\.edicionDe\(terminosActual\(\)\.version\) \} \} : \{\}/)
+    expect(fs.readFileSync('src/store.ts', 'utf8')).toMatch(/pruebaCompleta\(\) \? \{ terminos: \{ version: terminosActual\(\)\.version, \.\.\.edicionDe\(terminosActual\(\)\.version, a\.duenoEmail\) \} \} : \{\}/)
   })
 })

@@ -153,7 +153,7 @@ Se muestra al crear el alquiler y ambas partes lo aceptan. Los ejemplos son crit
 **D.** Los faltantes y daños se cobran por su valor menos la depreciación. **E.** Cuanto más largo el alquiler, más desgaste se considera normal.
 
 ## 7. Uso aceptable
-No está permitido: a) intentar usar la app con la red principal de Stellar o con activos reales, o enviar fondos reales a las cuentas de la demo; b) usar la app para alquileres o depósitos reales, ni para hacerle creer a otra persona que la demo tiene valor; c) subir fotos de personas, documentos de identidad, datos sensibles o contenido ilegal u ofensivo; d) intentar vulnerar la seguridad de la app, de sus proveedores o de la red; e) automatizar el uso de la app de forma abusiva; f) hacerse pasar por otra persona. Si alguien incumple estas reglas, Lockumi puede suspender su acceso a la demo y le informará el motivo.
+No está permitido: a) intentar usar la app con la red principal de Stellar o con activos reales, o enviar fondos reales a las cuentas de la demo; b) usar la app para alquileres o depósitos reales, ni para hacerle creer a otra persona que la demo tiene valor; c) subir fotos de personas, documentos de identidad, datos sensibles o contenido ilegal u ofensivo; d) intentar vulnerar la seguridad de la app, de sus proveedores o de la red; e) automatizar el uso de la app de forma abusiva; f) hacerse pasar por otra persona{{reputacion:; g) usar los perfiles públicos en contra de lo dispuesto en la cláusula 15.4}}. Si alguien incumple estas reglas, Lockumi puede suspender su acceso a la demo y le informará el motivo.
 
 ## 8. Propiedad intelectual
 <!-- LEGAL: revisado (25/10, lista de Legal) · paso16-unido: sin el modo de dos personas, la última frase no nombra a la otra parte ni a una persona del equipo -->
@@ -184,3 +184,17 @@ Estos términos se rigen por las leyes de la República de Costa Rica. Cualquier
 
 ## 14. Contacto
 Para dudas, reclamos o para ejercer tus derechos: **business.applockumi@gmail.com**.
+
+<!-- LEGAL: revisado · paso 19, REP-15 (solo con VITE_REPUTACION=1) -->
+<!-- si: reputacion -->
+## 15. Perfil de reputación
+<!-- LEGAL: revisado (25/10) · 15.1, última oración (cuentas anteriores a la 1.10-demo, texto literal de Legal) -->
+15.1 Usar Lockumi incluye un perfil de reputación público (perfil, puntaje e insignias), que se crea con tu cuenta después de que lo aceptes en una pantalla aparte. Tu puntaje se muestra siempre desde tu 3.er alquiler cerrado. Tu perfil es fijo: no se puede ocultar y solo deja de verse si eliminas tu cuenta (15.7). Si no lo aceptas, puedes no crear tu cuenta, sin costo. Las vitrinas (Dueños destacados, Inquilinos destacados y Nuevos en Lockumi) son opcionales. Las cuentas creadas antes de la versión 1.10‑demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.
+15.2 El puntaje y las insignias **resumen hechos registrados en la app**. No son una garantía, una recomendación ni una evaluación de tu identidad, solvencia o conducta, y Lockumi no promete ningún resultado a quien los consulte. En la demo, se calculan con datos de prueba sin efecto legal.
+15.3 El puntaje de un alquiler solo baja en estos casos: (a) **inquilino**, si su reclamo terminó con un descuento del depósito, en proporción a lo descontado; (b) **dueño**, si en un acuerdo o en la mediación se devolvió al inquilino el 90 % o más de lo reclamado, en proporción a lo devuelto. No baja por abrir un reclamo, por un reclamo cerrado sin descuento, por un reclamo que no se presentó a tiempo (5.3 d) ni por acudir a los tribunales u otras vías. Nada en esta cláusula limita los derechos irrenunciables que la Ley 7527 da a los inquilinos (arts. 2 y 3) ni los derechos del consumidor.
+15.4 **Uso prohibido:** no se permite copiar o recopilar perfiles en forma masiva, hacer listas de personas, usar los perfiles para discriminar a nadie (art. 33 de la Constitución Política) ni para negar un alquiler por haber ejercido un derecho. Lockumi puede suspender el acceso de quien lo haga.
+15.5 Puedes pedir que se corrija un dato o que se revise un hecho según el Aviso de privacidad. Te enviamos un acuse al instante, tu puntaje dice «En revisión» mientras tanto y Lockumi responde en un máximo de 5 días hábiles.
+15.6 Lockumi puede ocultar un dato o una insignia mientras revisa un error o una disputa.
+15.7 Los datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje) se guardan mientras exista tu cuenta y se borran cuando la eliminas. Tu perfil solo deja de verse si eliminas tu cuenta, y retirar el consentimiento es eliminar la cuenta: puedes hacerlo gratis en «Tu perfil en Lockumi» › «Eliminar mi cuenta» o por correo a business.applockumi@gmail.com, y borramos los datos de reputación en un máximo de 5 días hábiles (si tienes un alquiler abierto, desde que se cierra). Por el art. 6 de la Ley 8968, un hecho que baja el puntaje (del inquilino o del dueño) deja de contar y se borra de tu reputación 10 años después de que ocurrió. Los datos del contrato y del depósito siguen la regla general del Aviso de privacidad.
+15.8 Estas reglas pueden cambiar. Si cambian, te avisaremos antes y te pediremos aceptar la nueva versión.
+<!-- fin -->

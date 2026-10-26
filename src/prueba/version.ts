@@ -2,13 +2,14 @@
 // (pantallas y plazos de siempre) salvo que los dos acepten la 1.7-demo. Los nuevos, con el interruptor encendido, nacen en la 1.7-demo.
 import type { Alquiler, Rol } from '../types'
 import { pruebaCompleta } from './interruptor'
-import { V17 } from '../legal/version17'
+import { V17, edicionDeCuenta } from '../legal/version17'
 import { edicionDe as edicionTexto, desde17, ordenVersion, versionVigente } from '../legal/versiones'
 import { interruptoresLegales } from '../legal/documentos'
 export { V17 }
 export const V16 = '1.6-demo'
 /** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; la 1.7-demo y posteriores la llevan. */
-export const edicionDe = (version: string) => { const e = edicionTexto(version); return e ? { edicion: e } : {} }
+/** Paso 19 (Legal, bloqueo 2): con la reputación encendida, la versión vigente lleva la 1.10-demo solo si esa cuenta aceptó REP-01. */
+export const edicionDe = (version: string, cuenta?: string) => { const e = edicionTexto(version); return e ? { edicion: version === versionActual() ? edicionDeCuenta(cuenta, e) : e } : {} }
 /** Escenario C (preparación): la versión de los Términos según lo encendido (1.7-demo con A, 1.8-demo con B, 1.9-demo con C). */
 export const versionActual = () => versionVigente(interruptoresLegales())
 /** Sin versión guardada: el alquiler es de antes del paso 16, o sea 1.6-demo. */

@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 const db = new PGlite()
 const STUB = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
-create schema auth; create schema storage;
+create schema auth; create table auth.users (id uuid primary key, email text); create schema storage;
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth, storage, public to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
 create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);

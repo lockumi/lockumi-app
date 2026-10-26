@@ -177,3 +177,27 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Accesible: foco en el globo, Tab atrapado, Esc, foco de vuelta, movimiento reducido.
 - [ ] Entrada en el menú de la cuenta (avatar) de la maqueta: la app todavía no tiene ese menú.
 - [x] Publicado en `master` el 24 oct 2026 (OK de Katherine).
+
+## Paso 19 · Reputación (25 oct 2026, rama `paso19-reputacion`, borrador)
+
+- [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
+- [x] REP-01 en una pantalla aparte antes de crear la cuenta (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.
+- [x] Cuentas anteriores a la 1.10-demo: sin re-aceptación ni pantallas extra; sin perfil, y sus alquileres no cuentan para nadie (Coordinador, 25/10).
+- [x] Con un borrado pendiente no se crean ni se aceptan alquileres nuevos (app y SQL). El build falla si se enciende con «[fecha de encendido]».
+- [x] Puntaje: inquilino baja solo por descuento del depósito; dueño solo si se devolvió al inquilino el 90 % o más de lo reclamado (antes del 0,3 %); siempre visible desde el 3.er alquiler; 10 años.
+- [x] «En revisión» con reclamo abierto o revisión pedida (REP-11), avisos de cambio de puntaje y de los 10 años (REP-12), noindex.
+- [x] Eliminar la cuenta gratis en 5 días hábiles; vitrinas opcionales; REP-14 y REP-15 en los textos legales (solo con el interruptor).
+- [x] Migración escrita (no aplicada), pruebas unitarias, SQL y E2E con dos cuentas en local.
+- [x] Segundo factor (Legal 5:04 p. m., Katherine 5:29 p. m.): código de 6 números por correo antes de «Eliminar mi cuenta» y «Descargar mis datos» (solo en modo servidor). Solo HMAC con pepper y sal, 10 minutos, 5 intentos, un solo uso por acción y persona, reenvío 1/min y 5/hora; la base lo exige (`lk_usar_codigo`). Pruebas SQL, API y pantalla; flujo real local con capturas a 390 px.
+- [x] Segundo factor: Legal revisó los 2 textos propios (25/10, 6:01 p. m.: más de 5 por hora tal como está; «No pudimos enviarte el código. Vuelve a intentarlo en un minuto.» literal).
+- [x] Segundo factor: el aviso «Ya te enviamos un código…» se oculta al empezar a escribir (Legal 6:04 p. m., opcional).
+- [x] Verificación del correo (Legal 6:04 p. m., BLOQUEANTE): la huella de un solo uso es sobre `iss|sub|iat|nonce`, no sobre la firma (maleable). Pruebas: bit de relleno, ECDSA `s → n−s` y reuso → «ya usado».
+- [x] JWKS reales del enclave, Google y Apple revisados (25/10 6:05 p. m.): todas las llaves publican `use = sig` y `alg`; la regla estricta se mantiene.
+- [x] Valores de CAVOS_* buscados sin secretos: `CAVOS_APP_ID` = UUID interno de Cavos (no el `cav_…`), aud de Google y Apple = `client_id` de Cavos (docs/reputacion.md).
+- [x] En Vercel Production (25/10): `CAVOS_APP_ID`, `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `LOCKUMI_CODIGO_PEPPER`; `RESEND_API_KEY` ya estaba.
+- [x] Rama al día con master (escenario C); OK final de Legal al PR #26.
+- [x] Encendida el 25 de octubre de 2026 (10:43 p. m. CR): `CAVOS_AUD_EMAIL` puesto al encender (de un login real con código por correo, en el navegador de Katherine) con `encender-reputacion.sh <AUD>`: migración, `VITE_REPUTACION=1`, fecha real en `src/legal/fecha-reputacion.ts`, merge del PR #26 y comprobación (docs/reputacion.md, «Encendido»).
+- [x] Correo por código con el token de correo de Cavos (Legal 25/10, 9:00 p. m.): con `aud` «cavos-email» (la misma para todas las apps de Cavos) el correo solo queda verificado con el código de 6 números de Lockumi («Revisa tu correo», acción `verificar_correo` de `lk_usar_codigo`, mismas reglas del segundo factor). Migración NUEVA `20261025210000_verificar_correo_codigo.sql` (la aplica `encender-reputacion.sh`). Pruebas: sin código → 403; con el código → verificado. Alternativa para Legal (no implementada): el código del kit dice que el `nonce` del correo lleva el App ID (docs/reputacion.md).
+- [ ] Pendiente de Legal: alquiler abierto al eliminar la cuenta; fecha de publicación de la 1.8-demo; «Ajustes ›» en REP-14/REP-15 (la app no tiene Ajustes).
+- [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles (la migración se aplica al encender).
+

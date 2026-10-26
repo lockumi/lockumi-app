@@ -10,6 +10,7 @@ import { modoSolo, modoVideo } from '../servidor/config'
 import { turno } from '../flujo'
 import { ICONO_ESTADO, claseEstado } from '../estados'
 import { Dibujo } from './dibujos'
+import { EntradaReputacion } from '../reputacion/Entrada'
 
 // Los 3 pasos de la portada, en el orden real de flujo.ts (ETAPAS): las fotos de entrada van después del depósito.
 const PASOS = [
@@ -38,6 +39,7 @@ export function Inicio({ u }: { u: Usuario }) {
       <div><h2 id="pv-t">¿Primera vez?</h2><p className="nota">Mira cómo funciona en 1 minuto.</p></div>
       <button type="button" className="boton boton--secundario" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>Ver el recorrido</button>
     </section>
+    {import.meta.env.VITE_REPUTACION === '1' && <EntradaReputacion email={u.email} />}{/* Paso 19 · solo con VITE_REPUTACION=1; apagado no entra en el build */}
     {todos.length === 0 && <div className="glass tarjeta"><p>Todavía no hay alquileres.</p></div>}
     <ul className="rejilla" role="list">
       {todos.map(a => { const rol = rolDe(a, u.email), ico = ICONO_ESTADO[a.estado]
