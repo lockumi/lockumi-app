@@ -310,3 +310,7 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   conexiones automáticas nunca piden la llave. Textos en `src/services/llave.ts` (`TEXTOS_LLAVE`). Pruebas `llave.test.ts`,
   `llave-conexion.test.ts`. Límites del kit: la ventana de confirmación del vault es de Cavos y está en inglés («Add a passkey»,
   «Verify it's you») y la passkey queda guardada a nombre de «Cavos» (vault.cavos.xyz), no de Lockumi.
+- [ ] Firmante al entrar (Katherine, 26/10 1:12 p. m.; PR #53, sin publicar): puerta `signMessage('lockumi-login')` al entrar (solo se
+  recuerda sí/no), «Entrar de nuevo» antes de pagar y de firmar en C con regreso al mismo alquiler, mensaje solo si la billetera existe y
+  el dispositivo no firma, 5 errores del pago corregidos. **Falta:** OK de Legal al cambio del test de Términos 5.3 (`signMessage` solo
+  con `lockumi-login`), prueba real de Katherine después de publicar (`capturas/firmante-login/pasos-katherine.md`). Doc: `docs/firmante-login.md`.

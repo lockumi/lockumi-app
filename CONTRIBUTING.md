@@ -78,6 +78,13 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Los scripts de navegador que pasan por Inicio deben marcarlo como visto en `addInitScript` (ver `scripts/alertas/capturar.mjs`); si no, el recorrido se abre y tapa la pantalla.
 - Prueba en navegador: `VITE_TRUSTLESS=1 npx vite build && npx vite preview --port 4173`, luego `OUT=/tmp/rec/ node scripts/recorrido/capturar.mjs` (teléfono, computadora y movimiento reducido).
 
+## Firmante al entrar (`src/services/firmante.ts`, `src/screens/Firmante.tsx`, `docs/firmante-login.md`)
+
+- `signMessage` solo se usa en `probarFirma` (`src/services/billetera.ts`) con el texto fijo `lockumi-login`; nunca para pagos (Términos 5.3,
+  `cavos-sin-firma-silenciosa.test.ts`). La firma se descarta: solo se guarda «sí/no» por correo.
+- Una firma fallida al entrar no reintenta ni conecta con la llave de acceso sola: el kit puede borrar la llave local dentro de `connect`.
+- Un botón nuevo de pagar o firmar en C va dentro de `<ConSesion>` («Entrar de nuevo» si la pestaña perdió la sesión).
+
 ## Agregar un estado del alquiler y su color
 
 «Tus alquileres» pinta cada tarjeta según el **grupo** de su estado: `pendiente` (amarillo miel), `curso` (verde salvia), `reclamo` (terracota) o `terminado` (arena). Para agregar un estado:

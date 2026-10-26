@@ -359,5 +359,6 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   dispositivo ya puede pagar». 3) pagar el depósito en B. 4) cuenta sin llave en B → la frase de «Todavía no tienes una llave…».
 - **Capturas locales:** `npm run dev` y en la consola `localStorage` `lockumi.billetera.prueba` = una dirección G de prueba,
   `lockumi.billetera.prueba.estado` = `needs-device-approval` (dispositivo nuevo) y `lockumi.llave.prueba` = `si`/`no` (solo en dev).
+  Firmante al entrar: `lockumi.billetera.prueba.firma` = `no`/`sin-sesion`/`error` y `lockumi.billetera.prueba.sesion` = `no` (ver [firmante-login.md](firmante-login.md)).
 - **Límites del kit:** la ventana del vault es de Cavos y está en inglés; la passkey se guarda con el nombre «Cavos».
 - **Volver atrás:** `git revert -m 1 <merge>` (no hay migraciones).
