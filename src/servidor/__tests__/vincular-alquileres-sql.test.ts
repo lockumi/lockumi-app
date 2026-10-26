@@ -76,10 +76,13 @@ describe('lk_vincular_alquileres', () => {
     expect(await usuarioDe(c, 'inquilino')).toBe(viejo)
   })
   it('no junta los dos lugares en una sesión: se salta si ya es parte; si es dueña e inquilina con el mismo correo, trae el de dueño', async () => {
+    // Filas de antes de 20261026100000 (dueño e inquilino con el mismo correo): hoy la base ya no deja crearlas.
+    await db.exec('alter table public.lk_participantes disable trigger lk_inquilino_no_dueno')
     const yo = id(), otro = id()
     const c1 = await alquiler(yo, 'mismo@ejemplo.com', otro, 'mismo@ejemplo.com')   // la sesión ya es dueña
     const viejoD = id(), viejoI = id(), nueva = id()
     const c2 = await alquiler(viejoD, 'doble@ejemplo.com', viejoI, 'doble@ejemplo.com')
+    await db.exec('alter table public.lk_participantes enable trigger lk_inquilino_no_dueno')
     await verificar(yo, 'mismo@ejemplo.com', 'google'); await verificar(nueva, 'doble@ejemplo.com', 'google')
     expect(await vincular(yo, 'mismo@ejemplo.com')).toBe(0)
     expect(await usuarioDe(c1, 'inquilino')).toBe(otro); expect(await ve(yo)).toEqual([c1])

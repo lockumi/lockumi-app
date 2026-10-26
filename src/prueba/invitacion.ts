@@ -52,6 +52,16 @@ export const correoOculto = (c: string) => { const [n = '', d = ''] = c.trim().t
 export const textoInvitacionEnviada = (c: string) => `Esta invitación se envió a ${correoOculto(c)}`
 export const BOTON_CODIGO_INVITACION = 'Enviarme un código a ese correo'
 export const TEXTO_OTRO_CORREO = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'
+// 26/10/2026 (Katherine, 3:07 p. m.): el link abierto con la sesión del dueño (misma cuenta o mismo correo). Mismo texto que la base
+// (migración 20261026100000, disparador lk_inquilino_no_dueno).
+export const TEXTO_LINK_DEL_DUENO = 'Este link es para la otra persona. Cierra sesión o ábrelo en otro dispositivo.'
+export const BOTON_CERRAR_SESION = 'Cerrar sesión'
+const normal = (c?: string | null) => (c ?? '').trim().toLowerCase()
+/** ¿La sesión que abrió el link es el dueño? El servidor lo dice (`es_dueno`), o el alquiler ya es mío como dueño, o el mismo correo,
+ *  o la base rechazó la aceptación por eso. */
+export const esLinkDelDueno = (o: { esDueno?: boolean; miRol?: string; correo?: string; correoDueno?: string | null; error?: string }) =>
+  !!o.esDueno || o.miRol === 'dueno' || (!!normal(o.correo) && normal(o.correo) === normal(o.correoDueno))
+  || !!o.error && (o.error.includes(TEXTO_LINK_DEL_DUENO) || o.error.includes('Eres el dueño de este alquiler'))
 // LEGAL: textos literales aprobados por Legal (25/10, 10:15 p. m., paso21) · pantalla de la persona invitada sin sesión, corta:
 // título y subtítulo (sin nombre del dueño ni «firmar»). El título es el mismo de la pantalla de la invitación con sesión.
 export const TITULO_INVITACION = 'Te invitaron a un alquiler'

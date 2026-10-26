@@ -10,7 +10,8 @@ import { cuentaServidor } from '../services/trustless'
 import { ir } from '../router'
 import type { Usuario } from '../types'
 import { usd, fecha } from '../ui'
-import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS } from '../prueba/invitacion'
+import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS, TEXTO_LINK_DEL_DUENO, BOTON_CERRAR_SESION, esLinkDelDueno } from '../prueba/invitacion'
+import { guardarRegreso } from '../regreso'
 import { Plegable } from './Plegable'
 
 type Datos = Awaited<ReturnType<typeof servidor.verInvitacion>>
@@ -61,7 +62,13 @@ export async function abrirSiYaEsMio(id: string) {
   try { await recargar(); if (!repositorio.obtener(id)) return false; activarServidor(); ir('/alquiler/' + id); return true } catch { return false }
 }
 
-export function Invitacion({ id, token, u }: { id: string; token: string; u: Usuario }) {
+/** 26/10/2026: el link abierto con la sesión del dueño no se acepta como inquilino. «Cerrar sesión» vuelve a este link al entrar (regreso.ts). */
+export function LinkDelDueno({ id, token, salir }: { id: string; token: string; salir?: () => void }) {
+  return <><p className="error" role="alert">{TEXTO_LINK_DEL_DUENO}</p>
+    {salir && <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={() => { guardarRegreso(`/invitacion/${id}/${token}`); salir() }}>{BOTON_CERRAR_SESION}</button>}</>
+}
+
+export function Invitacion({ id, token, u, salir }: { id: string; token: string; u: Usuario; salir?: () => void }) {
   const [d, setD] = useState<Datos | null>(null); const [err, setErr] = useState(''); const [ocupado, setOcupado] = useState(false)
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
   const [codigo, setCodigo] = useState<Abierto | null>(null)   // la pantalla del código (otra cuenta)
@@ -72,7 +79,8 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
     try { await aceptarConCorreo(id, token, u.email); activarServidor(); ir('/alquiler/' + id) }
     catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos aceptar la invitación. Intenta de nuevo.'); setOcupado(false) }
   }
-  if (codigo && PantallaCodigo) return <Suspense fallback={null}><PantallaCodigo id={id} token={token} abierto={codigo} cancelar={() => setCodigo(null)}
+  const delDueno = esLinkDelDueno({ esDueno: d?.es_dueno, miRol: repositorio.obtener(id)?.miRol, correo: u.email, correoDueno: d?.email_dueno, error: err })
+  if (codigo && PantallaCodigo && !delDueno) return <Suspense fallback={null}><PantallaCodigo id={id} token={token} abierto={codigo} cancelar={() => setCodigo(null)}
     extra={async () => { const direccion = await cuentaPropia(); return { ...(dosPersonas && { terminos_version: versionActual() }), ...(direccion && { direccion }) } }}
     listo={() => { activarServidor(); ir('/alquiler/' + id) }} /></Suspense>
   const otroCorreo = d?.email_inquilino && PedirCodigo
@@ -81,8 +89,9 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
     <h1 className="inv-titulo">{TITULO_INVITACION}</h1>
     <div className="glass glass--fuerte tarjeta pila">
       {!d && !err && <p className="nota">Cargando la invitación…</p>}
-      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} bloqueado={err.includes(TEXTO_OTRO_CORREO)} otroCorreo={otroCorreo} />}
-      {err && <p className="error" role="alert">{err}</p>}
+      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} bloqueado={err.includes(TEXTO_OTRO_CORREO)} otroCorreo={otroCorreo} delDueno={delDueno ? <LinkDelDueno id={id} token={token} salir={salir} /> : undefined} />}
+      {err && !delDueno && <p className="error" role="alert">{err}</p>}
+      {!d && delDueno && <LinkDelDueno id={id} token={token} salir={salir} />}
       {d && CorreoReal && esRelay(u.email) && <Suspense fallback={null}><CorreoReal email={u.email} /></Suspense>}
       <a href="#/" className="enlace">Ir a tus alquileres</a>
     </div>
@@ -91,7 +100,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
 
 /** paso21: lo que se ve con la invitación cargada. Resumen (lugar, depósito, fechas, dueño) a la vista; las reglas, plegadas y
  *  cerradas; la casilla de los Términos y el Aviso de privacidad (con sus enlaces) y «Aceptar invitación», siempre a la vista. */
-export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar, bloqueado = false, otroCorreo }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void; bloqueado?: boolean; otroCorreo?: ReactNode }) {
+export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar, bloqueado = false, otroCorreo, delDueno }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void; bloqueado?: boolean; delDueno?: ReactNode; otroCorreo?: ReactNode }) {
   return <>
     <ul className="lista resumen">
       <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
@@ -99,8 +108,8 @@ export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar, bl
       <li><span>Dueño</span><strong className="cortar">{d.email_dueno}</strong></li></ul>
     {/* paso21: las reglas (solo lectura, sin campos) van plegadas y cerradas; la casilla, sus enlaces y «Aceptar invitación» quedan a la vista */}
     {d.reglas?.length > 0 && <Plegable titulo={TITULO_PLEGABLE_REGLAS}><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></Plegable>}
-    {u.email.trim().toLowerCase() !== d.email_inquilino?.trim().toLowerCase()
+    {delDueno ?? (u.email.trim().toLowerCase() !== d.email_inquilino?.trim().toLowerCase()
       ? otroCorreo ?? <p className="error" role="alert">{TEXTO_OTRO_CORREO}</p>
-      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} bloqueado={bloqueado} />}
+      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} bloqueado={bloqueado} />)}
   </>
 }

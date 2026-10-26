@@ -279,6 +279,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
 
+**26 de octubre de 2026 (el dueño no puede aceptar su propia invitación; aprobado por Katherine a las 3:07 p. m.)**
+- Si el link de invitación se abre con la sesión del dueño (la misma cuenta o un correo del dueño, también el correo real de Apple), la invitación muestra «Este link es para la otra persona. Cierra sesión o ábrelo en otro dispositivo.» y el botón «Cerrar sesión», que vuelve al mismo link al entrar. La base lo rechaza también (migración `20261026100000_invitacion_no_dueno.sql`, aplicada en producción el 26/10). Las filas que ya existían no se tocan. Ver [docs/invitacion-enlace.md](docs/invitacion-enlace.md#el-dueño-no-acepta-su-propia-invitación-26102026).
+
 **26 de octubre de 2026 (PR #54, merge `a1dfc6d`: firma del servidor en testnet y eliminar antes del pago; con el OK de Katherine de las 2:02 p. m.)**
 - Solo testnet: en alquileres nuevos de dos personas el servidor firma el depósito del inquilino y la aprobación del dueño con una cuenta de testnet derivada de cada cuenta (la llave nunca sale del servidor; Friendbot la fondea). Fuera de testnet se niega. En la red principal cada persona firma con su billetera de Cavos. Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Los alquileres de antes siguen con Cavos.
 - El dueño puede eliminar un alquiler de dos personas mientras el depósito no esté pagado: el servidor lee el saldo de la cuenta segura en la red y con depósito lo sigue bloqueando. Migración `20261026090000_eliminar_sin_deposito.sql`, aplicada en producción el 26/10. Sin textos nuevos. Límites conocidos y vuelta atrás: [docs/firma-servidor.md](docs/firma-servidor.md).
