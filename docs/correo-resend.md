@@ -35,3 +35,9 @@ Ninguna de las dos está en Production. Nunca se escriben sus valores en el repo
 - **paso16-unido (25/10):** un solo correo de invitación por alquiler, sin recordatorios (`lk_registrar_correo_invitacion`; sin Supabase, en memoria y con clave de idempotencia `inv:<alquiler>`), y el correo de la persona invitada se borra si no se une en 7 días (`lk_borrar_invitaciones_vencidas`, desde `GET /api/borrados`). Ver `docs/prueba-completa.md`, «Borrados en Supabase». La migración está aplicada (25/10, 1:20 a. m. CR); falta poner `CRON_SECRET`.
 - Pasar a producción las variables del servidor compartido y de Resend, y activar la Parte 4 en la app.
 - Actualizar el README (guía para jueces y «Cambios publicados») en el mismo trabajo.
+
+## Si Resend no acepta un correo (26 oct 2026)
+
+- La cuota diaria de Resend se cuenta por día UTC (se reinicia a las 6:00 p. m. CR). Con la cuota agotada, Resend responde 429 (`daily_quota_exceeded`) o acepta el correo y luego lo marca `failed` sin `message_id`. Las corridas E2E con `--correos` gastan esa misma cuota.
+- Si una invitación no sale, el servidor borra su registro en `lk_correos_invitacion`, así que un nuevo intento puede salir. En los logs de Vercel queda `correo resend <tipo> <estado> <nombre del error>`.
+

@@ -77,4 +77,19 @@ describe('un solo correo de invitación por alquiler, sin recordatorios (arreglo
     await expect(atenderCorreo({ RESEND_API_KEY: 'x', ...ENV }, inv('c0ffee00-0000-4000-8000-000000000003'), ORIGEN, '2.2.2.3', no)).rejects.toThrow(/No enviamos recordatorios/)
     expect(no.mock.calls.some(([u]) => u.includes('resend'))).toBe(false)
   })
+  it('si Resend no acepta la invitación (p. ej. 429 por cuota), se borra el registro y un nuevo intento puede salir', async () => {
+    olvidarInvitaciones()
+    const a = 'c0ffee00-0000-4000-8000-000000000004'
+    const f = vi.fn(async (url: string) => url.includes('resend')
+      ? new Response(JSON.stringify({ name: 'daily_quota_exceeded' }), { status: 429 })
+      : new Response(url.includes('/rpc/') ? 'true' : '', { status: url.includes('/rpc/') ? 200 : 204 })) as unknown as typeof fetch & { mock: { calls: Llamada[] } }
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(atenderCorreo({ RESEND_API_KEY: 'x', ...ENV }, inv(a), ORIGEN, '2.2.2.4', f)).rejects.toThrow(/No pudimos enviar el correo ahora/)
+    const borrar = f.mock.calls.find(([, i]) => i?.method === 'DELETE')
+    expect(borrar?.[0]).toBe(`${URL_SB}/rest/v1/lk_correos_invitacion?contrato_id=eq.${a}`)
+    const sin = falso({ '/emails': { id: 'em_4' } }, ['/emails'])
+    await expect(atenderCorreo({ RESEND_API_KEY: 'x' }, inv(a), ORIGEN, '2.2.2.4', sin)).rejects.toThrow(/No pudimos enviar/)
+    const ok = falso({ '/emails': { id: 'em_5' } })
+    await expect(atenderCorreo({ RESEND_API_KEY: 'x' }, inv(a), ORIGEN, '2.2.2.4', ok)).resolves.toEqual({ enviado: true, id: 'em_5' })
+  })
 })
