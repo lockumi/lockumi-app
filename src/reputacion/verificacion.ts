@@ -44,6 +44,8 @@ export function asegurarCorreo(email: string): Promise<boolean> {
       if (normalizar(r.correo) === c) { porConfirmar = { c, correo: r.correo, ...(r.motivo && MOTIVOS_AVISO.has(r.motivo) && { motivo: r.motivo as MotivoCodigo }) }; avisar() }
       return false
     }
+    // Alquileres traídos de otro navegador (20261026060000): conecta el servidor a las pantallas abiertas para que «Tus alquileres» los muestre.
+    if (r.vinculados) void import('../store').then(m => m.activarServidor()).catch(() => {})
     return normalizar(r.correo) === c
   })().catch(() => false)
   const yo = { c, p }

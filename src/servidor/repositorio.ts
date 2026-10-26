@@ -160,12 +160,14 @@ export const servidor = {
   /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase.
    *  codigo: true (403, Legal 25/10 9:00 p. m.) = token de correo con aud «cavos-email»: el correo queda por confirmar con el código de
    *  6 números que Lockumi mandó (motivo: 'minuto' | 'hora' | 'envio' si no salió uno nuevo). */
-  async verificarCorreo(tokenCavos: string): Promise<{ correo: string; codigo?: boolean; motivo?: string }> {
+  async verificarCorreo(tokenCavos: string): Promise<{ correo: string; codigo?: boolean; motivo?: string; vinculados?: number }> {
     const r = await fetch('/api/verificar-correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenSesion()}` },
       body: JSON.stringify({ token: tokenCavos }) })
-    const j = await r.json().catch(() => ({})) as { correo?: string; error?: string; codigo?: boolean; motivo?: string }
+    const j = await r.json().catch(() => ({})) as { correo?: string; error?: string; codigo?: boolean; motivo?: string; vinculados?: number }
     if (j.codigo === true && j.correo) return { correo: j.correo, codigo: true, ...(typeof j.motivo === 'string' && { motivo: j.motivo }) }   // 403: falta el código
     if (!r.ok || !j.correo) throw new ErrorServidor(j.error ?? 'No pudimos confirmar el correo de tu cuenta.')
+    // El servidor trajo a esta sesión los alquileres de este correo (otro navegador o dispositivo): se cargan sin aviso.
+    if (typeof j.vinculados === 'number' && j.vinculados > 0) { await recargar().catch(() => {}); return { correo: j.correo, vinculados: j.vinculados } }
     return { correo: j.correo }
   },
   actualizarCuenta: (id: string, cuenta: string) => tras(rpc('lk_actualizar_direccion', { p_contrato: id, p_direccion_stellar: cuenta })),

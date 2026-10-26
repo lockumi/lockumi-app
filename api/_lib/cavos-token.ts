@@ -184,5 +184,12 @@ export async function atenderVerificacion(env: Env, bearer: string | null, body:
     console.warn('verificar-correo', usado ? 'token ya usado' : 'no se pudo registrar')
     return { estado: usado ? 403 : 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   }
-  return { estado: 200, cuerpo: { correo: v.correo } }
+  // Tus alquileres en cualquier dispositivo (26/10/2026): con el correo que Cavos verificó (Google/Apple, sacado del token aquí, nunca
+  // del cliente), los lugares de esa persona pasan a esta sesión (lk_vincular_alquileres, migración 20261026060000). Si falla, el
+  // correo igual quedó verificado: no se cambia la respuesta.
+  let vinculados = 0
+  try { vinculados = Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: v.correo }, f)) || 0 } catch {
+    console.warn('verificar-correo', 'no se pudieron traer los alquileres')
+  }
+  return { estado: 200, cuerpo: { correo: v.correo, ...(vinculados > 0 && { vinculados }) } }
 }
