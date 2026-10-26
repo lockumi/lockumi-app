@@ -466,6 +466,7 @@ export type Pedido =
   | { accion: 'repartir'; contrato: string }
   | { accion: 'mi-cuenta' }
   | { accion: 'preparar-cuenta'; contrato: string }
+  | { accion: 'eliminar'; contrato: string }
 
 export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const c = configuracion(e)
@@ -533,6 +534,18 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       // PR #22 (lista de Legal, punto 5; Términos 6.5 a): «Todo bien, devolver» libera todo al inquilino ahora (trasAprobar).
       // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
       return await trasAprobar(c, k, tx, r.status ?? null, f)
+    }
+    case 'eliminar': {   // 26/10 (Katherine): el dueño elimina el alquiler mientras el depósito no está pagado (saldo leído en la red)
+      exigir(rol === 'dueno', 403, 'Solo el dueño puede eliminar este alquiler.')
+      exigir(['firmas', 'pendiente_pago'].includes(k.estado) && !k.liquidacion_tx, 409, 'Este alquiler tiene un depósito guardado.')
+      if (k.escrow_contract_id) {
+        const x = await leerEscrowTw(c, k.escrow_contract_id, f)
+        const saldo = x.balance === undefined || x.balance === null || x.balance === '' ? NaN : Number(x.balance)
+        exigir(saldo === 0 && !x.flags?.released && !x.flags?.disputed, 409, 'Este alquiler tiene un depósito guardado.')
+      }
+      const r = await rest(c, 'rpc/lk_eliminar_sin_deposito', { method: 'POST', body: JSON.stringify({ p_contrato: k.id, p_usuario: uid }) }, f)
+      exigir(r.ok && (await r.json().catch(() => false)) === true, 409, 'Este alquiler tiene un depósito guardado.')
+      return { eliminado: true }
     }
     case 'preparar-cuenta': {   // firma del servidor: deja lista la cuenta de testnet de ESTA sesión en ESTE alquiler
       const g = cuenta(k, rol!), llave = llaveServidor(e, c, uid, g)

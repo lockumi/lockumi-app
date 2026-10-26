@@ -301,3 +301,4 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   parte del alquiler, va directo al alquiler (`abrirSiYaEsMio`, sin textos nuevos). Test `invitacion-ya-aceptada.test.ts`.
 
 - 26/10/2026 · Firma del servidor en testnet (solo red de prueba): en alquileres nuevos de dos personas, el servidor firma por el dueño y el inquilino con una cuenta de testnet propia de cada cuenta (api/_lib/tw.ts). Cavos queda solo para entrar. Apagar: FIRMA_SERVIDOR_TESTNET=0. En mainnet cada persona firma con su billetera Cavos.
+- 26/10/2026 · El dueño puede eliminar un alquiler de dos personas mientras el depósito no esté pagado (el servidor lee el saldo de la cuenta segura en la red; migración 20261026090000).

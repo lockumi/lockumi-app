@@ -222,6 +222,13 @@ export const servidor = {
   guardarCasillaCorreo: (id: string, para: string, acepta: boolean, texto: string) => yAvisar(id, rpc('lk_guardar_consentimiento_correo', { p_contrato: id, p_para: para, p_acepta: acepta, p_texto: texto })),
   // PROTOTIPO eliminar-alquiler: el servidor revisa las reglas (dueño, sin la otra persona, sin depósito) y solo toca filas propias.
   eliminarAlquiler: (id: string) => tras(rpc('lk_eliminar_alquiler', { p_contrato: id })),
+  /** 26/10: con la otra persona ya unida o con la cuenta segura creada, el servidor lee el saldo en la red y elimina solo si es 0. */
+  async eliminarSinDeposito(id: string) {
+    const r = await fetch('/api/tw', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await tokenSesion() }, body: JSON.stringify({ accion: 'eliminar', contrato: id }) })
+    const j = await r.json().catch(() => ({})) as { error?: string }
+    if (!r.ok) throw new ErrorServidor(j.error ?? 'No pudimos eliminarlo.')
+    await recargar()
+  },
   ocultarAlquiler: (id: string, ocultar: boolean) => tras(rpc('lk_ocultar_alquiler', { p_contrato: id, p_ocultar: ocultar })),
   reiniciarMiDemo: () => tras(rpc<{ eliminados: number; ocultos: number; quedan: number; ids?: string[] }>('lk_reiniciar_mi_demo', {})),
   registrarLiquidacion: (id: string, tx: string) => yAvisar(id, rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
