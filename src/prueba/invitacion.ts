@@ -31,10 +31,16 @@ export async function enviarInvitacionUnaVez(alquiler: string, para: string, nom
   return r.ok
 }
 
-// LEGAL: textos literales de Legal (25/10, paso21) · tarjeta del dueño después de invitar
-export const textoEnlaceEnviado = (correo: string) => `Te enviamos el enlace a ${correo}. Si quieres, también puedes copiarlo y compartirlo por WhatsApp.`
+// LEGAL: textos literales de Legal (25/10, 10:10 p. m., paso21) · tarjeta del dueño después de invitar
+export const textoEnlaceEnviado = (c: string) => `Te enviamos el enlace a ${c}. La persona invitada tiene que entrar con ese correo. Si quieres, también puedes copiarlo y compartirlo por WhatsApp.`
 /** Botón para compartir el link por WhatsApp (abre WhatsApp con el link escrito; la persona elige a quién). Texto pendiente de revisión de Legal. */
 export const BOTON_WHATSAPP = 'Compartir por WhatsApp'
 export const enlaceWhatsApp = (link: string) => 'https://wa.me/?text=' + encodeURIComponent(link)
-// LEGAL: texto literal de Legal (25/10, paso21) · pantalla de la persona invitada sin sesión
-export const TEXTO_INVITADO_SIN_SESION = 'Te invitaron a un alquiler en Lockumi. Inicia sesión para ver y aceptar la invitación.'
+// LEGAL: texto literal de Legal (25/10, 10:10 p. m., paso21) · la invitación es para otro correo. El mismo texto lo da el servidor (20261025230000).
+export const TEXTO_OTRO_CORREO = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'
+// LEGAL: textos literales aprobados por Legal (25/10, 10:15 p. m., paso21) · pantalla de la persona invitada sin sesión, corta:
+// título y subtítulo (sin nombre del dueño ni «firmar»). El título es el mismo de la pantalla de la invitación con sesión.
+export const TITULO_INVITACION = 'Te invitaron a un alquiler'
+export const SUBTITULO_INVITADO_SIN_SESION = 'Inicia sesión para verlo'
+/** Título del plegable de las reglas en la invitación (Katherine/Legal 25/10, 10:15 p. m.): dice qué contiene; el texto de adentro no cambia. */
+export const TITULO_PLEGABLE_REGLAS = 'Reglas del alquiler'

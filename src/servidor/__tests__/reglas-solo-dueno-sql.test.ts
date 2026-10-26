@@ -1,6 +1,6 @@
 // paso21 · Solo el dueño pone las reglas del alquiler. El inquilino las ve y acepta (o no se une), pero no puede cambiarlas por la API:
 // lk_contratos no tiene permiso de escritura para anon ni authenticated (RLS + revoke) y ninguna función lk_* cambia «reglas»
-// después de crear el alquiler. También deja escrito cómo se une la persona invitada (pregunta de Legal, paso21).
+// después de crear el alquiler. Quién puede aceptar la invitación: invitacion-correo-verificado-sql.test.ts.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 
@@ -12,7 +12,7 @@ const PRELUDIO = `
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
   alter table storage.objects enable row level security;
   create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;`
-const DUENO = '00000000-0000-4000-8000-0000000000d1', INQ = '00000000-0000-4000-8000-0000000000e1', OTRO = '00000000-0000-4000-8000-0000000000f1'
+const DUENO = '00000000-0000-4000-8000-0000000000d1', INQ = '00000000-0000-4000-8000-0000000000e1'
 const DECL = 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.'
 let db: PGlite
 const como = (uid: string | null) => db.query(`select set_config('test.uid', $1, false)`, [uid ?? ''])
@@ -33,6 +33,7 @@ beforeAll(async () => {
 describe('reglas: solo el dueño', () => {
   it('el inquilino unido NO puede cambiar las reglas por la API (update directo rechazado) y siguen iguales', async () => {
     const r = await crear()
+    await db.query(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, 'luis.demo@lockumi.com', 'email') on conflict do nothing`, [INQ])   // paso 21: correo verificado
     await como(INQ); await db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, r.token])
     expect((await uno<{ rol: string }>(`select rol from public.lk_participantes where contrato_id = $1 and usuario = $2`, [r.id, INQ]))!.rol).toBe('inquilino')
     // Puede VERLAS (RLS de lectura)…
@@ -57,23 +58,5 @@ describe('reglas: solo el dueño', () => {
     const src = (await db.query<{ s: string }>(`select prosrc s from pg_proc where proname = any($1)`, [fs])).rows.map(x => x.s).join('\n')
     expect(src).not.toMatch(/update\s+public\.lk_contratos\s+set[^;]*reglas/i)
     expect((await uno<{ s: string }>(`select prosrc s from pg_proc where proname = 'lk_crear_contrato'`))!.s).toMatch(/values \(v_id, 'dueno', auth\.uid\(\)/)
-  })
-})
-
-describe('quién puede aceptar la invitación (pregunta de Legal; comportamiento de hoy, sin cambios)', () => {
-  it('se exige el token vigente y el correo escrito por el dueño; el link sirve una sola vez (el primero que acepta)', async () => {
-    const r = await crear()
-    await como(OTRO)
-    await expect(db.query(`select public.lk_aceptar_invitacion($1, $2, 'otra@correo.com')`, [r.id, r.token])).rejects.toThrow(/Esta invitación es para luis\.demo@lockumi\.com/)
-    await expect(db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, 'ef'.repeat(32)])).rejects.toThrow(/no es válido/)
-    await como(INQ); await db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, r.token])
-    await como(OTRO)
-    await expect(db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, r.token])).rejects.toThrow(/no es válido o ya se usó/)
-  })
-  it('HOY el correo lo manda la app (p_email_cavos): la base no lo comprueba contra la sesión. Quien tenga el link Y escriba ese correo por la API podría unirse', async () => {
-    const r = await crear()
-    await como(OTRO)   // otra sesión anónima, que no entró con luis.demo@lockumi.com
-    await db.query(`select public.lk_aceptar_invitacion($1, $2, 'luis.demo@lockumi.com')`, [r.id, r.token])
-    expect((await uno<{ usuario: string }>(`select usuario from public.lk_participantes where contrato_id = $1 and rol = 'inquilino'`, [r.id]))!.usuario).toBe(OTRO)
   })
 })

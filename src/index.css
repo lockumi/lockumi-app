@@ -625,7 +625,7 @@ html.sin-scroll{overflow:hidden}
 @media (min-width:720px){.ct{padding:28px 32px}.ct__datos{grid-template-columns:repeat(3,1fr)}.ct__datos--partes{grid-template-columns:1fr 1fr}}
 /* En la columna lateral del escritorio (angosta) el contrato usa el diseño de celular */
 .detalle__lado .ct{padding:20px}.detalle__lado .ct__datos{grid-template-columns:1fr 1fr}.detalle__lado .ct__datos--partes{grid-template-columns:1fr}
-/* Contrato plegable (maqueta producto/contrato-plegable, 22/10/2026): botón «Ver contrato completo» y bloque plegado. Prefijo cp-, solo tokens de este archivo. */
+/* Contrato plegable (maqueta producto/contrato-plegable, 22/10/2026): botón del contrato (paso21: «Contrato de alquiler (Ejemplo)»; antes «Ver contrato completo») y bloque plegado. Prefijo cp-, solo tokens de este archivo. */
 .cp-abrir{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin-top:14px;padding:10px 14px 10px 16px;border:0;border-radius:16px;
   background:var(--fondo);box-shadow:inset 0 0 0 1.5px var(--linea);color:var(--cafe);font:600 16px/22px var(--f-texto);text-align:left;cursor:pointer;
   transition:background-color var(--t-micro),box-shadow var(--t-micro)}
@@ -639,6 +639,11 @@ html.sin-scroll{overflow:hidden}
 .cp-abrir[aria-expanded="true"]{background:#fff}
 /* Lo plegado: mismas secciones .ct__sec de siempre; la primera sin borde arriba */
 .cp-completo{margin-top:6px}
+/* paso21 (25/10, 10:15 p. m.): mismos plegables fuera del contrato (src/screens/Plegable.tsx); título de la invitación con aire; subtítulo de la entrada de una persona invitada */
+.plegable .cp-abrir{margin-top:4px}
+.plegable .cp-completo .reglas{margin-top:4px}
+.inv-titulo{margin:12px 0 20px}
+.entrada-app .entrada-app__sub{margin:-4px 0 0;font:600 18px/26px var(--f-texto);color:var(--cafe-suave);text-align:center;align-self:center}
 .cp-completo[hidden]{display:none}
 .cp-completo>.ct__sec:last-child{border-bottom:1px solid var(--linea)}
 /* Con el contrato cerrado, el pie queda pegado al botón */

@@ -9,6 +9,8 @@ import { conectarBilletera } from '../services/billetera'
 import { ir } from '../router'
 import type { Usuario } from '../types'
 import { usd, fecha } from '../ui'
+import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS } from '../prueba/invitacion'
+import { Plegable } from './Plegable'
 
 type Datos = Awaited<ReturnType<typeof servidor.verInvitacion>>
 /** Cuenta G… de Cavos, si se puede obtener (solo con login real). No bloquea si falla: se puede agregar después. */
@@ -35,21 +37,28 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
     catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos aceptar la invitación. Intenta de nuevo.'); setOcupado(false) }
   }
   return <main id="contenido" tabIndex={-1} className="cont cont--form" style={{ paddingBottom: 48 }}>
-    <h1>Te invitaron a un alquiler</h1>
+    <h1 className="inv-titulo">{TITULO_INVITACION}</h1>
     <div className="glass glass--fuerte tarjeta pila">
       {!d && !err && <p className="nota">Cargando la invitación…</p>}
-      {d && <>
-        <ul className="lista resumen">
-          <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
-          <li><span>Entrada</span><strong>{fecha(d.inicio)}</strong></li><li><span>Salida</span><strong>{fecha(d.fin)}</strong></li>
-          <li><span>Dueño</span><strong className="cortar">{d.email_dueno}</strong></li></ul>
-        {d.reglas?.length > 0 && <><p className="mini">Reglas</p><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></>}
-        {u.email.toLowerCase() !== d.email_inquilino
-          ? <p className="error" role="alert">Esta invitación es para {d.email_inquilino}. Sal y entra con ese correo.</p>
-          : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} />}
-      </>}
+      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} />}
       {err && <p className="error" role="alert">{err}</p>}
       <a href="#/" className="enlace">Ir a tus alquileres</a>
     </div>
   </main>
+}
+
+/** paso21: lo que se ve con la invitación cargada. Resumen (lugar, depósito, fechas, dueño) a la vista; las reglas, plegadas y
+ *  cerradas; la casilla de los Términos y el Aviso de privacidad (con sus enlaces) y «Aceptar invitación», siempre a la vista. */
+export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void }) {
+  return <>
+    <ul className="lista resumen">
+      <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
+      <li><span>Entrada</span><strong>{fecha(d.inicio)}</strong></li><li><span>Salida</span><strong>{fecha(d.fin)}</strong></li>
+      <li><span>Dueño</span><strong className="cortar">{d.email_dueno}</strong></li></ul>
+    {/* paso21: las reglas (solo lectura, sin campos) van plegadas y cerradas; la casilla, sus enlaces y «Aceptar invitación» quedan a la vista */}
+    {d.reglas?.length > 0 && <Plegable titulo={TITULO_PLEGABLE_REGLAS}><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></Plegable>}
+    {u.email.trim().toLowerCase() !== d.email_inquilino?.trim().toLowerCase()
+      ? <p className="error" role="alert">{TEXTO_OTRO_CORREO}</p>
+      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} />}
+  </>
 }

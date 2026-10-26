@@ -12,7 +12,7 @@ vi.stubGlobal('localStorage', L.s); vi.stubGlobal('sessionStorage', S.s)
 beforeEach(() => { L.m.clear(); S.m.clear() })
 
 const { armar, validar, atenderCorreo, enlaceInvitacion, olvidarInvitaciones } = await import('../../../api/_lib/correo')
-const { enviarInvitacionUnaVez, correoInvitacionEnviado, tokenDeLink, textoEnlaceEnviado, TEXTO_INVITADO_SIN_SESION, BOTON_WHATSAPP } = await import('../invitacion')
+const { enviarInvitacionUnaVez, correoInvitacionEnviado, tokenDeLink, textoEnlaceEnviado, TITULO_INVITACION, SUBTITULO_INVITADO_SIN_SESION, TITULO_PLEGABLE_REGLAS, TEXTO_OTRO_CORREO, BOTON_WHATSAPP } = await import('../invitacion')
 const { guardarRegreso, tomarRegreso, esRutaInvitacion } = await import('../../regreso')
 
 const ORIGEN = 'https://app.lockumi.com', ID = '3f2a9c1b-0000-4000-8000-0000000000aa', TOKEN = 'ab'.repeat(32)
@@ -86,18 +86,22 @@ describe('la ruta de la invitación sobrevive al inicio de sesión', () => {
 })
 
 describe('pantallas', () => {
-  it('sin sesión, Entrar dice el texto de Legal (sin el nombre del dueño) y conserva Google, Apple y correo', async () => {
-    expect(TEXTO_INVITADO_SIN_SESION).toBe('Te invitaron a un alquiler en Lockumi. Inicia sesión para ver y aceptar la invitación.')
+  it('sin sesión, Entrar es corto: título y subtítulo de Legal (sin el nombre del dueño ni «firmar»), sin beneficios; casillas y Entrar igual', async () => {
+    expect(TITULO_INVITACION).toBe('Te invitaron a un alquiler'); expect(SUBTITULO_INVITADO_SIN_SESION).toBe('Inicia sesión para verlo')
     const { Login } = await import('../../screens/Login')
-    const html = renderToStaticMarkup(<Login onOk={() => {}} titulo={TEXTO_INVITADO_SIN_SESION} />)
-    expect(html).toContain(TEXTO_INVITADO_SIN_SESION); expect(html).not.toContain('El depósito de tu alquiler, protegido')
+    const html = renderToStaticMarkup(<Login onOk={() => {}} invitacion={{ titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION }} />)
+    expect(html).toContain(`<h2 class="entrada-app__titulo">${TITULO_INVITACION}</h2><p class="entrada-app__sub">${SUBTITULO_INVITADO_SIN_SESION}</p>`)
+    expect(html).not.toContain('El depósito de tu alquiler, protegido'); expect(html).not.toContain('class="beneficios"'); expect(html).not.toMatch(/firm/i)
+    expect(html).not.toContain('demo@lockumi.com'); expect(html).not.toContain('Ana')
+    expect(html).toContain('id="acepto-terminos"'); expect(html).toContain('href="/terminos"'); expect(html).toContain('>Entrar</button>')
     expect(html).toContain('Con Google, Apple o tu correo. Sin contraseñas.')
-    expect(renderToStaticMarkup(<Login onOk={() => {}} />)).toContain('El depósito de tu alquiler, protegido')
+    const normal = renderToStaticMarkup(<Login onOk={() => {}} />)
+    expect(normal).toContain('El depósito de tu alquiler, protegido'); expect(normal).toContain('class="beneficios"'); expect(normal).not.toContain('entrada-app__sub')
   })
   it('App: sin sesión en #/invitacion/… muestra ese texto y guarda la ruta; al entrar vuelve ahí (nunca a Inicio)', async () => {
     const app = (await import('../../App.tsx?raw')).default
     expect(app).toMatch(/const invitado = !u && esRutaInvitacion\(r\)/); expect(app).toMatch(/if \(invitado\) guardarRegreso\(r\)/)
-    expect(app).toMatch(/titulo=\{invitado \? TEXTO_INVITADO_SIN_SESION : undefined\}/); expect(app).toMatch(/location\.hash = volver\(\)/)
+    expect(app).toMatch(/invitacion=\{invitado \? \{ titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION \} : undefined\}/); expect(app).toMatch(/location\.hash = volver\(\)/)
   })
   const A: Alquiler = { id: ID, direccion: 'Ejemplo · Casa demo', monto: 20, moneda: 'USDC', inicio: '2026-11-01', fin: '2027-05-01', reglas: [], duenoEmail: 'demo@lockumi.com',
     inquilinoEmail: 'luis.demo@lockumi.com', estado: 'firmas', rendimiento: false, historial: [], contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, diasSimulados: 0,
@@ -107,7 +111,7 @@ describe('pantallas', () => {
     const { Invitacion } = await import('../../screens/Detalle')
     const html = renderToStaticMarkup(<Invitacion a={A} />)
     expect(html).toContain(textoEnlaceEnviado('luis.demo@lockumi.com'))
-    expect(textoEnlaceEnviado('x@y.com')).toBe('Te enviamos el enlace a x@y.com. Si quieres, también puedes copiarlo y compartirlo por WhatsApp.')
+    expect(textoEnlaceEnviado('x@y.com')).toBe('Te enviamos el enlace a x@y.com. La persona invitada tiene que entrar con ese correo. Si quieres, también puedes copiarlo y compartirlo por WhatsApp.')
     expect(html).not.toContain('Envía este link a'); expect(html).toContain('Copiar link'); expect(html).toContain(BOTON_WHATSAPP)
     expect(html).toContain('href="https://wa.me/?text=' + encodeURIComponent(A.invitacion!).replace(/&/g, '&amp;') + '"')
   })
@@ -116,6 +120,58 @@ describe('pantallas', () => {
     const html = renderToStaticMarkup(<Invitacion a={A} />)
     expect(html).not.toContain('Te enviamos el enlace'); expect(html).not.toContain('Envía este link a')
     expect(html).toContain('Copiar link'); expect(html).toContain(BOTON_WHATSAPP)
+  })
+})
+
+/** Quita del HTML lo que está dentro de bloques `hidden` (lo que el navegador no muestra con los plegables cerrados). */
+const aLaVista = (html: string) => { let s = html; for (;;) { const i = s.search(/<div class="cp-completo"[^>]*hidden=""/); if (i < 0) return s; const j = s.indexOf('</div>', i); s = s.slice(0, i) + s.slice(j + 6) } }
+
+describe('plegables (Katherine/Legal 25/10, 10:15 p. m.): cerrados al entrar, título que dice qué contiene, casilla y botón a la vista', () => {
+  const D = { id: ID, direccion: 'Ejemplo · Casa demo', monto: 20, inicio: '2026-11-01', fin: '2027-05-01', reglas: ['No fumar dentro de la casa', 'Sin fiestas'],
+    email_dueno: 'demo@lockumi.com', email_inquilino: 'luis.demo@lockumi.com', estado: 'firmas' }
+  const U = { email: 'Luis.Demo@lockumi.com ', nombre: 'Luis Ejemplo', metodo: 'correo' } as const
+  it('invitación: «Reglas del alquiler» es un botón con aria-expanded="false" y aria-controls; las reglas (solo lectura) quedan ocultas', async () => {
+    const { CuerpoInvitacion } = await import('../../screens/Invitacion')
+    const html = renderToStaticMarkup(<CuerpoInvitacion d={D as never} u={U as never} acepta={false} setAcepta={() => {}} ocupado={false} aceptar={() => {}} />)
+    expect(TITULO_PLEGABLE_REGLAS).toBe('Reglas del alquiler')
+    const b = html.match(/<button type="button" class="cp-abrir" aria-expanded="false" aria-controls="([^"]+)"><span class="cp-abrir__txt">Reglas del alquiler<\/span>/)
+    expect(b, 'botón del plegable').not.toBeNull()
+    expect(html).toContain(`<div class="cp-completo" id="${b![1]}" role="region" aria-label="Reglas del alquiler" hidden=""><ul class="reglas"><li>No fumar dentro de la casa</li><li>Sin fiestas</li></ul></div>`)
+    const vista = aLaVista(html)
+    expect(vista).not.toContain('No fumar dentro de la casa'); expect(vista).not.toMatch(/<input[^>]*type="text"|<textarea|contenteditable/)
+  })
+  it('invitación con los plegables CERRADOS: la casilla, los enlaces a /terminos y /privacidad, «Aceptar invitación» y el depósito siguen a la vista', async () => {
+    const { CuerpoInvitacion } = await import('../../screens/Invitacion')
+    const vista = aLaVista(renderToStaticMarkup(<CuerpoInvitacion d={D as never} u={U as never} acepta={false} setAcepta={() => {}} ocupado={false} aceptar={() => {}} />))
+    expect(vista).toMatch(/<input[^>]*type="checkbox"[^>]*id="inv-terminos"|<input[^>]*id="inv-terminos"[^>]*type="checkbox"/)
+    expect(vista).toContain('href="/terminos"'); expect(vista).toContain('href="/privacidad"')
+    expect(vista).toMatch(/<button type="button" class="boton boton--primario[^"]*"[^>]*>Aceptar invitación<\/button>/)
+    expect(vista).toContain('<span>Depósito</span><strong>20,00 USDC de prueba</strong>')
+  })
+  it('alquiler (paso de firmas): el contrato va en «Contrato de alquiler (Ejemplo)», cerrado; la casilla «Leí el contrato…» y Firmar quedan a la vista', async () => {
+    const { Contrato } = await import('../../screens/Detalle')
+    const a: Alquiler = { id: ID, direccion: 'Ejemplo · Casa demo', monto: 20, moneda: 'USDC', inicio: '2026-11-01', fin: '2027-05-01', reglas: ['No fumar dentro de la casa'], duenoEmail: 'demo@lockumi.com',
+      inquilinoEmail: 'luis.demo@lockumi.com', estado: 'firmas', rendimiento: false, historial: [], contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, diasSimulados: 0, dosPersonas: true, miRol: 'inquilino', inquilinoUnido: true }
+    const html = renderToStaticMarkup(<Contrato a={a} rol="inquilino" />)
+    expect(html).toMatch(/<button type="button" class="cp-abrir" aria-expanded="false" aria-controls="[^"]+"><span class="cp-abrir__txt">Contrato de alquiler \(Ejemplo\)<small>/)
+    const vista = aLaVista(html)
+    expect(vista).not.toContain('No fumar dentro de la casa')   // reglas dentro del plegable cerrado
+    expect(vista).toContain('Leí el contrato y estoy de acuerdo.'); expect(vista).toMatch(/<input[^>]*type="checkbox"/)
+    expect(vista).toMatch(/<button[^>]*>[^<]*Firma/)
+    expect(vista).toContain('<dt>Depósito</dt><dd>20,00 USDC de prueba</dd>'); expect(vista).toContain('sin dinero real')
+  })
+})
+
+describe('la invitación es para otro correo (Legal 25/10, 10:10 p. m.)', () => {
+  it('el texto es el literal de Legal, igual en la pantalla y en el servidor (migración 20261025230000)', async () => {
+    const L = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'
+    expect(TEXTO_OTRO_CORREO).toBe(L)
+    const inv = (await import('../../screens/Invitacion.tsx?raw')).default
+    expect(inv).toMatch(/u\.email\.trim\(\)\.toLowerCase\(\) !== d\.email_inquilino\?\.trim\(\)\.toLowerCase\(\)\s*\? <p className="error" role="alert">\{TEXTO_OTRO_CORREO\}<\/p>/)
+    expect(inv).not.toMatch(/Esta invitación es para \{/)   // ya no se muestra el correo invitado a otra persona
+    const sql = (await import('../../../supabase/migrations/20261025230000_invitacion_correo_verificado.sql?raw')).default
+    expect(sql).toContain(`raise exception '${L}'`)
+    expect(sql).not.toMatch(/lower\(trim\(p_email_cavos\)\)\s*<>/)
   })
 })
 

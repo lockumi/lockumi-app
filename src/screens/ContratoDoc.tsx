@@ -1,5 +1,5 @@
 // Contrato del alquiler: el resumen (cabecera, «El alquiler», «Partes» y pie) siempre visible en el detalle (antes y después de
-// firmar); el resto (Reglas, El depósito, 7 días para reclamos, Mediación y Firmas) plegado por defecto tras «Ver contrato completo»
+// firmar); el resto (Reglas, El depósito, 7 días para reclamos, Mediación y Firmas) plegado por defecto tras el botón «Contrato de alquiler» (paso21; antes «Ver contrato completo»)
 // (maqueta producto/contrato-plegable, 22/10/2026). Empieza cerrado cada vez (no se recuerda el estado). La versión para imprimir
 // o guardar como PDF desde el navegador (window.print, sin generar archivos) es SIEMPRE la completa. Todo sale de los datos que ya están en este navegador:
 // el lugar y las fotos no se envían a ningún lado para mostrarlo o imprimirlo.
@@ -18,8 +18,9 @@ import { rutaTerminos } from '../legal/documentos'
 const ROLES: Rol[] = ['dueno', 'inquilino']
 const parte = (a: Alquiler, r: Rol) => r === 'dueno' ? (modoDe(a).prueba ? DUENO_PRUEBA : a.duenoEmail) : a.inquilinoEmail
 
-export const TEXTO_VER = 'Ver contrato completo'
-export const TEXTO_OCULTAR = 'Ocultar contrato completo'
+// paso21 (Katherine/Legal 25/10, 10:15 p. m.): el título del plegable dice qué contiene y es el mismo abierto o cerrado
+// (antes «Ver contrato completo» / «Ocultar contrato completo»); el estado lo dicen aria-expanded y la flecha.
+export const TITULO_CONTRATO = 'Contrato de alquiler' + (modoPrueba ? ' (Ejemplo)' : '')
 export const TEXTO_CONTENIDO = 'Reglas, depósito, reclamos, mediación y firmas'
 
 /** Plegado: solo en pantalla. `impresion` siempre muestra todo (y con @media print lo plegado también se imprime). */
@@ -86,7 +87,7 @@ export function Documento({ a, impresion, plegado }: { a: Alquiler; impresion?: 
 
     {plegado && !impresion ? <>
       <button type="button" className="cp-abrir" aria-expanded={plegado.abierto} aria-controls={plegado.id} onClick={plegado.alternar}>
-        <span className="cp-abrir__txt">{plegado.abierto ? TEXTO_OCULTAR : <>{TEXTO_VER}<small>{TEXTO_CONTENIDO}</small></>}</span>
+        <span className="cp-abrir__txt">{TITULO_CONTRATO}<small>{TEXTO_CONTENIDO}</small></span>
         <span className="cp-abrir__ico"><Icono id="i-chevron" /></span>
       </button>
       <div className="cp-completo" id={plegado.id} role="region" aria-label="Contrato completo" hidden={!plegado.abierto}>

@@ -91,8 +91,9 @@ const ERROR_INGRESO = alertaIngresoFallo()
 // LEGAL: revisado (24/10) · dos-personas-textos.md, D: nota visible bajo el título (Ley 7472, art. 37)
 export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.'
 
-/** `titulo`: paso21, la persona que abrió un link de invitación sin sesión ve el texto de la invitación en lugar del título (mismo diseño). */
-export function Login({ onOk, error = false, onReintento, titulo }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void; titulo?: string }) {
+/** `invitacion`: paso21, la persona que abrió un link de invitación sin sesión ve una pantalla corta (Katherine/Legal 25/10, 10:15 p. m.):
+ *  título y subtítulo de la invitación en lugar del título, sin la lista de beneficios. Las casillas, «Entrar» y la nota legal no cambian. */
+export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void; invitacion?: { titulo: string; subtitulo: string } }) {
   const [abierta, setAbierta] = useState(false)
   // Dos casillas obligatorias y separadas: Términos, y Aviso de privacidad con transferencia de datos.
   // Paso 16: la versión vigente (1.7-demo con el interruptor encendido). La pantalla no cambia: solo el texto detrás de los enlaces.
@@ -120,10 +121,11 @@ export function Login({ onOk, error = false, onReintento, titulo }: { onOk: (u: 
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <h1 className="marca-c" aria-label="Lockumi"><span dangerouslySetInnerHTML={{ __html: WORDMARK_SVG }} /></h1>
     <LogoAnimado className="entrada-app__arte marca-c__arte" />
-    <h2 className="entrada-app__titulo">{titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
+    <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
+    {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
     <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
-    <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
-      <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>
+    {!invitacion && <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
+      <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>}
     <div className="casillas-legales">
       <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos}>
         Acepto los <a href="/terminos" target="_blank" rel="noopener">Términos y condiciones</a></CasillaLegal>

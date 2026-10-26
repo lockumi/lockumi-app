@@ -21,6 +21,8 @@ for (const f of readdirSync(dir).sort()) { const sql = readFileSync(new URL(f, d
 
 const DUENO = '11111111-1111-4111-8111-111111111111', INQ = '22222222-2222-4222-8222-222222222222', OTRO = '33333333-3333-4333-8333-333333333333', MED = '44444444-4444-4444-8444-444444444444'
 await db.exec(`insert into public.lk_mediadores values ('${MED}', 'Mediación Lockumi')`)
+// Paso 21 (20261025230000): correos verificados por el servidor. INQ entró con inq@x.cr; OTRO con otro@x.cr.
+await db.exec(`insert into public.lk_correos_verificados(usuario, correo, metodo) values ('${INQ}', 'inq@x.cr', 'email'), ('${OTRO}', 'otro@x.cr', 'email')`)
 let ok = 0, fallas = 0
 const como = async (uid, sql, params = []) => {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '${uid ?? ''}', false); set role ${uid ? 'authenticated' : 'anon'};`)
@@ -49,7 +51,8 @@ await espera('otra persona no ve el contrato', async () => { const r = await com
 await falla('nadie inserta directo en tablas', () => como(DUENO, `insert into public.lk_firmas values ($1, 'contrato', 'inquilino', $2)`, [id, DUENO]))
 await falla('dueño no puede firmar antes de que acepte el inquilino', () => como(DUENO, `select public.lk_firmar($1, 'contrato')`, [id]), /todavía no aceptó/)
 await falla('token incorrecto', () => como(INQ, `select public.lk_aceptar_invitacion($1, 'xxx', 'inq@x.cr')`, [id]), /no es válido/)
-await falla('otro correo no puede aceptar', () => como(OTRO, `select public.lk_aceptar_invitacion($1, $2, 'otro@x.cr')`, [id, token]), /Esta invitación es para/)
+await falla('otro correo no puede aceptar', () => como(OTRO, `select public.lk_aceptar_invitacion($1, $2, 'otro@x.cr')`, [id, token]), /Esta invitación es para otro correo/)
+await falla('otro correo verificado no acepta aunque mande el invitado', () => como(OTRO, `select public.lk_aceptar_invitacion($1, $2, 'inq@x.cr')`, [id, token]), /Esta invitación es para otro correo/)
 await falla('el dueño no puede aceptar su propia invitación', () => como(DUENO, `select public.lk_aceptar_invitacion($1, $2, 'inq@x.cr')`, [id, token]), /Eres el dueño/)
 await espera('link nuevo invalida el anterior (solo el dueño)', async () => {
   await falla('x', () => como(INQ, `select public.lk_nueva_invitacion($1)`, [id]), /No participas/)
