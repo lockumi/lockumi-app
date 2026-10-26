@@ -53,7 +53,7 @@ export function Billetera({ email }: { email?: string } = {}) {
     <p className="error" role="alert">{NO_FIRMANTE}</p>
     <AprobarDispositivo alAprobar={() => { olvidarBilletera(); void conectarBilletera().then(setB).catch(() => {}) }} />
   </div></section>
-  return <>{email && <OfertaLlave email={email} estado={b.estado} />}  return <section className="glass tarjeta billetera ta-cuenta estado--curso" aria-label="Tu cuenta para el depósito">
+  return <>{email && <OfertaLlave email={email} estado={b.estado} />}<section className="glass tarjeta billetera ta-cuenta estado--curso" aria-label="Tu cuenta para el depósito">
     <span className="ta-sello"><Dibujo n="escudo" /></span><div className="ta-cuenta__cuerpo">
     <p className="etiqueta">Tu cuenta para el depósito</p>
     <p className="ta-cuenta__lista"><strong>Lista ✓</strong> <span className="nota">Aquí se guarda y se devuelve el depósito.</span></p>
