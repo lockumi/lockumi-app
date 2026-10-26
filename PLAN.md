@@ -177,6 +177,11 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Migración escrita (no aplicada), pruebas unitarias, SQL y E2E con dos cuentas en local.
 - [x] Segundo factor (Legal 5:04 p. m., Katherine 5:29 p. m.): código de 6 números por correo antes de «Eliminar mi cuenta» y «Descargar mis datos» (solo en modo servidor). Solo HMAC con pepper y sal, 10 minutos, 5 intentos, un solo uso por acción y persona, reenvío 1/min y 5/hora; la base lo exige (`lk_usar_codigo`). Pruebas SQL, API y pantalla; flujo real local con capturas a 390 px.
 - [x] Segundo factor: Legal revisó los 2 textos propios (25/10, 6:01 p. m.: más de 5 por hora tal como está; «No pudimos enviarte el código. Vuelve a intentarlo en un minuto.» literal).
+- [x] Segundo factor: el aviso «Ya te enviamos un código…» se oculta al empezar a escribir (Legal 6:04 p. m., opcional).
+- [x] Verificación del correo (Legal 6:04 p. m., BLOQUEANTE): la huella de un solo uso es sobre `iss|sub|iat|nonce`, no sobre la firma (maleable). Pruebas: bit de relleno, ECDSA `s → n−s` y reuso → «ya usado».
+- [x] JWKS reales del enclave, Google y Apple revisados (25/10 6:05 p. m.): todas las llaves publican `use = sig` y `alg`; la regla estricta se mantiene.
+- [x] Valores de CAVOS_* buscados sin secretos: `CAVOS_APP_ID` = UUID interno de Cavos (no el `cav_…`), aud de Google y Apple = `client_id` de Cavos (docs/reputacion.md).
+- [ ] Para encender: confirmar `CAVOS_AUD_GOOGLE`/`CAVOS_AUD_APPLE` con un token real (login con Google y con Apple) y sacar `CAVOS_AUD_EMAIL` de un login real con código por correo; ponerlos en Vercel (Katherine).
 - [ ] Segundo factor, para encender: `LOCKUMI_CODIGO_PEPPER` y `RESEND_API_KEY` en Production.
 - [ ] Pendiente de Legal: alquiler abierto al eliminar la cuenta; fecha de publicación de la 1.8-demo; «Ajustes ›» en REP-14/REP-15 (la app no tiene Ajustes).
 - [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles, aplicar la migración.

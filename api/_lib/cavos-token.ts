@@ -36,6 +36,9 @@ export const huellaHex = async (t: string) => Array.from(new Uint8Array(await cr
 // JWKS por emisor, 10 minutos en memoria (por función fetch, para que las pruebas no se mezclen).
 // Un kid desconocido vuelve a leer el JWKS solo si la última lectura fue hace 1 minuto o más (no se puede usar para martillar al emisor).
 type Jwk = JsonWebKey & { kid?: string; use?: string }
+/** Revisión previa al encendido (Legal 6:04 p. m.): los JWKS reales del enclave, Google y Apple (leídos el 25/10/2026, 6:05 p. m. CR)
+ *  publican use = "sig" y alg en TODAS sus llaves, así que la regla estricta se mantiene: use = sig y alg = el fijo del emisor. */
+export const llaveValida = (k: Jwk, alg: string) => k.use === 'sig' && k.alg === alg
 const cache = new WeakMap<typeof fetch, Map<string, { hasta: number; leido: number; keys: Jwk[] }>>()
 async function llave(url: string, kid: string, alg: string, f: typeof fetch, ahora: number) {
   let m = cache.get(f); if (!m) { m = new Map(); cache.set(f, m) }
@@ -47,12 +50,25 @@ async function llave(url: string, kid: string, alg: string, f: typeof fetch, aho
   }
   const k = e.keys.find(x => x.kid === kid)
   if (!k) throw new ErrorVerificacion(403, 'La firma usa una llave que el emisor no publica.')
-  if (k.use !== 'sig' || k.alg !== alg) throw new ErrorVerificacion(403, 'La llave publicada no es de firma o no es del algoritmo del emisor.')
+  if (!llaveValida(k, alg)) throw new ErrorVerificacion(403, 'La llave publicada no es de firma o no es del algoritmo del emisor.')
   return k
 }
 
+/** Legal 6:04 p. m. (BLOQUEANTE): huella de un solo uso sobre los claims firmados iss|sub|iat|nonce, NUNCA sobre la firma.
+ *  La firma es maleable: los bits de relleno del último carácter base64url no cambian los bytes decodificados, y en ES256 (s → n−s)
+ *  hay dos firmas válidas para el mismo contenido. Con la huella sobre los claims, cualquier variante de la firma da la misma huella.
+ *  Se codifica como arreglo JSON (sin ambigüedad aunque un claim traiga «|»). */
+export const huellaDeUso = (c: { iss: string; sub: string; iat: number; nonce?: unknown }) =>
+  huellaHex(JSON.stringify(['lockumi-uso-v2', c.iss, c.sub, c.iat, typeof c.nonce === 'string' ? c.nonce : null]))
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** Valida el token de Cavos y devuelve el correo (normalizado) y el método. Lanza ErrorVerificacion si algo no cuadra. */
 export async function verificarTokenCavos(token: string, env: Env, f: typeof fetch = fetch, ahora = Date.now()): Promise<{ correo: string; metodo: Metodo }> {
+  const { correo, metodo } = await verificarConHuella(token, env, f, ahora)
+  return { correo, metodo }
+}
+/** Igual que verificarTokenCavos, y además la huella de un solo uso (huellaDeUso) de los claims ya verificados. */
+export async function verificarConHuella(token: string, env: Env, f: typeof fetch = fetch, ahora = Date.now()): Promise<{ correo: string; metodo: Metodo; huella: string }> {
   const partes = String(token ?? '').split('.')
   if (partes.length !== 3 || !partes[0] || !partes[1]) throw new ErrorVerificacion(403, 'El token no tiene el formato de un JWT.')
   let cab: Record<string, unknown>, c: Record<string, unknown>
@@ -66,6 +82,9 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   if (!auds.length) throw new ErrorVerificacion(503, `Falta ${em.aud}: no se verifica ningún correo de ese emisor.`)
   const appId = env.CAVOS_APP_ID?.trim()
   if (metodo !== 'email' && !appId) throw new ErrorVerificacion(503, 'Falta CAVOS_APP_ID: no se verifica ningún correo de Google ni de Apple.')
+  // El prefijo del nonce es el id interno de la app en Cavos (UUID), no la clave pública «cav_…» de VITE_CAVOS_APP_ID (comprobado con
+  // GET https://cavos.xyz/api/oauth/v2/google, 25/10 6:06 p. m.; docs/reputacion.md). Con «cav_…» se rechazaría todo: mejor avisar.
+  if (metodo !== 'email' && !UUID.test(appId!)) throw new ErrorVerificacion(503, 'CAVOS_APP_ID tiene que ser el id interno de la app en Cavos (UUID), no la clave cav_.')
   if (typeof cab.kid !== 'string') throw new ErrorVerificacion(403, 'La firma no dice con qué llave se hizo.')
   const jwk = await llave(em.jwks, cab.kid, em.alg, f, ahora)
   const algo = em.alg === 'ES256' ? { name: 'ECDSA', namedCurve: 'P-256' } : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
@@ -90,7 +109,8 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) throw new ErrorVerificacion(403, 'El token no trae un correo.')
   if (c.email_verified === false || c.email_verified === 'false') throw new ErrorVerificacion(403, 'El emisor dice que no confirmó el correo.')
   if (metodo !== 'email' && !(c.email_verified === true || c.email_verified === 'true')) throw new ErrorVerificacion(403, 'El proveedor no confirmó el correo.')
-  return { correo, metodo }
+  if (typeof c.sub !== 'string' || !c.sub || c.sub.length > 256) throw new ErrorVerificacion(403, 'El token no dice de quién es (sub).')
+  return { correo, metodo, huella: await huellaDeUso({ iss: String(c.iss), sub: c.sub, iat: c.iat, nonce: c.nonce }) }
 }
 
 // LEGAL: revisado (25/10) · ronda 4:41 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
@@ -125,14 +145,15 @@ export async function atenderVerificacion(env: Env, bearer: string | null, body:
   const ok = await intento(`sesion:${uid}`, LIMITES.sesion)
   if (ok === null) return { estado: 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   if (!ok) return { estado: 429, cuerpo: { error: DEMASIADOS_INTENTOS } }
-  let v: { correo: string; metodo: Metodo }
-  try { v = await verificarTokenCavos(token, env, f, ahora) } catch (e) {
+  let v: { correo: string; metodo: Metodo; huella: string }
+  try { v = await verificarConHuella(token, env, f, ahora) } catch (e) {
     const estado = e instanceof ErrorVerificacion ? e.estado : 403
     console.warn('verificar-correo', e instanceof Error ? e.message : 'error')   // el motivo, nunca el token
     return { estado, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   }
-  // Un solo uso: la base guarda la huella SHA-256 del token y rechaza la segunda vez (aunque sea otra sesión).
-  try { await rpc(s, 'lk_registrar_correo_verificado', { p_usuario: uid, p_correo: v.correo, p_metodo: v.metodo, p_huella: await huellaHex(token) }, f) } catch (e) {
+  // Un solo uso: la base guarda la huella de los claims (iss|sub|iat|nonce, huellaDeUso; nunca la firma ni el token) y rechaza la segunda
+  // vez, aunque sea otra sesión o la firma venga reescrita (Legal 6:04 p. m.).
+  try { await rpc(s, 'lk_registrar_correo_verificado', { p_usuario: uid, p_correo: v.correo, p_metodo: v.metodo, p_huella: v.huella }, f) } catch (e) {
     const usado = e instanceof Error && /409/.test(e.message)
     console.warn('verificar-correo', usado ? 'token ya usado' : 'no se pudo registrar')
     return { estado: usado ? 403 : 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }

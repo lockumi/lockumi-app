@@ -396,15 +396,18 @@ function useSegundoFactor(email: string) {
 export function CodigoCorreo({ c, err, enviando, confirmar, reenviar, cancelar }: { c: Codigo; err: { t: string; codigo: boolean } | null; enviando: boolean
   confirmar: (valor: string) => void; reenviar: () => void; cancelar: () => void }) {
   const [valor, setValor] = useState(''), id = useId()
+  // Legal 6:04 p. m. (opcional): el aviso «Ya te enviamos un código…» se oculta cuando la persona empieza a escribir. Solo ESE aviso y
+  // solo esa vez: un error nuevo (otro objeto) se vuelve a mostrar.
+  const [oculto, setOculto] = useState<typeof err>(null), errVisible = err && err !== oculto ? err : null
   const [antes, despues] = SEGUNDO_FACTOR.texto[c.accion].split('{correo}')
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <section className="glass tarjeta rp-texto" aria-labelledby={`${id}t`}><h1 id={`${id}t`} className="h2">{SEGUNDO_FACTOR.titulo}</h1>
       <p>{antes}<strong>{c.correo}</strong>{despues}</p>
       <form onSubmit={e => { e.preventDefault(); confirmar(valor) }}>
         <div className="campo rp-campo" style={{ marginTop: 'var(--s4)' }}><label htmlFor={`${id}c`}>{SEGUNDO_FACTOR.campo}</label>
-          <input id={`${id}c`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={valor} onChange={e => setValor(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            aria-invalid={err?.codigo || undefined} aria-describedby={err ? `${id}e` : undefined} /></div>
-        {err && <p id={`${id}e`} className="error" role="alert" style={{ marginTop: 8 }}>{err.t}</p>}
+          <input id={`${id}c`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={valor} onChange={e => { setValor(e.target.value.replace(/\D/g, '').slice(0, 6)); if (err?.t === SEGUNDO_FACTOR.errores.minuto) setOculto(err) }}
+            aria-invalid={errVisible?.codigo || undefined} aria-describedby={errVisible ? `${id}e` : undefined} /></div>
+        {errVisible && <p id={`${id}e`} className="error" role="alert" style={{ marginTop: 8 }}>{errVisible.t}</p>}
         <p className="nota">{SEGUNDO_FACTOR.nota}</p>
         <div className="rp-acciones"><button type="submit" className={c.accion === 'eliminar' ? 'boton rp-peligro' : 'rp-boton rp-boton--ancho'} disabled={enviando}>{SEGUNDO_FACTOR.boton[c.accion]}</button>
           <button type="button" className="boton boton--secundario" onClick={reenviar} disabled={enviando}>{SEGUNDO_FACTOR.reenviar}</button>

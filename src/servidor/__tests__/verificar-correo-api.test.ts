@@ -4,7 +4,7 @@
 // La función valida firma (JWKS publicado por el emisor), emisor, audiencia, vencimiento y correo, y solo entonces registra
 // (sesión, correo) con la clave de servicio. Todo lo demás se rechaza (cierre por defecto).
 import { describe, it, expect, vi } from 'vitest'
-import { verificarTokenCavos, atenderVerificacion, EMISORES } from '../../../api/_lib/cavos-token'
+import { verificarTokenCavos, verificarConHuella, atenderVerificacion, EMISORES, llaveValida, huellaDeUso } from '../../../api/_lib/cavos-token'
 
 const b64u = (b: ArrayBuffer | Uint8Array | string) => {
   const u = typeof b === 'string' ? new TextEncoder().encode(b) : b instanceof Uint8Array ? b : new Uint8Array(b)
@@ -23,7 +23,7 @@ async function firmar(k: Llaves, claims: Record<string, unknown>, kid = k.jwk.ki
 }
 const AHORA = Date.parse('2026-10-25T22:30:00Z'), seg = Math.floor(AHORA / 1000)
 // Audiencias POR EMISOR (Legal 4:45): la de Google no vale para Apple ni para el enclave, y al revés.
-const APP = 'app-lockumi-de-prueba'
+const APP = '00000000-0000-4000-8000-0000000000aa'   // id interno de la app en Cavos: un UUID, no la clave cav_… (docs/reputacion.md)
 const ENV = { CAVOS_AUD_GOOGLE: 'aud-google-de-cavos', CAVOS_AUD_APPLE: 'aud-apple-de-cavos', CAVOS_AUD_EMAIL: 'aud-enclave-lockumi', CAVOS_APP_ID: APP, SUPABASE_URL: 'https://proyecto.supabase.co', SUPABASE_ANON_KEY: 'anon-de-prueba', SUPABASE_SERVICE_ROLE_KEY: 'servicio-de-prueba' }
 async function escenario() {
   const usadas = new Set<string>(), bloqueadas = new Set<string>(), permitir = (k: string) => !bloqueadas.has(k)
@@ -74,6 +74,8 @@ describe('verificarTokenCavos: el correo sale de un token firmado por Google, Ap
     const t = await firmar(google, { ...base, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'a@ejemplo.com', email_verified: true })
     await expect(verificarTokenCavos(t, { ...ENV, CAVOS_AUD_GOOGLE: '' }, f, AHORA)).rejects.toThrow(/CAVOS_AUD_GOOGLE/)
     await expect(verificarTokenCavos(t, { ...ENV, CAVOS_APP_ID: '' }, f, AHORA)).rejects.toThrow(/CAVOS_APP_ID/)
+    // La clave pública del frontend (cav_…) no es el prefijo del nonce: se avisa con 503 en vez de rechazar todo en silencio.
+    await expect(verificarTokenCavos(t, { ...ENV, CAVOS_APP_ID: 'cav_c1b1cec42e7b62cd01f377b5a3291b276079' }, f, AHORA)).rejects.toMatchObject({ estado: 503, message: /UUID/ })
   })
 })
 
@@ -120,7 +122,7 @@ describe('Legal 4:45 · BLOQUEANTE 2 y ajustes de cavos-token.ts', () => {
 })
 
 describe('atenderVerificacion · un solo uso y límite de intentos (Legal 4:45)', () => {
-  it('manda la huella SHA-256 del token (nunca el token) y el mismo token no verifica dos veces', async () => {
+  it('manda la huella SHA-256 de los claims (nunca el token ni su firma) y el mismo token no verifica dos veces', async () => {
     const { google, f, base } = await escenario()
     const t = await firmar(google, { ...base, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'ana@ejemplo.com', email_verified: true })
     expect((await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t }, f, AHORA)).estado).toBe(200)
@@ -174,5 +176,79 @@ describe('atenderVerificacion (POST /api/verificar-correo)', () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const s = fs.readFileSync('api/verificar-correo.ts', 'utf8')
     expect(s).toMatch(/export async function POST/); expect(s).not.toMatch(/export async function GET/); expect(s).toMatch(/atenderVerificacion\(process\.env/)
+  })
+})
+
+// Legal 6:04 p. m. · BLOQUEANTE: la huella de un solo uso NO puede depender de la firma (es maleable).
+const ORDEN_P256 = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551n
+const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+const desdeB64u = (t: string) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+/** Cambia el bit de relleno más bajo del último carácter base64url de la firma: los bytes decodificados no cambian. */
+function rellenoAlterado(t: string) {
+  const [h, p, f] = t.split('.'), ult = f!.at(-1)!, otro = ALFABETO[ALFABETO.indexOf(ult) ^ 1]!
+  const g = f!.slice(0, -1) + otro
+  expect(Array.from(desdeB64u(g))).toEqual(Array.from(desdeB64u(f!)))   // misma firma en bytes
+  return `${h}.${p}.${g}`
+}
+/** ES256: (r, s) → (r, n − s), la otra firma ECDSA válida del mismo contenido. */
+function ecdsaReescrita(t: string) {
+  const [h, p, f] = t.split('.'), b = desdeB64u(f!)
+  const s = BigInt('0x' + Array.from(b.slice(32), x => x.toString(16).padStart(2, '0')).join('')), s2 = (ORDEN_P256 - s).toString(16).padStart(64, '0')
+  const nueva = new Uint8Array(64); nueva.set(b.slice(0, 32)); nueva.set(Uint8Array.from(s2.match(/../g)!, x => parseInt(x, 16)), 32)
+  return `${h}.${p}.${b64u(nueva)}`
+}
+const huellasEnviadas = (f: { mock: { calls: [string, RequestInit | undefined][] } }) =>
+  f.mock.calls.filter(([u]) => u.endsWith('lk_registrar_correo_verificado')).map(([, i]) => JSON.parse(String(i!.body)).p_huella as string)
+
+describe('Legal 6:04 p. m. · BLOQUEANTE: huella de un solo uso sobre iss|sub|iat|nonce, nunca sobre la firma', () => {
+  const tokens = async () => {
+    const e = await escenario()
+    const tg = await firmar(e.google, { ...e.base, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'ana@ejemplo.com', email_verified: true })
+    const te = await firmar(e.enclave, { ...e.base, nonce: 'otro.hash-del-secreto', iss: 'https://enclave.cavos.xyz', aud: 'aud-enclave-lockumi', email: 'ana@ejemplo.com' })
+    return { ...e, tg, te }
+  }
+  for (const [nombre, cual, alterar] of [
+    ['firma con el bit de relleno alterado (Google, RS256)', 'tg', rellenoAlterado],
+    ['firma con el bit de relleno alterado (enclave, ES256)', 'te', rellenoAlterado],
+    ['firma ECDSA reescrita s → n−s (enclave, ES256)', 'te', ecdsaReescrita],
+    ['reuso del mismo token, tal cual', 'tg', (t: string) => t],
+    ['reuso del mismo token del enclave, tal cual', 'te', (t: string) => t],
+  ] as const) it(`${nombre}: la firma sigue valiendo, pero da «ya usado» (403) con la misma huella`, async () => {
+    const e = await tokens(), t = e[cual], t2 = alterar(t)
+    if (nombre.startsWith('firma')) expect(t2).not.toBe(t)
+    expect(await verificarTokenCavos(t2, ENV, e.f, AHORA)).toEqual(await verificarTokenCavos(t, ENV, e.f, AHORA))   // la variante es válida
+    expect((await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t }, e.f, AHORA)).estado).toBe(200)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const r = await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t2 }, e.f, AHORA)
+    expect(r.estado).toBe(403); expect((r.cuerpo as { error: string }).error).toMatch(/Sal de Lockumi y vuelve a entrar con tu correo/)
+    expect(warn).toHaveBeenCalledWith('verificar-correo', 'token ya usado'); warn.mockRestore()
+    const [h1, h2] = huellasEnviadas(e.f); expect(h1).toMatch(/^[0-9a-f]{64}$/); expect(h2).toBe(h1)
+  })
+  it('la huella es la de los claims (iss|sub|iat|nonce), no la del token ni la de su firma; sin sub no se verifica', async () => {
+    const e = await tokens()
+    const { huella } = await verificarConHuella(e.tg, ENV, e.f, AHORA)
+    expect(huella).toBe(await huellaDeUso({ iss: 'https://accounts.google.com', sub: 'u1', iat: e.base.iat, nonce: e.base.nonce }))
+    const sha = async (x: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x)))).map(b => b.toString(16).padStart(2, '0')).join('')
+    expect(huella).not.toBe(await sha(e.tg)); expect(huella).not.toBe(await sha(e.tg.split('.')[2]!))
+    // Otro login (otro iat o nonce) es otro uso; otra persona (sub) también.
+    expect(await huellaDeUso({ iss: 'https://accounts.google.com', sub: 'u1', iat: e.base.iat + 1, nonce: e.base.nonce })).not.toBe(huella)
+    expect(await huellaDeUso({ iss: 'https://accounts.google.com', sub: 'u2', iat: e.base.iat, nonce: e.base.nonce })).not.toBe(huella)
+    for (const sub of [undefined, '', 7]) await expect(verificarTokenCavos(await firmar(e.google, { ...e.base, sub, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'ana@ejemplo.com', email_verified: true }), ENV, e.f, AHORA), String(sub)).rejects.toThrow(/sub/)
+  })
+})
+
+describe('Legal 6:04 p. m. · JWKS reales (copia del 25/10, 6:05 p. m.): todas las llaves publican use = "sig" y su alg', () => {
+  it('las llaves reales del enclave, Google y Apple pasan la regla estricta; la del enclave se importa como ECDSA P-256', async () => {
+    const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+    const reales = JSON.parse(fs.readFileSync('src/servidor/__tests__/fixtures/jwks-reales-2026-10-25.json', 'utf8')) as Record<string, { keys: (JsonWebKey & { kid: string; use?: string })[] }>
+    for (const m of ['google', 'apple', 'email'] as const) {
+      const keys = reales[EMISORES[m].jwks]!.keys; expect(keys.length, m).toBeGreaterThan(0)
+      for (const k of keys) { expect(k.use, `${m} ${k.kid}`).toBe('sig'); expect(k.alg, `${m} ${k.kid}`).toBe(EMISORES[m].alg); expect(llaveValida(k, EMISORES[m].alg)).toBe(true) }
+    }
+    const [e] = reales[EMISORES.email.jwks]!.keys
+    expect([e!.kty, e!.crv]).toEqual(['EC', 'P-256'])
+    await expect(crypto.subtle.importKey('jwk', { kty: e!.kty, crv: e!.crv, x: e!.x, y: e!.y }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify'])).resolves.toBeDefined()
+    // La regla sigue cerrada: sin use, con otro use o con otro alg, no.
+    expect(llaveValida({ ...e!, use: undefined }, 'ES256')).toBe(false); expect(llaveValida({ ...e!, use: 'enc' }, 'ES256')).toBe(false); expect(llaveValida(e!, 'RS256')).toBe(false)
   })
 })

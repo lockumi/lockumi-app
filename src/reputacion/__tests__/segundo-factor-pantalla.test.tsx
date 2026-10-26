@@ -37,6 +37,16 @@ describe('pantalla «Revisa tu correo»', () => {
     const r = await pintar('descargar', { t: SEGUNDO_FACTOR.errores.minuto, codigo: false })
     expect(texto(r)).toContain('Ya te enviamos un código. Espera un minuto antes de pedir otro.'); expect(r).not.toMatch(/aria-invalid/)
   })
+  it('Legal 6:04 p. m.: el aviso «Ya te enviamos un código…» se oculta al empezar a escribir (solo ese aviso; uno nuevo se vuelve a ver)', async () => {
+    const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
+    const s = fs.readFileSync('src/reputacion/Pantallas.tsx', 'utf8')
+    expect(s).toMatch(/const \[oculto, setOculto\] = useState<typeof err>\(null\), errVisible = err && err !== oculto \? err : null/)
+    expect(s).toMatch(/onChange=\{e => \{ setValor\([^}]*\); if \(err\?\.t === SEGUNDO_FACTOR\.errores\.minuto\) setOculto\(err\) \}\}/)
+    expect(s).toMatch(/\{errVisible && <p id=\{`\$\{id\}e`\} className="error" role="alert"/)
+    // Antes de escribir, el aviso se ve (foto descargar-2c); el error del código no se oculta al escribir.
+    const { SEGUNDO_FACTOR } = await import('../textos')
+    expect(texto(await pintar('descargar', { t: SEGUNDO_FACTOR.errores.minuto, codigo: false }))).toContain(SEGUNDO_FACTOR.errores.minuto)
+  })
   it('sin servidor (demo local) nada cambia: las pantallas solo piden el código con conServidor; con servidor, siempre', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const s = fs.readFileSync('src/reputacion/Pantallas.tsx', 'utf8')

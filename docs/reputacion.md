@@ -162,14 +162,15 @@ entregó el proveedor al iniciar sesión (en `sessionStorage`, `cavos-kit:token:
 Supabase. `api/_lib/cavos-token.ts` valida con WebCrypto: firma con el JWKS del emisor (RS256 Google/Apple, ES256 enclave; `none`/HS256 nunca),
 emisor, audiencia POR EMISOR (`CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL`), `exp`/`nbf` (±60 s), `iat` de 5 minutos o menos,
 el prefijo del App ID en el `nonce` (Google/Apple, `CAVOS_APP_ID`), correo (`email_verified` en Google/Apple; `false` se rechaza con cualquier
-emisor) y, solo entonces, llama `lk_registrar_correo_verificado(uid, correo, método, huella)` con la clave de servicio (huella = SHA-256 del
-token; un token se usa UNA vez). Hasta entonces el servidor RECHAZA (cierre por defecto):
+emisor) y, solo entonces, llama `lk_registrar_correo_verificado(uid, correo, método, huella)` con la clave de servicio (huella = SHA-256 de los
+claims firmados `iss|sub|iat|nonce`, NUNCA de la firma; un token se usa UNA vez; Legal 6:04 p. m., abajo). Hasta entonces el servidor RECHAZA (cierre por defecto):
 `lk_mis_datos_reputacion`, `lk_pedir_borrado_cuenta`, `lk_aceptar_reputacion` y `lk_necesita_rep01` solo aceptan un correo de
 `lk_correos_verificados` para ESA sesión; un `email_cavos` sin verificar no usa la aceptación de otra persona (regla del encendido).
 **Antes de usarlo (no lo hacemos nosotros, Vercel sin tocar):** poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE` y `CAVOS_AUD_EMAIL` (cada una,
-lista separada por comas) con el `aud` real de cada emisor, sacado de un token real, y `CAVOS_APP_ID` (el mismo valor público que
-`VITE_CAVOS_APP_ID`). Sin ninguna audiencia la función responde 503; sin la de un emisor, ese emisor no se verifica; sin `CAVOS_APP_ID`, Google
-y Apple no se verifican.
+lista separada por comas) con el `aud` real de cada emisor y `CAVOS_APP_ID` = el id INTERNO de la app en Cavos (un UUID), que NO es la clave
+pública `cav_…` de `VITE_CAVOS_APP_ID` (valores encontrados y fuentes: «Valores reales de CAVOS_*», abajo). Sin ninguna audiencia la función
+responde 503; sin la de un emisor, ese emisor no se verifica; sin `CAVOS_APP_ID`, o si no es un UUID (p. ej. `cav_…`), Google y Apple no se
+verifican (503).
 Además `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (ya usadas por `/api/tw`).
 
 **Dos correos en un aparato (Legal, 4:23 p. m.):** cada fila de reputación lleva su `correo`; borrar y descargar filtran por CORREO
@@ -199,12 +200,19 @@ justo después del login (`Pantallas.tsx`, `useRep01Servidor` → `asegurarCorre
 valiendo. Riesgo: si al encender una sesión no verificó en los 5 minutos del login, no puede crear ni aceptar hasta volver a entrar (el texto
 lo dice).
 
-**Reuso del token (Legal, 4:45 p. m., BLOQUEANTE 2):** `iat` de 5 minutos o menos (como exige el enclave de Cavos); la huella SHA-256 del token
-va a `lk_tokens_usados` (sin acceso de la app) y la segunda vez se rechaza (409 → 403), aunque sea otra sesión; la app no reenvía un token que
+**Reuso del token (Legal, 4:45 p. m., BLOQUEANTE 2; huella corregida por Legal 6:04 p. m.):** `iat` de 5 minutos o menos (como exige el
+enclave de Cavos); la huella va a `lk_tokens_usados` (sin acceso de la app) y la segunda vez se rechaza (409 → 403), aunque sea otra sesión; la app no reenvía un token que
 ya mandó. Audiencias separadas por emisor. Llaves del JWKS solo con `use = "sig"` y el `alg` del emisor (los tres JWKS publican `use` y `alg`).
 Un `kid` desconocido vuelve a leer el JWKS como mucho una vez por minuto. Límite de intentos en `/api/verificar-correo`
 (`lk_intento_verificacion`, compartido entre instancias): 5 cada 10 minutos por sesión y 30 cada 10 minutos por IP (se guarda la huella de la
 IP, nunca la IP); si se pasa: 429 con `DEMASIADOS_INTENTOS` y no se lee el JWKS; si la base no responde, 503 (cierre por defecto).
+**Huella de un solo uso (Legal 6:04 p. m., BLOQUEANTE):** antes era SHA-256 del token entero, firma incluida, y la firma es maleable: los
+bits de relleno del último carácter base64url no cambian los bytes (RS256: 342 caracteres; ES256: 86; en los dos sobran 4 bits) y en
+ES256 la firma `(r, n−s)` también vale. Con otra firma salía otra huella y el token se podía usar otra vez. Ahora
+`huellaDeUso` (`api/_lib/cavos-token.ts`) = SHA-256 de `["lockumi-uso-v2", iss, sub, iat, nonce]` (arreglo JSON, sin ambigüedad), calculada
+DESPUÉS de verificar la firma; se exige `sub` (texto de 1 a 256 caracteres). Pruebas (`verificar-correo-api.test.ts`): bit de relleno
+alterado (Google RS256 y enclave ES256), firma ECDSA reescrita `s → n−s` y reuso tal cual: las tres dan «ya usado» (403) y la base recibe la
+misma huella.
 `search_path = ''` también en `lk_de_la_persona`, `lk_pascua`, `lk_es_feriado_cr` y `lk_fecha_limite_borrado`.
 
 **Cuánto dura cada token (para el `iat` de 5 minutos):**
@@ -220,8 +228,9 @@ Con cualquiera de los tres, Lockumi solo acepta el token en sus primeros 5 minut
 **El nonce NO se verifica del todo (riesgo residual aceptado para la demo):** Cavos arma el nonce de Google/Apple como
 `<app id>.<BASE64URL(SHA-256(secreto del login))>` (https://docs.cavos.xyz/llms-full.txt; `@cavos/kit` 0.4.2,
 `dist/chunk-GD4BWPID.mjs:94-101` y `dist/chunk-7PFB7IVG.mjs:423`). El servidor exige el prefijo `CAVOS_APP_ID.` (el token salió de un login de
-Lockumi) pero NO puede comprobar la parte del secreto, que queda en el cliente. El nonce del código por correo no lleva App ID (el kit manda
-solo el hash del secreto), así que en ese emisor no se comprueba nada del nonce. Un token robado en sus primeros 5 minutos y antes de que la app
+Lockumi) pero NO puede comprobar la parte del secreto, que queda en el cliente. En el código por correo el kit manda solo el hash del secreto
+(`client_nonce`) y exige que el nonce del token del enclave termine en `.<hash>` (`dist/chunk-7PFB7IVG.mjs:426-437`); el prefijo que pone el
+enclave no está documentado, así que en ese emisor el servidor no comprueba nada del nonce. Un token robado en sus primeros 5 minutos y antes de que la app
 lo use serviría una vez.
 
 **¿Lockumi tiene un `aud` propio con Cavos? NO (investigado 25/10, 4:45–5:00 p. m.):** con el login alojado de Cavos (el que usa Lockumi:
@@ -263,6 +272,9 @@ en la demo local sin servidor nada cambia.
   `segundo-factor-pantalla.test.tsx` (5). **Flujo real local** (sin producción): `prueba-completa/scripts/segundo-factor-real.mjs` (Postgres
   real con la migración + el `atenderCodigo` real + Resend de verdad SOLO a lockumi@mail.grokbot.com) y
   `segundo-factor-capturas-real.mjs` (Playwright, 390 px): capturas en `prueba-completa/capturas/paso19-reputacion/segundo-factor/real/`.
+  Legal 6:04 p. m. (opcional): el aviso «Ya te enviamos un código. Espera un minuto antes de pedir otro.» se oculta cuando la persona empieza
+  a escribir el código (solo ese aviso; un error nuevo se vuelve a ver). Panel 3 rehecho con el flujo real (25/10, 6:17 p. m. CR, código
+  real recibido en lockumi@mail.grokbot.com; `segundo-factor-panel3-real.mjs`, `log-panel3.txt`: «avisos visibles después de escribir: 0»).
 - **Límites:** el código va al correo que Cavos verificó; quien controla ese correo puede borrar o descargar (es el diseño aprobado). El
   correo lleva el enlace de Privacidad con el origen de la app que lo pidió (solo orígenes permitidos).
 
@@ -274,11 +286,41 @@ propio de Lockumi (segundo factor, arriba). (d) El servidor no puede comprobar l
 sin correo (anteriores a esta ronda) en una sesión con dos correos no se borran con ninguno de los dos. (g) Cerrada (lecturas por el correo
 activo). (h) Con un token ya usado (p. ej. al recargar), la app no vuelve a verificar: el servidor usa lo que esa sesión ya verificó. (2) Una sesión sin
 alquileres ni aceptación no tiene correo conocido hasta que se verifica.
+**JWKS reales (revisión previa al encendido, Legal 6:04 p. m.; leídos el 25/10/2026 a las 6:05 p. m. CR, copia en
+`prueba-completa/evidencias/jwks-2026-10-25/`):** las tres URL que usa el código responden 200 y TODAS sus llaves publican `use` y `alg`:
+- Enclave `https://enclave.cavos.xyz/.well-known/jwks.json` (la de la documentación de Cavos y la del código; el enclave NO tiene
+  `/.well-known/openid-configuration`: 404): 1 llave, `kid kdAGJcKh_MT-utzXkGqVm2MXWUZh6SulWawbqOlMXUM`, `kty EC`, `crv P-256`, `alg ES256`, `use sig`.
+- Google `https://www.googleapis.com/oauth2/v3/certs` (= `jwks_uri` de su configuración OpenID, que publica solo RS256): 2 llaves RSA,
+  `alg RS256`, `use sig`.
+- Apple `https://appleid.apple.com/auth/keys` (= `jwks_uri` de su configuración OpenID, solo RS256): 3 llaves RSA, `alg RS256`, `use sig`.
+Por eso la regla estricta se mantiene (`llaveValida`: `use = "sig"` y `alg` = el fijo del emisor); no hizo falta aceptar `use` ausente. La
+prueba «JWKS reales» usa esta copia: las llaves pasan la regla y la del enclave se importa como llave ECDSA P-256 de verificación. Si un emisor
+dejara de publicar `use`, todas las entradas de ese emisor darían 403: volver a leer el JWKS antes de encender.
+
+**Valores reales de CAVOS_* (Legal 6:04 p. m., sin pedir secretos; 25/10 6:06 p. m. CR):**
+- `VITE_CAVOS_APP_ID` (clave pública del frontend): `cav_c1b1cec42e7b62cd01f377b5a3291b276079`, en el bundle publicado de app.lockumi.com
+  (`/assets/index-KGYSB8bC.js`). NO es el prefijo del nonce.
+- `CAVOS_APP_ID` = **`514692ec-9202-4015-b53c-4b8824dca4d5`** (confirmado): `GET https://cavos.xyz/api/oauth/v2/google?app_id=cav_…&nonce=<hash>`
+  (lo mismo que hace el kit al tocar «Google», `dist/chunk-GD4BWPID.mjs:94-101`, sin completar el login) devuelve la URL de Google con
+  `nonce=514692ec-….<hash>` y un `state` con `"app_id":"514692ec-9202-4015-b53c-4b8824dca4d5"`. Igual en Apple. Es el «app id» del nonce que
+  documenta Cavos. Con un `app_id` inventado, Cavos responde «Invalid app_id».
+- `CAVOS_AUD_GOOGLE` = **`1074035053584-s7i7gv8mbki1gnlgnnhibt6lfknqm3nb.apps.googleusercontent.com`**: es el `client_id` de la URL de Google
+  que arma Cavos (`redirect_uri https://cavos.xyz/api/oauth/google/callback`). En OpenID el `aud` del id_token es el `client_id`. Falta verlo
+  en un id_token real (login real con Google).
+- `CAVOS_AUD_APPLE` = **`com.cavosx.auth`**: `client_id` de la URL de Apple que arma Cavos. Falta verlo en un identity token real (login real
+  con Apple).
+- `CAVOS_AUD_EMAIL`: NO se puede saber sin un token real. Ni el kit 0.4.2 ni la documentación lo dicen. Requiere un login real con código por
+  correo en la app (con `VITE_CAVOS_APP_ID`) y leer el `aud` de `sessionStorage['cavos-kit:token:<cav_…>']` (lo que devuelve
+  `getAuthToken()`), sin copiar el token entero. Ese mismo token confirma `email`, el formato del nonce y `exp - iat`.
+Son identificadores públicos (van en URLs del navegador), no secretos. No se configuró nada en Vercel.
+
 **Antes de encender (lista):**
 - Con un token REAL del código por correo de Cavos: confirmar que trae `email`. Si no lo trae, ese método de entrada NO puede aceptar
   REP-01 (el servidor no tiene correo que verificar). Medir también su `exp - iat` y anotarlo arriba.
 - Con tokens reales de Google y Apple: confirmar el formato del `nonce` (`<app id>.<hash>`) y el `aud` de cada emisor.
-- Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros).
+- Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros). `CAVOS_APP_ID` es el
+  UUID `514692ec-…`, no `cav_…`; Google y Apple, con los valores de arriba después de verlos en un token real; el del correo, del token real.
+- Volver a leer los tres JWKS y comprobar que siguen con `use` y `alg`.
 - Segundo factor (programado): poner `LOCKUMI_CODIGO_PEPPER` (al azar, 32+ caracteres, solo servidor, NUNCA en el bundle) y `RESEND_API_KEY`
   en Production. (Los 2 textos propios del segundo factor ya tienen el OK de Legal, 25/10 6:01 p. m.)
 - Aplicar la migración `20261025140000_reputacion.sql` (con OK de Katherine; incluye la sección 7 del segundo factor).

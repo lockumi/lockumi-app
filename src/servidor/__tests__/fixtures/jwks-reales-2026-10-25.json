@@ -1,0 +1,64 @@
+{
+ "_fuente": "Le\u00eddos el 25/10/2026 a las 6:05 p. m. (hora de Costa Rica) de las URL de EMISORES en api/_lib/cavos-token.ts. Llaves p\u00fablicas.",
+ "https://enclave.cavos.xyz/.well-known/jwks.json": {
+  "keys": [
+   {
+    "alg": "ES256",
+    "crv": "P-256",
+    "kid": "kdAGJcKh_MT-utzXkGqVm2MXWUZh6SulWawbqOlMXUM",
+    "kty": "EC",
+    "use": "sig",
+    "x": "XOPTtu0ML5ohSfaxn0EolHRS5r6lLvP6N6RCXJBSB94",
+    "y": "wTLr_Y-JQJa3wdYS9Pl8Bw9LSTze_dHsTgBRV_RTVLM"
+   }
+  ]
+ },
+ "https://www.googleapis.com/oauth2/v3/certs": {
+  "keys": [
+   {
+    "kty": "RSA",
+    "kid": "943a3a5d7d919625a454e489b75c29adab57acba",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig",
+    "n": "pIpnzA2ezyEERJSxiqpLBmMeIqATH-V6iuBtKIibXEyYovujrx8niqTeO6RIyXT6uDUUv0V2kJ8V_iWYFxzXY1BqK9IfcAmjg0XUDoyTVkoyLsF0gj299LH-zw5vCvy8jmamFIZKAbKcQ5hpHvSittM1vl-6vVL-i2GxyGbMA9aY6Hq15NylS1t7ELTYfQimlnvxcb7_DM0cuS5U1SfbCZMCpKhh0nrSlYds240oxpCJOV2rBahs_Ea5c7tezS1nwVC9W_E-bR9TF6BHkC_fv-E8DcWfkI_6geaJzBhINNxBfjx-w1-WUp2Jz3YYFWEfeQjxMqu-Fg6cGxwk7V16uQ"
+   },
+   {
+    "kty": "RSA",
+    "kid": "f10f87405a979c1df36df26606734f33cd85c271",
+    "n": "4rY5uwZK1dQ-UVgB5s4NLyC-u5LC2MT7b8GWZztiNgMsp0Nnqx0pM7Ofx0ws32N2aZcx10-J8ydQxnNb9uAcf-7LyhyOIcv_WEyzaSbUAMOgoF-nQmJetckxNg6ekhNfaFcTQS0T-29ql2_CBLIML6CvSh-r0fgWRsqN2ayB7wCl74Gv6OOVbvagUWhj5z2L6o_plmsPDwLVuvA7o3WDEDjoq-IXafRQowj92kQUenrOKD4YCopuLIBhel6VH8doFRNZ6KISQhMcOivWaLU_UtKKAMloGJieTf_3r-_nErs2h5wB7T7FrMCScmO7mvFQXKh8_4P-MlbfgS9CUvQksw",
+    "e": "AQAB",
+    "alg": "RS256",
+    "use": "sig"
+   }
+  ]
+ },
+ "https://appleid.apple.com/auth/keys": {
+  "keys": [
+   {
+    "kty": "RSA",
+    "kid": "nP41CGTvOz",
+    "use": "sig",
+    "alg": "RS256",
+    "n": "5t6lyqRebZHCK0v8B0RbG7opwbEqO3H7iH9eZ00DM65_kGzI7FfumDiRQzPFD51Sm7Dn3puwcfo8dcDJyoOgVrqhbazgBDNNHFUJqMH_t5TTYYXFSCJHP_gQwLPvwLnPfAj75lZu2w4sb1Z1hvkibDoJcFSsKwomjPnBHSSJE1JtnHsAvucJZbsnwEcy4DXnlbkjv_BBrKLGouBpX2n_T5vSDn98_pU4KPD7_WOs8JXBvkYJVbhkV55LtwfrrfKq0jmABGDRjYebOj_qEM0EBeN7F4vSXyFejViieIMdlX4_dG4QUmwJ23LhWXQ7Ik7efCHdSb_Bv1Jm6xbkQbPrUQ",
+    "e": "AQAB"
+   },
+   {
+    "kty": "RSA",
+    "kid": "GNCf4J83Oh",
+    "use": "sig",
+    "alg": "RS256",
+    "n": "0n5COwAlDNqbSbKrmA91jkAmZXLV0LKki5Iv-Ic4LRsXvkbQWG1HG56qE4KrXPdfSCFVfDEz-9J2Li3YFKhpDFl3Tq6UxcIW-VzQuyMbwSkjkYze7v-RsRl_7fWod2XR6znjqym_QhAnX_hoFUIzNPj1Wy9aeSGekUaBiNZnUinCsz7xsqmDonS-BVygEc8NYDCjPSMA1yHXjVGGUI1-KFUDuqenLtOLlzqKk4bKQlCucgDpTSySiTC_TEDk-W6c7LiiFwRTkhp9DlOTmUz-e6KT5HRnWYc2yyUeQwxCDVApOa93EtzuuIqI8z3v-LfPs-A_h_tJ7MYaPDM3oKfxFQ",
+    "e": "AQAB"
+   },
+   {
+    "kty": "RSA",
+    "kid": "8nTlO3M2Bk",
+    "use": "sig",
+    "alg": "RS256",
+    "n": "xOu-GP0-nzajn7s732MfYCtP11ns6GU65M-1ce-DDduxbukLXHAyhd0EsxJSWgKBgG6BEu3rvrpPNl0hc2Af77OE58jZos5j08QDtdyj4VWZCTSuC0zr9Ory8S4RqaFWVYEUpBVXFXqqXzvtlZlegqs0YOIqbAdia-nQGnFcEtnPW0VDL_k7q8D5tWs5o8YHUlYEOAEm2xJA9OrFufExmXQeWiN8-CzFhzkNIyspZBEwz7gRjihnQpZz8KorZSl2JJK6JGR3JFZ_GGBI95CzPSR7oy1bWwCsIebiF05ISR0_ogNqdU-O1kro6Peuq9XT0tMCAlC3dhFUoH1nxhvacQ",
+    "e": "AQAB"
+   }
+  ]
+ }
+}
