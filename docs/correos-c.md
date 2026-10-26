@@ -80,6 +80,16 @@ Términos 5.3 d): si el dueño no reclama en su plazo, el 100 % vuelve al inquil
 
 Después: otra corrida no pide nada a Trustless Work (`pendientes: 0`); la app ve el pago hecho (mismo hash); `get-escrow-by-contract-ids` (validateOnChain) muestra los tres escrows resueltos/liberados y con saldo 0; Horizon, las tres transacciones `successful`; COR-C-07 a las dos partes de cada caso, enviado por la misma corrida (Resend simulado, solo al buzón de prueba). 160 pasos, 0 fallas, 227 s. Ninguna llave en el registro ni en el informe (revisado).
 
+## «Plazo de devolución» plegado en la invitación y en el alquiler (OK de Katherine a la hoja `linea-plazo-v2`, 26/10/2026 12:44 a. m. CR)
+
+Debajo de la línea del 0,3 % (franja del aviso de la red, solo en la invitación y en la vista del alquiler) hay un plegable chico **cerrado al entrar**, «Plazo de devolución», con el mismo componente que «Reglas del alquiler» (`src/screens/Plegable.tsx`, clases `.cp-abrir`, en chico con `.plegable--plazo` en `src/index.css`). Texto de Legal (`src/ui.tsx`, `TEXTO_PLAZO_DEVOLUCION`):
+
+> El dueño tiene 7 días para revisar la casa y reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Si el último día cae en domingo o feriado, el plazo pasa al siguiente día hábil. Si no reclama a tiempo, el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.
+
+Respaldo de Legal: «solo» se muestra **únicamente** si la corrida paga (`DEVOLUCION_CRON` distinto de `0`). Con `DEVOLUCION_CRON=0` la línea termina «…Si no reclama a tiempo, el inquilino recibe su depósito de vuelta cuando cualquiera de los dos abre el alquiler.» (`TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA`).
+
+Cómo lo sabe el navegador sin secretos: `GET /api/config` (`api/config.ts` → `api/_lib/config-publica.ts`) responde solo `{ "devolucionAutomatica": true | false }`, calculado con la **misma** función que usa la corrida (`devolucionAutomaticaEncendida`, `api/_lib/devoluciones.ts`), así que no hay una variable `VITE_` que se pueda desincronizar. Caché de 60 s (cambiar la variable en Vercel exige redesplegar igual). Si la llamada falla o todavía no respondió, se muestra el texto **sin** «solo». Pruebas: `src/prueba/__tests__/paso21-invitacion.test.tsx` («plazo de devolución plegado»).
+
 ## Publicación del paso 22 (25/10/2026, hora de Costa Rica)
 
 Con el OK de Katherine (10:39 p. m.) y el de Legal a `TEXTO_REVISAR_PAGO` (11:15 p. m., sin cambios; la marca se quitó). Los Términos 6.5 a, 5.3 d y `ContratoDoc.tsx:49` no cambiaron.

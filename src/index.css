@@ -650,6 +650,12 @@ html.sin-scroll{overflow:hidden}
 .cp-completo>.ct__sec:last-child{border-bottom:1px solid var(--linea)}
 /* Con el contrato cerrado, el pie queda pegado al botón */
 .ct .cp-abrir+.ct__pie,.ct .cp-completo[hidden]+.ct__pie{padding-top:14px}
+/* paso22 (26/10, OK de Katherine a linea-plazo-v2): «Plazo de devolución» en la franja del aviso, mismo plegable (.cp-abrir) en chico */
+.plegable--plazo{background:#FFF1B8;border-bottom:1px dashed #9A7B00;padding:2px 12px 5px;text-align:center}
+.plegable--plazo .cp-abrir{display:inline-flex;width:auto;min-height:28px;margin:0 auto;gap:6px;padding:2px 3px 2px 12px;border-radius:999px;font:600 12px/16px var(--f-texto);color:var(--cafe-suave);background:var(--fondo)}
+.plegable--plazo .cp-abrir:focus-visible{border-radius:999px}
+.plegable--plazo .cp-abrir__ico{width:22px;height:22px}.plegable--plazo .cp-abrir__ico .ico{width:13px;height:13px}
+.plegable--plazo .cp-completo{max-width:640px;margin:4px auto 0;font:400 12px/17px var(--f-texto);color:#5C4A00}.plegable--plazo .cp-completo p{margin:0}
 @media (prefers-reduced-motion:reduce){.cp-abrir__ico .ico{transition:none}}
 .impresion{display:none}
 @media print{

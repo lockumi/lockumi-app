@@ -6,6 +6,7 @@
 // Por corrida: hasta DEVOLUCIONES_POR_CORRIDA casos (5 por defecto, tope 20) y sin empezar uno nuevo después de
 // DEVOLUCIONES_SEGUNDOS (30 por defecto) desde el inicio de la corrida (maxDuration 60 s en vercel.json). Lo que quede, en la próxima.
 // Apagado: DEVOLUCION_CRON=0. Solo testnet (configuracion() rechaza otra API de Trustless Work).
+import { devolucionAutomaticaEncendida } from './config-publica.js'
 import { configuracion, contrato, devolverAlInquilino, modoDevolucion, sinSecretos, ErrorRevisar, ErrorTw, type Entorno, type ModoDevolucion } from './tw.js'
 
 export const POR_CORRIDA = 5, TOPE_POR_CORRIDA = 20, SEGUNDOS_CORRIDA = 30
@@ -22,7 +23,7 @@ export type SalidaDevoluciones = ResultadoDevoluciones | { apagado: true } | { e
 const entero = (v: string | undefined, d: number, min: number, max: number) => { const n = Number(v); return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : d }
 
 export async function pagarDevoluciones(env: Entorno, o: { inicio?: number; reloj?: () => number; log?: (m: string) => void } = {}, f: typeof fetch = fetch): Promise<SalidaDevoluciones> {
-  if (env.DEVOLUCION_CRON?.trim() === '0') return { apagado: true }
+  if (!devolucionAutomaticaEncendida(env)) return { apagado: true }
   const reloj = o.reloj ?? Date.now, inicio = o.inicio ?? reloj(), log = o.log ?? ((m: string) => console.error(m))
   const limite = entero(env.DEVOLUCIONES_POR_CORRIDA, POR_CORRIDA, 1, TOPE_POR_CORRIDA), seg = entero(env.DEVOLUCIONES_SEGUNDOS, SEGUNDOS_CORRIDA, 5, 800)
   let c: ReturnType<typeof configuracion>
