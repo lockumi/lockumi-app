@@ -5,7 +5,7 @@ Estado: Legal revisó c97585b y dio su OK a PR #35 (26/10/2026); Katherine aprob
 Vuelta atrás: revertir el merge y correr `supabase/revert/20261026010000_eliminar_ocultar_reiniciar_revert.sql`.
 
 ## Reglas
-- **Eliminar** (solo antes del depósito; con otra persona, solo el dueño y antes de que la otra persona acepte): borra el alquiler.
+- **Eliminar** (solo antes del depósito; con otra persona, solo el dueño): borra el alquiler. Desde el 26/10 (PR #54) el dueño también puede eliminar después de que la otra persona acepte, mientras el depósito no esté pagado; el servidor lo comprueba en la red ([firma-servidor.md](firma-servidor.md)).
 - **Ocultar** (después): lo quita solo de MI lista. No borra nada; la otra persona lo sigue viendo.
 - **Con un depósito guardado:** ni eliminar ni ocultar; se explica por qué.
 - **«Reiniciar mi demo»:** solo lo propio. Elimina los alquileres sin depósito, oculta los terminados y deja los que tienen depósito.
