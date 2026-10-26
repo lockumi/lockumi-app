@@ -6,7 +6,7 @@
 // * Encendido con CORREOS_C=1 (servidor). REGLA DURA: con cualquier texto «LEGAL: revisar», no sale nada, salvo la excepción local
 //   LOCKUMI_CORREOS_BORRADOR=1 fuera de Vercel, y entonces solo al buzón de prueba lockumi@mail.grokbot.com.
 // RESEND_API_KEY y SUPABASE_SERVICE_ROLE_KEY solo viven en el servidor y nunca se devuelven.
-import { servicio, rpc, type ServicioSupabase } from './supabase.js'
+import { servicio, rpc, correoAviso, type ServicioSupabase } from './supabase.js'
 import { ErrorCorreo, REMITENTE, origenPermitido } from './correo.js'
 import { TEXTOS, textosPorRevisar, DEMO, PIE, PIE_BAJA, NOTA_CONFIRMAR, NOTA_UN_BOTON, type DatosCorreo } from './textos-correos.js'
 import { sumarHabiles } from './plazos.js'
@@ -124,7 +124,8 @@ export async function procesarCorreos(env: Env, op: { contrato?: string; ahora?:
   const r: Resultado = { enviados: [], omitidos: [], vencidas: Number(vencidas) || 0 }
   for (const p of pendientes) {
     if (op.sinRecordatorios && esRecordatorio(p.clave)) continue   // paso 22: los recordatorios salen solo en la corrida de las 3:00 a. m. CR
-    const para = (p.rol === 'mediacion' ? env.CORREO_MEDIACION ?? '' : p.para ?? '').trim().toLowerCase()
+    const dir = (p.rol === 'mediacion' ? env.CORREO_MEDIACION ?? '' : p.para ?? '').trim().toLowerCase()
+    const para = p.rol === 'mediacion' ? dir : await correoAviso(s, dir, f)   // Apple con correo oculto → el real guardado (20261026080000)
     if (!para) { r.omitidos.push({ clave: p.clave, motivo: 'sin-correo-de-mediacion' }); continue }
     if (!destinoPermitido(env, borrador, para)) { r.omitidos.push({ clave: p.clave, motivo: 'solo-buzon-de-prueba' }); continue }
     const plantilla = plantillaDe(p)

@@ -4,7 +4,7 @@
 // (https://docs.cavos.xyz/docs/auth: «issuer https://enclave.cavos.xyz, keys at https://enclave.cavos.xyz/.well-known/jwks.json»).
 // Aquí se valida como lo hace el enclave de Cavos (docs.cavos.xyz/docs/hardware-isolated-recovery): firma con las llaves públicas
 // del emisor (JWKS), emisor, audiencia, vencimiento y el correo. Solo WebCrypto (sin dependencias nuevas). Cierre por defecto.
-import { servicio, rpc } from './supabase.js'
+import { servicio, rpc, ES_RELAY } from './supabase.js'
 import { mandarCodigo, ERRORES as ERRORES_CODIGO } from './codigo-correo.js'
 
 // Legal, revisión de 96e931b (4:45 p. m.): audiencias POR EMISOR (CAVOS_AUD_GOOGLE, CAVOS_AUD_APPLE, CAVOS_AUD_EMAIL), iat de 5 minutos
@@ -191,5 +191,11 @@ export async function atenderVerificacion(env: Env, bearer: string | null, body:
   try { vinculados = Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: v.correo }, f)) || 0 } catch {
     console.warn('verificar-correo', 'no se pudieron traer los alquileres')
   }
+  // Correo real para avisos con Apple (20261026080000): si esta cuenta de Apple ya guardó su correo real ('apple-real'), también se traen
+  // los alquileres de ese correo. Lo busca el servidor por el correo de Apple del token; la base exige el token de Apple de ESTA sesión.
+  if (v.metodo === 'apple' && ES_RELAY.test(v.correo)) try {
+    const real = await rpc<string | null>(s, 'lk_correo_real_de', { p_correo: v.correo }, f)
+    if (real) vinculados += Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: real }, f)) || 0
+  } catch { console.warn('verificar-correo', 'no se pudieron traer los alquileres del correo real') }
   return { estado: 200, cuerpo: { correo: v.correo, ...(vinculados > 0 && { vinculados }) } }
 }

@@ -11,7 +11,7 @@
 //   · La acción la hace ESTE servidor, con la sesión de la persona, justo después de confirmar el código; lk_pedir_borrado_cuenta y
 //     lk_mis_datos_reputacion además rechazan sin un código confirmado (lk_usar_codigo), aunque la app las llame directo.
 // Correo: aviso del servicio (sin casilla ni contenido comercial), con el pie de siempre (PIE, el mismo de REP-12), por Resend.
-import { servicio, rpc, type ServicioSupabase } from './supabase.js'
+import { servicio, rpc, correoAviso, ES_RELAY, type ServicioSupabase } from './supabase.js'
 import { PIE, REMITENTE, origenPermitido } from './correo.js'
 
 type Env = Record<string, string | undefined>
@@ -19,15 +19,16 @@ type Env = Record<string, string | undefined>
 // (api/_lib/cavos-token.ts). Va al correo POR CONFIRMAR de la sesión (lk_correo_pendiente), no al verificado activo.
 // 'invitacion' (26/10/2026, Katherine): la sesión abrió una invitación enviada a OTRO correo (p. ej. entró con Apple). El código va al
 // correo INVITADO de ese alquiler (lk_invitacion_por_confirmar) y, con el código correcto, se acepta la invitación con ESTA sesión.
-export type Accion = 'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion'
-export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar', 'verificar_correo', 'invitacion']
+// 'correo_real' (26/10/2026, Katherine): Apple con correo oculto (privaterelay) guarda UNA vez un correo real para los avisos (20261026080000).
+export type Accion = 'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion' | 'correo_real'
+export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar', 'verificar_correo', 'invitacion', 'correo_real']
 export const MINUTOS_VALIDO = 10
 export const INTENTOS = 5
 
 // LEGAL: revisado (25/10, 5:04 p. m.) · textos literales de Legal (correo del código)
 export const asuntoCodigo = (codigo: string) => `Tu código de Lockumi: ${codigo}`
 // LEGAL: revisado (25/10, 9:00 p. m.) · variante literal de Legal para el correo del código: «para confirmar tu correo»
-export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos', verificar_correo: 'confirmar tu correo', invitacion: 'aceptar la invitación' }
+export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos', verificar_correo: 'confirmar tu correo', invitacion: 'aceptar la invitación', correo_real: 'confirmar tu correo' }
 export const cuerpoCodigo = (accion: Accion) =>
   `Escribe este código en Lockumi para ${PARA_QUE[accion]}. Vale 10 minutos. No lo compartas con nadie: Lockumi nunca te lo va a pedir por otro medio. Si no lo pediste, ignora este correo; sin el código no se hace nada.`
 
@@ -43,6 +44,8 @@ export const ERRORES = {
   envio: 'No pudimos enviarte el código. Vuelve a intentarlo en un minuto.',
   // LEGAL: revisado (25/10) · mismo texto del servidor que lk_correo_de_sesion (la sesión no tiene un correo verificado)
   correo: 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.',
+  // 26/10/2026 (correo real para avisos): el correo escrito no sirve o es otro correo oculto de Apple
+  invalido: 'Escribe un correo válido que no sea el oculto de Apple.',
 } as const
 export type Motivo = keyof typeof ERRORES | 'accion'
 // LEGAL: revisado (26/10/2026, texto literal de Legal) · el mismo de lk_ver_invitacion (token vencido, usado o con inquilino)
@@ -106,10 +109,12 @@ export async function mandarCodigo(env: Env, s: Base, uid: string, correo: strin
   if (g.error || typeof g.id !== 'number') return { motivo: 'correo' }
   const o = origen && origenPermitido(origen) ? origen : 'https://app.lockumi.com'
   const c = armarCodigo(codigo, accion, o)
+  // Apple con correo oculto: el código de eliminar o descargar va al correo real guardado (20261026080000), si hay uno.
+  const para = (accion === 'eliminar' || accion === 'descargar') ? await correoAviso(s, correo, f) : correo
   const e = await f('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': `codigo:${g.id}:${sal}` },
-    body: JSON.stringify({ from: REMITENTE, to: [correo], subject: c.asunto, html: c.html, text: c.texto }),
+    body: JSON.stringify({ from: REMITENTE, to: [para], subject: c.asunto, html: c.html, text: c.texto }),
   }).catch(() => null)
   const j = e ? await e.json().catch(() => ({})) as { id?: string } : {}
   if (!e?.ok || !j.id) {
@@ -128,7 +133,7 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
   const s = servicio(env), anon = (env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY)?.trim(), pepper = pepperDe(env), llave = env.RESEND_API_KEY?.trim()
   // Cierre por defecto: sin base, sin pepper o sin Resend no se manda ni se acepta ningún código (y por lo tanto no se borra ni se descarga).
   if (!s || !anon || !pepper || !llave) return error(503, 'envio')
-  const b = (body ?? {}) as { paso?: unknown; accion?: unknown; codigo?: unknown; rol?: unknown; contrato?: unknown; token?: unknown; terminos_version?: unknown; direccion?: unknown }
+  const b = (body ?? {}) as { correo?: unknown; paso?: unknown; accion?: unknown; codigo?: unknown; rol?: unknown; contrato?: unknown; token?: unknown; terminos_version?: unknown; direccion?: unknown }
   const accion = b.accion as Accion
   if (!ACCIONES.includes(accion) || (b.paso !== 'pedir' && b.paso !== 'confirmar')) return error(400, 'accion')
   if (!bearer || !/^Bearer \S+$/.test(bearer)) return error(401, 'correo')
@@ -145,6 +150,11 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
     if (inv) {   // deja la invitación por confirmar (revisa token, vencimiento, sin inquilino y que no sea el dueño) y da el correo invitado
       try { correo = await rpc<string>(s, 'lk_invitacion_por_confirmar', { p_usuario: uid, p_contrato: inv.contrato, p_token: inv.token }, f) }
       catch { return { estado: 403, cuerpo: { error: INVITACION_NO, motivo: 'invitacion' } } }
+    } else if (accion === 'correo_real') {   // el correo real escrito; la base exige que la sesión sea de Apple con privaterelay
+      const escrito = typeof b.correo === 'string' ? b.correo.trim().toLowerCase() : ''
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(escrito) || ES_RELAY.test(escrito)) return error(400, 'invalido')
+      try { correo = await rpc<string>(s, 'lk_correo_real_por_confirmar', { p_usuario: uid, p_correo: escrito }, f) }
+      catch (e) { return /400/.test(String(e)) ? error(400, 'invalido') : error(403, 'correo') }
     } else
     // 'verificar_correo': el correo por confirmar (lk_correo_pendiente); las otras: el verificado activo (lk_codigo_para).
     try { correo = accion === 'verificar_correo' ? await rpc<string | null>(s, 'lk_correo_pendiente', { p_usuario: uid }, f) : await rpc<string | null>(s, 'lk_codigo_para', { p_usuario: uid }, f) }
@@ -176,6 +186,16 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
     // Código por correo de Cavos (20261026070000): el correo quedó 'cavos-email'; se traen a esta sesión los alquileres de ese correo.
     let vinculados = 0
     try { vinculados = Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: c }, f)) || 0 } catch { /* el correo igual quedó verificado */ }
+    return { estado: 200, cuerpo: { hecho: true, correo: c, ...(vinculados > 0 && { vinculados }) } }
+  }
+  // 'correo_real': lk_confirmar_correo_real usa el código (un solo uso) y guarda el correo real para la cuenta de Apple de la sesión.
+  // Después se traen los alquileres de ese correo (la base exige el token de Apple de ESTA sesión, hace menos de 10 minutos).
+  if (accion === 'correo_real') {
+    let c: string | null
+    try { c = await rpc<string>(s, 'lk_confirmar_correo_real', { p_usuario: uid }, f) } catch { return error(403, 'codigo') }
+    if (!c) return error(403, 'codigo')
+    let vinculados = 0
+    try { vinculados = Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: c }, f)) || 0 } catch { /* el correo igual quedó guardado */ }
     return { estado: 200, cuerpo: { hecho: true, correo: c, ...(vinculados > 0 && { vinculados }) } }
   }
   // 'invitacion': lk_confirmar_invitacion_codigo usa el código (un solo uso) y registra el correo invitado verificado para ESE alquiler y

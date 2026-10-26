@@ -306,6 +306,14 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   con el código, `lk_confirmar_correo_pendiente` lo registra como «cavos-email» y `/api/codigo-correo` (`verificar_correo`) llama a
   `lk_vincular_alquileres`. El código de invitación de Lockumi queda «email» y no trae nada. Revert:
   `supabase/revert/20261026070000_vincular_cavos_email_revert.sql` («cavos-email» → «email»).
+- **Correo real para avisos con Apple (20261026080000):** si la cuenta es de Apple con correo oculto
+  (`@privaterelay.appleid.com`, verificado con el token de Apple en el servidor), «Crear alquiler» y la invitación muestran UNA vez
+  «Correo para avisos» (`src/reputacion/CorreoReal.tsx`, con `VITE_REPUTACION=1`; no bloquea crear ni aceptar). `/api/codigo-correo`
+  acción `correo_real`: `pedir` con el correo escrito (`lk_correo_real_por_confirmar`; la app nunca dice de qué cuenta es: sale de
+  `lk_correo_activo` de la sesión y debe ser Apple) y `confirmar` (`lk_confirmar_correo_real` → `lk_correos_reales`, origen
+  «apple-real», y `lk_vincular_alquileres` del correo real). `lk_tengo_correo_real()` evita volver a preguntar. En otro aparato,
+  `/api/verificar-correo` con el token de Apple busca `lk_correo_real_de` y trae también esos alquileres. Revert:
+  `supabase/revert/20261026080000_correo_real_apple_revert.sql`.
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).
 

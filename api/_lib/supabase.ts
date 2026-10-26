@@ -17,3 +17,11 @@ export async function borrarObjetos(s: ServicioSupabase, bucket: string, rutas: 
   const r = await f(`${s.url}/storage/v1/object/${bucket}`, { method: 'DELETE', headers: cabeceras(s), body: JSON.stringify({ prefixes: rutas }) })
   return r.ok
 }
+
+// Correo real para avisos con Apple (migración 20261026080000).
+export const ES_RELAY = /@privaterelay\.appleid\.com$/i
+/** A dónde mandar un aviso o un código: si es un correo oculto de Apple con correo real guardado (lk_correo_aviso), el real. */
+export async function correoAviso(s: ServicioSupabase | null, correo: string, f: typeof fetch = fetch): Promise<string> {
+  if (!s || !ES_RELAY.test(correo)) return correo
+  try { const r = await rpc<string | null>(s, 'lk_correo_aviso', { p_correo: correo }, f); return typeof r === 'string' && r ? r : correo } catch { return correo }
+}
