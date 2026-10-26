@@ -106,7 +106,10 @@ describe('Legal: guarda de encendido (la fecha real de publicación)', () => {
   })
   it('vite.config.ts usa la guarda en el build', async () => {
     const { guardaEncendido } = await import('../../legal/encendido'), g = guardaEncendido({ VITE_REPUTACION: '1' })
-    expect(() => g.configResolved!({ command: 'build' } as never)).toThrow(/FECHA_ENCENDIDO_REPUTACION/)
+    const { FECHA_ENCENDIDO_REPUTACION: F } = await import('../../legal/fecha-reputacion')
+    // Con la fecha de borrador el build se para; con la fecha real (al encender) pasa.
+    if (F.includes('[')) expect(() => g.configResolved!({ command: 'build' } as never)).toThrow(/FECHA_ENCENDIDO_REPUTACION/)
+    else expect(() => g.configResolved!({ command: 'build' } as never)).not.toThrow()
     expect(() => g.configResolved!({ command: 'serve' } as never)).not.toThrow()
     expect(await leerArchivo('vite.config.ts')).toMatch(/guardaEncendido\(/)
   })
