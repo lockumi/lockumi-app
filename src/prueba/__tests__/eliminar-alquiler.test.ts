@@ -2,7 +2,7 @@
 // comprueba que se le pide lo correcto (sus reglas se prueban en servidor/__tests__/eliminar-alquiler-sql.test.ts).
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 vi.hoisted(() => { for (const n of ['localStorage', 'sessionStorage']) { const mem = new Map<string, string>(); (globalThis as Record<string, unknown>)[n] = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() } } })
-const srv = vi.hoisted(() => ({ eliminarAlquiler: vi.fn(async () => {}), ocultarAlquiler: vi.fn(async () => {}), reiniciarMiDemo: vi.fn(async () => ({ eliminados: 0, ocultos: 1, quedan: 1 })) }))
+const srv = vi.hoisted(() => ({ eliminarAlquiler: vi.fn(async () => {}), eliminarSinDeposito: vi.fn(async () => {}), ocultarAlquiler: vi.fn(async () => {}), reiniciarMiDemo: vi.fn(async () => ({ eliminados: 0, ocultos: 1, quedan: 1 })) }))
 const olvidarInvitacion = vi.hoisted(() => vi.fn())
 vi.mock('../../servidor/repositorio', () => ({ servidor: srv, olvidarInvitacion, repositorio: { todos: () => [], obtener: () => undefined, subscribe: () => () => {} } }))
 import { store, actaVacia } from '../../store'
@@ -32,9 +32,10 @@ describe('qué se puede hacer', () => {
     expect(opcionDe(base('a', { estado: 'pendiente_pago', red: { escrow: ESCROW, txs: { deposito: 'f'.repeat(64) } } }), YO)).toBe('esperar')
   })
   it('lo de otra persona: ninguna opción', () => { expect(opcionDe(base('a', { inquilinoEmail: OTRA }), YO)).toBeNull() })
-  it('con otra persona: el dueño elimina solo antes de que acepte; el inquilino nunca elimina', () => {
+  it('con otra persona: el dueño elimina mientras no haya depósito pagado (26/10); el inquilino nunca elimina', () => {
     expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: false }), YO)).toBe('eliminar')
-    expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: true }), YO)).toBe('ocultar')
+    expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: true }), YO)).toBe('eliminar')
+    expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: true, estado: 'pendiente_pago', escrowId: ESCROW }), YO)).toBe('eliminar')
     expect(opcionDe(base('a', { dosPersonas: true, miRol: 'inquilino', inquilinoUnido: true }), YO)).toBe('ocultar')
     expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: true, estado: 'en_curso', escrowId: ESCROW }), YO)).toBe('esperar')
     expect(opcionDe(base('a', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: true, estado: 'cerrado', escrowId: ESCROW }), YO)).toBe('esperar')   // falta la devolución
@@ -69,7 +70,8 @@ describe('eliminar y ocultar en este aparato', () => {
   it('con otra persona va al servidor solo si la regla lo permite', async () => {
     const dos = base('s', { dosPersonas: true, miRol: 'dueno', inquilinoUnido: false })
     await eliminarAlquiler('s', YO, dos); expect(srv.eliminarAlquiler).toHaveBeenCalledWith('s')
-    await expect(eliminarAlquiler('s', YO, { ...dos, inquilinoUnido: true })).rejects.toThrow(NoSePuede); expect(srv.eliminarAlquiler).toHaveBeenCalledTimes(1)
+    await eliminarAlquiler('s', YO, { ...dos, inquilinoUnido: true }); expect(srv.eliminarSinDeposito).toHaveBeenCalledWith('s'); expect(srv.eliminarAlquiler).toHaveBeenCalledTimes(1)
+    await expect(eliminarAlquiler('s', YO, { ...dos, inquilinoUnido: true, estado: 'en_curso', escrowId: ESCROW })).rejects.toThrow(NoSePuede)
   })
 })
 

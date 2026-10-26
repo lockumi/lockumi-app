@@ -10,7 +10,7 @@ const PAGOS = new Set(['enviar', 'liberar', 'devolver-automatico', 'repartir'])
 export async function GET(req: Request): Promise<Response> { return responderLlaves(process.env, req.url) }
 
 export async function POST(req: Request): Promise<Response> {
-  let p: Pedido
+  let p: Pedido & { contrato?: string }
   try { p = await req.json() as Pedido } catch { return Response.json({ error: 'Pedido inválido.' }, { status: 400 }) }
   try {
     const r = await atender(process.env, p, req.headers.get('authorization'))

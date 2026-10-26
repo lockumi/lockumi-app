@@ -7,9 +7,9 @@
 //   release  https://docs.trustlesswork.com/trustless-work/api-rest/deploy/release-funds
 //   send     https://docs.trustlesswork.com/trustless-work/api-rest/helpers/send-transaction
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
-import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, type Transaction } from '@stellar/stellar-sdk'
+import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
 import { repartoCentimos } from './centimos.js'
-import { NO_PREPARAR_DEPOSITO, esTecnico } from './red.js'
+import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, RED_ACTIVA, FRIENDBOT, USDC, TOPE_USDC } from './red.js'
 
 export type Entorno = Record<string, string | undefined>
 export class ErrorTw extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
@@ -364,6 +364,97 @@ async function cerrarAprobado(c: Config, id: string, f = fetch) {
   return r.ok && (await r.json().catch(() => false)) === true
 }
 
+// ── Firma del servidor en testnet (26/10/2026, aprobado por Katherine: «Sí, el servidor firma en testnet») ──
+// Para alquileres NUEVOS de dos personas, cada cuenta (dueño o inquilino) firma con una llave de testnet propia de esa cuenta,
+// derivada en el servidor: HMAC-SHA256(llave de la plataforma, etiqueta + id de la cuenta). Es distinta de las llaves del modo
+// de una persona (api/_lib/solo.ts, que usa LOCKUMI_DEMO_SEED y otra etiqueta). La llave nunca sale del servidor. Cavos queda
+// solo para entrar. Interruptor: FIRMA_SERVIDOR_TESTNET=0 vuelve a la firma con Cavos. Fuera de testnet, se rechaza.
+// En la red principal cada persona firmaría con su propia billetera Cavos: esto NO existe ahí.
+export const ETIQUETA_FIRMA_SERVIDOR = 'lockumi-firma-servidor-testnet-v1|usuario|'
+export function firmaServidorActiva(e: Entorno): boolean {
+  if (e.FIRMA_SERVIDOR_TESTNET?.trim() === '0') return false
+  const pass = e.STELLAR_NETWORK_PASSPHRASE?.trim() || PASSPHRASE_TESTNET
+  const horizon = (e.HORIZON_URL?.trim() || HORIZON_TESTNET).replace(/\/$/, '')
+  if (pass !== PASSPHRASE_TESTNET || RED_ACTIVA !== PASSPHRASE_TESTNET || horizon !== HORIZON_TESTNET) throw new ErrorTw(500, 'La firma del servidor solo existe en la red de prueba.')
+  return true
+}
+/** Llave de testnet de una cuenta (id estable de la sesión). Determinística; solo en memoria del servidor. */
+export function cuentaServidorDe(c: Pick<Config, 'plataforma'>, uid: string): Keypair {
+  exigir(typeof uid === 'string' && uid.length > 0, 401, 'Falta la sesión.')
+  return Keypair.fromRawEd25519Seed(hmac(new Uint8Array(c.plataforma.rawSecretKey()), new TextEncoder().encode(ETIQUETA_FIRMA_SERVIDOR + uid)) as never)
+}
+/** HMAC-SHA256 (RFC 2104) con el sha256 de stellar-sdk (igual que hmacSha256 en solo.ts, sin importarlo para no crear un ciclo). */
+function hmac(clave: Uint8Array, mensaje: Uint8Array): Uint8Array {
+  const k = new Uint8Array(64); k.set(clave.length > 64 ? new Uint8Array(hash(clave as never)) : clave)
+  const interno = new Uint8Array(hash(new Uint8Array([...k.map(b => b ^ 0x36), ...mensaje]) as never))
+  return new Uint8Array(hash(new Uint8Array([...k.map(b => b ^ 0x5c), ...interno]) as never))
+}
+/** La llave del servidor para ESTA cuenta en ESTE alquiler, solo si la cuenta guardada del participante es la suya. Si no
+ *  (alquileres de antes, billeteras Cavos), null: se firma como antes. */
+function llaveServidor(e: Entorno, c: Config, uid: string, g: string): Keypair | null {
+  if (!firmaServidorActiva(e)) return null
+  const k = cuentaServidorDe(c, uid); return k.publicKey() === g ? k : null
+}
+/** La cuenta del servidor solo firma una llamada a contrato que sale de ella. */
+export function firmarComoCuenta(k: Keypair, xdr: string) {
+  const t = leerTx(xdr)
+  if (t.source !== k.publicKey()) throw new ErrorTw(502, 'La transacción no sale de la cuenta esperada.')
+  if (t.operations.length !== 1 || t.operations[0].type !== 'invokeHostFunction') throw new ErrorTw(502, 'Transacción inesperada.')
+  t.sign(k); return t.toXDR()
+}
+type CuentaH = { id: string; sequence: string; balances: { asset_code?: string; asset_issuer?: string; balance: string }[] }
+async function leerCuenta(g: string, f = fetch): Promise<CuentaH | null> {
+  const r = await f(`${HORIZON_TESTNET}/accounts/${g}`); if (r.status === 404) return null
+  if (!r.ok) throw new ErrorTw(502, 'Horizon respondió ' + r.status); return r.json() as Promise<CuentaH>
+}
+const usdcDe = (a: CuentaH | null) => { const b = a?.balances?.find(x => x.asset_code === USDC.code && x.asset_issuer === USDC.issuer); return b ? Number(b.balance) : null }
+async function enviarHorizon(t: Transaction, f = fetch) {
+  const r = await f(`${HORIZON_TESTNET}/transactions`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'tx=' + encodeURIComponent(t.toXDR()) })
+  const j = await r.json().catch(() => ({})) as { hash?: string; extras?: { result_codes?: unknown } }
+  if (!r.ok || !j.hash) throw new ErrorTw(502, 'Horizon rechazó la operación: ' + JSON.stringify(j.extras?.result_codes ?? r.status).slice(0, 160))
+  return j.hash
+}
+const tbH = (a: CuentaH) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
+/** Friendbot si falta la cuenta, trustline de USDC si falta y, con `objetivo`, USDC de prueba hasta el monto del depósito:
+ *  desde la tesorería (plataforma) si falta poco (≤ TOPE_USDC), si no, compra en el DEX de testnet con su XLM de Friendbot. */
+export async function prepararCuentaServidor(c: Config, k: Keypair, objetivo: number | null, f = fetch) {
+  const g = k.publicKey(); let a = await leerCuenta(g, f)
+  if (!a) {
+    const r = await f(`${FRIENDBOT}/?addr=${g}`)
+    if (!r.ok && !(r.status === 400 && /already|exist/i.test(await r.text().catch(() => '')))) throw new ErrorTw(502, 'Friendbot respondió ' + r.status)
+    a = await leerCuenta(g, f); exigir(!!a, 502, 'Friendbot no creó la cuenta.')
+  }
+  let trustline: string | null = null
+  if (usdcDe(a) === null) { const t = tbH(a!).addOperation(Operation.changeTrust({ asset: new Asset(USDC.code, USDC.issuer) })).setTimeout(60).build(); t.sign(k); trustline = await enviarHorizon(t, f); a = await leerCuenta(g, f) }
+  let compra: string | null = null
+  const falta = objetivo === null ? 0 : Math.round((objetivo - Number(usdcDe(a) ?? 0)) * 1e7) / 1e7
+  if (falta > 0) {
+    const tes = await leerCuenta(c.plataforma.publicKey(), f)
+    if (falta <= TOPE_USDC && Number(usdcDe(tes) ?? 0) >= falta) {
+      const t = tbH(tes!).addOperation(Operation.payment({ destination: g, asset: new Asset(USDC.code, USDC.issuer), amount: falta.toFixed(7) })).setTimeout(60).build(); t.sign(c.plataforma); compra = await enviarHorizon(t, f)
+    } else {
+      const max = Math.min(9000, Math.ceil(falta * 3) + 5)
+      const t = tbH(a!).addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: String(max), destination: g, destAsset: new Asset(USDC.code, USDC.issuer), destAmount: falta.toFixed(7), path: [] })).setTimeout(60).build(); t.sign(k); compra = await enviarHorizon(t, f)
+    }
+  }
+  return { trustline, compra }
+}
+// Límite por cuenta de «preparar-cuenta» (Friendbot, trustline y USDC de prueba): 12 por hora, en memoria (como limitar en solo.ts).
+const preparaciones = new Map<string, number[]>()
+export function limitarPreparar(uid: string, ahora = Date.now()) {
+  const v = (preparaciones.get(uid) ?? []).filter(t => ahora - t < 3_600_000)
+  if (v.length >= 12) throw new ErrorTw(429, 'Hiciste muchas solicitudes seguidas. Espera 60 minutos y vuelve a intentarlo.')
+  v.push(ahora); preparaciones.set(uid, v); if (preparaciones.size > 5000) preparaciones.clear()
+}
+/** Después de la aprobación del dueño en la cadena: se anota, se cierra el caso y la plataforma libera (como «enviar» paso aprobar). */
+async function trasAprobar(c: Config, k: Contrato, tx: string, estado: unknown, f = fetch): Promise<Record<string, unknown>> {
+  await anotar(c, k.id, {}, APROBADO, tx, f)
+  if (!(await cerrarAprobado(c, k.id, f))) return { tx, estado }
+  try { return { tx, estado, liberacion: (await devolverAlInquilino(c, await contrato(c, k.id, f), 'liberar', f)).tx } }
+  // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
+  catch { return { tx, estado, errorLiberacion: 'La aprobación quedó en la red de prueba, pero todavía no se pudo entregar el depósito. Vuelve a abrir el alquiler para reintentarlo.' } }
+}
+
 // ── Acciones (permitidas y nada más) ──
 export type Pedido =
   | { accion: 'desplegar'; contrato: string }
@@ -373,10 +464,15 @@ export type Pedido =
   | { accion: 'liberar'; contrato: string }
   | { accion: 'devolver-automatico'; contrato: string }
   | { accion: 'repartir'; contrato: string }
+  | { accion: 'mi-cuenta' }
+  | { accion: 'preparar-cuenta'; contrato: string }
+  | { accion: 'eliminar'; contrato: string }
 
 export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const c = configuracion(e)
   const uid = await usuario(c, bearer, f)
+  // Firma del servidor en testnet: la cuenta de testnet de esta sesión (solo la pública), o null con el interruptor apagado.
+  if (p.accion === 'mi-cuenta') return { cuenta: firmaServidorActiva(e) ? cuentaServidorDe(c, uid).publicKey() : null }
   const k = await contrato(c, p.contrato, f)
   const rol = rolDe(k, uid); exigir(rol !== null, 403, 'No participas en este contrato.')
   const P = c.plataforma.publicKey()
@@ -409,16 +505,23 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(rol === 'inquilino', 403, 'Solo el inquilino paga el depósito.')
       exigir(k.estado === 'pendiente_pago' && !!k.escrow_contract_id, 409, 'Primero hay que crear la cuenta segura del depósito.')
       const j = await tw(c, '/escrow/single-release/fund-escrow', { contractId: k.escrow_contract_id, signer: cuenta(k, 'inquilino'), amount: Number(k.monto) }, f)
-      return { unsignedXdr: sinFirmar(j) }
+      const llave = llaveServidor(e, c, uid, cuenta(k, 'inquilino'))
+      if (!llave) return { unsignedXdr: sinFirmar(j) }
+      const firmada = firmarComoCuenta(llave, sinFirmar(j)), r = await enviar(c, firmada, f)
+      return { tx: hashTx(firmada), estado: r.status ?? null, firmaServidor: true }
     }
     case 'aprobar': {     // la plataforma deja la evidencia (serviceProvider) y el dueño aprueba la devolución
       exigir(rol === 'dueno', 403, 'Solo el dueño aprueba la devolución.')
       exigir(k.estado === 'ventana_reclamo' && !!k.escrow_contract_id, 409, 'La devolución se aprueba durante el plazo de reclamo, después del acta de salida.')
+      const llave = llaveServidor(e, c, uid, cuenta(k, 'dueno'))
+      if (llave) await prepararCuentaServidor(c, llave, null, f)   // la cuenta del dueño tiene que existir para firmar
       const cambio = await tw(c, '/escrow/single-release/change-milestone-status', { contractId: k.escrow_contract_id, milestoneIndex: '0',
         newStatus: 'Completed', newEvidence: EVIDENCIA_ONCHAIN, serviceProvider: P }, f)
       const tx = firmarComoPlataforma(c, sinFirmar(cambio)); await enviar(c, tx, f)
       const j = await tw(c, '/escrow/single-release/approve-milestone', { contractId: k.escrow_contract_id, milestoneIndex: '0', approver: cuenta(k, 'dueno') }, f)
-      return { unsignedXdr: sinFirmar(j), evidenciaTx: hashTx(tx) }
+      if (!llave) return { unsignedXdr: sinFirmar(j), evidenciaTx: hashTx(tx) }
+      const firmada = firmarComoCuenta(llave, sinFirmar(j)), r = await enviar(c, firmada, f)
+      return { ...(await trasAprobar(c, k, hashTx(firmada), r.status ?? null, f)), evidenciaTx: hashTx(tx), firmaServidor: true }
     }
     case 'enviar': {      // solo reenvía transacciones del propio participante, del paso que le toca
       const quien = p.paso === 'fondear' ? 'inquilino' : 'dueno'
@@ -428,14 +531,28 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(t.operations.length === 1 && t.operations[0].type === 'invokeHostFunction', 400, 'Transacción inesperada.')
       const r = await enviar(c, p.signedXdr, f), tx = hashTx(p.signedXdr)
       if (p.paso !== 'aprobar') return { tx, estado: r.status ?? null }
-      await anotar(c, k.id, {}, APROBADO, tx, f)
-      // PR #22 (lista de Legal, punto 5; Términos 6.5 a): «Todo bien, devolver» libera todo al inquilino ahora, no al final del
-      // plazo. El servidor cierra el caso (lk_cerrar_aprobado: sin reclamo y con la aprobación anotada) y la plataforma
-      // (releaseSigner) libera en el mismo pedido. Si la red falla, el caso queda cerrado y la app reintenta con «liberar».
-      if (!(await cerrarAprobado(c, k.id, f))) return { tx, estado: r.status ?? null }
-      try { return { tx, estado: r.status ?? null, liberacion: (await devolverAlInquilino(c, await contrato(c, k.id, f), 'liberar', f)).tx } }
+      // PR #22 (lista de Legal, punto 5; Términos 6.5 a): «Todo bien, devolver» libera todo al inquilino ahora (trasAprobar).
       // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
-      catch { return { tx, estado: r.status ?? null, errorLiberacion: 'La aprobación quedó en la red de prueba, pero todavía no se pudo entregar el depósito. Vuelve a abrir el alquiler para reintentarlo.' } }
+      return await trasAprobar(c, k, tx, r.status ?? null, f)
+    }
+    case 'eliminar': {   // 26/10 (Katherine): el dueño elimina el alquiler mientras el depósito no está pagado (saldo leído en la red)
+      exigir(rol === 'dueno', 403, 'Solo el dueño puede eliminar este alquiler.')
+      exigir(['firmas', 'pendiente_pago'].includes(k.estado) && !k.liquidacion_tx, 409, 'Este alquiler tiene un depósito guardado.')
+      if (k.escrow_contract_id) {
+        const x = await leerEscrowTw(c, k.escrow_contract_id, f)
+        const saldo = x.balance === undefined || x.balance === null || x.balance === '' ? NaN : Number(x.balance)
+        exigir(saldo === 0 && !x.flags?.released && !x.flags?.disputed, 409, 'Este alquiler tiene un depósito guardado.')
+      }
+      const r = await rest(c, 'rpc/lk_eliminar_sin_deposito', { method: 'POST', body: JSON.stringify({ p_contrato: k.id, p_usuario: uid }) }, f)
+      exigir(r.ok && (await r.json().catch(() => false)) === true, 409, 'Este alquiler tiene un depósito guardado.')
+      return { eliminado: true }
+    }
+    case 'preparar-cuenta': {   // firma del servidor: deja lista la cuenta de testnet de ESTA sesión en ESTE alquiler
+      const g = cuenta(k, rol!), llave = llaveServidor(e, c, uid, g)
+      exigir(!!llave, 409, 'Esta cuenta no la prepara el servidor.')
+      limitarPreparar(uid)
+      const objetivo = rol === 'inquilino' && k.estado === 'pendiente_pago' ? Number(k.monto) : null
+      return { cuenta: g, ...(await prepararCuentaServidor(c, llave!, objetivo, f)) }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
       // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.

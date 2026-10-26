@@ -29,6 +29,8 @@ export function opcionDe(a: Alquiler, email: string): Opcion | null {
   if (!esMio(a, email)) return null
   if (a.dosPersonas) {   // con otra persona: eliminar solo el dueño y solo antes de que la otra persona acepte (servidor: lk_eliminar_alquiler)
     if (a.miRol === 'dueno' && a.inquilinoUnido === false && a.estado === 'firmas' && !tieneGarantia(a)) return 'eliminar'
+    // 26/10 (Katherine): mientras el depósito no esté pagado, el dueño también elimina (el servidor revisa el saldo en la red: /api/tw «eliminar»).
+    if (a.miRol === 'dueno' && ['firmas', 'pendiente_pago'].includes(a.estado) && !a.pago && !a.liquidacionTx) return 'eliminar'
     return conDinero(a) || (a.estado === 'pendiente_pago' && tieneGarantia(a)) ? 'esperar' : 'ocultar'
   }
   if (!tieneDeposito(a)) return tieneGarantia(a) ? 'ocultar' : 'eliminar'
@@ -38,7 +40,12 @@ export function opcionDe(a: Alquiler, email: string): Opcion | null {
 export class NoSePuede extends Error {}
 /** Elimina un alquiler de este aparato (sin depósito). Vuelve a leer lo guardado justo antes, por si cambió en otra pestaña. */
 export async function eliminarAlquiler(id: string, email: string, a0?: Alquiler) {
-  if (a0?.dosPersonas) { if (opcionDe(a0, email) !== 'eliminar') throw new NoSePuede('deposito'); await servidor.eliminarAlquiler(id); olvidarEnEsteAparato(id); return a0.direccion }
+  if (a0?.dosPersonas) {
+    if (opcionDe(a0, email) !== 'eliminar') throw new NoSePuede('deposito')
+    if (a0.inquilinoUnido === false && a0.estado === 'firmas' && !tieneGarantia(a0)) await servidor.eliminarAlquiler(id)
+    else await servidor.eliminarSinDeposito(id)
+    olvidarEnEsteAparato(id); return a0.direccion
+  }
   const a = store.fresco(id)
   if (!a) throw new NoSePuede('ya-no-esta')
   if (opcionDe(a, email) !== 'eliminar') throw new NoSePuede(tieneDeposito(a) ? 'deposito' : 'no-es-tuyo')

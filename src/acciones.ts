@@ -212,7 +212,7 @@ const remoto: Acciones = {
   iniciarSalida: a => servidor.iniciarSalida(a.id).then(() => {}),
   // 26/10/2026: el dueño puede recibir USDC en el reparto; al reclamar deja lista su cuenta (sin bloquear el reclamo si falla).
   reclamar: async (a, m, mot, fotos) => {
-    if (modoDe(a).trustless) await trustless.prepararDueno(a.cuentas?.dueno).catch(e => console.warn('[Lockumi] cuenta del dueño:', e instanceof Error ? e.message : e))
+    if (modoDe(a).trustless) await trustless.prepararDueno(a.cuentas?.dueno, a.id).catch(e => console.warn('[Lockumi] cuenta del dueño:', e instanceof Error ? e.message : e))
     await servidor.reclamar(a.id, m, mot, fotos)
   },
   // PR #22: si el inquilino acepta, el servidor cierra por acuerdo y /api/tw paga el reparto en la red («repartir»).
