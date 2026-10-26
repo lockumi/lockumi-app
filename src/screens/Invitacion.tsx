@@ -6,6 +6,7 @@ import { versionActual } from '../prueba/version'
 import { activarServidor } from '../store'
 import { modoReal } from '../services/auth'
 import { conectarBilletera } from '../services/billetera'
+import { cuentaServidor } from '../services/trustless'
 import { ir } from '../router'
 import type { Usuario } from '../types'
 import { usd, fecha } from '../ui'
@@ -25,6 +26,8 @@ const esRelay = (e: string) => /@privaterelay\.appleid\.com$/i.test(e.trim())
 /** Cuenta G… de Cavos, si se puede obtener (solo con login real). No bloquea si falla: se puede agregar después. */
 export async function cuentaPropia(): Promise<string | undefined> {
   if (!modoReal) return undefined
+  // Firma del servidor en testnet: los alquileres nuevos usan la cuenta de testnet de esta sesión (sin la billetera de este dispositivo).
+  if (dosPersonas) { const s = await cuentaServidor(); if (s) return s }
   try { return (await conectarBilletera()).direccion } catch { return undefined }
 }
 

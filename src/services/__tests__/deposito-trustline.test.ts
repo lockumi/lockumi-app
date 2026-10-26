@@ -84,7 +84,7 @@ describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segur
     vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'fondear' ? { unsignedXdr: 'x' } : c.accion === 'enviar' ? { tx: 'tx-dep' } : { contractId: CID }))))
     const { trustless } = await import('../trustless')
     expect(await trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).toBe('tx-dep')
-    expect(b.llamadas).toEqual(['friendbot', 'trustline', 'firma', 'compra', 'tw:desplegar', 'tw:fondear', 'firma', 'tw:enviar'])
+    expect(b.llamadas).toEqual(['tw:mi-cuenta', 'friendbot', 'trustline', 'firma', 'compra', 'tw:desplegar', 'tw:fondear', 'firma', 'tw:enviar'])
   })
   it('un error técnico que llegue del servidor no se muestra: «No pudimos preparar el depósito…»', async () => {
     b.existe = true; b.trust = true; b.llamadas.push('compra')
@@ -96,6 +96,12 @@ describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segur
     vi.stubGlobal('fetch', fetchFalso(() => new Response('{}')))
     const { trustless } = await import('../trustless')
     await expect(trustless.depositar(ID, 1, () => {}, INQ)).rejects.toThrow(NO_PREPARAR_DEPOSITO)
-    expect(b.llamadas).toEqual([])
+    expect(b.llamadas).toEqual(['tw:mi-cuenta'])
+  })
+  it('firma del servidor (testnet): sin billetera en el dispositivo, el servidor prepara la cuenta y firma el depósito', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'mi-cuenta' ? { cuenta: INQ } : c.accion === 'fondear' ? { tx: 'tx-srv' } : { contractId: CID }))))
+    const { trustless } = await import('../trustless')
+    expect(await trustless.depositar(ID, 1, () => {}, INQ)).toBe('tx-srv')
+    expect(b.llamadas).toEqual(['tw:mi-cuenta', 'tw:preparar-cuenta', 'tw:desplegar', 'tw:fondear'])
   })
 })

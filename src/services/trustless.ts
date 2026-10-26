@@ -20,25 +20,37 @@ async function firmarYEnviar(contrato: string, paso: 'fondear' | 'aprobar', unsi
   try { signedXdr = await firmarXdr(unsignedXdr) } catch (e) { throw new ErrorTrustless(mensajeFirma(e)) }
   return (await llamar<{ tx: string }>({ accion: 'enviar', contrato, paso, signedXdr })).tx
 }
+/** Firma del servidor en testnet (api/_lib/tw.ts, «mi-cuenta»): la cuenta de testnet de esta sesión, o null si está apagada. */
+export async function cuentaServidor(): Promise<string | null> {
+  try { return (await llamar<{ cuenta: string | null }>({ accion: 'mi-cuenta' })).cuenta ?? null } catch { return null }
+}
+const esDelServidor = async (cuenta?: string) => !!cuenta && cuenta === await cuentaServidor()
 export const trustless = {
   /** Crea el escrow (si falta) y deposita el monto desde la cuenta Cavos del inquilino. Devuelve el hash de la transacción. */
   // 26/10/2026: la cuenta del inquilino es el «receiver» del escrow: Trustless Work exige que exista y tenga la trustline de USDC
   // (si no, 400). Antes de crear la cuenta segura, como «Obtener USDC de prueba» de un solo aparato: Friendbot → trustline →
   // USDC de prueba del exchange de testnet por lo que falte. Si ya está lista, solo lee Horizon. `cuenta`: la del alquiler.
   async depositar(contrato: string, monto?: number, avance: (t: string) => void = () => {}, cuenta?: string): Promise<string> {
-    if (monto !== undefined) await prepararCuentaCavos(monto, avance, cuenta)
+    // Firma del servidor (testnet): el servidor deja lista la cuenta y firma el depósito. Sin firma en este dispositivo.
+    const servidor = await esDelServidor(cuenta)
+    if (servidor) await llamar({ accion: 'preparar-cuenta', contrato })
+    else if (monto !== undefined) await prepararCuentaCavos(monto, avance, cuenta)
     avance('Creando la cuenta segura del depósito…')
     await llamar({ accion: 'desplegar', contrato })
-    const { unsignedXdr } = await llamar<{ unsignedXdr: string }>({ accion: 'fondear', contrato })
+    const r = await llamar<{ unsignedXdr?: string; tx?: string }>({ accion: 'fondear', contrato })
     avance('Guardando el depósito en la cuenta segura…')
-    return firmarYEnviar(contrato, 'fondear', unsignedXdr)
+    if (r.tx) return r.tx
+    return firmarYEnviar(contrato, 'fondear', r.unsignedXdr!)
   },
   /** El dueño (al abrir un reclamo) deja lista su cuenta para recibir USDC en un reparto: Friendbot y trustline, si faltan. */
-  async prepararDueno(cuenta?: string): Promise<void> { await asegurarTrustline(() => {}, cuenta) },
+  async prepararDueno(cuenta?: string, contrato?: string): Promise<void> {
+    if (contrato && await esDelServidor(cuenta)) { await llamar({ accion: 'preparar-cuenta', contrato }); return }
+    await asegurarTrustline(() => {}, cuenta)
+  },
   /** El dueño aprueba devolver el depósito (hito "entrega sin daños"). */
   async aprobarDevolucion(contrato: string): Promise<string> {
-    const { unsignedXdr } = await llamar<{ unsignedXdr: string }>({ accion: 'aprobar', contrato })
-    const tx = await firmarYEnviar(contrato, 'aprobar', unsignedXdr); await recargar(); return tx
+    const r = await llamar<{ unsignedXdr?: string; tx?: string }>({ accion: 'aprobar', contrato })
+    const tx = r.tx ?? await firmarYEnviar(contrato, 'aprobar', r.unsignedXdr!); await recargar(); return tx
   },
   /** Libera el 100 % al inquilino (contrato cerrado sin reclamo y hito aprobado). */
   /** Paso 7: sin la aprobación del dueño, la devolución automática del 100 % al inquilino (disputa + resolución en el servidor). */
