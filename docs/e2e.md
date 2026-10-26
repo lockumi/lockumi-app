@@ -16,3 +16,6 @@
 - Secretos de GitHub: `LOCKUMI_TW_MEDIADOR_PUBLICA` (clave pública del mediador; solo para comparar). No usa otros secretos ni imprime ninguno. Los correos de prueba (cuando el PR 8 esté publicado) van solo a buzones del equipo.
 - Local: `E2E_CHROME=/usr/bin/google-chrome npm run e2e` usa el Chrome del sistema.
 - Build local de producción: `VITE_TRUSTLESS=1 npm run build` y `vite preview` con un proxy de `/api` a https://app.lockumi.com (las funciones no corren en `vite preview`); luego `E2E_BASE=http://localhost:<puerto>`.
+
+## Link del correo de invitación (paso 21)
+- `npm run e2e:invitacion` (`scripts/paso21-invitacion/e2e-enlace.mjs`, opcional una carpeta para capturas): Vite local contra Supabase, `/api/correo` con el `atenderCorreo` real y Resend falso, y el href del botón del correo abierto en un navegador nuevo sin sesión. Falla si después de entrar no llega a la invitación o si el alquiler no queda en «Tus alquileres». Necesita `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (públicas) y `CHROME=/usr/bin/google-chrome` en la caja. Ver [`invitacion-enlace.md`](invitacion-enlace.md).

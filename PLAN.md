@@ -2,6 +2,11 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Paso 21 (25 oct 2026, rama local `paso21-invitacion-fix`, sin publicar): el link del correo de invitación abre la invitación
+- Causa: el botón del correo de invitación llevaba a la raíz de la app (`api/_lib/correo.ts:81` en f6e3254) y la app no mandaba el token; la persona invitada caía en Inicio después de entrar.
+- Arreglo: botón a `#/invitacion/<alquiler>/<token>` (token comprobado contra el link vigente antes de enviar), regreso guardado también en localStorage 30 min, título de Legal en Entrar sin sesión y mensaje de Legal en la tarjeta del dueño con «Compartir por WhatsApp». Sin migraciones.
+- E2E nuevo `npm run e2e:invitacion`: abre el link REAL del correo en un navegador sin sesión. Detalle en [`docs/invitacion-enlace.md`](docs/invitacion-enlace.md).
+
 ## Franja: texto nuevo (publicado con el OK de Katherine)
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
 

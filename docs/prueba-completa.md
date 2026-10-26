@@ -199,7 +199,7 @@ Regla de Katherine: el diseño que ya existe no se toca; solo se agregan pantall
    - Un Supabase local necesita Docker y la Supabase CLI. Esta caja no los tiene, así que el script lo revisa y lo avisa.
    - Si el único destino es producción, el E2E de testnet **solo** corre con `--prod-datos-prueba`, que escribe datos de prueba marcados en esa base. Sin esa opción, hace el ensayo simulado y sale con el código 3.
 3. **Build** de la rama con `VITE_PRUEBA_COMPLETA=1 VITE_DOS_PERSONAS=1 VITE_TRUSTLESS=1 VITE_ORIGEN_PUBLICO=https://app.lockumi.com` (con `VITE_CORREOS` apagado) en `/tmp/c-build-<commit>`. Si ya existe para ese commit, se reutiliza.
-4. **E2E de dos cuentas:** `scripts/e2e-c.mjs`.
+4. **E2E de dos cuentas:** `scripts/e2e-c.mjs`. No abre el correo ni un navegador: el link del botón del correo de invitación lo prueba `npm run e2e:invitacion` ([`invitacion-enlace.md`](invitacion-enlace.md), paso 21).
    - Dos sesiones anónimas propias (dueño e inquilino) y una persona mediadora de prueba llaman a las mismas funciones `lk_*` que la app y al mismo `/api/tw` (`api/_lib/tw.ts`, cargado en el proceso).
    - El build local no tiene Cavos, así que las firmas de la billetera (depósito y aprobación) las hacen cuentas Stellar desechables de testnet: Friendbot, trustline y USDC del DEX.
    - Cuatro alquileres corren en paralelo, con un plazo de 60 s cada uno. Las llamadas a Trustless Work van en fila para que no choquen los números de secuencia:

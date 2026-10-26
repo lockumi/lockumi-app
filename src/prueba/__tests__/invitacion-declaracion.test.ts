@@ -38,6 +38,6 @@ describe('un solo correo de invitación', () => {
     vi.unstubAllGlobals(); vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
   })
   it('Crear lo envía después de crear el alquiler con la invitación', async () => {
-    expect(await leer('src/screens/Crear.tsx')).toMatch(/if \(invitar\) \{ activarServidor\(\); void enviarInvitacionUnaVez\(r\.id, f\.email\.trim\(\), nombreInvitacion\(u\.nombre\)\) \}/)
+    expect(await leer('src/screens/Crear.tsx')).toMatch(/if \(invitar\) \{ activarServidor\(\); void enviarInvitacionUnaVez\(r\.id, f\.email\.trim\(\), nombreInvitacion\(u\.nombre\), tokenDeLink\(r\.link\)\) \}/)   // paso21: con el token del link
   })
 })

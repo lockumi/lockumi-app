@@ -91,7 +91,8 @@ const ERROR_INGRESO = alertaIngresoFallo()
 // LEGAL: revisado (24/10) · dos-personas-textos.md, D: nota visible bajo el título (Ley 7472, art. 37)
 export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.'
 
-export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void }) {
+/** `titulo`: paso21, la persona que abrió un link de invitación sin sesión ve el texto de la invitación en lugar del título (mismo diseño). */
+export function Login({ onOk, error = false, onReintento, titulo }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void; titulo?: string }) {
   const [abierta, setAbierta] = useState(false)
   // Dos casillas obligatorias y separadas: Términos, y Aviso de privacidad con transferencia de datos.
   // Paso 16: la versión vigente (1.7-demo con el interruptor encendido). La pantalla no cambia: solo el texto detrás de los enlaces.
@@ -119,7 +120,7 @@ export function Login({ onOk, error = false, onReintento }: { onOk: (u: Usuario)
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <h1 className="marca-c" aria-label="Lockumi"><span dangerouslySetInnerHTML={{ __html: WORDMARK_SVG }} /></h1>
     <LogoAnimado className="entrada-app__arte marca-c__arte" />
-    <h2 className="entrada-app__titulo">El depósito de tu alquiler, protegido</h2>
+    <h2 className="entrada-app__titulo">{titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
     <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
     <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
       <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>

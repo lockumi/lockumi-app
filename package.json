@@ -11,6 +11,7 @@
     "test": "vitest run",
     "revisar:bundle": "node scripts/revisar-bundle.mjs",
     "e2e:solo": "node scripts/e2e-solo.mjs",
+    "e2e:invitacion": "node scripts/paso21-invitacion/e2e-enlace.mjs",
     "e2e": "playwright test -c e2e"
   },
   "dependencies": {
