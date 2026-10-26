@@ -97,7 +97,7 @@ export function conectarBilletera(): Promise<Billetera> {
     const { Cavos } = await import('@cavos/kit')
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
     const rec = await opcionesRecuperacion(auth)
-    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, vault: true, ...rec })
+    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
     return { direccion: w.address, estado: w.status as EstadoBilletera }
