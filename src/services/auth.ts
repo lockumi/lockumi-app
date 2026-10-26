@@ -57,6 +57,14 @@ const real = () => realP ??= import('@cavos/kit').then(({ CavosAuth }) => {
 })
 const proveedor = (): Promise<CavosLike> => modoReal ? real() : Promise.resolve(simulado)
 
+/** 26/10: si Cavos no responde (la petición queda colgada en Safari), «Enviar código» quedaba en «Enviando…» sin mensaje.
+ *  Con este límite el envío falla a los 20 s y la pantalla muestra el error que ya existe. No cambia el flujo de Cavos. */
+export const LIMITE_ENVIO_MS = 20_000
+export const conLimite = <T,>(p: Promise<T>, ms = LIMITE_ENVIO_MS): Promise<T> => new Promise<T>((ok, mal) => {
+  const t = setTimeout(() => mal(new Error('kit/auth: sin respuesta')), ms)
+  p.then(v => { clearTimeout(t); ok(v) }, e => { clearTimeout(t); mal(e) })
+})
+
 const K = 'lockumi.usuario'
 const K_METODO = 'lockumi.oauth.metodo'
 const guardar = (u: Usuario) => { localStorage.setItem(K, JSON.stringify(u)); return u }
@@ -102,7 +110,7 @@ export const auth: AuthService = {
     try { return await this.handleCallback(q, metodo) }
     finally { history.replaceState(null, '', window.location.pathname + window.location.hash) }
   },
-  sendOtp: async (email) => (await proveedor()).sendOtp(email),
+  sendOtp: (email) => conLimite(proveedor().then(p => p.sendOtp(email))),
   async verifyOtp(email, code) { const r = await (await proveedor()).verifyOtp(email, code); return guardar(aUsuario(r.email, 'correo', r.nombre)) },
   actual() { try { const s = localStorage.getItem(K); return s ? JSON.parse(s) : null } catch { return null } },
   salir() { localStorage.removeItem(K); if (modoReal) void real().then(p => p.salir?.()) },

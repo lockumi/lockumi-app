@@ -22,6 +22,7 @@ gh pr merge <N> --repo lockumi/lockumi-app --merge --subject "Publicar PR <N>: �
 - https://app.lockumi.com carga, muestra «El depósito de tu alquiler, protegido» y la nota de Legal debajo.
 - https://app.lockumi.com/terminos muestra la versión esperada (hoy «Versión 1.6-demo · 24 de octubre de 2026»).
 - Una sesión con una versión anterior aceptada entra directo a la app (sin pantalla «Actualizamos los Términos…», desactivada el 24/10).
+- Entrar con correo: «Enviar código» siempre termina en «Te enviamos un código» o en un error visible («Ese proveedor de correo aún no es compatible…» o «No pudimos enviar el código…»). Si Cavos no responde, el error sale a los 20 s (`conLimite` en `src/services/auth.ts`, 26/10).
 - E2E contra producción: `BASE=https://app.lockumi.com node scripts/e2e-solo.mjs 2` (testnet, tokens sin valor) y la suite de Playwright cuando exista. Resultado en `E2E.md`.
 
 ## Volver atrás (rollback)

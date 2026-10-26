@@ -69,7 +69,7 @@ function Hoja({ onCerrar, onOk }: { onCerrar: () => void; onOk: (u: Usuario) => 
         {err && <p className="error" role="alert">{err}</p>}
         <button type="submit" className="boton boton--primario boton--ancho" disabled={!!cargando || codigo.length !== F.largo}>{cargando ? 'Verificando…' : 'Entrar'}</button>
         <p className="nota centro" role="status">{reenviado ? 'Te enviamos un código nuevo.' : '¿No te llegó?'}{' '}
-          <button type="button" className="enlace" onClick={async () => { await auth.sendOtp(email.trim()); setReenviado(true) }}>Reenviar código</button></p>
+          <button type="button" className="enlace" onClick={async () => { setErr(''); try { await auth.sendOtp(email.trim()); setReenviado(true) } catch { setErr('No pudimos enviar el código. Inténtalo de nuevo.') } }}>Reenviar código</button></p>
       </form>}
       <p className="nota centro hoja__pie"><Icono id="i-escudo" className="ico--salvia" /> Acceso seguro con Cavos{!modoReal && <> · <Demo /></>}</p>
     </div>

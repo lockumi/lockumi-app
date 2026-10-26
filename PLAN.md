@@ -2,6 +2,12 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Arreglo: «Enviar código» sin respuesta (26 oct 2026), sin cambios visibles
+
+- **Síntoma:** 26/10, 8:18 a. m. (CR, UTC-6). En iPhone Safari, Katherine escribió un correo de Hotmail en «Continuar con tu correo» y tocó «Enviar código». No salió ningún mensaje y no llegó ningún código.
+- **Causa:** `auth.sendOtp` espera a Cavos (`POST https://cavos.xyz/api/oauth/email/code`) sin límite de tiempo. Si esa petición no responde, la hoja queda en «Enviando…» para siempre y sin error. Se reprodujo en WebKit y Chromium (iPhone 14) contra producción con la petición colgada: «Enviando…» seguía a los 25 s. Si Cavos responde 422 o la red falla, el error ya salía bien. Además, «Reenviar código» no atrapaba los errores.
+- **Arreglo:** `conLimite` (20 s) en `auth.sendOtp`. Pasado ese tiempo sale el texto que ya existe, «No pudimos enviar el código. Inténtalo de nuevo.». «Reenviar código» muestra el mismo error si falla. No cambia el flujo de Cavos, ni los textos, ni el diseño. Prueba: `src/services/__tests__/envio-codigo.test.ts`.
+
 ## Arreglo: invitación por correo que no salió (26 oct 2026), sin cambios visibles
 
 - **Síntoma:** 26/10, 7:41 a. m. (CR, UTC-6), Katherine invitó por correo al crear un alquiler y el correo nunca llegó. `POST /api/correo` respondió 502 y en Resend no se creó ningún correo.
