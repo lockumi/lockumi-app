@@ -92,8 +92,14 @@ describe('3) pago en C: confirma la cuenta Lockumi (Cavos), la única que firma 
 
 describe('4) fecha de la 1.9-demo: una sola constante, provisional hasta el encendido', () => {
   it('FECHA_V19 es la de la 1.9-demo', () => {
-    expect(V.FECHA_V19).toBe('25 de octubre de 2026')
+    // la fecha real del encendido se cambia en UNA sola línea (versiones.ts); aquí solo se exige el formato «25 de octubre de 2026»
+    expect(V.FECHA_V19).toMatch(/^\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) de 20\d\d$/)
     expect(V.VERSIONES.find(v => v.version === '1.9-demo')!.fecha).toBe(V.FECHA_V19)
+  })
+  it('sin VITE_DOS_PERSONAS=1 los Términos y la Privacidad dicen 1.7-demo; al encender C, 1.9-demo con FECHA_V19', () => {
+    expect(V.versionVigente({ 'dos-personas': false, correos: false })).toBe('1.7-demo')
+    expect(V.versionVigente({ 'dos-personas': true, correos: true })).toBe('1.9-demo')
+    expect(V.edicionDe('1.9-demo')).toBe(`1.9-demo · ${V.FECHA_V19}`)
   })
   it('no hay otra copia de la fecha en versiones.ts', async () => {
     const src = (await import('../../legal/versiones.ts?raw')).default as string
@@ -204,5 +210,9 @@ describe('C sin «propuesta automática» (Coordinador 25/10, 5:29 p. m.)', () =
       expect(`${k} ${t.asunto({ ...d, auto, motivo })} ${t.cuerpo({ ...d, auto, motivo })}`).not.toMatch(/propuesta automática/i)
     const { SIGUE_RECLAMO_DOS } = await import('../dosPersonas')
     expect(Object.values(SIGUE_RECLAMO_DOS).join(' ')).not.toMatch(/propuesta automática/i)
+  })
+  it('en C el inquilino no ve «rubro por rubro» (responde el reclamo entero; Legal 25/10, 6:10 p. m.)', () => {
+    expect(turno(A({ estado: 'reclamo', dosPersonas: true }), 'inquilino').tu).toBe('Responde el reclamo.')
+    for (const rol of ['inquilino', 'dueno'] as const) expect(JSON.stringify(turno(A({ estado: 'reclamo', dosPersonas: true }), rol))).not.toMatch(/rubro por rubro/)
   })
 })

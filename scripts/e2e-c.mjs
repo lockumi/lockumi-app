@@ -162,6 +162,8 @@ async function correosC(k, id, esperado, ahora) {
 }
 const CASILLA = 'Acepto que Lockumi me envíe avisos por correo'
 const masDias = (t, d) => new Date(+new Date(t) + d * 864e5).toISOString()
+/** El cron diario de las 3:00 a. m. (Costa Rica, UTC−6) del día calendario que está n días antes del día de t (Legal 25/10, 6:10 p. m.). */
+const cronDiaAntes = (t, n) => `${new Date(Date.parse(new Date(+new Date(t) - 6 * 36e5).toISOString().slice(0, 10)) - n * 864e5).toISOString().slice(0, 10)}T09:00:00.000Z`
 /** Vencimiento real del plazo (con domingos y feriados), igual que lk_fin_plazo. Los recordatorios se cuentan HACIA ATRÁS desde aquí (Legal 25/10, 5:09 p. m.). */
 const { vencimiento } = await vite.ssrLoadModule('/api/_lib/plazos.ts')
 const finPlazo = (t, seg) => new Date(vencimiento(+new Date(t), seg * 1000).fin).toISOString()
@@ -322,7 +324,7 @@ const flujos = {
     // P-06: plazo de 3 días hábiles de la mediación (lunes a viernes, sin feriados de Costa Rica), con el reloj de prueba.
     const [pl] = await D.leer('lk_mediacion_plazos', id); exigir(pl?.vence, 'no quedó programado el plazo de la mediación')
     paso('silencio-inquilino', `plazo de la mediación: ${pl.desde} → vence ${pl.vence} (3 días hábiles)`)
-    await correosC('silencio-inquilino', id, ['COR-C-05/recordatorio', 'COR-C-05/recordatorio', 'COR-C-05/recordatorio-mediacion'], masDias(pl.vence, -1 + 1 / 1440))
+    await correosC('silencio-inquilino', id, ['COR-C-05/recordatorio', 'COR-C-05/recordatorio', 'COR-C-05/recordatorio-mediacion'], cronDiaAntes(pl.vence, 1))   // el día anterior, 3:00 a. m.
     await correosC('silencio-inquilino', id, ['COR-C-06/vencida', 'COR-C-06/vencida', 'COR-C-06/vencida-mediacion'], masDias(pl.vence, 1 / 1440))
     const v = await estado(id), [pl2] = await D.leer('lk_mediacion_plazos', id)
     exigir(v.estado === 'mediacion' && !v.resultado && !v.liquidacion_tx && pl2.vencido_en, 'al vencer la mediación no debía pagar ni cerrar')
@@ -333,16 +335,16 @@ const flujos = {
     const id = ids.recordatorios = await hastaPlazo('recordatorios', true, 7 * 86400)
     const inicio = (await estado(id)).ventana_inicio; exigir(inicio, 'no empezó el plazo del dueño')
     const fin = finPlazo(inicio, 7 * 86400)
-    await correosC('recordatorios', id, ['COR-C-02/d4'], masDias(fin, -2.5))   // quedan 3 días
-    await correosC('recordatorios', id, ['COR-C-02/d6'], masDias(fin, -0.5))   // vence mañana
+    await correosC('recordatorios', id, ['COR-C-02/d4'], cronDiaAntes(fin, 3))   // quedan 3 días (día calendario fin − 3)
+    await correosC('recordatorios', id, ['COR-C-02/d6'], cronDiaAntes(fin, 1))   // vence mañana (día calendario fin − 1)
     const ruta = `${id}/reclamo/${randomUUID()}.jpg`; await dueno.subirFoto(ruta, FOTO)
     await dueno.rpc('lk_registrar_foto', { p_contrato: id, p_etapa: 'reclamo', p_cuarto: null, p_ruta: ruta, p_sha256: createHash('sha256').update(FOTO).digest('hex'), p_tomada_en: new Date().toISOString(), p_fecha_archivo: null, p_origen: 'camara', p_posible_galeria: false, p_sha256_original: null })
     await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: RECLAMO, p_motivo: 'Vidrio de la ventana rajado (prueba)' }); paso('recordatorios', `el dueño reclama ${RECLAMO} USDC`)
     await correosC('recordatorios', id, ['COR-C-03'])
     const [rec] = await D.leer('lk_reclamos', id); exigir(rec?.entregado_en, 'el reclamo no tiene hora de entrega')
     const finInq = finPlazo(rec.entregado_en, 7 * 86400)
-    await correosC('recordatorios', id, ['COR-C-04/d4'], masDias(finInq, -2.5))
-    await correosC('recordatorios', id, ['COR-C-04/d6'], masDias(finInq, -0.5))
+    await correosC('recordatorios', id, ['COR-C-04/d4'], cronDiaAntes(finInq, 3))
+    await correosC('recordatorios', id, ['COR-C-04/d6'], cronDiaAntes(finInq, 1))
     // 6.5 c) el inquilino acepta el reclamo: cierre por acuerdo, «repartir» en la red de prueba y COR-C-07 «acuerdo» a los dos
     await inquilino.rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: true }); paso('recordatorios', 'el inquilino acepta el reclamo: cierre por acuerdo')
     const r = await tw(inquilino, { accion: 'repartir', contrato: id }); paso('recordatorios', `«repartir» del acuerdo: ${RECLAMO} USDC al dueño y ${MONTO - RECLAMO} al inquilino (menos 0,3 %)`, r.tx)

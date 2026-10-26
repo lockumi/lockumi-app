@@ -8,7 +8,10 @@ import { V17, FECHA_V17 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
 // LEGAL: revisado (25/10, lista de Legal) · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
-// 1.9-demo: FECHA_V19 es la fecha real del encendido de C en app.lockumi.com (25/10/2026, encendido con el OK de Katherine y de Legal, 5:31 p. m.).
+// 1.9-demo: FECHA_V19 es la ÚNICA línea que hay que cambiar. Se pone la fecha real del día en que se encienda VITE_DOS_PERSONAS=1 en
+// app.lockumi.com (formato «25 de octubre de 2026»). Hasta ese día /terminos y /privacidad muestran la 1.7-demo; desde ese día, la
+// 1.9-demo con esta fecha. Al 25/10/2026, 6:40 p. m., C NO está encendido (las variables de Vercel siguen pendientes): el valor de
+// abajo es provisional y se cambia en el mismo cambio que enciende C (paso obligatorio de docs/correos-c.md, «Encender C»).
 // LEGAL: revisado (25/10, lista de Legal)
 export const FECHA_V19 = '25 de octubre de 2026'
 /** 1.8-demo (B, solo correos): fecha provisional de B. En C (B se enciende junto con C) se muestra FECHA_V19: ver casillaDeFuncion. */

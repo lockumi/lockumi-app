@@ -17,6 +17,8 @@ Desde el 20 de octubre de 2026, **todo cambio publicado en app.lockumi.com tiene
 
 Textos de correos: todos van en `api/_lib/textos-correos.ts` y en la lista de [`docs/correos-c.md`](docs/correos-c.md). Un texto nuevo se marca `legal: 'revisar'` con el comentario «LEGAL: revisar» encima; mientras quede uno, el servidor no envía y el build de producción falla. Para probarlos solo existe `LOCKUMI_CORREOS_BORRADOR=1` en tu máquina (nunca en Vercel) y solo al buzón de prueba `lockumi@mail.grokbot.com`. La guarda (`api/_lib/guarda-correos.ts`) también busca cualquier comentario «LEGAL: revisar» en `src/`, `api/` y `supabase/migrations/`: el build de producción falla mientras quede uno. Formatos: la hora siempre en 12 h con espacio fijo («9:00 a. m.», `horaCR`/`fechaHoraCR` en `api/_lib/plazos.ts`, `fechaHora` en `src/ui.tsx`) y los montos siempre con 2 decimales. Si cambias un texto, corre `node scripts/textos-correos-doc.mjs` para regenerar la sección «Textos» de `docs/correos-c.md`.
 
+Montos de C (Legal 25/10, 6:10 p. m.): los montos del depósito y del reparto van con 2 decimales y suman el depósito; **solo** lo que llega a cada parte y la comisión de Trustless Work van con 4 decimales exactos (`repartoCentimos` y `cuatroDecimales` de `api/_lib/centimos.ts`, `llegaPrueba` en la app). Recordatorios de C: por día calendario de Costa Rica (`lk_dia_cr`), nunca «faltan menos de 24 h».
+
 Nunca pongas valores de secretos en la documentación: solo el nombre de la variable y dónde está (por ejemplo, «Vercel, solo Preview, sensible»).
 
 ## Cambios en `/api/solo`: piensa en las pestañas abiertas

@@ -55,12 +55,31 @@ Prioridad del Coordinador (5:29 p. m.): primero lo que cambia el funcionamiento.
 - **Textos de las 5:00 p. m.:** línea del plazo de la mediación (P-05), «solicitud» en la Privacidad, «el dueño» en COR-C-00.
 - **Segunda parte (ya hecha, se puede revisar aparte):** hora en 12 h y montos con 2 decimales; guarda de todas las marcas; Privacidad :51 y :52; `SIGUE_RECLAMO_DOS` literal; historial de `api/_lib/tw.ts` («de prueba» y 2 decimales); COR-C-03 registra la apertura solo con el botón (`POST`); comentario de la línea 1 de la migración 090000.
 - **Legal, 5:31 p. m.:** con las tres correcciones de funcionamiento (recordatorios hacia atrás con los textos aprobados de 02/d4, 02/d6 y 04/d6; vencimiento sin `CORREOS_C`; sin «propuesta automática», `SIGUE_RECLAMO_DOS` literal) aprueba las demás marcas de C tal como están. Con el OK de Katherine se quitaron las marcas, `FECHA_V19` quedó con la fecha real y PR #22 se unió a master (f9489a6). Las variables de Vercel Production siguen pendientes (ver `docs/prueba-completa.md`, «Publicación de C»).
-- **Para una ronda después de publicar:** con un reparto pequeño la comisión redondeada puede mostrarse como 0,00 (p. ej. 0,50 + 1,50 → llegan 0,50 + 1,50, comisión 0,00); vencimiento de la mediación cada hora (Vercel Hobby solo permite un cron diario; hace falta Pro o un cron externo).
-- **Repartos en céntimos (Coordinador 5:39 p. m.):** `api/_lib/centimos.ts` (`repartoCentimos`): el dueño se redondea y el inquilino recibe el residuo; la comisión se queda con el residuo de lo que llega. Las partes mostradas suman exactamente el depósito (4,99 + 14,96 + 0,05 = 20,00). Prueba: `src/__tests__/reparto-centimos.test.ts`.
+- **Para una ronda después de publicar:** ~~con un reparto pequeño la comisión redondeada puede mostrarse como 0,00~~ resuelto (4 decimales en las líneas del reparto, Legal 6:10 p. m., abajo); vencimiento de la mediación cada hora (Vercel Hobby solo permite un cron diario; hace falta Pro o un cron externo).
+- **Repartos en céntimos (Coordinador 5:39 p. m.):** `api/_lib/centimos.ts` (`repartoCentimos`): el dueño se redondea y el inquilino recibe el residuo; la comisión se queda con el residuo de lo que llega. Las partes mostradas suman exactamente el depósito. Desde la ronda de Legal de las 6:10 p. m., lo que llega y la comisión van con 4 decimales exactos (4,9850 + 14,9550 + 0,0600 = 20,00). Prueba: `src/__tests__/reparto-centimos.test.ts`.
 - **Marcas quitadas (Legal 5:31 p. m.):** con las tres correcciones, Legal aprobó todas las marcas de C tal como estaban; ya no queda ninguna «LEGAL: revisar» y el build de producción pasa. La guarda sigue: cualquier marca nueva lo vuelve a bloquear.
 - **Para una ronda después de publicar (antes «abierto para Legal»):** texto de la página del enlace de COR-C-03; «(red de prueba)» en el historial de la disputa (`api/_lib/tw.ts`); ~~descuadre de 0,01~~ resuelto con céntimos.
 
-## Recordatorios hacia atrás: `supabase/migrations/20261025100000_c_recordatorios_hacia_atras.sql`
+## Bloqueantes de Legal 25/10/2026, 6:10 p. m. (antes de encender `CORREOS_C`)
+
+Legal revisó C en master f9489a6: todo bien, pero **`CORREOS_C` no se enciende hasta corregir estos dos puntos**. Corregidos en la rama `paso20-c-bloqueantes` (PR #27); con CI en verde Legal da el OK sin otra revisión.
+
+1. **Comisión que desaparecía con 2 decimales.** `api/_lib/centimos.ts`: las partes del reparto siguen con 2 decimales y suman el depósito (el céntimo que sobra va al inquilino); **solo en las líneas del reparto** (lo que llega a cada parte y la comisión) se muestran **4 decimales con el cálculo exacto** (`cuatroDecimales`). Ejemplo: 0,50 + 1,50 sobre 2,00 → llegan **0,4985** y **1,4955**, Trustless Work descuenta **0,0060** (antes «0,50 + 1,50, descuenta 0,00»). Se aplica en los correos (`textos-correos.ts`, `llegan` y `comision`), en las notas de la app (`dosPersonas.ts`, `notaComisionAuto` y `notaComisionReparto`, con `llegaPrueba`), en el cierre (`Detalle.tsx`, listas de «Lo aceptaron las dos partes» y de la devolución automática) y en el aviso de la devolución automática (`alertas.ts`). Pruebas: `src/__tests__/reparto-centimos.test.ts` (comisión > 0 con (1, 1) y (0,50, 1,50); llegadas + comisión = depósito en diezmilésimos).
+2. **«Vence mañana» el mismo día del vencimiento.** Con el cron diario de las 3:00 a. m. y un fin a las 5:54 p. m., `fin − 1 día` ya se cumplía a las 3:00 a. m. del día del fin. Nueva migración `20261025110000_c_recordatorios_dia_cr.sql` (abajo): se cuenta por **día calendario de Costa Rica** (`lk_dia_cr`).
+3. **Cosmético:** en C el inquilino ve «Responde el reclamo.» (sin «rubro por rubro», `src/flujo.ts`); la hoja `resumen-correos.jpg` ya no dice «borrador LEGAL: revisar» en el título (`scripts/capturas-correos.mjs`).
+4. **Fecha de la 1.9-demo:** hoy `/terminos` y `/privacidad` muestran la 1.7-demo porque falta `VITE_DOS_PERSONAS=1`. Al encender C deben decir 1.9-demo con la fecha de ese día: se cambia **una sola línea**, `FECHA_V19` en `src/legal/versiones.ts`, el mismo día y en el mismo cambio que enciende C (ver «Encender C» en `docs/prueba-completa.md`).
+
+## Recordatorios por día calendario: `supabase/migrations/20261025110000_c_recordatorios_dia_cr.sql`
+
+Reemplaza la regla de 20261025100000 (Legal 25/10, 6:10 p. m.). Solo `create or replace` de `lk_dia_cr` (misma definición de 20261025060000, por si no existe) y de `lk_correos_por_estado` (misma firma y permisos); no toca tablas ni datos.
+
+- COR-C-02 «día 6» (vence mañana) cuando `lk_dia_cr(ahora) = lk_dia_cr(fin) − 1`; «día 4» (quedan 3 días) cuando `= lk_dia_cr(fin) − 3`. Nunca el mismo día del fin.
+- COR-C-04: igual con `fin_inq`. Recordatorio de COR-C-05: `lk_dia_cr(ahora) = lk_dia_cr(m.vence) − 1`.
+- Con el cron de las 3:00 a. m. (`0 9 * * *` UTC) cada aviso sale una vez, ese día. Si el cron no corre un día, ese aviso no se manda más tarde (no saldría con un texto equivocado).
+- Prueba: `c-correos-sql.test.ts` («vencimiento a las 5:54 p. m. y cron a las 3:00 a. m.», también con el feriado del 25 de diciembre y un domingo); `scripts/e2e-c.mjs` usa el cron de las 3:00 a. m. del día que toca.
+- **Aplicada en producción el 25/10/2026 a las 6:19 p. m. (hora de Costa Rica)**, en una transacción (`begin; … commit;`): `lk_correos_por_estado` md5 245ed84f… → 9bdfa4b3…; `lk_dia_cr` sin cambios (3d6be287…); permisos iguales; `waitlist` 2 filas (3b7472…) y `waitlist_intentos` 1 fila (8a0f91…), iguales antes y después; `lk_contratos` y `lk_eventos` en 0. No se registró en `schema_migrations` (igual que 090000 y 100000).
+
+## Recordatorios hacia atrás: `supabase/migrations/20261025100000_c_recordatorios_hacia_atras.sql` (reemplazada por 110000)
 
 Legal 25/10/2026, 5:09 p. m. (bloqueante): los recordatorios se cuentan **hacia atrás desde el vencimiento real** `{vence}` (con domingos y feriados, `lk_fin_plazo`), no desde el inicio. Solo reemplaza `lk_correos_por_estado` (`create or replace`, misma firma y permisos); no toca tablas ni datos. **Aplicada en producción el 25/10/2026 a las 5:25 p. m. (hora de Costa Rica)**, en una transacción; waitlist (2 filas) y waitlist_intentos (1 fila) con la misma huella antes y después, permisos iguales (postgres y service_role). No se registró en `supabase_migrations.schema_migrations` (igual que 20261025090000), porque solo se autorizó reemplazar la función.
 
@@ -86,9 +105,9 @@ Legal 25/10/2026, 5:09 p. m. (bloqueante): los recordatorios se cuentan **hacia 
 |---|---|---|
 | COR-C-00 | inquilino invitado | Al invitar (ya existía; `api/_lib/correo.ts`, un solo correo por alquiler) |
 | COR-C-01 | dueño e inquilino | Empieza el plazo del dueño («Recibí la casa» o 2 días después de entregar). La del dueño es su día 1 |
-| COR-C-02 | dueño | «Quedan 3 días» y «vence mañana», contados hacia atrás desde el vencimiento real (3/7 y 1/7 del plazo antes del fin), sin reclamo ni aprobación; solo el último que toca |
+| COR-C-02 | dueño | «Quedan 3 días» y «vence mañana», contados hacia atrás desde el vencimiento real por día calendario de Costa Rica (el día fin − 3 y el día fin − 1; migración 110000), sin reclamo ni aprobación; solo el último que toca |
 | COR-C-03 | inquilino | El dueño reclama. El botón «Ver el reclamo» abre `GET /api/correo?abrir=<enlace>`, que **solo muestra una página** con el botón «Ver el reclamo en la app». La apertura (6.5 b) se registra **solo al tocar ese botón** (`POST`, Legal 25/10 punto 4), porque los programas que revisan enlaces también hacen GET. El texto de esta página es nuevo: **LEGAL: revisar** (`api/_lib/correos-c.ts`, `PAGINA_ABRIR`) |
-| COR-C-04 | inquilino | «Quedan 3 días» y «vence mañana» de su plazo para responder (hacia atrás desde `fin_inq`), si no respondió |
+| COR-C-04 | inquilino | «Quedan 3 días» y «vence mañana» de su plazo para responder (el día `fin_inq` − 3 y el día `fin_inq` − 1, hora de Costa Rica), si no respondió |
 | COR-C-05 | dueño e inquilino + versión de la persona mediadora | Pasa a la mediación (rechazo o silencio); recordatorio 1 día antes de vencer |
 | COR-C-06 | dueño e inquilino | Resultado de la mediación (reparto aceptado por los dos y pagado). Variante «sin acuerdo» al vencer (también a la mediadora) |
 | COR-C-07 | dueño e inquilino | Cierre con pago: devuelto (aprobó), automático (venció sin reclamo) o acuerdo; montos menos el 0,3 % |
@@ -99,140 +118,140 @@ Legal 25/10/2026, 5:09 p. m. (bloqueante): los recordatorios se cuentan **hacia 
 
 Datos de ejemplo: depósito 2,00, reclamo 0,50, reparto 0,50 / 1,50, vence el 29 oct 2026, 9:00 a. m. Hora en 12 h y montos con 2 decimales (Legal 25/10, 5:09 p. m., punto 8).
 
-### COR-C-01/dueno · `api/_lib/textos-correos.ts:76` · **LEGAL: revisado (25/10)**
+### COR-C-01/dueno · `api/_lib/textos-correos.ts:78` · **LEGAL: revisado (25/10)**
 
 - Asunto: Tienes 7 días naturales para revisar la casa y reclamar
 - Botones: «Revisar y reclamar», «Todo bien, devolver» · nota: confirmar · pie de baja: sí
 
 > Empezó tu plazo para revisar la casa y, si hace falta, reclamar del depósito de prueba de 2,00 USDC de prueba. Vence el 29 oct 2026, 9:00 a. m., hora de Costa Rica. Solo se puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si todo está bien, puedes tocar «Todo bien, devolver». Si el plazo vence sin reclamo, se devuelve todo el depósito de prueba al inquilino. La devolución es automática: el 100 % al inquilino, menos el 0,3 % de comisión de Trustless Work, y puede tardar hasta 24 horas después de que vence el plazo. No la decide una persona ni pasa a la Mediación Lockumi (demo).
 
-### COR-C-01/inquilino · `api/_lib/textos-correos.ts:80` · **LEGAL: revisado (25/10)**
+### COR-C-01/inquilino · `api/_lib/textos-correos.ts:82` · **LEGAL: revisado (25/10)**
 
 - Asunto: Empezó el plazo del dueño para revisar la casa
 - Botones: «Ver el alquiler» · nota: uno · pie de baja: sí
 
 > El dueño confirmó que recibió la casa. Empezó su plazo de 7 días naturales para revisar la casa y, si hace falta, reclamar de tu depósito de prueba de 2,00 USDC de prueba. Vence el 29 oct 2026, 9:00 a. m., hora de Costa Rica. Solo puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si reclama, verás el reclamo en la app y tendrás 7 días naturales para responder. Si el dueño no aprueba ni reclama antes de que venza su plazo, se te devuelve automáticamente el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work. Puede tardar hasta 24 horas después de que vence el plazo. No lo decide una persona. Por ahora no tienes que hacer nada.
 
-### COR-C-02/d4 · `api/_lib/textos-correos.ts:84` · **LEGAL: revisado (25/10)**
+### COR-C-02/d4 · `api/_lib/textos-correos.ts:86` · **LEGAL: revisado (25/10)**
 
 - Asunto: Te quedan 3 días para revisar y reclamar
 - Botones: «Revisar y reclamar», «Todo bien, devolver» · nota: confirmar · pie de baja: sí
 
 > Te quedan 3 días para revisar y reclamar. Vence el 29 oct 2026, 9:00 a. m., hora de Costa Rica. Después, el depósito de prueba se devuelve completo al inquilino. La devolución es automática, menos el 0,3 % de comisión de Trustless Work, y puede tardar hasta 24 horas después de que vence el plazo.
 
-### COR-C-02/d6 · `api/_lib/textos-correos.ts:88` · **LEGAL: revisado (25/10)**
+### COR-C-02/d6 · `api/_lib/textos-correos.ts:90` · **LEGAL: revisado (25/10)**
 
 - Asunto: Último aviso: tu plazo para reclamar vence mañana
 - Botones: «Revisar y reclamar», «Todo bien, devolver» · nota: confirmar · pie de baja: sí
 
 > Último aviso: tu plazo para reclamar vence mañana, 29 oct 2026, 9:00 a. m., hora de Costa Rica. Si no reclamas, el depósito de prueba se devuelve completo al inquilino. La devolución es automática, menos el 0,3 % de comisión de Trustless Work, y puede tardar hasta 24 horas después de que vence el plazo.
 
-### COR-C-03 · `api/_lib/textos-correos.ts:92` · **LEGAL: revisado (25/10)**
+### COR-C-03 · `api/_lib/textos-correos.ts:94` · **LEGAL: revisado (25/10)**
 
 - Asunto: Tienes un reclamo sobre tu depósito de prueba: 7 días naturales para responder
 - Botones: «Ver el reclamo» · nota: uno · pie de baja: sí
 
 > El dueño reclamó 0,50 USDC de prueba de tu depósito de prueba de 2,00 USDC de prueba. Responde antes del 29 oct 2026, 9:00 a. m., hora de Costa Rica. Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo). En la app puedes aceptar el reclamo o no aceptarlo. Si lo aceptas, el dueño recibe 0,50 USDC de prueba y tú el resto, cada monto menos el 0,3 % de comisión de Trustless Work. Si no lo aceptas o no respondes, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. El silencio no significa que aceptes el reclamo. Cuando abres el reclamo, desde este botón o desde la app, la app registra la fecha y la hora de la primera vez que lo abres, y lo anota en el historial del alquiler, que también ve el dueño. En esta versión, ese registro no cambia lo que pasa con el depósito de prueba. Siempre puedes ir a los tribunales.
 
-### COR-C-04/d4 · `api/_lib/textos-correos.ts:96` · **LEGAL: revisado (25/10)**
+### COR-C-04/d4 · `api/_lib/textos-correos.ts:98` · **LEGAL: revisado (25/10)**
 
 - Asunto: Te quedan 3 días para responder el reclamo de 0,50 USDC de prueba
 - Botones: «Responder» · nota: uno · pie de baja: sí
 
 > Te quedan 3 días para responder el reclamo de 0,50 USDC de prueba sobre tu depósito de prueba de 2,00 USDC de prueba. Vence el 29 oct 2026, 9:00 a. m., hora de Costa Rica. Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. El silencio no significa que aceptes el reclamo.
 
-### COR-C-04/d6 · `api/_lib/textos-correos.ts:100` · **LEGAL: revisado (25/10)**
+### COR-C-04/d6 · `api/_lib/textos-correos.ts:102` · **LEGAL: revisado (25/10)**
 
 - Asunto: Último aviso: tu plazo vence mañana
 - Botones: «Responder ahora» · nota: uno · pie de baja: sí
 
 > Último aviso: tu plazo vence mañana, 29 oct 2026, 9:00 a. m., hora de Costa Rica. Si no respondes a tiempo, el caso pasa a la Mediación Lockumi (demo), sin costo, y el reparto solo se aplica si las dos partes lo aceptan. El silencio no significa que aceptes el reclamo. Siempre puedes ir a los tribunales.
 
-### COR-C-05/partes · `api/_lib/textos-correos.ts:104` · **LEGAL: revisado (25/10)**
+### COR-C-05/partes · `api/_lib/textos-correos.ts:106` · **LEGAL: revisado (25/10)**
 
 - Asunto: El inquilino no aceptó el reclamo: el caso pasa a la Mediación Lockumi (demo)
 - Botones: «Ver el caso» · nota: uno · pie de baja: sí
 
 > El inquilino no aceptó el reclamo de 0,50 USDC de prueba. El caso pasa a la Mediación Lockumi (demo), sin costo. Una persona del equipo de Lockumi puede ayudarles a buscar un acuerdo. No decide por ustedes. No es mediadora certificada ni neutral: es parte de Lockumi, que no gana nada con el resultado del reclamo. Responde en un plazo de 3 días hábiles: hasta el 29 oct 2026, 9:00 a. m., hora de Costa Rica. En la app, cada parte elige el reparto que acepta. El reparto solo se aplica si las dos partes aceptan el mismo, y cada monto se paga menos el 0,3 % de comisión de Trustless Work. Mientras no haya acuerdo, el monto reclamado sigue retenido, y cualquiera de las dos partes puede acudir a los tribunales de Costa Rica o a otro mecanismo que la ley permita. La Mediación Lockumi (demo) no tiene efecto legal y no es una mediación en el sentido de la Ley 7727.
 
-### COR-C-05/mediacion · `api/_lib/textos-correos.ts:108` · **LEGAL: revisado (25/10)**
+### COR-C-05/mediacion · `api/_lib/textos-correos.ts:110` · **LEGAL: revisado (25/10)**
 
 - Asunto: Nuevo caso en la Mediación Lockumi (demo)
 - Botones: «Abrir el caso» · nota: uno · pie de baja: no (correo de servicio)
 
 > Un alquiler de ejemplo pasó a la Mediación Lockumi (demo). Motivo: el inquilino no aceptó el reclamo. Reclamado: 0,50 USDC de prueba de un depósito de prueba de 2,00 USDC de prueba. Plazo para responder: 29 oct 2026, 9:00 a. m., hora de Costa Rica (3 días hábiles). Abre el caso en la app para ver el reclamo, la respuesta y las fotos. Recuerda: no decides por las partes. Solo puedes registrar el acuerdo cuando las dos partes aceptaron en la app el mismo reparto. Lo que veas en este caso es confidencial: úsalo solo para este reclamo, no lo compartas con terceros ni lo copies fuera de la app. Aunque la Mediación Lockumi (demo) no es una mediación de la Ley 7727, seguimos el mismo deber de confidencialidad que esa ley pide a quien media.
 
-### COR-C-05/recordatorio · `api/_lib/textos-correos.ts:112` · **LEGAL: revisado (25/10)**
+### COR-C-05/recordatorio · `api/_lib/textos-correos.ts:114` · **LEGAL: revisado (25/10)**
 
 - Asunto: Mañana vence el plazo de la Mediación Lockumi (demo)
 - Botones: «Ver el caso» · nota: uno · pie de baja: sí
 
 > El plazo de 3 días hábiles de la Mediación Lockumi (demo) vence mañana, 29 oct 2026, 9:00 a. m., hora de Costa Rica. Si quieren llegar a un acuerdo, cada parte elige en la app el reparto que acepta; el reparto solo se aplica si las dos partes aceptan el mismo. Si vence sin acuerdo, no se paga nada: el monto reclamado de 0,50 USDC de prueba sigue retenido y la mediación sigue abierta.
 
-### COR-C-05/recordatorio-mediacion · `api/_lib/textos-correos.ts:116` · **LEGAL: revisado (25/10)**
+### COR-C-05/recordatorio-mediacion · `api/_lib/textos-correos.ts:118` · **LEGAL: revisado (25/10)**
 
 - Asunto: Mañana vence el plazo de un caso de la Mediación Lockumi (demo)
 - Botones: «Abrir el caso» · nota: uno · pie de baja: no (correo de servicio)
 
 > El plazo de 3 días hábiles de un caso de la Mediación Lockumi (demo) vence mañana, 29 oct 2026, 9:00 a. m., hora de Costa Rica. Reclamado: 0,50 USDC de prueba de un depósito de prueba de 2,00 USDC de prueba. Recuerda: no decides por las partes, y lo que veas en este caso es confidencial.
 
-### COR-C-06/partes · `api/_lib/textos-correos.ts:120` · **LEGAL: revisado (25/10)**
+### COR-C-06/partes · `api/_lib/textos-correos.ts:122` · **LEGAL: revisado (25/10)**
 
 - Asunto: Se registró el acuerdo de la Mediación Lockumi (demo)
 - Botones: «Ver el resultado» · nota: uno · pie de baja: sí
 
-> Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de 2,00 USDC de prueba, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino; Trustless Work descuenta 0,00 USDC de prueba, y Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.
+> Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de 2,00 USDC de prueba, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino; Trustless Work descuenta 0,0060 USDC de prueba, y Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.
 
-### COR-C-06/vencida · `api/_lib/textos-correos.ts:124` · **LEGAL: revisado (25/10)**
+### COR-C-06/vencida · `api/_lib/textos-correos.ts:126` · **LEGAL: revisado (25/10)**
 
 - Asunto: Venció el plazo de la Mediación Lockumi (demo) sin acuerdo
 - Botones: «Ver el caso» · nota: uno · pie de baja: sí
 
 > Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo), el 29 oct 2026, 9:00 a. m., hora de Costa Rica, sin que las dos partes aceptaran el mismo reparto. No se pagó nada y no se aplicó ninguna regla: el monto reclamado de 0,50 USDC de prueba sigue retenido. La mediación sigue abierta: si las dos partes aceptan en la app el mismo reparto, la persona mediadora lo registra y se paga, cada monto menos el 0,3 % de comisión de Trustless Work. Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica.
 
-### COR-C-06/vencida-mediacion · `api/_lib/textos-correos.ts:128` · **LEGAL: revisado (25/10)**
+### COR-C-06/vencida-mediacion · `api/_lib/textos-correos.ts:130` · **LEGAL: revisado (25/10)**
 
 - Asunto: Venció sin acuerdo el plazo de un caso de la Mediación Lockumi (demo)
 - Botones: «Abrir el caso» · nota: uno · pie de baja: no (correo de servicio)
 
 > Venció el plazo de 3 días hábiles de un caso de la Mediación Lockumi (demo), el 29 oct 2026, 9:00 a. m., hora de Costa Rica, sin el mismo reparto aceptado por las dos partes. No se pagó nada: el monto reclamado de 0,50 USDC de prueba sigue retenido y el caso sigue abierto. Recuerda: no decides por las partes, y lo que veas en este caso es confidencial.
 
-### COR-C-07/devuelto · `api/_lib/textos-correos.ts:132` · **LEGAL: revisado (25/10)**
+### COR-C-07/devuelto · `api/_lib/textos-correos.ts:134` · **LEGAL: revisado (25/10)**
 
 - Asunto: Se devolvió todo el depósito de prueba al inquilino
 - Botones: «Ver el alquiler» · nota: uno · pie de baja: sí
 
 > El dueño tocó «Todo bien, devolver». Se devuelve al inquilino todo el depósito de prueba de 2,00 USDC de prueba, menos el 0,3 % de comisión de Trustless Work: llegan 1,99 USDC de prueba. El dueño y Lockumi no reciben nada. Se entrega en cuanto la red de prueba lo confirme. El dueño ya no puede reclamar en la app.
 
-### COR-C-07/automatico · `api/_lib/textos-correos.ts:136` · **LEGAL: revisado (25/10)**
+### COR-C-07/automatico · `api/_lib/textos-correos.ts:138` · **LEGAL: revisado (25/10)**
 
 - Asunto: Venció el plazo sin reclamo: se devolvió el 100 % del depósito de prueba al inquilino
 - Botones: «Ver el alquiler» · nota: uno · pie de baja: sí
 
 > El dueño no aprobó ni reclamó dentro de su plazo. El sistema de Lockumi abrió una disputa en la red de prueba solo para poder devolver el depósito de prueba, y otra cuenta de Lockumi, la que resuelve disputas, entregó el 100 % al inquilino: 2,00 USDC de prueba, menos el 0,3 % de comisión de Trustless Work. Llegan 1,99 USDC de prueba. El dueño y Lockumi no reciben nada. Ninguna persona decidió este reparto.
 
-### COR-C-07/acuerdo · `api/_lib/textos-correos.ts:140` · **LEGAL: revisado (25/10)**
+### COR-C-07/acuerdo · `api/_lib/textos-correos.ts:142` · **LEGAL: revisado (25/10)**
 
 - Asunto: El inquilino aceptó el reclamo: se repartió el depósito de prueba
 - Botones: «Ver el alquiler» · nota: uno · pie de baja: sí
 
-> El inquilino aceptó el reclamo de 0,50 USDC de prueba. Reparto del depósito de prueba de 2,00 USDC de prueba: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino. Lockumi no recibe nada. Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.
+> El inquilino aceptó el reclamo de 0,50 USDC de prueba. Reparto del depósito de prueba de 2,00 USDC de prueba: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino. Lockumi no recibe nada. Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.
 
-### COR-C-08/A · `api/_lib/textos-correos.ts:144` · **LEGAL: revisado (25/10)**
+### COR-C-08/A · `api/_lib/textos-correos.ts:146` · **LEGAL: revisado (25/10)**
 
 - Asunto: Recibimos tu pedido para eliminar tu cuenta de Lockumi
 - Botones: ninguno · nota: ninguna · pie de baja: no (correo de servicio)
 
 > Recibimos tu pedido para eliminar tu cuenta. Lo pediste el 26 oct 2026 a las 9:00 a. m. (hora de Costa Rica). Tu perfil ya no se muestra, y eliminamos tu cuenta en un máximo de 5 días hábiles. Fecha límite: 2 nov 2026. Borramos tus datos de reputación (puntaje, insignias, perfil y el historial que alimenta el puntaje), y no se pueden recuperar. Los datos del contrato y del depósito de prueba siguen la regla general del Aviso de privacidad. Lo registrado en la red de prueba de Stellar no se puede borrar. Esta solicitud no se puede deshacer. Si no hiciste este pedido, escríbenos a business.applockumi@gmail.com.
 
-### COR-C-08/B · `api/_lib/textos-correos.ts:148` · **LEGAL: revisado (25/10)**
+### COR-C-08/B · `api/_lib/textos-correos.ts:150` · **LEGAL: revisado (25/10)**
 
 - Asunto: Recibimos tu pedido para eliminar tu cuenta de Lockumi
 - Botones: ninguno · nota: ninguna · pie de baja: no (correo de servicio)
 
 > Recibimos tu pedido para eliminar tu cuenta. Lo pediste el 26 oct 2026 a las 9:00 a. m. (hora de Costa Rica). Tienes un alquiler abierto. Tu perfil ya no se muestra, y tu cuenta se eliminará cuando el alquiler se cierre, en un máximo de 5 días hábiles después del cierre. Mientras tanto, solo usamos tus datos para cerrar el alquiler; puedes usar Lockumi para cerrarlo, y la otra parte sigue viendo el contrato y el historial. Los datos del contrato y del depósito de prueba siguen la regla general del Aviso de privacidad. Lo registrado en la red de prueba de Stellar no se puede borrar. Esta solicitud no se puede deshacer. Si no hiciste este pedido, escríbenos a business.applockumi@gmail.com.
 
-### COR-C-09 · `api/_lib/textos-correos.ts:152` · **LEGAL: revisado (25/10)**
+### COR-C-09 · `api/_lib/textos-correos.ts:154` · **LEGAL: revisado (25/10)**
 
 - Asunto: Eliminamos tu cuenta de Lockumi
 - Botones: ninguno · nota: ninguna · pie de baja: no (correo de servicio)

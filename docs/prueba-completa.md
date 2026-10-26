@@ -234,4 +234,15 @@ Regla de Katherine: el diseño que ya existe no se toca; solo se agregan pantall
 - Capturas: `prueba-completa/capturas/produccion-20261025/resumen-telefono.jpg` (en la caja). Las dos primeras son de app.lockumi.com; las demás, del build de C de la corrida (app.lockumi.com todavía no tiene las variables de C).
 - **Reversión:** `git revert -m 1 f9489a6d8ea568fa2899b500f20a088a0148b462` (no se ejecutó).
 
+### Bloqueantes de Legal (25/10/2026, 6:10 p. m.)
+
+Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `CORREOS_C` (detalle en `docs/correos-c.md`): las líneas del reparto (lo que llega y la comisión) con 4 decimales exactos (0,50 + 1,50 → 0,4985 + 1,4955, comisión 0,0060) y los recordatorios por día calendario de Costa Rica (migración `20261025110000_c_recordatorios_dia_cr.sql`, aplicada en producción a las 6:19 p. m. CR, solo funciones; `waitlist` y `waitlist_intentos` iguales). Rama `paso20-c-bloqueantes`. Capturas de los correos con los textos nuevos (E2E simulado): `prueba-completa/capturas/paso20-c-bloqueantes/correos/resumen-correos.jpg` (en la caja).
+
+### Encender C (cuando Katherine dé un token de Vercel con acceso al equipo)
+
+1. Cargar las variables de Vercel Production de la lista de arriba y volver a desplegar.
+2. **El mismo día:** poner la fecha real del encendido en `FECHA_V19` (`src/legal/versiones.ts`, una sola línea, formato «25 de octubre de 2026»), por PR a master. Hasta entonces `/terminos` y `/privacidad` muestran la 1.7-demo; con `VITE_DOS_PERSONAS=1`, la 1.9-demo con esa fecha.
+3. Revisar en app.lockumi.com `/terminos` y `/privacidad` (1.9-demo y la fecha del día) y `/api/tw?revisar=llaves`.
+4. `CORREOS_C=1` solo después de los bloqueantes de las 6:10 p. m. (ya en master) y con el OK de Legal.
+
 **Ensayo sin llaves:** `./correr-c.sh --simulado` hace el mismo recorrido con PGlite (todas las migraciones), el `/api/tw` de verdad y Trustless Work falso. Los hashes simulados nunca se muestran como enlaces. La prueba `scripts/__tests__/e2e-c-simulado.test.ts` lo mantiene verde en CI.

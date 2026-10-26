@@ -8,7 +8,7 @@
 //   * el build de producción falla (guardaCorreos en vite.config.ts, VERCEL_ENV=production).
 // Para aprobar un texto: Legal lo confirma, se cambia `legal: 'revisar'` por `legal: 'revisado'` y el comentario por «LEGAL: revisado (fecha)».
 import { fechaHoraCR, fechaCR, horaCR } from './plazos.js'
-import { repartoCentimos } from './centimos.js'
+import { repartoCentimos, cuatroDecimales } from './centimos.js'
 
 // LEGAL: revisado (25/10, lista de Legal) · nota de demo arriba del texto
 export const DEMO = 'Demo en la red de prueba: sin dinero real.'
@@ -66,8 +66,10 @@ const f = (t?: number) => fechaHora(t ?? 0)
 // En céntimos: las partes mostradas suman exactamente el depósito (api/_lib/centimos.ts)
 const rc = (d: DatosCorreo) => repartoCentimos(d.dueno ?? 0, d.inquilino ?? 0)
 const reparto = (d: DatosCorreo) => `${m(rc(d).dueno)} al dueño y ${m(rc(d).inquilino)} al inquilino`
-const llegan = (d: DatosCorreo) => `Llegan ${m(rc(d).llegaDueno)} al dueño y ${m(rc(d).llegaInquilino)} al inquilino`
-const comision = (d: DatosCorreo) => m(rc(d).comision)
+// Lo que llega y la comisión, con 4 decimales exactos (Legal 25/10, 6:10 p. m.: con 2 la comisión salía 0,00)
+const m4 = (n: number) => `${cuatroDecimales(n)} USDC de prueba`
+const llegan = (d: DatosCorreo) => `Llegan ${m4(rc(d).llegaDueno)} al dueño y ${m4(rc(d).llegaInquilino)} al inquilino`
+const comision = (d: DatosCorreo) => m4(rc(d).comision)
 const REVISAR_Y_RECLAMAR = [{ texto: 'Revisar y reclamar', destino: 'alquiler' as const }, { texto: 'Todo bien, devolver', destino: 'devolver' as const }]
 
 /** Plantillas de C por clave «COR-C-0x/variante». Cada una con su marca de Legal en el comentario de arriba. */
