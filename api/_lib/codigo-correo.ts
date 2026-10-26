@@ -17,15 +17,17 @@ import { PIE, REMITENTE, origenPermitido } from './correo.js'
 type Env = Record<string, string | undefined>
 // 'verificar_correo' (Legal 25/10/2026, 9:00 p. m.): confirmar el correo de un token de correo de Cavos con aud «cavos-email»
 // (api/_lib/cavos-token.ts). Va al correo POR CONFIRMAR de la sesión (lk_correo_pendiente), no al verificado activo.
-export type Accion = 'eliminar' | 'descargar' | 'verificar_correo'
-export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar', 'verificar_correo']
+// 'invitacion' (26/10/2026, Katherine): la sesión abrió una invitación enviada a OTRO correo (p. ej. entró con Apple). El código va al
+// correo INVITADO de ese alquiler (lk_invitacion_por_confirmar) y, con el código correcto, se acepta la invitación con ESTA sesión.
+export type Accion = 'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion'
+export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar', 'verificar_correo', 'invitacion']
 export const MINUTOS_VALIDO = 10
 export const INTENTOS = 5
 
 // LEGAL: revisado (25/10, 5:04 p. m.) · textos literales de Legal (correo del código)
 export const asuntoCodigo = (codigo: string) => `Tu código de Lockumi: ${codigo}`
 // LEGAL: revisado (25/10, 9:00 p. m.) · variante literal de Legal para el correo del código: «para confirmar tu correo»
-export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos', verificar_correo: 'confirmar tu correo' }
+export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos', verificar_correo: 'confirmar tu correo', invitacion: 'aceptar la invitación' }
 export const cuerpoCodigo = (accion: Accion) =>
   `Escribe este código en Lockumi para ${PARA_QUE[accion]}. Vale 10 minutos. No lo compartas con nadie: Lockumi nunca te lo va a pedir por otro medio. Si no lo pediste, ignora este correo; sin el código no se hace nada.`
 
@@ -43,6 +45,9 @@ export const ERRORES = {
   correo: 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.',
 } as const
 export type Motivo = keyof typeof ERRORES | 'accion'
+// LEGAL: revisado (26/10/2026, texto literal de Legal) · el mismo de lk_ver_invitacion (token vencido, usado o con inquilino)
+export const INVITACION_NO = 'Esta invitación ya no está disponible. Si todavía la necesitas, pídele al dueño que te envíe una nueva.'
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, TOKEN = /^[0-9a-f]{64}$/
 
 // Web Crypto (globalThis.crypto: Node 20+ y Vercel), sin depender de los tipos de node en el resto del proyecto.
 const te = new TextEncoder()
@@ -123,7 +128,7 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
   const s = servicio(env), anon = (env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY)?.trim(), pepper = pepperDe(env), llave = env.RESEND_API_KEY?.trim()
   // Cierre por defecto: sin base, sin pepper o sin Resend no se manda ni se acepta ningún código (y por lo tanto no se borra ni se descarga).
   if (!s || !anon || !pepper || !llave) return error(503, 'envio')
-  const b = (body ?? {}) as { paso?: unknown; accion?: unknown; codigo?: unknown; rol?: unknown }
+  const b = (body ?? {}) as { paso?: unknown; accion?: unknown; codigo?: unknown; rol?: unknown; contrato?: unknown; token?: unknown; terminos_version?: unknown; direccion?: unknown }
   const accion = b.accion as Accion
   if (!ACCIONES.includes(accion) || (b.paso !== 'pedir' && b.paso !== 'confirmar')) return error(400, 'accion')
   if (!bearer || !/^Bearer \S+$/.test(bearer)) return error(401, 'correo')
@@ -131,8 +136,16 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
   const uid = r?.ok ? ((await r.json()) as { id?: string }).id : undefined
   if (!uid) return error(401, 'correo')
 
+  // 'invitacion': siempre con el alquiler y el token del enlace (el mismo que abre la invitación).
+  const inv = accion === 'invitacion' ? { contrato: String(b.contrato ?? ''), token: String(b.token ?? '') } : null
+  if (inv && (!UUID.test(inv.contrato) || !TOKEN.test(inv.token))) return error(400, 'accion')
+
   if (b.paso === 'pedir') {
     let correo: string | null
+    if (inv) {   // deja la invitación por confirmar (revisa token, vencimiento, sin inquilino y que no sea el dueño) y da el correo invitado
+      try { correo = await rpc<string>(s, 'lk_invitacion_por_confirmar', { p_usuario: uid, p_contrato: inv.contrato, p_token: inv.token }, f) }
+      catch { return { estado: 403, cuerpo: { error: INVITACION_NO, motivo: 'invitacion' } } }
+    } else
     // 'verificar_correo': el correo por confirmar (lk_correo_pendiente); las otras: el verificado activo (lk_codigo_para).
     try { correo = accion === 'verificar_correo' ? await rpc<string | null>(s, 'lk_correo_pendiente', { p_usuario: uid }, f) : await rpc<string | null>(s, 'lk_codigo_para', { p_usuario: uid }, f) }
     catch { return error(503, 'envio') }
@@ -160,6 +173,24 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
     let c: string | null
     try { c = await rpc<string>(s, 'lk_confirmar_correo_pendiente', { p_usuario: uid }, f) } catch { return error(403, 'codigo') }
     return c ? { estado: 200, cuerpo: { hecho: true, correo: c } } : error(403, 'codigo')
+  }
+  // 'invitacion': lk_confirmar_invitacion_codigo usa el código (un solo uso) y registra el correo invitado verificado para ESE alquiler y
+  // ESTA sesión (lk_invitaciones_verificadas). Después se acepta con la sesión de la persona, como lo haría la app (mismas funciones).
+  if (inv) {
+    let id: string | null
+    try { id = await rpc<string>(s, 'lk_confirmar_invitacion_codigo', { p_usuario: uid }, f) } catch { return error(403, 'codigo') }
+    if (id !== inv.contrato) return error(403, 'codigo')
+    const version = typeof b.terminos_version === 'string' && b.terminos_version ? b.terminos_version : null
+    const direccion = typeof b.direccion === 'string' && /^G[A-Z2-7]{55}$/.test(b.direccion) ? b.direccion : null
+    const [fn, args] = version
+      ? ['lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: inv.token, p_email_cavos: t.correo, p_terminos_version: version, p_direccion_stellar: direccion }]
+      : ['lk_aceptar_invitacion', { p_contrato: id, p_token: inv.token, p_email_cavos: t.correo, p_direccion_stellar: direccion }]
+    const a = await f(`${s.url}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: anon, authorization: bearer, 'content-type': 'application/json' }, body: JSON.stringify(args) }).catch(() => null)
+    if (!a?.ok) {   // el texto de la base (p. ej. «Esta invitación ya no está disponible…»); el correo ya quedó verificado por 1 hora
+      const m = a ? ((await a.json().catch(() => ({}))) as { message?: string }).message : undefined
+      return { estado: 409, cuerpo: { motivo: 'aceptar', ...(typeof m === 'string' && m && { error: m }) } }
+    }
+    return { estado: 200, cuerpo: { hecho: true, contrato: id } }
   }
   // La acción, con la sesión de la persona (auth.uid()): la función usa el código confirmado (un solo uso).
   const rol = b.rol === 'dueno' || b.rol === 'inquilino' ? b.rol : null

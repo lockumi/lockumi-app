@@ -150,7 +150,8 @@ export const servidor = {
   // Ronda 25/10, 4:22–4:23 p. m.: límite 5 (eliminar en el servidor), límite 4 (REP-01 por el correo) y límite 1 (correo verificado).
   // Segundo factor (Legal 25/10, 5:04 p. m.): «Eliminar mi cuenta» y «Descargar mis datos» ya no llaman a lk_pedir_borrado_cuenta ni a
   // lk_mis_datos_reputacion directo: van por /api/codigo-correo, que manda el código al correo y, con el código correcto, hace la acción.
-  async codigoCorreo(cuerpo: { paso: 'pedir' | 'confirmar'; accion: 'eliminar' | 'descargar' | 'verificar_correo'; codigo?: string; rol?: 'dueno' | 'inquilino' }) {
+  async codigoCorreo(cuerpo: { paso: 'pedir' | 'confirmar'; accion: 'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion'; codigo?: string; rol?: 'dueno' | 'inquilino'
+    contrato?: string; token?: string; terminos_version?: string; direccion?: string }) {
     const r = await fetch('/api/codigo-correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenSesion()}` },
       body: JSON.stringify(cuerpo) })
     return { ok: r.ok, estado: r.status, cuerpo: await r.json().catch(() => ({})) as Record<string, unknown> }

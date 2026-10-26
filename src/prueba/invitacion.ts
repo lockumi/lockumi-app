@@ -39,6 +39,11 @@ export const textoEnlaceEnviado = (c: string) => `Te enviamos el enlace a ${c}. 
 export const BOTON_WHATSAPP = 'Compartir por WhatsApp'
 export const enlaceWhatsApp = (link: string) => 'https://wa.me/?text=' + encodeURIComponent(link)
 // LEGAL: texto literal de Legal (25/10, 10:10 p. m., paso21) · la invitación es para otro correo. El mismo texto lo da el servidor (20261025230000).
+/** 26/10/2026 (Katherine): con otra cuenta (p. ej. Apple), en lugar de TEXTO_OTRO_CORREO se ve a qué correo se envió (oculto) y el botón
+ *  para pedir el código de 6 números a ese correo (src/reputacion/InvitacionCodigo.tsx). Oculto: la primera letra, ••• y @dominio. */
+export const correoOculto = (c: string) => { const [n = '', d = ''] = c.trim().toLowerCase().split('@'); return `${n.slice(0, 1)}•••@${d}` }
+export const textoInvitacionEnviada = (c: string) => `Esta invitación se envió a ${correoOculto(c)}`
+export const BOTON_CODIGO_INVITACION = 'Enviarme un código a ese correo'
 export const TEXTO_OTRO_CORREO = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'
 // LEGAL: textos literales aprobados por Legal (25/10, 10:15 p. m., paso21) · pantalla de la persona invitada sin sesión, corta:
 // título y subtítulo (sin nombre del dueño ni «firmar»). El título es el mismo de la pantalla de la invitación con sesión.

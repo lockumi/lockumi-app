@@ -229,7 +229,7 @@ describe('la invitación es para otro correo (Legal 25/10, 10:10 p. m.)', () => 
     const L = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'
     expect(TEXTO_OTRO_CORREO).toBe(L)
     const inv = (await import('../../screens/Invitacion.tsx?raw')).default
-    expect(inv).toMatch(/u\.email\.trim\(\)\.toLowerCase\(\) !== d\.email_inquilino\?\.trim\(\)\.toLowerCase\(\)\s*\? <p className="error" role="alert">\{TEXTO_OTRO_CORREO\}<\/p>/)
+    expect(inv).toMatch(/u\.email\.trim\(\)\.toLowerCase\(\) !== d\.email_inquilino\?\.trim\(\)\.toLowerCase\(\)\s*\? otroCorreo \?\? <p className="error" role="alert">\{TEXTO_OTRO_CORREO\}<\/p>/)   // 26/10: con la reputación, el código al correo invitado (InvitacionCodigo.tsx)
     expect(inv).not.toMatch(/Esta invitación es para \{/)   // ya no se muestra el correo invitado a otra persona
     const sql = (await import('../../../supabase/migrations/20261025230000_invitacion_correo_verificado.sql?raw')).default
     expect(sql).toContain(`raise exception '${L}'`)

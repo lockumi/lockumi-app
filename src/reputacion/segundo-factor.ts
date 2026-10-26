@@ -7,7 +7,8 @@ import { SEGUNDO_FACTOR } from './textos'
 
 // 'verificar_correo' (Legal 25/10/2026, 9:00 p. m.): confirmar el correo de un token de correo de Cavos con aud «cavos-email»
 // (verificacion.ts). El código va al correo POR CONFIRMAR de la sesión, no al verificado.
-export type AccionCodigo = 'eliminar' | 'descargar' | 'verificar_correo'
+// 'invitacion' (26/10/2026): el correo invitado de una invitación abierta con otra cuenta (InvitacionCodigo.tsx).
+export type AccionCodigo = 'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion'
 export type MotivoCodigo = keyof typeof SEGUNDO_FACTOR.errores | 'accion'
 const MOTIVOS = new Set<string>(Object.keys(SEGUNDO_FACTOR.errores))
 /** Error del segundo factor. `motivo` elige el texto (SEGUNDO_FACTOR.errores, o el error de siempre de la acción si es 'accion'). */
