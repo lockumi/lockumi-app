@@ -12,42 +12,8 @@ export interface Bloque { titulo: string; parrafos: string[]; casillas: string[]
 // Fuente: legal/reputacion-textos-para-producto.md (aprobado por Legal, versión del 25/10/2026, 2:24 p. m.), al pie de la letra.
 // Lo que dice «Ajustes › …» en Legal es la ubicación; en la app es «Tu perfil en Lockumi» (no hay pantalla de Ajustes).
 
-// LEGAL: revisado (25/10) · REP-01 Pantalla previa a crear la cuenta (con la casilla) y REP-01b (edad, aparte).
-export const REP01 = {
-  titulo: 'Antes de crear tu cuenta: tu perfil de reputación',
-  subtitulo: 'Usar Lockumi incluye un perfil de reputación público',
-  intro: 'Para usar Lockumi necesitas un perfil de reputación. Se crea junto con tu cuenta y es **público**: cualquier persona en internet que tenga el enlace puede verlo.',
-  puntos: [
-    '**Qué muestra:** tu nombre visible (nombre e inicial del apellido), si eres dueño o inquilino, tu cantón, desde cuándo estás en Lockumi, cuántos alquileres cerraste en Lockumi y tus insignias.',
-    '**Tu puntaje:** se muestra siempre a partir de tu 3.er alquiler cerrado, sea alto o bajo. Antes se ve «Nuevo en Lockumi».',
-    '**Qué nunca muestra:** tu dirección, tu barrio, la distancia, tu teléfono, tu correo, tu cédula, tu billetera, tus fotos, los montos ni el detalle de tus reclamos.',
-    '**Es fijo:** no se puede ocultar. Solo desaparece si eliminas tu cuenta, que es gratis y se cumple en un máximo de 5 días hábiles.',
-    '**Tus derechos:** puedes ver y descargar tus datos, pedir que corrijamos un dato o que revisemos un hecho, y eliminar tu cuenta cuando quieras.',
-  ],
-  enlaces: { ejemplo: 'Ver un ejemplo de perfil', calculo: 'Cómo se calcula el puntaje', privacidad: 'Aviso de privacidad' },
-  casilla: 'Entiendo que usar Lockumi implica tener un perfil de reputación público y fijo, con mi puntaje visible desde mi 3.er alquiler cerrado, y que solo desaparece si elimino mi cuenta. Acepto que Lockumi lo publique.',
-  edad: 'Confirmo que soy mayor de 18 años.',
-  noAcuerdo: 'Si no estás de acuerdo, puedes no crear tu cuenta. No tiene ningún costo.',
-  entrar: 'Ya tengo cuenta: entrar',
-  continuar: 'Continuar', noCrear: 'No crear mi cuenta',
-}
-
-// LEGAL: revisado (25/10) · textos literales de Legal (revisión de c887895). Pantalla previa para una cuenta que YA EXISTE, sin REP-01 y
-// sin alquileres, antes de /crear o /invitacion: la casilla, su texto y el perfil de ejemplo son los de REP-01; cambian solo estos.
-export const REP01_EXISTENTE = {
-  titulo: 'Antes de crear un alquiler o unirte a uno',
-  noAcuerdo: 'Si no lo aceptas, puedes seguir usando tu cuenta, pero no podrás crear alquileres ni unirte a ellos.',
-}
-
-// LEGAL: revisado (25/10) · REP-02 Hoja «Ver un ejemplo de perfil».
-export const REP02 = {
-  titulo: 'Así se ve un perfil público', ejemplo: 'Ejemplo', nombre: 'Ana M.', papel: 'Inquilina', canton: 'Cantón: Heredia', desde: 'En Lockumi desde marzo de 2026',
-  cerrados: 'Alquileres cerrados en Lockumi: 4', puntaje: 'Puntaje: 4,6 de 5', calculo: 'Cómo se calcula',
-  insignias: ['contrato', 'deposito', 'fotos-entrada', 'fotos-salida'] as const,
-  aviso: 'No es una garantía ni una recomendación de Lockumi. Solo resume lo registrado en la app. Demo en la red de prueba: datos de ejemplo, sin dinero real.',
-  nunca: '**Esto no aparece nunca en un perfil:** dirección, barrio, distancia, teléfono, correo, cédula, billetera, fotos, montos ni el detalle de los reclamos.',
-  volver: 'Volver',
-}
+// Legal (26/10/2026): ya no hay pantalla aparte REP-01 (ni REP-01b ni la hoja REP-02). El perfil se acepta con la casilla de los
+// Términos 1.13-demo (src/legal/documentos.ts: casillaTerminos y LINEA_PERFIL_113).
 
 // LEGAL: revisado (25/10) · texto literal de Legal (d): con un pedido de borrado pendiente, al intentar crear o unirse a un alquiler nuevo.
 export const BLOQUEO_BORRADO = 'Pediste eliminar tu cuenta, así que ya no puedes crear ni unirte a alquileres nuevos. Tus alquileres abiertos siguen funcionando igual.'
@@ -259,9 +225,6 @@ export const UI = {
   errNombre: 'Escribe tu nombre y la inicial de tu apellido con punto, por ejemplo «Ana V.» o «Ana María V.».',
   errNombreLargo: 'Usa solo tu nombre y la inicial de tu apellido, por ejemplo «Ana V.». Máximo 30 letras.',
   errCanton: 'Elige tu cantón en la lista. Está ordenada por provincia.',
-  errRep01: 'Marca las dos casillas para continuar. Si no estás de acuerdo, toca «No crear mi cuenta».',
-  // LEGAL: revisado (25/10) · cuenta que ya existe: solo la primera oración de errRep01 (revisión de c887895)
-  errRep01Existente: 'Marca las dos casillas para continuar.',
   // LEGAL: revisado (25/10) · si falla «Descargar mis datos» en modo servidor
   errDescarga: 'No pudimos descargar tus datos. Revisa tu conexión y vuelve a tocar «Descargar mis datos».',
   // LEGAL: revisado (25/10) · ronda 4:41 · si el servidor no recibe la solicitud de «Eliminar mi cuenta» (texto de Legal)
@@ -270,8 +233,6 @@ export const UI = {
   activar: 'Activar',
   opcion: { destacados: 'Destacados', nuevos: 'Nuevos en Lockumi' } as Record<'destacados' | 'nuevos', string>,
   // Redacción nuestra, LEGAL: revisado (25/10).
-  noCreasTitulo: 'No creaste tu cuenta',
-  noCreasTexto: 'No creamos tu cuenta y no guardamos ningún dato tuyo. Si cambias de opinión, vuelve cuando quieras.',
   datosNota: 'Último paso: estos datos se publican en tu perfil.',
   aceptadoEl: (f: string, h: string) => `Aceptaste tu perfil de reputación el ${f} a las ${h}.`,
   revTitulo: 'Pedir revisión',
@@ -287,6 +248,8 @@ export const UI = {
   verVitrinaOpcion: 'Ver si quieres aparecer en la vitrina',
   aparecesListo: 'Listo. Ya apareces en la vitrina de tu cantón.',
   nuevoTitulo: 'Nuevo en Lockumi',
+  // Legal (26/10/2026, opción b): si la aceptación del perfil no llega al servidor, la casilla dentro de crear o unirse no deja seguir.
+  errPerfil113: 'No pudimos guardar tu perfil de reputación. Revisa tu conexión y vuelve a marcar la casilla.',
   errGuardar: 'No pudimos guardar en este navegador. Libera espacio (por ejemplo, con «Reiniciar demo») e inténtalo otra vez.',
   reclamoDevuelto: (p: number) => `Reclamo devuelto al inquilino: ${p} %`,
   sinReclamo: 'Sin reclamos devueltos',

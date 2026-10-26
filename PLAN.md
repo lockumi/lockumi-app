@@ -190,7 +190,8 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 ## Paso 19 · Reputación (25 oct 2026; encendida en app.lockumi.com, PR #26, merge `f87c8b8`, deploy `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP`, 10:45 p. m. CR)
 
 - [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
-- [x] REP-01 en una pantalla aparte antes de crear la cuenta (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.
+- [x] 26/10/2026 (Legal, 1.13-demo): se quitó la pantalla REP-01 (y REP-01b). El perfil va en la casilla de los Términos de la pantalla de inicio; sin perfil ni alquileres, la misma casilla dentro de «Nuevo alquiler» y de la invitación («Para tu cuenta» / «Para este alquiler»). Ver docs/reputacion.md.
+- [x] ~~REP-01 en una pantalla aparte antes de crear la cuenta~~ (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.
 - [x] Cuentas anteriores a la 1.10-demo: sin re-aceptación ni pantallas extra; sin perfil, y sus alquileres no cuentan para nadie (Coordinador, 25/10).
 - [x] Con un borrado pendiente no se crean ni se aceptan alquileres nuevos (app y SQL). El build falla si se enciende con «[fecha de encendido]».
 - [x] Puntaje: inquilino baja solo por descuento del depósito; dueño solo si se devolvió al inquilino el 90 % o más de lo reclamado (antes del 0,3 %); siempre visible desde el 3.er alquiler; 10 años.

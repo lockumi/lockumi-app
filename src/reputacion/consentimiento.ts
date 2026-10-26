@@ -1,6 +1,7 @@
 // Paso 19 · Registro de consentimientos de la reputación (legal/reputacion-textos-para-producto.md, regla 5, REP-01 y REP-06).
-// Una sola aceptación (REP-01), en una pantalla previa a crear la cuenta y aparte de los Términos, con versión, fecha, hora y texto
-// (Ley 8968). Antes de tener cuenta se guarda en este navegador y se pasa a la cuenta al entrar. Las vitrinas (Destacados y Nuevos en
+// Una sola aceptación del perfil (REP-01), con versión, fecha, hora y texto (Ley 8968). Desde la 1.13-demo (Legal, 26/10/2026) no hay
+// pantalla aparte: se acepta con la casilla de los Términos 1.13-demo en la pantalla de inicio (al entrar se registra aquí con la fecha
+// y hora de esa aceptación) o, para una cuenta sin perfil, con la misma casilla dentro de «Crear alquiler» o de la invitación. Las vitrinas (Destacados y Nuevos en
 // Lockumi) son casillas opcionales por papel. No hay «Dejar de mostrar» ni «Mostrar mi puntaje»:
 // el perfil queda fijo y visible y solo desaparece cuando la persona elimina su cuenta (borrado.ts). En la demo, se guarda en este navegador;
 // en el servidor, la tabla de supabase/migrations/20261025140000_reputacion.sql (escrita, no aplicada).
@@ -8,7 +9,7 @@ import { useSyncExternalStore } from 'react'
 import type { Alquiler, Rol } from '../types'
 import { provinciaDe } from './cantones'
 import { UI } from './textos'
-import { EDICION_REPUTACION, CLAVE_PREVIA_REPUTACION, claveReputacion } from '../legal/version17'
+import { EDICION_REPUTACION, claveReputacion } from '../legal/version17'
 
 /** Versión de los textos (Legal, revisión del PR #26): «{versión} · {fecha}» = 1.10-demo y la fecha real de encendido (version17.ts). */
 export const VERSION_TEXTOS = EDICION_REPUTACION
@@ -53,7 +54,7 @@ export function aceptar(email: string, rol: Rol, o: Opcion, texto: string[], fec
   if (!s.rep01) throw new Error('Primero acepta tu perfil de reputación.')
   escribir(email, { ...s, roles: { ...s.roles, [rol]: { ...s.roles[rol], [o]: registro(texto, fecha) } } })
 }
-/** REP-01 y REP-01b aceptadas por una cuenta que ya existe (cuentas 1.7-demo). */
+/** El perfil (REP-01) aceptado con la casilla de los Términos 1.13-demo: en la pantalla de inicio o dentro de crear/unirse. */
 export function aceptarRep01(email: string, texto: string[], fecha = new Date().toISOString()) {
   const s = leer(email); if (s.rep01) return
   escribir(email, { ...s, rep01: registro(texto, fecha) })
@@ -62,30 +63,8 @@ export const aceptoRep01 = (email: string) => !!leer(email).rep01
 /** Perfil creado: REP-01, nombre visible y cantón. */
 export const perfilCompleto = (email: string) => { const s = leer(email); return !!s.rep01 && !!s.nombre && !!s.canton }
 
-// ——— Antes de crear la cuenta (pantalla previa al login, sin tocar el login) ———
-// Legal (revisión del PR #26, regla 2): la aceptación previa vive solo en esta sesión del navegador (sessionStorage) y pasa solo a una
-// cuenta recién creada: sin REP-01 y sin alquileres. Una cuenta que ya existía no acepta nada: sigue sin perfil (Coordinador, 25/10).
-const PREVIA = CLAVE_PREVIA_REPUTACION, ENTRAR = 'lockumi.reputacion.entrar.v1'
-const sesion = () => { try { return sessionStorage } catch { return null } }
-export function previa(): Registro | null { try { const x = sesion()?.getItem(PREVIA); return x ? JSON.parse(x) : null } catch { return null } }
-export function aceptarPrevia(texto: string[], fecha = new Date().toISOString()) {
-  const s = sesion(); if (!s) throw new Error(UI.errGuardar)
-  s.setItem(PREVIA, JSON.stringify(registro(texto, fecha))); subs.forEach(f => f())
-}
-/** «Ya tengo cuenta: entrar»: abre el login de siempre sin registrar ninguna aceptación (Legal, regla 1). Dura hasta entrar. */
-export function entrarSinAceptar() { try { sesion()?.setItem(ENTRAR, '1') } catch { /* sin almacenamiento: se queda en la pantalla */ } subs.forEach(f => f()) }
-/** Al entrar a la cuenta se olvida: si sale, vuelve a ver la pantalla previa. */
-export const olvidarEntrar = () => { try { sesion()?.removeItem(ENTRAR) } catch { /* nada */ } }
-export const quiereEntrar = () => { try { return sesion()?.getItem(ENTRAR) === '1' } catch { return false } }
-/** Al entrar: la aceptación previa de ESTA sesión pasa a la cuenta solo si es nueva (`cuentaNueva`: sin REP-01 ni alquileres). Se borra igual. */
-export function vincularPrevia(email: string, cuentaNueva: boolean) {
-  const p = previa(); if (!p) return
-  const s = leer(email); if (cuentaNueva && !s.rep01) escribir(email, { ...s, rep01: p })
-  try { sesion()?.removeItem(PREVIA) } catch { /* nada */ }
-  subs.forEach(f => f())
-}
 /** Legal (respuesta a 6c71866, punto 2, 3:47 p. m.): las sesiones del servidor son anónimas por aparato y no tienen fecha de creación de la
- *  cuenta, así que la regla es: SIN REP-01 y SIN alquileres → antes de crear o unirse a un alquiler, la pantalla previa de siempre. Una
+ *  cuenta, así que la regla es: SIN REP-01 y SIN alquileres → al crear o unirse a un alquiler, la casilla de los Términos 1.13-demo. Una
  *  cuenta anterior con alquileres no tiene perfil y no ve nada nuevo. En el servidor: lk_sin_perfil_ni_alquileres (migración). */
 export function sinPerfilNiAlquileres(email: string, alquileres: readonly Alquiler[]): boolean {
   if (leer(email).rep01) return false

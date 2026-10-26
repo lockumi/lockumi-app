@@ -46,12 +46,13 @@ describe('archivo: los textos publicados son exactamente los de master 8790b52',
 })
 
 describe('cada enlace abre su versión (texto y número de versión visibles)', () => {
-  const LINEA = { '1.9-demo': 'Versión 1.9-demo · 25 de octubre de 2026', '1.10-demo': 'Versión 1.10-demo · 25 de octubre de 2026', '1.11-demo': 'Versión 1.11-demo · 26 de octubre de 2026' } as Record<string, string>
+  const LINEA = { '1.9-demo': 'Versión 1.9-demo · 25 de octubre de 2026', '1.10-demo': 'Versión 1.10-demo · 25 de octubre de 2026', '1.11-demo': 'Versión 1.11-demo · 26 de octubre de 2026', '1.12-demo': 'Versión 1.12-demo · 26 de octubre de 2026' } as Record<string, string>
   // Revisión de c97585b: la 1.11-demo queda archivada en /terminos-1-11 y la vigente es la 1.12-demo.
-  const TODAS = ['1.9-demo', '1.10-demo', '1.11-demo', '1.12-demo']
+  // Legal (26/10/2026): la 1.12-demo queda archivada en /terminos-1-12 y la vigente es la 1.13-demo.
+  const TODAS = ['1.9-demo', '1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo']
   it.each(TODAS)('%s', async v => {
     C(true); const { rutaTerminos, rutaPrivacidad, rutaLegal, docs } = await import('../documentos'), { EDICION_REPUTACION } = await import('../version17')
-    const esperado = { '1.9-demo': ['/terminos-1-9', '/privacidad-1-9'], '1.10-demo': ['/terminos-1-10', '/privacidad-1-10'], '1.11-demo': ['/terminos-1-11', '/privacidad-1-11'], '1.12-demo': ['/terminos', '/privacidad'] }[v]!
+    const esperado = { '1.9-demo': ['/terminos-1-9', '/privacidad-1-9'], '1.10-demo': ['/terminos-1-10', '/privacidad-1-10'], '1.11-demo': ['/terminos-1-11', '/privacidad-1-11'], '1.12-demo': ['/terminos-1-12', '/privacidad-1-12'], '1.13-demo': ['/terminos', '/privacidad'] }[v]!
     expect([rutaTerminos(v), rutaPrivacidad(v)]).toEqual(esperado)
     const linea = LINEA[v] ?? `Versión ${EDICION_REPUTACION}`
     for (const r of esperado) {
@@ -59,7 +60,7 @@ describe('cada enlace abre su versión (texto y número de versión visibles)', 
       expect(doc.version).toBe(v); expect(t).toContain(linea)
       for (const otra of TODAS.filter(x => x !== v)) expect(t).not.toContain(`Versión ${otra}`)
       // la ronda 1.10 de Legal solo está en la 1.11-demo
-      if (r.startsWith('/privacidad')) expect(t.includes('mediación y cierre del alquiler)'), r).toBe(v === '1.11-demo' || v === '1.12-demo')
+      if (r.startsWith('/privacidad')) expect(t.includes('mediación y cierre del alquiler)'), r).toBe(v === '1.11-demo' || v === '1.12-demo' || v === '1.13-demo')
       expect(t.includes('Perfil de reputación'), r).toBe(v !== '1.9-demo')
     }
     expect(rutaLegal(esperado[0].replace('/', '#/').slice(1))).toBe(rutaLegal(esperado[0]))   // también como ruta con #
@@ -73,7 +74,9 @@ describe('cada enlace abre su versión (texto y número de versión visibles)', 
     const h11 = renderToStaticMarkup(<Documento a={{ ...A, terminos: { version: '1.11-demo' } }} impresion />)
     expect(h11).toMatch(/<a href="\/terminos-1-11"[^>]*>versión 1\.11-demo · 26 de octubre de 2026<\/a>/)
     const h12 = renderToStaticMarkup(<Documento a={{ ...A, terminos: { version: '1.12-demo' } }} impresion />)
-    expect(h12).toMatch(/<a href="\/terminos"[^>]*>versión 1\.12-demo · /)
+    expect(h12).toMatch(/<a href="\/terminos-1-12"[^>]*>versión 1\.12-demo · 26 de octubre de 2026<\/a>/)
+    const h13 = renderToStaticMarkup(<Documento a={{ ...A, terminos: { version: '1.13-demo' } }} impresion />)
+    expect(h13).toMatch(/<a href="\/terminos"[^>]*>versión 1\.13-demo · /)
   })
 })
 
@@ -81,7 +84,7 @@ describe('1.11-demo sin volver a aceptar', () => {
   it('los alquileres nuevos de una persona guardan la 1.11-demo; los de dos personas siguen en la 1.9-demo', async () => {
     C(true); const { store } = await import('../../store'), { versionActual } = await import('../../prueba/version')
     const n = store.crear({ direccion: 'Ejemplo', monto: 800, inicio: '2026-11-01', fin: '2027-11-01', reglas: [], duenoEmail: 'demo@lockumi.com', inquilinoEmail: 'inquilino.prueba@lockumi.com' })
-    expect(n.terminos?.version).toBe('1.12-demo'); expect(versionActual()).toBe('1.9-demo')
+    expect(n.terminos?.version).toBe('1.13-demo'); expect(versionActual()).toBe('1.9-demo')
   })
   it('un alquiler en la 1.10-demo no ve «pasar a la versión …» (ni hacia la 1.11-demo); el orden es 1.9 < 1.10 < 1.11', async () => {
     C(true); const { puedeCambiarVersion, puedeCambiarA } = await import('../../prueba/version')
@@ -89,15 +92,15 @@ describe('1.11-demo sin volver a aceptar', () => {
     expect(ordenVersion('1.9-demo')).toBeLessThan(ordenVersion('1.10-demo')); expect(ordenVersion('1.10-demo')).toBeLessThan(ordenVersion('1.11-demo'))
     // Detalle.tsx muestra la tarjeta solo con puedeCambiarVersion(a) (y un 1.9-demo tampoco: ya está en la vigente).
     expect(await leer('../../screens/Detalle.tsx')).toContain('{puedeCambiarVersion(a) && !ejemplo && <CambioVersion')
-    for (const version of ['1.9-demo', '1.10-demo', '1.11-demo', '1.12-demo']) {
+    for (const version of ['1.9-demo', '1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo']) {
       const a = { id: 'a1', estado: 'en_curso', terminos: { version }, historial: [] } as unknown as Alquiler
-      expect(puedeCambiarVersion(a)).toBe(false); expect(puedeCambiarA(a, '1.11-demo')).toBe(false); expect(puedeCambiarA(a, '1.12-demo')).toBe(false)
+      expect(puedeCambiarVersion(a)).toBe(false); expect(puedeCambiarA(a, '1.11-demo')).toBe(false); expect(puedeCambiarA(a, '1.12-demo')).toBe(false); expect(puedeCambiarA(a, '1.13-demo')).toBe(false)
     }
   })
   it('la 1.11-demo no es una versión de escenario (no cambia la versión de los alquileres de dos personas ni pide REP-01 otra vez)', async () => {
     C(true); const { VERSIONES, EDICIONES_CUENTA, versionVigente } = await import('../versiones')
     expect(VERSIONES.map(v => v.version)).toEqual(['1.7-demo', '1.8-demo', '1.9-demo'])
-    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo'])
+    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo'])
     expect(versionVigente({ 'dos-personas': true, correos: true, reputacion: true })).toBe('1.9-demo')
     // REP-01 no compara la versión (solo la guarda): lk_necesita_rep01 depende de si la cuenta aceptó, no de la edición.
     expect(await leer('../../reputacion/consentimiento.ts')).not.toMatch(/VERSION_TEXTOS\s*[!=]==/)

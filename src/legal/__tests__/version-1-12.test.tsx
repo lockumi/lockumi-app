@@ -1,6 +1,6 @@
 // Legal (revisión de c97585b, 26/10/2026) · 1.12-demo: eliminar y ocultar un alquiler. Regla de archivo (CONTRIBUTING.md): la 1.11-demo
 // (publicada en master 04e4424) queda congelada en src/legal/archivo/04e4424/ y en /terminos-1-11 y /privacidad-1-11, byte a byte; la
-// 1.12-demo es la vigente, sin volver a aceptar. La 1.9-demo no cambia.
+// 1.12-demo fue la vigente (desde el 26/10/2026 la vigente es la 1.13-demo, version-1-13.test.tsx), sin volver a aceptar. La 1.9-demo no cambia.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mem = new Map<string, string>()
@@ -50,10 +50,10 @@ describe('archivo de la 1.11-demo', () => {
 })
 
 describe('1.12-demo: los textos de Legal, literales y en su lugar', () => {
-  it('/terminos y /privacidad son la 1.12-demo con su número de versión', async () => {
+  it('/terminos y /privacidad (ahora la 1.13-demo) siguen con los textos de la 1.12-demo; la 1.12-demo queda en /terminos-1-12', async () => {
     C(); const { docs, rutaTerminos, rutaPrivacidad } = await import('../documentos'), { EDICION_REPUTACION } = await import('../version17'), d = docs()
-    for (const k of ['terminos', 'privacidad'] as const) { expect(d[k].version).toBe('1.12-demo'); expect(plano(d[k].html)).toContain(`Versión ${EDICION_REPUTACION}`) }
-    expect([rutaTerminos('1.12-demo'), rutaPrivacidad('1.12-demo')]).toEqual(['/terminos', '/privacidad'])
+    for (const k of ['terminos', 'privacidad'] as const) { expect(d[k].version).toBe('1.13-demo'); expect(plano(d[k].html)).toContain(`Versión ${EDICION_REPUTACION}`) }
+    expect([rutaTerminos('1.12-demo'), rutaPrivacidad('1.12-demo')]).toEqual(['/terminos-1-12', '/privacidad-1-12'])
     expect([rutaTerminos('1.11-demo'), rutaPrivacidad('1.11-demo')]).toEqual(['/terminos-1-11', '/privacidad-1-11'])
   })
   it('Privacidad (1) después de la frase de dos personas y (2) al final del punto de los 7 días', async () => {
@@ -77,7 +77,7 @@ describe('1.12-demo sin volver a aceptar', () => {
     C(); const { VERSIONES, EDICIONES_CUENTA, versionVigente, ordenVersion } = await import('../versiones')
     const { puedeCambiarVersion, puedeCambiarA } = await import('../../prueba/version')
     expect(VERSIONES.map(v => v.version)).toEqual(['1.7-demo', '1.8-demo', '1.9-demo'])
-    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo'])
+    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo'])
     expect(ordenVersion('1.11-demo')).toBeLessThan(ordenVersion('1.12-demo'))
     expect(versionVigente({ 'dos-personas': true, correos: true, reputacion: true })).toBe('1.9-demo')
     for (const version of ['1.9-demo', '1.10-demo', '1.11-demo']) {

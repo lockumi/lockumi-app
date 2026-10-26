@@ -1,5 +1,5 @@
-// Paso 19 · Reputación ENCENDIDA (VITE_REPUTACION=1), según legal/reputacion-textos-para-producto.md: REP-01 en una pantalla aparte ANTES
-// de crear la cuenta (sin tocar el login); las cuentas que ya existían siguen igual, sin perfil ni pantallas extra (Coordinador, 25/10);
+// Paso 19 · Reputación ENCENDIDA (VITE_REPUTACION=1), según legal/reputacion-textos-para-producto.md. Desde la 1.13-demo (26/10/2026)
+// el perfil se acepta con la casilla de los Términos (sin pantalla aparte, sin tocar el login); las cuentas que ya existían siguen igual, sin perfil ni pantallas extra (Coordinador, 25/10);
 // pantallas sin casitas, solo con cantón, sin números de posición, sin «Dejar de mostrar», revisión, noindex y eliminación en 5 días hábiles.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -27,23 +27,27 @@ describe('reputación encendida', () => {
     await aceptarTodo(); const h = renderToStaticMarkup(<Inicio u={U} />)
     expect(h).toContain('Tu perfil en Lockumi'); expect(h).toContain('href="#/perfil"')
   })
-  it('REP-01 antes del login: pantalla aparte, dos casillas sin marcar, [Continuar] desactivado, enlaces y «No crear mi cuenta»', async () => {
-    const { Previa } = await import('../Pantallas')
-    const h = renderToStaticMarkup(<Previa><p>LOGIN-DE-SIEMPRE</p></Previa>), t = texto(h)
-    expect(t).not.toContain('LOGIN-DE-SIEMPRE')
-    expect(t).toContain('Antes de crear tu cuenta: tu perfil de reputación'); expect(t).toContain('Usar Lockumi incluye un perfil de reputación público')
-    expect((h.match(/type="checkbox"/g) ?? []).length).toBe(2); expect(h).not.toMatch(/type="checkbox"[^>]*checked/)
-    expect(t).toContain('Entiendo que usar Lockumi implica tener un perfil de reputación público y fijo, con mi puntaje visible desde mi 3.er alquiler cerrado, y que solo desaparece si elimino mi cuenta. Acepto que Lockumi lo publique.')
-    expect(t).toContain('Confirmo que soy mayor de 18 años.')
-    expect(h).toMatch(/<button[^>]*disabled=""[^>]*>Continuar<\/button>/)
-    for (const x of ['Ver un ejemplo de perfil', 'Cómo se calcula el puntaje', 'Aviso de privacidad', 'No crear mi cuenta', 'Si no estás de acuerdo, puedes no crear tu cuenta. No tiene ningún costo.']) expect(t).toContain(x)
-    expect(t).not.toMatch(/Términos y condiciones|Acepto los Términos/)   // aparte de los Términos
+  it('sin pantalla aparte (Legal, 26/10/2026): la pantalla de inicio de siempre, con la casilla de los Términos 1.13-demo y la línea de Legal', async () => {
+    expect((await import('../Pantallas') as Record<string, unknown>).Previa).toBeUndefined()
+    const { Login } = await import('../../screens/Login'), h = renderToStaticMarkup(<Login onOk={() => {}} />), t = texto(h)
+    expect(h).toMatch(/<a href="\/terminos"[^>]*>Términos 1\.13-demo<\/a>, incluido mi perfil de reputación público\./)
+    expect(t).toContain('Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver')
+    expect(h).toContain('id="acepto-privacidad"'); expect(h).not.toMatch(/type="checkbox"[^>]*checked/)
+    expect(t).not.toMatch(/Antes de crear tu cuenta|No crear mi cuenta|Ya tengo cuenta: entrar|Confirmo que soy mayor/)
   })
-  it('después de aceptar REP-01 en el navegador se ve el login de siempre, y al entrar la aceptación pasa a la cuenta', async () => {
-    const { aceptarPrevia, aceptoRep01 } = await import('../consentimiento'), { Previa } = await import('../Pantallas')
-    aceptarPrevia(['x']); expect(renderToStaticMarkup(<Previa><p>LOGIN-DE-SIEMPRE</p></Previa>)).toContain('LOGIN-DE-SIEMPRE')
-    const t = texto(await pantalla('/'))
-    expect(aceptoRep01(U.email)).toBe(true); expect(t).toContain('¿Cómo te verán?'); expect(t).toContain('Nombre visible'); expect(t).not.toContain('PANTALLA-DE-SIEMPRE')
+  it('al entrar con los Términos 1.13-demo se registra el perfil (versión, fecha, hora y texto) y se llega a Inicio; nombre y cantón, al crear', async () => {
+    const { leer } = await import('../consentimiento'), { V_REPUTACION } = await import('../../legal/version17'), { default: R } = await import('../Pantallas')
+    const F = '2026-11-16T16:00:00.000Z', u = { ...U, terminos: { version: V_REPUTACION, fecha: F } }
+    const t = texto(renderToStaticMarkup(<R u={u} r="/" salir={() => {}}><p>PANTALLA-DE-SIEMPRE</p></R>))
+    expect(t).toContain('PANTALLA-DE-SIEMPRE')
+    expect(leer(U.email).rep01).toMatchObject({ fecha: F, hora: '10:00\u00a0a.\u00a0m.', texto: ['Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.', expect.stringContaining('Tu cuenta incluye un perfil público')] })
+    expect(leer(U.email).rep01?.version).toMatch(/^1\.13-demo · /)
+    const c = texto(await pantalla('/crear')); expect(c).toContain('Nombre visible'); expect(c).not.toContain('PANTALLA-DE-SIEMPRE')
+  })
+  it('con los Términos 1.12-demo (sesión anterior) no se crea ningún perfil: sin volver a aceptar', async () => {
+    const { leer } = await import('../consentimiento'), { default: R } = await import('../Pantallas')
+    renderToStaticMarkup(<R u={{ ...U, terminos: { version: '1.12-demo', fecha: '2026-10-26T06:00:00.000Z' } }} r="/" salir={() => {}}><p>x</p></R>)
+    expect(leer(U.email).rep01).toBeUndefined()
   })
   it('cuentas que ya existían (sin REP-01, con alquileres): la app de siempre, sin aviso, sin bloqueo y sin perfil', async () => {
     abierto()

@@ -36,26 +36,28 @@ describe('Legal (1): nombre visible', () => {
     const l = (await leerArchivo('src/reputacion/textos.ts')).split('\n'), i = l.findIndex(x => x.includes('nombreAyuda:'))
     expect(l[i - 1]).toContain('LEGAL: revisado (25/10)')
     const { aceptarRep01 } = await import('../consentimiento'); aceptarRep01(VIEJA.email, ['x'])
-    expect(await pantalla(VIEJA, '/')).toContain(`<p id="rp-n-a" class="nota">${AYUDA.replace(/«/g, '«')}</p>`)
+    expect(await pantalla(VIEJA, '/crear')).toContain(`<p id="rp-n-a" class="nota">${AYUDA.replace(/«/g, '«')}</p>`)
   })
 })
 
 const CON_ALQ = () => mem.set('lockumi.alquileres.v3', JSON.stringify([alq('a1', 'otra@x.cr', VIEJA.email)]))
-describe('Legal (2): sin REP-01 y sin alquileres → la pantalla previa antes de crear o unirse', () => {
-  it('sin REP-01 ni alquileres: la pantalla previa de siempre (dos casillas sin marcar) en «Nuevo alquiler» y en la invitación; el resto igual', async () => {
+describe('Legal (2), opción (b) del 26/10: sin perfil y sin alquileres → la casilla del perfil dentro de «Nuevo alquiler» y la invitación', () => {
+  it('sin REP-01 ni alquileres: el formulario de siempre con la casilla de los Términos 1.13-demo (sin marcar) y la línea de Legal; sin pantalla aparte', async () => {
+    const { useRanuraPerfil } = await import('../../ranuraPerfil'), { default: R } = await import('../Pantallas')
+    const Formulario = () => { const p = useRanuraPerfil(); return <form><p>PANTALLA-DE-SIEMPRE</p>{p?.casilla}<button disabled={!!p && !p.lista}>Crear</button></form> }
     for (const r of ['/crear', '/invitacion/00000000-0000-4000-8000-000000000999/abc']) {
-      const h = await pantalla(NUEVA, r), t = texto(h)
-      // Legal, revisión de c887895: título, nota, «Volver» y solo la primera oración del error; la casilla y su texto son los de REP-01.
-      expect(h, r).toContain('<h1 id="rp-rep01" class="h2">Antes de crear un alquiler o unirte a uno</h1>'); expect(h, r).not.toContain('PANTALLA-DE-SIEMPRE')
-      expect(t, r).toContain('Si no lo aceptas, puedes seguir usando tu cuenta, pero no podrás crear alquileres ni unirte a ellos.')
-      expect(h, r).toContain('<p id="rp-rep01-falta" class="nota" style="margin-top:8px">Marca las dos casillas para continuar.</p>')
-      expect(h, r).toMatch(/<button type="button" class="boton boton--secundario">Volver<\/button>/)
-      for (const x of ['Antes de crear tu cuenta', 'puedes no crear tu cuenta', 'No crear mi cuenta']) expect(t, r).not.toContain(x)
-      const { REP01 } = await import('../textos'); expect(t, r).toContain(REP01.casilla.slice(0, 60)); expect(t, r).toContain(REP01.edad)
-      expect((h.match(/type="checkbox"/g) ?? []).length, r).toBe(2); expect(h, r).not.toMatch(/checked=""/)
-      expect(t, r).not.toContain('Ya tengo cuenta: entrar')
+      const h = renderToStaticMarkup(<R u={NUEVA} r={r} salir={() => {}}><Formulario /></R>), t = texto(h)
+      expect(h, r).toContain('PANTALLA-DE-SIEMPRE'); expect(h, r).not.toMatch(/Antes de crear un alquiler o unirte a uno|Antes de crear tu cuenta|Confirmo que soy mayor/)
+      expect(h, r).toMatch(/Acepto los <a href="\/terminos"[^>]*>Términos 1\.13-demo<\/a>, incluido mi perfil de reputación público\./)
+      expect(t, r).toContain('Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver')
+      expect((h.match(/type="checkbox"/g) ?? []).length, r).toBe(1); expect(h, r).not.toMatch(/checked=""/); expect(h, r).toMatch(/<button disabled="">Crear<\/button>/)
     }
-    for (const r of ['/', '/alquiler/x', '/perfil']) expect(await pantalla(NUEVA, r), r).toContain('PANTALLA-DE-SIEMPRE')
+    for (const r of ['/', '/alquiler/x', '/perfil']) expect(await pantalla(NUEVA, r), r).not.toContain('acepto-perfil-113')
+  })
+  it('Crear e Invitación usan la ranura y la invitación separa «Para tu cuenta» y «Para este alquiler»', async () => {
+    const c = await leerArchivo('src/screens/Crear.tsx'), v = await leerArchivo('src/screens/Invitacion.tsx')
+    for (const f of [c, v]) { expect(f).toContain('useRanuraPerfil()'); expect(f).toContain('{perfil?.casilla}'); expect(f).toContain('(!!perfil && !perfil.lista)') }
+    expect(v.indexOf('>Para tu cuenta</p>')).toBeGreaterThan(0); expect(v.indexOf('>Para tu cuenta</p>')).toBeLessThan(v.indexOf('{perfil?.casilla}')); expect(v.indexOf('{perfil?.casilla}')).toBeLessThan(v.indexOf('>Para este alquiler</p>'))
   })
   it('al aceptarla, la aceptación queda en la cuenta y sigue el último paso (nombre y cantón)', async () => {
     const { aceptarRep01, aceptoRep01 } = await import('../consentimiento'); aceptarRep01(NUEVA.email, ['x']); expect(aceptoRep01(NUEVA.email)).toBe(true)
@@ -85,9 +87,9 @@ describe('Arreglos 3:47 p. m.', () => {
     expect(horaCR('2026-10-25T21:21:00Z')).toBe('3:21\u00a0p.\u00a0m.'); expect(horaCR('2026-10-25T06:05:00Z')).toBe('12:05\u00a0a.\u00a0m.')
     expect(horaCR('2026-10-25T18:00:00Z')).toBe('12:00\u00a0p.\u00a0m.')
   })
-  it('las dos líneas nuevas de Legal usan el guion que no se corta (U+2011) en «1.10‑demo» y un espacio que no se corta (U+00A0) tras «versión» (revisión de c887895)', async () => {
-    for (const [f, x] of [['terminos.md', 'Las cuentas creadas antes de la versión\u00a01.10\u2011demo no tienen'], ['privacidad.md', 'Si tu cuenta es anterior a la versión\u00a01.10\u2011demo, no tienes']])
-      expect(await leerArchivo('src/legal/v17/' + f), f).toContain(x)
+  it('las líneas de la 1.10-demo sobre cuentas anteriores se reemplazaron por las de la 1.13-demo (Legal, 26/10); la 1.12-demo queda archivada', async () => {
+    for (const f of ['terminos.md', 'privacidad.md']) { expect(await leerArchivo('src/legal/v17/' + f), f).not.toContain('antes de la versión\u00a01.10\u2011demo no tienen')
+      expect(await leerArchivo('src/legal/archivo/4dfa5ae/' + f), f).toMatch(/versión\u00a01\.10\u2011demo/) }
   })
   it('las marcas de la ronda de las 3:27 ya dicen «LEGAL: revisado (25/10)»', async () => {
     for (const f of ['src/reputacion/textos.ts', 'supabase/migrations/20261025140000_reputacion.sql', 'src/legal/v17/terminos.md', 'src/legal/v17/privacidad.md'])
@@ -107,7 +109,7 @@ describe('Legal (3): un alquiler cuenta solo si cuenta para las dos cuentas', ()
     expect(alquileresDeReputacion([alq('p4', 'con@x.cr', '')], 'con@x.cr', 'dueno', () => true)).toEqual([])   // sin inquilino, no cuenta
   })
   it('el perfil usa las dos cuentas (Pantallas.tsx → alquileresDeReputacion con tienePerfilReputacion)', async () => {
-    expect(await leerArchivo('src/reputacion/Pantallas.tsx')).toContain('alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion)')
+    expect(await leerArchivo('src/reputacion/Pantallas.tsx')).toContain('alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)')
   })
 })
 

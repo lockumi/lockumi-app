@@ -2,16 +2,15 @@
 // previa a crear la cuenta, con versión, fecha, hora y texto (Ley 8968). Las vitrinas (REP-06) son casillas opcionales por papel.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as modulo from '../consentimiento'
-import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo, aceptarRep01, aceptoRep01, perfilCompleto,
-  aceptarPrevia, previa, vincularPrevia } from '../consentimiento'
+import { leer, guardarDatos, aceptar, activa, validarNombre, validarCanton, VERSION_TEXTOS, borrarTodo, aceptarRep01, aceptoRep01, perfilCompleto } from '../consentimiento'
 
 const E = 'Demo@Lockumi.com', F = '2026-11-16T16:00:00.000Z'
 const alm = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() } }
 beforeEach(() => { vi.stubGlobal('localStorage', alm()); vi.stubGlobal('sessionStorage', alm()) })
 
-describe('REP-01: aceptación previa a crear la cuenta', () => {
+describe('Perfil (REP-01): se acepta con la casilla de los Términos 1.13-demo (sin pantalla previa)', () => {
   it('todo empieza sin aceptar', () => {
-    expect(aceptoRep01(E)).toBe(false); expect(previa()).toBeNull()
+    expect(aceptoRep01(E)).toBe(false)
     for (const rol of ['dueno', 'inquilino'] as const) for (const o of ['destacados', 'nuevos'] as const) expect(activa(leer(E), rol, o)).toBe(false)
   })
   it('guarda la versión, la fecha, la hora (Costa Rica) y el texto aceptado', () => {
@@ -19,13 +18,11 @@ describe('REP-01: aceptación previa a crear la cuenta', () => {
     expect(leer(E).rep01).toEqual({ version: VERSION_TEXTOS, fecha: F, hora: '10:00\u00a0a.\u00a0m.', texto: ['Entiendo…', 'Confirmo que soy mayor de 18 años.'] })
     expect(aceptoRep01(E)).toBe(true)
   })
-  it('antes de tener cuenta se guarda en esta sesión y se pasa a la cuenta nueva al entrar (una sola vez)', () => {
-    aceptarPrevia(['Entiendo…', 'Confirmo…'], F); expect(previa()?.hora).toBe('10:00\u00a0a.\u00a0m.')
-    vincularPrevia(E, true); expect(aceptoRep01(E)).toBe(true); expect(leer(E).rep01?.fecha).toBe(F); expect(previa()).toBeNull()
-    vincularPrevia('otra@x.cr', true); expect(aceptoRep01('otra@x.cr')).toBe(false)
+  it('ya no hay aceptación previa en la sesión del navegador (Legal, 26/10/2026)', () => {
+    for (const k of ['aceptarPrevia', 'previa', 'vincularPrevia', 'entrarSinAceptar', 'quiereEntrar', 'olvidarEntrar']) expect((modulo as Record<string, unknown>)[k], k).toBeUndefined()
   })
   it('una cuenta que ya aceptó no cambia su registro', () => {
-    aceptarRep01(E, ['a'], F); aceptarPrevia(['b'], '2026-11-17T16:00:00.000Z'); vincularPrevia(E, true)
+    aceptarRep01(E, ['a'], F); aceptarRep01(E, ['b'], '2026-11-17T16:00:00.000Z')
     expect(leer(E).rep01?.texto).toEqual(['a'])
   })
   it('el perfil queda completo con REP-01, el nombre visible y el cantón', () => {

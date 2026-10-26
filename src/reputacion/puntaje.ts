@@ -30,8 +30,13 @@ export const cuentaParaPuntaje = (a: Alquiler): boolean => a.estado === 'cerrado
 const igual = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
 /** Legal (ronda del 25/10): los alquileres de esta persona en este papel que entran en su reputación. Un alquiler cuenta solo si LAS
  *  DOS partes tienen perfil (`conPerfil`); uno entre una cuenta anterior a la 1.10-demo y una nueva no cuenta para ninguna de las dos. */
-export const alquileresDeReputacion = (xs: readonly Alquiler[], email: string, rol: 'dueno' | 'inquilino', conPerfil: (email: string) => boolean): Alquiler[] =>
-  xs.filter(a => igual(rol === 'dueno' ? a.duenoEmail : a.inquilinoEmail, email) && !!a.duenoEmail && !!a.inquilinoEmail && conPerfil(a.duenoEmail) && conPerfil(a.inquilinoEmail))
+// Legal (Términos 1.13-demo, 15.1): las cuentas que no tenían perfil reciben uno al aceptar esa versión, y sus alquileres cerrados antes
+// de eso no se publican ni cuentan: con `desde` (fecha de la aceptación del perfil de cada parte), un alquiler cerrado antes no cuenta.
+export const alquileresDeReputacion = (xs: readonly Alquiler[], email: string, rol: 'dueno' | 'inquilino', conPerfil: (email: string) => boolean,
+  desde: (email: string) => string | undefined = () => undefined): Alquiler[] =>
+  xs.filter(a => igual(rol === 'dueno' ? a.duenoEmail : a.inquilinoEmail, email) && !!a.duenoEmail && !!a.inquilinoEmail && conPerfil(a.duenoEmail) && conPerfil(a.inquilinoEmail)
+    && !cerradoAntes(a, desde(a.duenoEmail)) && !cerradoAntes(a, desde(a.inquilinoEmail)))
+const cerradoAntes = (a: Alquiler, desde?: string) => !!desde && !!a.resultado?.fecha && Date.parse(a.resultado.fecha) < Date.parse(desde)
 
 /** Parte del depósito que se descontó (0 a 1). 0 si el reclamo se cerró sin descontar nada o si no hubo reclamo. */
 export function fraccionDescontada(a: Alquiler, ahora = Date.now()): number {

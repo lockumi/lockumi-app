@@ -37,15 +37,14 @@ describe('Coordinador: las cuentas que ya existían no vuelven a aceptar nada', 
     const t = await import('../textos') as Record<string, unknown>, p = await import('../Pantallas') as Record<string, unknown>
     for (const k of ['REP13', 'BLOQUEO_NUEVO']) expect(t[k], k).toBeUndefined()
     for (const k of ['TEXTO_REP01_CUENTA', 'BloqueoNuevo']) expect(p[k], k).toBeUndefined()
-    const { REP01, UI } = t as { REP01: Record<string, unknown>; UI: Record<string, unknown> }
-    for (const k of ['tituloCuenta', 'casillaVersion', 'noAcuerdoCuenta']) expect(REP01[k], k).toBeUndefined()
+    const { UI } = t as { UI: Record<string, unknown> }; expect(t.REP01, 'REP01 (sin pantalla previa, 26/10)').toBeUndefined()
     for (const k of ['errRep01Cuenta', 'rep13Titulo', 'ahoraNoCuenta']) expect(UI[k], k).toBeUndefined()
     const src = await leerArchivo('src/reputacion/Pantallas.tsx') + await leerArchivo('src/reputacion/textos.ts')
     for (const x of ['REP-13', 'REP13', 'ahora-no', 'cuenta = false', '/perfil/aceptar']) expect(src, x).not.toContain(x)
   })
-  it('la pantalla previa queda igual (REP-01 con dos casillas) y conserva «Ya tengo cuenta: entrar»', async () => {
-    const { Previa } = await import('../Pantallas'), h = renderToStaticMarkup(<Previa><p>LOGIN</p></Previa>)
-    expect((h.match(/type="checkbox"/g) ?? []).length).toBe(2); expect(texto(h)).toContain('Antes de crear tu cuenta: tu perfil de reputación'); expect(texto(h)).toContain('Ya tengo cuenta: entrar')
+  it('ya no hay pantalla previa (Legal, 26/10/2026): el perfil va en la casilla de los Términos 1.13-demo de la pantalla de inicio', async () => {
+    expect((await import('../Pantallas') as Record<string, unknown>).Previa).toBeUndefined()
+    expect(await leerArchivo('src/App.tsx')).not.toMatch(/<Previa|Antes de crear tu cuenta/)
   })
   it('Inicio: la tarjeta «Tu perfil en Lockumi» solo con REP-01 aceptado', async () => {
     const { EntradaReputacion } = await import('../Entrada')
@@ -66,7 +65,7 @@ describe('Legal: un alquiler con una cuenta anterior no cuenta para ninguna de l
     expect(alquileresDeReputacion(xs, 'vieja@x.cr', 'dueno', conPerfil)).toEqual([])
   })
   it('en el perfil: el alquiler con la cuenta anterior no suma; quien pidió eliminar su cuenta tenía perfil, así que sigue contando', async () => {
-    const c = await import('../consentimiento'); c.aceptarRep01(U.email, ['x']); c.guardarDatos(U.email, 'Demo D.', 'Escazú'); c.aceptarRep01('nueva@x.cr', ['x']); c.aceptarRep01('borra@x.cr', ['x'])
+    const c = await import('../consentimiento'); c.aceptarRep01(U.email, ['x'], '2026-01-01T00:00:00.000Z'); c.guardarDatos(U.email, 'Demo D.', 'Escazú'); c.aceptarRep01('nueva@x.cr', ['x'], '2026-01-01T00:00:00.000Z'); c.aceptarRep01('borra@x.cr', ['x'], '2026-01-01T00:00:00.000Z')
     sembrar([alq('a1', U.email, 'nueva@x.cr'), alq('a2', U.email, 'vieja@x.cr'), alq('a4', U.email, 'borra@x.cr')])
     const { pedirBorrado, ejecutarBorrados, tienePerfilReputacion } = await import('../borrado')
     pedirBorrado('borra@x.cr', Date.parse('2026-06-02T12:00:00Z'), []); ejecutarBorrados(Date.parse('2026-07-01T12:00:00Z'), [])
@@ -121,15 +120,8 @@ describe('Legal: guarda de encendido (la fecha real de publicación)', () => {
   })
 })
 
-describe('Legal: la 1.10-demo solo la guardan las cuentas nuevas (desde la pantalla previa)', () => {
-  it('aceptar los Términos sin la pantalla previa (cuenta anterior que entra) guarda la 1.7-demo', async () => {
-    const { guardarAceptacion } = await import('../../legal/aceptacion'), v = await import('../../legal/version17')
-    expect(guardarAceptacion('terminos', v.V17).edicion).toBe(v.EDICION_V17)
-    const { entrarSinAceptar } = await import('../consentimiento'); entrarSinAceptar()
-    expect(guardarAceptacion('terminos', v.V17).edicion).toBe(v.EDICION_V17)
-  })
-  it('con la pantalla previa aceptada en esta sesión (cuenta nueva) guarda la 1.10-demo', async () => {
-    const { aceptarPrevia } = await import('../consentimiento'); aceptarPrevia(['x'])
+describe('Legal (26/10/2026): con la reputación encendida, aceptar en la pantalla de inicio guarda la 1.13-demo', () => {
+  it('la casilla de los Términos nombra el perfil, así que guarda la edición vigente (sin pantalla previa)', async () => {
     const { guardarAceptacion } = await import('../../legal/aceptacion'), v = await import('../../legal/version17')
     expect(guardarAceptacion('terminos', v.V17).edicion).toBe(v.EDICION_REPUTACION)
   })
@@ -145,16 +137,16 @@ describe('Legal: la 1.10-demo solo la guardan las cuentas nuevas (desde la panta
 })
 
 describe('Legal: textos literales', () => {
-  it('Términos 15.1 y Aviso: las cuentas anteriores a la 1.10-demo no tienen perfil (LEGAL: revisado (25/10); guion U+2011 y espacio U+00A0 tras «versión»: «versión 1.10‑demo» nunca se corta)', async () => {
+  it('Términos 15.1 y Aviso (1.13-demo, Legal 26/10): las cuentas que no tenían perfil reciben uno al aceptar esta versión; lo anterior no cuenta', async () => {
     const t = await legal('terminos.md'), p = await legal('privacidad.md')
-    const T = 'Las cuentas creadas antes de la versión\u00a01.10\u2011demo no tienen perfil de reputación: siguen usando Lockumi como antes, sin perfil público, y sus alquileres no se publican ni cuentan para la reputación.'
-    const P = 'Si tu cuenta es anterior a la versión\u00a01.10\u2011demo, no tienes perfil de reputación: no publicamos nada sobre ti ni usamos tus alquileres para calcular puntajes.'
-    expect(t.split('\n').find(l => l.startsWith('15.1 '))!.endsWith(T)).toBe(true)
-    const sec = p.slice(p.indexOf('## Perfil de reputación')).split('\n').filter(l => l.trim() && !l.startsWith('<!--'))
-    expect(sec[1]!.startsWith('Usar Lockumi incluye un perfil de reputación')).toBe(true); expect(sec[2]).toBe(P)
-    expect(await legal('terminos.md', false)).not.toContain(T); expect(await legal('privacidad.md', false)).not.toContain(P)
-    for (const f of ['terminos.md', 'privacidad.md']) expect(await leerArchivo('src/legal/v17/' + f)).toMatch(/LEGAL: revisado \(25\/10\)[^\n]*1\.10-demo/)
+    const T = 'Las cuentas que no tenían perfil de reputación reciben uno cuando aceptan esta versión. Sus alquileres cerrados antes de eso no se publican ni cuentan para la reputación.'
+    const P101 = 'Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con tu cuenta. **Cualquier persona en internet** con el enlace puede verlo. Lo aceptas al marcar la casilla de los Términos, que nombra el perfil y sale sin marcar. Si no lo aceptas, puedes no crear tu cuenta, sin costo.'
+    expect(t.split('\n').find(l => l.startsWith('15.1 '))!.endsWith(T)).toBe(true); expect(t).toContain('que se crea con tu cuenta cuando aceptas estos Términos.')
+    expect(await leerArchivo('src/legal/v17/privacidad.md')).toContain(P101); expect(p).toContain(T)
+    expect(t + p).not.toMatch(/anteriores? a la versión\u00a01\.10/)
+    expect(await legal('terminos.md', false)).not.toContain(T); expect(await legal('privacidad.md', false)).not.toContain(T)
   })
+
   it('sin restos de REP-13, la tercera casilla ni [Ver y aceptar] en los textos legales ni en la documentación', async () => {
     for (const f of ['src/legal/v17/privacidad.md', 'src/legal/v17/terminos.md', 'docs/reputacion.md']) {
       const s = await leerArchivo(f); for (const x of ['REP-13', 'tercera casilla', 'Ver y aceptar', 'Ver cambios', 'tres casillas']) expect(s, f + ' · ' + x).not.toContain(x) }
@@ -169,8 +161,8 @@ describe('Legal: textos literales', () => {
   it('perfil con una revisión pedida: la nota de Legal', async () => {
     const L = 'Pediste una revisión. Mientras la revisamos, tu puntaje público dice «En revisión».'
     const { NOTA_EN_REVISION } = await import('../textos'); expect(NOTA_EN_REVISION).toBe(L)
-    const c = await import('../consentimiento'); c.aceptarRep01(U.email, ['x']); c.guardarDatos(U.email, 'Demo D.', 'Escazú')
-    sembrar([alq('r1', U.email, 'nueva@x.cr')]); c.aceptarRep01('nueva@x.cr', ['x'])
+    const c = await import('../consentimiento'); c.aceptarRep01(U.email, ['x'], '2026-01-01T00:00:00.000Z'); c.guardarDatos(U.email, 'Demo D.', 'Escazú')
+    sembrar([alq('r1', U.email, 'nueva@x.cr')]); c.aceptarRep01('nueva@x.cr', ['x'], '2026-01-01T00:00:00.000Z')
     const { pedirRevision } = await import('../revision'); pedirRevision(U.email, { alquilerId: 'r1', rol: 'dueno', texto: 'Está mal' }, Date.now())
     expect(texto(await pantalla('/perfil/dueno'))).toContain(L)
   })
