@@ -358,7 +358,7 @@ export function CodigoCorreo({ c, err, enviando, confirmar, reenviar, cancelar }
         <p className="nota">{SEGUNDO_FACTOR.nota}</p>
         <div className="rp-acciones"><button type="submit" className={c.accion === 'eliminar' ? 'boton rp-peligro' : 'rp-boton rp-boton--ancho'} disabled={enviando}>{SEGUNDO_FACTOR.boton[c.accion]}</button>
           <button type="button" className="boton boton--secundario" onClick={reenviar} disabled={enviando}>{SEGUNDO_FACTOR.reenviar}</button>
-          <a className="boton boton--secundario" href={c.accion === 'verificar_correo' ? '#/' : '#/perfil'} onClick={cancelar}>{SEGUNDO_FACTOR.cancelar}</a></div>
+          <a className="boton boton--secundario" href={c.accion === 'verificar_correo' ? '#/' : c.accion === 'invitacion' ? location.hash : '#/perfil'} onClick={cancelar}>{SEGUNDO_FACTOR.cancelar}</a></div>
       </form></section></main>
 }
 // ——— «Revisa tu correo» al entrar con el código por correo de Cavos (Legal 25/10/2026, 9:00 p. m.) ———

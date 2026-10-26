@@ -125,11 +125,14 @@ export const SEGUNDO_FACTOR = {
   texto: { eliminar: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para eliminar tu cuenta.',
     descargar: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para descargar tus datos.',
     // LEGAL: revisado (25/10, 9:00 p. m.) · texto literal de Legal (confirmar el correo con el token de correo de Cavos, aud «cavos-email»)
-    verificar_correo: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu correo.' } as Record<'eliminar' | 'descargar' | 'verificar_correo', string>,
+    verificar_correo: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu correo.',
+    // 26/10/2026 (Katherine): la misma frase, para aceptar una invitación abierta con otra cuenta
+    invitacion: 'Te enviamos un código de 6 números a {correo}. Escríbelo aquí para aceptar la invitación.' } as Record<'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion', string>,
   campo: 'Código del correo',
   nota: 'El código vale 10 minutos. Si no llega en un minuto, revisa la carpeta de correo no deseado o toca «Reenviar código».',
   // verificar_correo: «Continuar», el mismo botón ya aprobado de la app (UI.continuar); Legal no pidió otro.
-  boton: { eliminar: 'Eliminar mi cuenta', descargar: 'Descargar mis datos', verificar_correo: 'Continuar' } as Record<'eliminar' | 'descargar' | 'verificar_correo', string>,
+  // invitacion: «Aceptar invitación», el mismo botón de la invitación (Invitacion.tsx, ZonaAceptar).
+  boton: { eliminar: 'Eliminar mi cuenta', descargar: 'Descargar mis datos', verificar_correo: 'Continuar', invitacion: 'Aceptar invitación' } as Record<'eliminar' | 'descargar' | 'verificar_correo' | 'invitacion', string>,
   reenviar: 'Reenviar código', cancelar: 'Cancelar',
   errores: {
     // LEGAL: revisado (25/10, 5:04 p. m.) · texto literal de Legal («Si el código falla»)
