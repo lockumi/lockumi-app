@@ -50,7 +50,7 @@ export function textoFoto(f: Foto, ahora = Date.now()): string {
   if (f.origen === 'ejemplo') return 'Foto de ejemplo'
   const t = f.tomadaEn ?? Date.parse(f.fecha)
   const d = new Date(t), h = new Date(ahora)
-  const hora = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const hora = d.toLocaleTimeString('es-CR', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s*([ap])\.\s*m\./g, '\u00a0$1.\u00a0m.')   // 12 h (Legal 25/10, punto 8)
   const mismoDia = (x: Date, y: Date) => x.toDateString() === y.toDateString()
   const ayer = new Date(h); ayer.setDate(h.getDate() - 1)
   const dia = mismoDia(d, h) ? 'hoy' : mismoDia(d, ayer) ? 'ayer' : 'el ' + d.toLocaleDateString('es-CR', { day: 'numeric', month: 'short' })

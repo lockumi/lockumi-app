@@ -57,7 +57,7 @@ describe('paso 7 · devolución automática (dos personas, opción 1)', () => {
     expect(JSON.stringify(r)).not.toContain(M.secret())
   })
   it('solo si venció el plazo sin reclamo (cerrado automático) y sin la aprobación del dueño', async () => {
-    for (const k of [{ ...base, estado: 'ventana_reclamo', resultado: null }, { ...base, resultado: { via: 'mediacion', dueno: 5, inquilino: 795 } }, { ...base, estado: 'reclamo' }])
+    for (const k of [{ ...base, estado: 'ventana_reclamo', resultado: null }, { ...base, resultado: { via: 'mediacion', dueno: 5, inquilino: 795 } }, { ...base, estado: 'reclamo' }, { ...base, estado: 'mediacion', resultado: null }, { ...base, estado: 'reclamo', resultado: { via: 'automatico' } }])
       await expect(atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', simular(k).f)).rejects.toMatchObject({ estado: 409 })
     await expect(atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', simular(base, [{ texto: APROBADO }]).f)).rejects.toMatchObject({ estado: 409 })
   })

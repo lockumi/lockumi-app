@@ -53,14 +53,14 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
         : <><h2>Tu plazo para revisar y reclamar</h2><p className="cuenta-texto" role="timer">{textoContador('dueno', a, ahora)}</p>
           <p className="nota">Solo se puede reclamar por daños o faltantes con pruebas, nunca por el desgaste normal (Anexo 6-A). Si el plazo vence sin reclamo, se devuelve todo el depósito al inquilino.</p>{/* LEGAL: revisado (24/10) · frases de la B.2b */}
           {dos && <Auto rol="dueno" texto={TEXTO_AUTO_DUENO} />}</>}
-      {simulado && <p className="nota">El dueño es una cuenta de prueba de Lockumi: estos botones simulan lo que haría.</p>}{/* LEGAL: revisar */}
-      {!a.ventanaInicio && !enServidor && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => store.cambiar(a.id, x => recibirCasa(x, ahoraDe(x)))}>{botonRecibir(simulado)}</button>}
-      {a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => setForm(true)}>{simulado ? 'Simular: el dueño hace un reclamo' : 'Revisar y reclamar'}</button>}{/* LEGAL: revisar (simulado) · revisado (24/10) · B.2b «Revisar y reclamar» */}
+      {simulado && <p className="nota">El dueño es una cuenta de prueba de Lockumi: estos botones simulan lo que haría.</p>}{/* LEGAL: revisado (25/10, lista de Legal) */}
+      {!a.ventanaInicio && <button type="button" className="boton boton--pc boton--ancho boton--grande" disabled={p.ocupado} onClick={() => enServidor ? void p.correr(() => acciones.recibirCasa!(a)) : store.cambiar(a.id, x => recibirCasa(x, ahoraDe(x)))}>{botonRecibir(simulado)}</button>}
+      {a.ventanaInicio && !(enServidor && aprobado) && <button type="button" className="boton boton--pc boton--ancho boton--grande" onClick={() => setForm(true)}>{simulado ? 'Simular: el dueño hace un reclamo' : 'Revisar y reclamar'}</button>}{/* LEGAL: revisado (25/10, lista de Legal) (simulado) · revisado (24/10) · B.2b «Revisar y reclamar» */}
       {enServidor && aprobado ? <p className="nota" role="status">{TEXTO_APROBADO_DOS}</p>
         : <button type="button" className="boton boton--secundario boton--ancho" onClick={() => setConfirmar(true)}>{botonDevolver(simulado)}</button>}
     </div>
   } else {
-    // LEGAL: revisar · textos del inquilino durante el plazo del dueño
+    // LEGAL: revisado (25/10, lista de Legal) · textos del inquilino durante el plazo del dueño
     cuerpo = <div className="pila" id="plazo-acciones"><h2>El dueño revisa la casa</h2>
       {!a.ventanaInicio ? <p>Entregaste la casa el {cr(+new Date(a.entrega!))}. El dueño tiene 7 días naturales para revisar y reclamar: empiezan cuando toque «Recibí la casa» o, si no lo toca, el {cr(inicioAuto(a)!)}.</p>
         : <p className="cuenta-texto" role="timer">El dueño puede reclamar hasta el {cr(fin!)}. Si no reclama, se te devuelve todo el depósito{modoPrueba ? ' de prueba' : ''}.</p>}
@@ -73,7 +73,7 @@ export function PlazoDueno({ a, rol, reclamo, children }: { a: Alquiler; rol: Ro
     <AvisosApp a={a} rol={rol} onAccion={acc => acc === 'confirmar-devolver' ? (setForm(false), setConfirmar(true)) : irA()} />
     {correosActivos() && <AvisosCorreo a={a} rol={rol} />}{/* paso 11, solo con VITE_CORREOS=1 */}
     {adelantoPermitido() && !termino && !enServidor && <section className="pila simulador" aria-labelledby="t-simulador">
-      {/* LEGAL: revisar · simulador de días (aprobado: los avisos salen al adelantar) */}
+      {/* LEGAL: revisado (25/10, lista de Legal) · simulador de días (aprobado: los avisos salen al adelantar) */}
       <h3 id="t-simulador">Simulador de días (solo red de prueba)</h3>
       <p className="nota">Reloj de la demo: {cr(ahora)}. Adelántalo para ver los avisos de cada día; no cambia la hora real.</p>
       <div className="fila-botones">

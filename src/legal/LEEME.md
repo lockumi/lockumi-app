@@ -68,3 +68,23 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **En línea:** `{{correos: y avisos por correo}}` (sale solo si está encendido) y `{{!dos-personas:texto}}` (solo si está apagado). El espacio después de «:» cuenta: si la frase empieza con espacio, se escribe.
 - Interruptores: `dos-personas` (modo de dos personas) y `correos` (`VITE_CORREOS=1`). Un nombre desconocido o un bloque sin cerrar hace fallar el build y los tests (`condicional.ts`).
 - Las notas `<!-- LEGAL: revisar … -->` en su propia línea no se publican.
+
+## Versiones por escenario (escenario C, preparación; rama `paso17-escenario-c`, sin publicar)
+- Un solo archivo por documento (`v17/terminos.md`, `v17/privacidad.md`) y una versión por escenario encendido, en `versiones.ts`:
+  A → 1.7-demo · 25 de octubre de 2026; B (correos) → 1.8-demo; C (correos + dos personas) → 1.9-demo. Cada una con su fecha
+  (la de la 1.8 y la 1.9 se pone el día en que se enciendan; la 1.9 lleva «25 de octubre de 2026» como fecha provisional, a cambiar por la
+  fecha real de encendido). `{{edicion}}` sale de la versión vigente.
+- Con dos personas, la versión queda guardada por alquiler en el servidor (`terminos_version`, migración 20261025050000) y la casilla
+  «Acepto los Términos 1.9-demo y el Aviso de privacidad» (`CasillaVersion`) se marca al crear invitando y al unirse; quién y cuándo, en
+  `lk_aceptaciones_terminos`. `// LEGAL: revisar`.
+- **Marcas (lista de Legal del 25/10, `legal/revision-marcas-pr22.md`):** lo que Legal dio por bueno lleva `// LEGAL: revisado (25/10, lista de Legal)`; las 19 correcciones van literales. Los errores nuevos del servidor (migraciones 030000–070000 y `api/_lib/tw.ts`) tienen el texto final de Legal del 25/10, 4:56 a. m., y la marca `LEGAL: revisado (25/10, 4:56 a. m., Legal)` (lista en `legal/errores-servidor-c.md`). En `src` y `api` solo queda `src/alertas.ts:5`. «Todo bien, devolver» y el texto de después de aprobar («en cuanto la red de prueba lo confirme») quedaron revisados por Legal el 25/10, 4:33 a. m. `src/prueba/__tests__/c-lista-marcas.test.tsx` las cuenta.
+- Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: sin aviso de «Términos actualizados» en «Tus alquileres»
+  ni pantalla de volver a aceptar (decisión de Katherine, 25/10). Una cuenta nueva acepta la 1.9-demo en «Entrar» y cada función nueva tiene su casilla. Un alquiler firmado sigue con su versión salvo que los dos acepten.
+- **2.2 b) con dos personas** (texto exacto de Legal, 25/10): es un bloque `<!-- si: dos-personas -->` que reemplaza toda la b): primero el párrafo exacto de Legal y, después, sin cambios, la b) de antes (registro en la red de prueba, «simulados», «Nada de esto tiene efecto legal»; Legal, 25/10, 1:24 a. m.)
+  (fase 2, la mediación no decide, excepciones 5.3 d y 6.5.1). Sin dos personas (A y B), la b) no cambia. Prueba: `escenario-c.test.ts`.
+
+- **Regla 6.5.1 en dos personas (C), opción 1 de Legal (25/10, 1:50 a. m.):** en los alquileres de dos personas la regla no se ofrece al firmar (6.5.1 d y 2.2 b, textos de Legal del 25/10, 2:53 a. m., solo en el bloque de dos personas; la pantalla de firmar muestra la nota «Si hay un reclamo», sin casilla) y nunca se aplica sola: si el inquilino no responde, el servidor pasa el caso a la mediación con el motivo «regla no disponible en esta versión (6.5.1 d)», sin tope ni recorte del 30 % y sin pago parcial. Solo pagan el acuerdo, la mediación con las dos aceptaciones y la devolución del 100 % si el dueño no reclama (`20261025040000_silencio_dos_personas.sql`, `/api/tw` «repartir»).
+- **Legal 25/10, 3:16 a. m. (C):** la 6.5 c) termina, solo con dos personas, con «En la versión con dos personas, la regla no se ofrece (6.5.1 d).» (`{{dos-personas: …}}`). Se quitaron las marcas `LEGAL: revisar` de lo aprobado (2.2 b, 6.5.1 d, 6.5 c y los textos de C en `src/prueba/dosPersonas.ts`). Prueba: `escenario-c.test.ts`.
+
+- **Fecha de la 1.9-demo:** `FECHA_V19` en `versiones.ts` es provisional («25 de octubre de 2026»). Al encender C hay que poner la fecha real del encendido (paso obligatorio de `encendido-lista.md`).
+- **Legal 25/10, 3:34 a. m.:** `TEXTO_SOLOS_DOS` en contrato y «En curso» de C; 2.2 b) de C termina con quién maneja las cuentas y quién aplica la regla de las dos aceptaciones.

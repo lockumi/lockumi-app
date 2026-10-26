@@ -3,15 +3,16 @@
 // sin recordatorios.» La declaración se guarda en el servidor (quién, cuándo y el texto exacto: lk_crear_contrato_invitando).
 import { correosActivos } from './interruptor'
 import { enviarCorreo } from './correoAvisos'
+import { NOMBRE_INVITACION } from '../../api/_lib/textos-correos'
 
-// LEGAL: revisar · casilla de la declaración (texto propio, igual que la Privacidad 1.7-demo)
+// LEGAL: revisado (25/10, lista de Legal) · casilla de la declaración (texto propio, igual que la Privacidad 1.7-demo)
 export const declaracionInvitacion = () => correosActivos()
-  ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de Lockumi.'
+  ? 'Declaro que esta persona sabe que la invito y que acepta recibir el correo de invitación de Lockumi.'
   : 'Declaro que esta persona sabe que la invito.'
 
 const NOMBRE = /^[\p{L} .'-]{1,60}$/u
-/** Nombre visible para el correo (el servidor solo acepta letras y espacios). */
-export const nombreInvitacion = (nombre?: string) => nombre && NOMBRE.test(nombre.trim()) ? nombre.trim() : 'El dueño'
+/** Nombre visible para el correo (el servidor solo acepta letras y espacios). Sin nombre: «el dueño», en minúscula porque va a mitad de la frase. */
+export const nombreInvitacion = (nombre?: string) => nombre && NOMBRE.test(nombre.trim()) ? nombre.trim() : NOMBRE_INVITACION
 
 const clave = (alquiler: string) => 'lk:invitacion-enviada:' + alquiler
 /** Envía el correo de invitación una sola vez por alquiler (solo con VITE_CORREOS=1). El servidor también lo exige. */

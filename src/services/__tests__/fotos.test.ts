@@ -36,6 +36,6 @@ describe('huella y texto', () => {
   })
   it('texto simple', () => {
     const t = new Date(2026, 9, 16, 15, 5).getTime()
-    expect(textoFoto({ src: '', por: 'dueno', fecha: '', tomadaEn: t, origen: 'camara' }, t + 1000)).toBe('Foto tomada hoy a las 3:05 PM')
+    expect(textoFoto({ src: '', por: 'dueno', fecha: '', tomadaEn: t, origen: 'camara' }, t + 1000)).toBe('Foto tomada hoy a las 3:05 p. m.')
   })
 })

@@ -14,15 +14,15 @@ describe('plazos (hora de Costa Rica, feriados del art. 148)', () => {
   it('caso (a): el día 7 cae en domingo y pasa al lunes', () => {
     const v = vencimiento(cr('2026-11-01T10:00:00'), 7 * DIA_MS)
     expect(diaCR(cr('2026-11-08T10:00:00')).semana).toBe(0)
-    expect(v.movido).toBe('domingo'); expect(fechaHoraCR(v.fin)).toBe('9 nov 2026, 10:00')
+    expect(v.movido).toBe('domingo'); expect(fechaHoraCR(v.fin)).toBe('9 nov 2026, 10:00 a. m.')
   })
   it('caso (a): el día 7 cae en feriado (1 de diciembre) y pasa al siguiente día hábil', () => {
     const v = vencimiento(cr('2026-11-24T09:30:00'), 7 * DIA_MS)
-    expect(v.movido).toBe('feriado'); expect(v.feriado).toBe('Abolición del Ejército'); expect(fechaHoraCR(v.fin)).toBe('2 dic 2026, 09:30')
+    expect(v.movido).toBe('feriado'); expect(v.feriado).toBe('Abolición del Ejército'); expect(fechaHoraCR(v.fin)).toBe('2 dic 2026, 9:30 a. m.')
   })
   it('feriado en sábado seguido de domingo: pasa al lunes', () => {
     const v = vencimiento(cr('2027-12-18T08:00:00'), 7 * DIA_MS)
-    expect(v.movido).toBe('feriado'); expect(fechaHoraCR(v.fin)).toBe('27 dic 2027, 08:00')
+    expect(v.movido).toBe('feriado'); expect(fechaHoraCR(v.fin)).toBe('27 dic 2027, 8:00 a. m.')
   })
   it('día normal: no se mueve; plazos cortos de prueba no se mueven', () => {
     expect(vencimiento(cr('2026-11-02T10:00:00'), 7 * DIA_MS)).toEqual({ fin: cr('2026-11-09T10:00:00'), movido: null })
@@ -32,7 +32,11 @@ describe('plazos (hora de Costa Rica, feriados del art. 148)', () => {
     expect(diaCR(cr('2026-11-07T23:30:00'))).toEqual({ fecha: '2026-11-07', semana: 6 })
   })
   it('3 días hábiles de la mediación: sin fines de semana ni feriados', () => {
-    expect(fechaHoraCR(sumarHabiles(cr('2026-11-27T10:00:00'), 3))).toBe('3 dic 2026, 10:00')   // vie → lun, (mar 1 dic feriado), mié, jue
-    expect(fechaHoraCR(sumarHabiles(cr('2026-11-02T10:00:00'), 3))).toBe('5 nov 2026, 10:00')
+    // Legal 25/10, 5:09 p. m. (punto 8): siempre 12 h, «4:44 p. m.» con espacios duros (U+00A0)
+    expect(fechaHoraCR(cr('2026-10-25T16:44:00'))).toBe('25 oct 2026, 4:44\u00a0p.\u00a0m.')
+    expect(fechaHoraCR(cr('2026-10-25T00:05:00'))).toBe('25 oct 2026, 12:05\u00a0a.\u00a0m.')
+    expect(fechaHoraCR(cr('2026-10-25T12:00:00'))).toBe('25 oct 2026, 12:00\u00a0p.\u00a0m.')
+    expect(fechaHoraCR(sumarHabiles(cr('2026-11-27T10:00:00'), 3))).toBe('3 dic 2026, 10:00 a. m.')   // vie → lun, (mar 1 dic feriado), mié, jue
+    expect(fechaHoraCR(sumarHabiles(cr('2026-11-02T10:00:00'), 3))).toBe('5 nov 2026, 10:00 a. m.')
   })
 })

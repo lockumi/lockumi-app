@@ -25,6 +25,12 @@
       ]
     }
   ],
+  "crons": [
+    {
+      "path": "/api/borrados",
+      "schedule": "0 9 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!assets/|fonts/|img/|api/|robots.txt).*)",

@@ -20,7 +20,7 @@ export const claveReputacion = (email: string) => 'lockumi.reputacion.v1.' + ema
 export const CLAVE_PREVIA_REPUTACION = 'lockumi.reputacion.previa.v2'
 const leerJson = (s: () => Storage, k: string) => { try { const x = s().getItem(k); return x ? JSON.parse(x) : null } catch { return null } }
 const reputacionEncendida = () => import.meta.env.VITE_REPUTACION === '1'
-/** Al aceptar en el login: 1.10-demo solo si en esta sesión se aceptó la pantalla previa (cuenta nueva). */
-export const edicionAlAceptar = () => reputacionEncendida() && leerJson(() => sessionStorage, CLAVE_PREVIA_REPUTACION) ? EDICION_REPUTACION : EDICION_V17
+/** Al aceptar en el login (base: la edición de la versión aceptada; desde C, la 1.9-demo): 1.10-demo solo si en esta sesión se aceptó la pantalla previa (cuenta nueva). */
+export const edicionAlAceptar = (base = EDICION_V17) => reputacionEncendida() && leerJson(() => sessionStorage, CLAVE_PREVIA_REPUTACION) ? EDICION_REPUTACION : base
 /** Para los registros de una cuenta (p. ej. la Regla, 6.5.1): 1.10-demo solo si esa cuenta aceptó su perfil (REP-01). */
-export const edicionDeCuenta = (email?: string) => reputacionEncendida() && email && leerJson(() => localStorage, claveReputacion(email))?.rep01 ? EDICION_REPUTACION : EDICION_V17
+export const edicionDeCuenta = (email?: string, base = EDICION_V17) => reputacionEncendida() && email && leerJson(() => localStorage, claveReputacion(email))?.rep01 ? EDICION_REPUTACION : base

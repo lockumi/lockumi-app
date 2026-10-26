@@ -56,10 +56,16 @@ export function vencimiento(inicio: number, ms: number): Vencimiento {
 }
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
-/** «16 nov 2027, 10:00» en hora de Costa Rica (siempre, sin importar la zona del aparato). */
+const NBSP = '\u00a0'
+/** «3:21 p. m.» (12 horas, con espacios duros U+00A0) en hora de Costa Rica. Legal 25/10 5:09 p. m. (punto 8): la hora siempre en 12 h. */
+export function horaCR(t: number): string {
+  const x = new Date(t + CR), h = x.getUTCHours()
+  return `${h % 12 || 12}:${String(x.getUTCMinutes()).padStart(2, '0')}${NBSP}${h < 12 ? 'a.' : 'p.'}${NBSP}m.`
+}
+/** «16 nov 2027, 10:00 a. m.» en hora de Costa Rica (siempre, sin importar la zona del aparato). */
 export function fechaHoraCR(t: number): string {
   const x = new Date(t + CR)
-  return `${x.getUTCDate()} ${MESES[x.getUTCMonth()]} ${x.getUTCFullYear()}, ${String(x.getUTCHours()).padStart(2, '0')}:${String(x.getUTCMinutes()).padStart(2, '0')}`
+  return `${x.getUTCDate()} ${MESES[x.getUTCMonth()]} ${x.getUTCFullYear()}, ${horaCR(t)}`
 }
 /** «16 nov 2027» en hora de Costa Rica. */
 export const fechaCR = (t: number) => fechaHoraCR(t).split(',')[0]

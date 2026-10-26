@@ -5,6 +5,8 @@ import { store, ahoraDe } from '../store'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 import { botonesAviso, type Plantilla } from '../../api/_lib/avisos'
 import { abrirAviso } from './dueno'
+import { dosPersonas } from '../servidor/config'
+import { correosActivos } from './interruptor'
 
 const cr = (iso?: string) => iso ? `${fechaHoraCR(+new Date(iso))}, hora de Costa Rica` : '—'
 export function AvisosApp({ a, rol, onAccion }: { a: Alquiler; rol: Rol; onAccion: (accion: 'ver' | 'confirmar-devolver') => void }) {
@@ -18,8 +20,8 @@ export function AvisosApp({ a, rol, onAccion }: { a: Alquiler; rol: Rol; onAccio
       <summary><strong>{v.dia === 'reparacion' ? '5 días antes de la salida' : `Día ${v.dia}`}</strong> · {v.asunto}{!v.abierto && <span className="chip chip--coral">Nuevo</span>}</summary>
       <p>{v.texto}</p>
       <div className="fila-botones">{botonesAviso(v.id as Plantilla).map(b => <button key={b.texto} type="button" className={'boton boton--chico ' + (b.accion === 'ver' ? 'boton--pc' : 'boton--secundario')} onClick={() => { abrir(v.id); onAccion(b.accion) }}>{b.texto}</button>)}</div>
-      {/* LEGAL: revisar · registro visible en el detalle del caso */}
-      <p className="nota">Entregado en la app: {cr(v.entregado)} · Abierto en la app: {cr(v.abierto)} · Abierto por el enlace del correo: {cr(v.abiertoCorreo)}</p>
+      {/* LEGAL: revisado (25/10, lista de Legal) · registro visible en el detalle del caso */}
+      <p className="nota">Entregado en la app: {cr(v.entregado)} · Abierto en la app: {cr(v.abierto)}{(!dosPersonas || correosActivos()) && ` · Abierto por el enlace del correo: ${cr(v.abiertoCorreo)}`}</p>
     </details>)}
   </section>
 }

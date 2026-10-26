@@ -5,8 +5,10 @@
 //          https://supabase.com/docs/reference/javascript/storage-from-createsignedurls
 import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 import type { Alquiler, Foto, Rol } from '../types'
-import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS } from './config'
+import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS, dosPersonas } from './config'
+import { linkInvitacion } from './origen'
 import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
+import type { Aceptacion } from './aceptaciones'
 
 export class ErrorServidor extends Error {}
 let cliente: Promise<SupabaseClient> | null = null
@@ -38,7 +40,7 @@ const urls = new Map<string, string>()
 const INV = 'lockumi.invitaciones'
 const invitaciones = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(INV) || '{}') } catch { return {} } }
 const guardarInvitacion = (id: string, t: string) => localStorage.setItem(INV, JSON.stringify({ ...invitaciones(), [id]: t }))
-export const linkInvitacion = (id: string, token: string) => `${location.origin}/#/invitacion/${id}/${token}`
+export { linkInvitacion }
 
 export async function recargar() {
   const sb = await supabase(); yo = await sesion()
@@ -49,8 +51,18 @@ export async function recargar() {
   const [ps, as, fs, fts, rs, es] = await Promise.all([
     de('lk_participantes', 'rol, usuario, email_cavos, direccion_stellar'), de('lk_actas', 'etapa, cuartos'), de('lk_firmas', 'etapa, rol, firmado_en'),
     de('lk_fotos', 'id, etapa, cuarto, por_rol, ruta, sha256, sha256_original, tomada_en, fecha_archivo, origen, posible_galeria, subido_en'),
-    de('lk_reclamos', 'monto, motivo, creado_en, respuesta'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
+    de('lk_reclamos', 'monto, motivo, creado_en, respuesta, respondido_en'), sb.from('lk_eventos').select('contrato_id, texto, tx_hash, creado_en').in('contrato_id', ids).order('id')])
   for (const r of [ps, as, fs, fts, rs, es]) if (r.error) throw new ErrorServidor(mensajeServidor(r.error))
+  // Escenario C (20261025050000): versión de los Términos por alquiler. Sin la migración, la consulta falla y todo sigue como antes.
+  const [tv, at, en] = dosPersonas ? await Promise.all([sb.from('lk_contratos').select('id, terminos_version').in('id', ids), de('lk_aceptaciones_terminos', 'rol, aceptado_en'),
+    sb.from('lk_contratos').select('id, entregado_en').in('id', ids)]) : [] // 20261025060000: sin la migración, falla y no se usa
+  const entregaDe = (id: string) => en && !en.error ? ((en.data ?? []) as { id: string; entregado_en: string | null }[]).find(x => x.id === id)?.entregado_en ?? null : null
+  // Escenario C (20261025090000): mi casilla de avisos por correo, guardada en el servidor (RLS: solo la mía). Sin la migración, no se usa.
+  const cc = dosPersonas ? await sb.from('lk_correos_consentimiento').select('contrato_id, rol, para').in('contrato_id', ids) : null
+  const casillas = cc && !cc.error ? (cc.data ?? []) as { contrato_id: string; rol: Rol; para: string }[] : []
+  const conTerminos = !!tv && !!at && !tv.error && !at.error
+  const terminosDe = (id: string): Filas['terminos'] => conTerminos ? { version: ((tv.data ?? []) as { id: string; terminos_version: string | null }[]).find(x => x.id === id)?.terminos_version ?? null,
+    aceptaciones: por(at, id) as unknown as NonNullable<Filas['terminos']>['aceptaciones'] } : null
   type Fila = Record<string, unknown> & { contrato_id: string }
   const por = (r: { data: unknown }, id: string) => ((r.data ?? []) as Fila[]).filter(x => x.contrato_id === id)
   const faltan = ((fts.data ?? []) as unknown as { ruta: string }[]).map(f => f.ruta).filter(r => !urls.has(r))
@@ -60,9 +72,11 @@ export async function recargar() {
   }
   const inv = invitaciones()
   datos = (cs ?? []).map(c => {
-    const a = aAlquiler({ contrato: c as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
+    const a = aAlquiler({ contrato: { ...c, entregado_en: entregaDe(c.id) } as Filas['contrato'], participantes: por(ps, c.id) as unknown as Filas['participantes'], actas: por(as, c.id) as unknown as Filas['actas'],
       firmas: por(fs, c.id) as unknown as Filas['firmas'], fotos: por(fts, c.id) as unknown as Filas['fotos'], reclamo: (por(rs, c.id)[0] ?? null) as unknown as Filas['reclamo'],
-      eventos: por(es, c.id) as unknown as Filas['eventos'] }, yo, r => urls.get(r) ?? '')
+      eventos: por(es, c.id) as unknown as Filas['eventos'], terminos: terminosDe(c.id) }, yo, r => urls.get(r) ?? '')
+    const mias = casillas.filter(x => x.contrato_id === c.id)
+    if (mias.length) a.correos = Object.fromEntries(mias.map(x => [x.rol, x.para]))
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
@@ -104,16 +118,27 @@ async function subirFoto(id: string, etapa: 'entrada' | 'salida' | 'reclamo', cu
 }
 
 const tras = async <T>(p: Promise<T>) => { const r = await p; await recargar(); return r }
+/** Escenario C (docs/correos-c.md): después de un paso, se le pide al servidor que envíe los correos que tocan de ESE alquiler.
+ *  El navegador no elige textos ni destinatarios; si el servidor tiene los correos apagados, no pasa nada. Nunca frena la app. */
+// Después de cada paso: el servidor revisa el plazo de la mediación (siempre, Legal 25/10 punto 3) y, solo con CORREOS_C=1, envía los correos.
+export function avisarCorreos(id: string) {
+  if (!dosPersonas) return
+  void tokenSesion().then(t => fetch('/api/correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + t }, body: JSON.stringify({ tipo: 'avisos', alquiler: id }) })).catch(() => {})
+}
+const yAvisar = async <T>(id: string, p: Promise<T>) => { const r = await tras(p); avisarCorreos(id); return r }
 export const servidor = {
-  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string }, email: string, cuenta?: string) {
+  async crear(d: { direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; inquilinoEmail: string; declaracion?: string; terminosVersion?: string }, email: string, cuenta?: string) {
     // paso16-unido: al invitar, el servidor guarda la declaración (quién, cuándo y el texto) en la misma transacción.
-    const r = await rpc<{ id: string; token: string }>(d.declaracion ? 'lk_crear_contrato_invitando' : 'lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
-      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS, ...(d.declaracion && { p_declaracion: d.declaracion }) })
+    const r = await rpc<{ id: string; token: string }>(d.declaracion ? (d.terminosVersion ? 'lk_crear_contrato_con_terminos' : 'lk_crear_contrato_invitando') : 'lk_crear_contrato', { p_direccion: d.direccion, p_monto: d.monto, p_inicio: d.inicio, p_fin: d.fin, p_reglas: d.reglas,
+      p_email_inquilino: d.inquilinoEmail, p_email_cavos: email, p_direccion_stellar: cuenta ?? null, p_ventana_segundos: VENTANA_SEGUNDOS, ...(d.declaracion && { p_declaracion: d.declaracion }), ...(d.declaracion && d.terminosVersion && { p_terminos_version: d.terminosVersion }) })
     guardarInvitacion(r.id, r.token); await recargar(); return { id: r.id, link: linkInvitacion(r.id, r.token) }
   },
   async nuevaInvitacion(id: string) { const t = await rpc<string>('lk_nueva_invitacion', { p_contrato: id }); guardarInvitacion(id, t); await recargar(); return linkInvitacion(id, t) },
   verInvitacion: (id: string, token: string) => rpc<{ direccion: string; monto: number; inicio: string; fin: string; reglas: string[]; email_inquilino: string; email_dueno: string }>('lk_ver_invitacion', { p_contrato: id, p_token: token }),
-  aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string) => tras(rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
+  /** Escenario C: con `terminosVersion`, el inquilino se une aceptando esa versión de los Términos y el Aviso de privacidad (queda quién y cuándo). */
+  aceptarInvitacion: (id: string, token: string, email: string, cuenta?: string, terminosVersion?: string) => tras(terminosVersion
+    ? rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: token, p_email_cavos: email, p_terminos_version: terminosVersion, p_direccion_stellar: cuenta ?? null })
+    : rpc('lk_aceptar_invitacion', { p_contrato: id, p_token: token, p_email_cavos: email, p_direccion_stellar: cuenta ?? null })),
   // Paso 19 · reputación por la persona (Legal, 25/10/2026): el correo es el de la sesión de Cavos (el mismo que p_email_cavos).
   aceptarReputacion: (email: string, version: string, texto: string[]) => rpc<boolean>('lk_aceptar_reputacion', { p_correo: email, p_version: version, p_texto: texto }),
   // Ronda 25/10, 4:22–4:23 p. m.: límite 5 (eliminar en el servidor), límite 4 (REP-01 por el correo) y límite 1 (correo verificado).
@@ -143,13 +168,30 @@ export const servidor = {
   iniciarSalida: (id: string) => tras(rpc('lk_iniciar_salida', { p_contrato: id })),
   async reclamar(id: string, monto: number, motivo: string, fotos: Foto[]) {
     for (const f of fotos) await subirFoto(id, 'reclamo', null, f)
-    return tras(rpc('lk_reclamar', { p_contrato: id, p_monto: monto, p_motivo: motivo }))
+    return yAvisar(id, rpc('lk_reclamar', { p_contrato: id, p_monto: monto, p_motivo: motivo }))
   },
-  responder: (id: string, acepta: boolean) => tras(rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: acepta })),
+  responder: (id: string, acepta: boolean) => yAvisar(id, rpc('lk_responder_reclamo', { p_contrato: id, p_acepta: acepta })),
   cerrarSinReclamo: (id: string) => tras(rpc<boolean>('lk_cerrar_sin_reclamo', { p_contrato: id })),
-  decidir: (id: string, montoDueno: number, motivo?: string) => tras(rpc('lk_decidir_mediacion', { p_contrato: id, p_monto_dueno: montoDueno, p_motivo: motivo ?? null })),
+  decidir: (id: string, montoDueno: number, motivo?: string) => yAvisar(id, rpc('lk_decidir_mediacion', { p_contrato: id, p_monto_dueno: montoDueno, p_motivo: motivo ?? null })),
+  // B2 (escenario C): cada parte acepta un reparto; lk_decidir_mediacion solo cierra con las dos aceptaciones del mismo monto.
+  aceptarAcuerdo: (id: string, montoDueno: number) => tras(rpc('lk_aceptar_acuerdo_mediacion', { p_contrato: id, p_monto_dueno: montoDueno })),
+  /** 6.5 b: el inquilino abrió el aviso o la pantalla del reclamo (solo cuenta la primera vez). */
+  abrirAvisoReclamo: (id: string) => tras(rpc('lk_abrir_aviso_reclamo', { p_contrato: id })),
+  // 20261025060000 (C): «Recibí la casa» empieza el plazo del dueño en el servidor (art. 148 del Código de Trabajo para los feriados).
+  recibirCasa: (id: string) => yAvisar(id, rpc('lk_recibi_casa', { p_contrato: id })),
+  /** 6.5 c: vencido el plazo del inquilino sin respuesta, el servidor pasa el caso a la mediación (en dos personas la 6.5.1 no se aplica sola). */
+  aplicarSilencio: (id: string) => yAvisar(id, rpc<'mediacion' | null>('lk_aplicar_silencio', { p_contrato: id })),
+  /** PR #22: lo que aceptó cada parte en la mediación (RLS: solo los participantes del alquiler). */
+  async aceptaciones(id: string): Promise<Aceptacion[]> {
+    await sesion(); const { data, error } = await (await supabase()).from('lk_aceptaciones_mediacion').select('rol, monto_dueno, aceptado_en').eq('contrato_id', id)
+    if (error) throw new ErrorServidor(mensajeServidor(error))
+    return ((data ?? []) as { rol: Rol; monto_dueno: string | number; aceptado_en: string }[]).map(f => ({ rol: f.rol, montoDueno: Number(f.monto_dueno), fecha: f.aceptado_en }))
+  },
   esMediador: () => rpc<boolean>('lk_es_mediador', {}),
-  registrarLiquidacion: (id: string, tx: string) => tras(rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
+  /** Escenario C: la casilla «Acepto que Lockumi me envíe avisos por correo» se guarda en el servidor (quién, cuándo y el texto).
+   *  Desmarcarla la borra y el servidor deja de enviar. El papel sale de la sesión, no del navegador. */
+  guardarCasillaCorreo: (id: string, para: string, acepta: boolean, texto: string) => yAvisar(id, rpc('lk_guardar_consentimiento_correo', { p_contrato: id, p_para: para, p_acepta: acepta, p_texto: texto })),
+  registrarLiquidacion: (id: string, tx: string) => yAvisar(id, rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }
 export type Servidor = typeof servidor
 export type { Rol }

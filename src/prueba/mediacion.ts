@@ -2,7 +2,8 @@
 // En la demo no hay una persona real: el reparto se elige con «Resolver el reclamo (simulación)» (6.8 b). La mediación con una
 // persona del equipo queda fuera hasta que Legal publique el texto de Privacidad (LEGAL-produccion-2114.md).
 import type { Alquiler } from '../types'
-import { sumarHabiles } from '../../api/_lib/plazos'
+import { sumarHabiles, fechaHoraCR } from '../../api/_lib/plazos'
+import { dosPersonas } from '../servidor/config'
 
 export const CUPO = 10
 const iso = (t: number) => new Date(t).toISOString()
@@ -16,16 +17,27 @@ export function pedirMediacion(x: Alquiler, lista: Alquiler[], ahora: number): '
   const r = x.reclamo!; if (r.mediacion) return r.mediacion.estado
   const estado = casosActivos(lista.filter(a => a.id !== x.id)) >= CUPO ? 'sin-cupo' : 'pedida'
   r.mediacion = { estado, fecha: iso(ahora) }
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: estado === 'pedida' ? 'Se pidió la Mediación Lockumi (demo)' : 'La Mediación Lockumi (demo) no tenía cupo (10 casos)' })
   return estado
 }
 export function noUsarMediacion(x: Alquiler, ahora: number) {
   const r = x.reclamo!; if (r.mediacion) return
   r.mediacion = { estado: 'no-usar', fecha: iso(ahora) }
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: iso(ahora), texto: 'Se prefirió no usar la Mediación Lockumi (demo)' })
 }
+/** Escenario C (P-06): fin del plazo de 3 días hábiles de la mediación. La MISMA cuenta que lk_mediacion_vencimientos en el servidor
+ *  (20261025090000_c_correos.sql): desde la respuesta del inquilino o, si no respondió, desde el evento «Pasa a la Mediación Lockumi (demo)». */
+export function venceMediacionC(a: Alquiler): number | null {
+  const ev = [...(a.historial ?? [])].reverse().find(e => e.texto.includes('Pasa a la Mediación Lockumi (demo)'))
+  const desde = a.reclamo?.respondido ?? ev?.fecha
+  return desde ? sumarHabiles(+new Date(desde), 3) : null
+}
+// LEGAL: revisado (25/10, 5:01 p. m., respuesta de Legal, punto 1) · línea del plazo en la pantalla de la mediación de C
+export const textoPlazoMediacionC = (t: number) =>
+  `La mediación tiene un plazo de 3 días hábiles, hasta el ${fechaHoraCR(t)}, hora de Costa Rica. Si para entonces no aceptan el mismo reparto, no se paga nada: el monto reclamado sigue retenido y pueden seguir buscando un acuerdo.`
+
 /** Plazo de respuesta: 3 días hábiles desde que se pidió (6.8 b). */
 export const plazoMediacion = (a: Alquiler) => a.reclamo?.mediacion?.estado === 'pedida' ? sumarHabiles(+new Date(a.reclamo.mediacion.fecha), 3) : null
 
@@ -35,5 +47,5 @@ export const repartoValido = (a: Alquiler, alDueno: number) => Number.isFinite(a
 // LEGAL: revisado (24/10, v4) · B.14 (confirmación y aviso del resultado)
 export const textoConfirmar = (d: number, i: number) => `El dueño recibirá ${u(d)} y el inquilino ${u(i)}. Esto mueve el depósito de prueba de verdad en la red de prueba y no se puede deshacer en la app. Es una simulación: no lo decide una persona mediadora y no tiene efecto legal.`
 export const textoResultado = (d: number, i: number) => `El dueño recibió ${u(d)} y el inquilino ${u(i)}, en la red de prueba. El reparto se eligió con el botón de simulación: no lo decidió una persona mediadora. En la demo, no tiene efecto legal. Fuera de la app, los dos conservan sus derechos.`
-// LEGAL: revisar · 6.3 f (texto propio basado en la cláusula)
-export const textoNoReclamado = (a: Alquiler) => `La parte no reclamada, ${u(Math.round((a.monto - (a.reclamo?.monto ?? 0)) * 100) / 100)}, se libera al inquilino cuando se cierra el reclamo (6.3 f). Mientras tanto, todo el depósito de prueba sigue bloqueado en la cuenta segura.`
+// LEGAL: revisado (25/10, lista de Legal) · 6.3 f (texto propio basado en la cláusula)
+export const textoNoReclamado = (a: Alquiler) => `La parte no reclamada, ${u(Math.round((a.monto - (a.reclamo?.monto ?? 0)) * 100) / 100)}, se libera al inquilino cuando se cierra el reclamo (6.3 f)${dosPersonas ? ', menos la comisión de 0,3 % de Trustless Work en la red de prueba' : ''}. Mientras tanto, todo el depósito de prueba sigue bloqueado en la cuenta segura.`

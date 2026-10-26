@@ -3,9 +3,10 @@
 //   <!-- si: dos-personas -->  …líneas…  <!-- fin -->      (solo con el modo de dos personas)
 //   <!-- si no: correos -->    …líneas…  <!-- fin -->      (solo con los correos apagados)
 //   {{dos-personas: frase}}  ·  {{!correos:frase}}         (dentro de una línea; el espacio tras «:» se respeta)
-//   {{edicion}}                                            → «1.7-demo · 25 de octubre de 2026» (src/legal/version17.ts); con la reputación, «1.10-demo · {fecha de encendido}»
+//   {{edicion}}                                            → versión de lo encendido con su fecha (src/legal/versiones.ts); con la reputación, «1.10-demo · {fecha de encendido}» (paso 19)
 // Un interruptor desconocido o un bloque sin cerrar es un error: es mejor que falle la prueba a publicar un texto roto.
-import { EDICION_V17, EDICION_REPUTACION } from './version17'
+import { versionVigente, edicionDe } from './versiones'
+import { EDICION_REPUTACION } from './version17'
 
 export type Interruptor = 'dos-personas' | 'correos' | 'reputacion'
 /** `reputacion` (paso 19) es opcional: apagado si no se indica. */
@@ -22,7 +23,8 @@ export function condicional(txt: string, s: Interruptores): string {
     if (pila.every(Boolean)) fuera.push(l)
   }
   if (pila.length) throw new Error('Bloque condicional sin «<!-- fin -->»')
-  let r = fuera.join('\n').replace(/\{\{edicion\}\}/g, s.reputacion ? EDICION_REPUTACION : EDICION_V17), antes
+  // Paso 19: con la reputación encendida, los textos son la 1.10-demo (fecha real de encendido, src/legal/fecha-reputacion.ts).
+  let r = fuera.join('\n').replace(/\{\{edicion\}\}/g, s.reputacion ? EDICION_REPUTACION : edicionDe(versionVigente(s))!), antes
   do { antes = r; r = r.replace(/\{\{(!?)([\w-]+):([^{}]*)\}\}/g, (_, no: string, k: string, f: string) => valor(s, k) !== !!no ? f : '') } while (r !== antes)
   if (/\{\{|\}\}/.test(r)) throw new Error('Marca condicional mal escrita en un texto legal')
   return r

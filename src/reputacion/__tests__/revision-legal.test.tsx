@@ -26,11 +26,13 @@ describe('VERSIÓN: 1.10-demo con la fecha real de encendido (una sola constante
     for (const f of ['src/reputacion/consentimiento.ts', 'src/reputacion/textos.ts', 'src/legal/condicional.ts']) expect(await leerArchivo(f)).not.toContain(v.FECHA_ENCENDIDO_REPUTACION)
   })
   it('con la reputación, el Aviso y los Términos dicen la 1.10-demo (nunca la etiqueta 1.7-demo ya publicada); apagada, siguen en 1.7-demo', async () => {
-    const { EDICION_REPUTACION, EDICION_V17 } = await import('../../legal/version17')
+    const { EDICION_REPUTACION, EDICION_V17 } = await import('../../legal/version17'), { edicionDe, versionVigente } = await import('../../legal/versiones')
+    // Apagada: la edición de lo encendido (desde master, con dos personas, la 1.9-demo; src/legal/versiones.ts).
+    const apagada = edicionDe(versionVigente({ 'dos-personas': true, correos: false, reputacion: false }))!
     for (const f of ['privacidad.md', 'terminos.md']) {
       const on = await legal(f), off = await legal(f, false)
-      expect(on).toContain(`**Versión ${EDICION_REPUTACION}**`); expect(on).not.toContain(EDICION_V17)
-      expect(off).toContain(`**Versión ${EDICION_V17}**`)
+      expect(on).toContain(`**Versión ${EDICION_REPUTACION}**`); expect(on).not.toContain(EDICION_V17); expect(on).not.toContain(apagada)
+      expect(off).toContain(`**Versión ${apagada}**`)
     }
   })
   it('aceptar los Términos con la reputación encendida guarda la edición 1.10-demo (cuenta nueva, desde la pantalla previa)', async () => {

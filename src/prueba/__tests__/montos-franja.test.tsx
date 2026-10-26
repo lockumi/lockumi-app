@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllEnvs())
 describe('montos con el interruptor', () => {
   it('encendido: «800 USDC de prueba»', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
-    expect(usd(800)).toBe('800 USDC de prueba'); expect(usd(705.5)).toBe('705,5 USDC de prueba')
+    expect(usd(800)).toBe('800,00 USDC de prueba'); expect(usd(705.5)).toBe('705,50 USDC de prueba'); expect(usd(0.5)).toBe('0,50 USDC de prueba')   // 2 decimales (Legal 25/10, punto 8)
   })
   it('apagado: como siempre (en las pruebas no hay red: «USD 800,00»)', () => {
     vi.stubEnv('VITE_PRUEBA_COMPLETA', '0')

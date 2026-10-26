@@ -11,7 +11,7 @@ const iso = (t: number) => new Date(t).toISOString()
 /** Fotos de salida confirmadas por los dos: queda registrada la entrega. El plazo del dueño todavía no corre. */
 export function registrarEntrega(x: Alquiler, cuando: string) {
   x.estado = 'ventana_reclamo'; x.entrega = cuando; delete x.ventanaInicio
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: cuando, texto: 'Fotos de salida confirmadas. Quedó registrada la entrega de la casa' })
 }
 /** Cuándo empieza solo el plazo del dueño si no toca «Recibí la casa»: 2 días después de la entrega registrada. */
@@ -21,7 +21,7 @@ export const inicioAuto = (a: Pick<Alquiler, 'entrega'>) => a.entrega ? +new Dat
 export function recibirCasa(x: Alquiler, ahora: number) {
   if (x.estado !== 'ventana_reclamo' || x.ventanaInicio || x.reclamo) return
   x.recibido = x.ventanaInicio = iso(ahora)
-  // LEGAL: revisar · historial
+  // LEGAL: revisado (25/10, lista de Legal) · historial
   x.historial.push({ fecha: x.ventanaInicio, texto: `El dueño tocó «Recibí la casa». Empiezan sus ${textoPlazo(x)} naturales para reclamar` })
 }
 export const finVentana = (a: Alquiler) => plazoDueno(a)?.fin ?? null
@@ -33,7 +33,7 @@ export function sincronizar(x: Alquiler, ahora: number, real = Date.now()): bool
   const auto = inicioAuto(x)
   if (x.estado === 'ventana_reclamo' && !x.ventanaInicio && !x.reclamo && auto !== null && ahora >= auto) {
     x.ventanaInicio = iso(auto); cambio = true
-    // LEGAL: revisar · historial
+    // LEGAL: revisado (25/10, lista de Legal) · historial
     x.historial.push({ fecha: x.ventanaInicio, texto: 'El plazo del dueño para reclamar empezó automáticamente 2 días después de la entrega' })
   }
   for (const d of debidos(x, ahora)) {
@@ -41,7 +41,7 @@ export function sincronizar(x: Alquiler, ahora: number, real = Date.now()): bool
     const v: Aviso = { id: d.id, para: d.para, dia: d.dia, asunto: c.asunto, texto: c.texto, entregado: iso(d.hora), entregadoReal: iso(real) }
     ;(x.avisos ??= []).push(v); cambio = true
     if (d.id === 'reclamo-1' && x.reclamo && !x.reclamo.entregado) x.reclamo.entregado = v.entregado
-    // LEGAL: revisar · historial
+    // LEGAL: revisado (25/10, lista de Legal) · historial
     x.historial.push({ fecha: v.entregado, texto: `Aviso en la app al ${d.para === 'dueno' ? 'dueño' : 'inquilino'}: ${c.asunto}` })
   }
   return cambio
@@ -70,5 +70,5 @@ export const textoRecibir = (a: Alquiler) => `¿Recibiste la casa? Tus 7 días n
 export const CONFIRMAR_DEVOLVER = 'Se devolverá todo el depósito al inquilino ahora. Después de esto no podrás reclamar en la app. Fuera de la app, conservas tus derechos según la ley.'
 // LEGAL: revisado (24/10) · C, nota de la fase 1: el dueño es una cuenta de prueba, los botones dicen «Simular: …»
 export const botonRecibir = (simulado: boolean) => simulado ? 'Simular: el dueño recibe la casa' : 'Recibí la casa'
-// LEGAL: revisar · mismo criterio de la nota de la fase 1
+// LEGAL: revisado (25/10, lista de Legal) · mismo criterio de la nota de la fase 1
 export const botonDevolver = (simulado: boolean) => simulado ? 'Simular: el dueño toca «Todo bien, devolver el depósito»' : 'Todo bien, devolver el depósito'

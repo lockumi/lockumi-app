@@ -5,8 +5,8 @@ import { PGlite } from '@electric-sql/pglite'
 import { readFileSync, readdirSync } from 'node:fs'
 const db = new PGlite()
 const STUB = `
-create role anon nologin; create role authenticated nologin;
-create schema auth; create schema storage;
+create role anon nologin; create role authenticated nologin; create role service_role nologin;
+create schema auth; create table auth.users (id uuid primary key, email text); create schema storage;
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth, storage, public to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
 create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
@@ -105,9 +105,11 @@ await espera('reclamo, rechazo y acuerdo registrado por la persona mediadora', a
   await como(DUENO, `select public.lk_reclamar($1, 30, 'Mancha en la pared de la sala')`, [id]); await como(INQ, `select public.lk_responder_reclamo($1, false)`, [id])
   await falla('x', () => como(DUENO, `select public.lk_decidir_mediacion($1, 30)`, [id]), /Solo la persona mediadora puede registrar el acuerdo\./)
   const v = await como(MED, `select estado from public.lk_contratos where id = $1`, [id]); if (v[0]?.estado !== 'mediacion') throw new Error('el mediador no ve el caso')
+  await falla('x', () => como(MED, `select public.lk_decidir_mediacion($1, 20, 'Daño parcial')`, [id]), /aceptaciones de las dos partes/) // escenario C: la persona mediadora no decide
+  for (const u of [DUENO, INQ]) await como(u, `select public.lk_aceptar_acuerdo_mediacion($1, 20)`, [id])
   await como(MED, `select public.lk_decidir_mediacion($1, 20, 'Daño parcial')`, [id])
   const [c] = await como(INQ, `select estado, resultado from public.lk_contratos where id = $1`, [id]); if (c.estado !== 'cerrado' || Number(c.resultado.dueno) !== 20 || Number(c.resultado.inquilino) !== 80) throw new Error(JSON.stringify(c))
-  const ev = await como(INQ, `select texto from public.lk_eventos where contrato_id = $1 order by id`, [id]); if (!ev.some(x => /^Acuerdo registrado: 20 USDC al dueño y 80(\.00)? al inquilino · Daño parcial$/.test(x.texto)) || ev.some(x => /decidi/.test(x.texto))) throw new Error(JSON.stringify(ev.map(x => x.texto)))
+  const ev = await como(INQ, `select texto from public.lk_eventos where contrato_id = $1 order by id`, [id]); if (!ev.some(x => /^Acuerdo registrado: 20 USDC( de prueba)? al dueño y 80(\.00)?( USDC de prueba)? al inquilino(, cada monto menos el 0,3 % de comisión de Trustless Work)?( \(aceptado por las dos partes\))? · Daño parcial$/.test(x.texto)) || ev.some(x => /decidi/.test(x.texto))) throw new Error(JSON.stringify(ev.map(x => x.texto)))
   await como(MED, `select public.lk_registrar_liquidacion($1, 'txresolve')`, [id])
 })
 await espera('historial con hashes de transacción', async () => {

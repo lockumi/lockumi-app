@@ -61,22 +61,23 @@ export function salidaTrasCambiarEntrada(inicio: string, fin: string): string {
   return fin >= min && fin <= max ? fin : ''
 }
 
-export function validarMonto(s: string): string | undefined {
+/** `prueba`: alquiler con otra persona (C), en USDC de prueba. */
+export function validarMonto(s: string, prueba = false): string | undefined {
   const t = s.trim().replace(',', '.')
   if (!t) return 'Escribe el monto del depósito.'
   if (!/^\d+(\.\d{1,2})?$/.test(t)) return 'Usa solo números, con hasta 2 decimales (ej.: 800 o 800.50).'
   const n = Number(t)
   if (n <= 0) return 'El depósito tiene que ser mayor que cero.'
-  if (n > MONTO_MAX) return `El depósito puede ser de hasta USD ${MONTO_MAX.toLocaleString('es-CR')}. Revisa si sobra un cero.`
+  if (n > MONTO_MAX) return prueba ? `El depósito puede ser de hasta ${MONTO_MAX.toLocaleString('es-CR')} USDC de prueba. Revisa si sobra un cero.` : `El depósito puede ser de hasta USD ${MONTO_MAX.toLocaleString('es-CR')}. Revisa si sobra un cero.`
 }
 
-export function validarAlquiler(d: DatosAlquiler, hoy: string, correoDueno = ''): Errores {
+export function validarAlquiler(d: DatosAlquiler, hoy: string, correoDueno = '', prueba = false): Errores {
   const e: Errores = { ...validarFechas(d.inicio, d.fin, hoy) }
   const dir = d.direccion.trim()
   if (!dir) e.direccion = 'Escribe la dirección o un nombre para el lugar.'
   else if (dir.length < 4) e.direccion = 'Escribe un poco más (al menos 4 letras).'
   else if (dir.length > 120) e.direccion = 'Es muy largo. Usa hasta 120 caracteres.'
-  const m = validarMonto(d.monto); if (m) e.monto = m
+  const m = validarMonto(d.monto, prueba); if (m) e.monto = m
   const correo = d.email.trim().toLowerCase()
   if (!correo) e.email = 'Escribe el correo de la persona que va a alquilar.'
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) e.email = 'Ese correo no parece válido. Revisa que tenga @ y un punto.'

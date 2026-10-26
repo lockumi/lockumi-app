@@ -73,13 +73,13 @@ describe('tope de 20 USDC solo para los USDC de Lockumi; con cuenta propia, el s
   it('cuenta propia: desplegar 500 pasa si el saldo real alcanza; si no, mensaje claro; más de 50 000 se rechaza', async () => {
     const s = simular(escrow(), '600'); await ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 500 }, s)
     expect(s.llamadas.find(l => l.url.endsWith('/deployer/single-release'))!.cuerpo!.amount).toBe(500)
-    await expect(ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 500, origen: 'propia' }, simular(escrow(), '50'))).rejects.toThrow('Tu cuenta tiene 50 USDC de prueba y el depósito es de 500. Carga más USDC de prueba en tu cuenta y vuelve a tocar el botón.')
+    await expect(ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 500, origen: 'propia' }, simular(escrow(), '50'))).rejects.toThrow('Tu cuenta tiene 50,00 USDC de prueba y el depósito es de 500,00. Carga más USDC de prueba en tu cuenta y vuelve a tocar el botón.')
     await expect(ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 50_001 }, simular(escrow(), '60000'))).rejects.toThrow(/máximo 50/)
   })
   it('cuenta propia: fondear arma el depósito de 500 para la dirección de la persona y revisa su saldo', async () => {
     const r = await ir({ accion: 'fondear', escrow: ESC, inquilino: INQ.publicKey() }, simular(escrow({ amount: 500 }), '500'))
     expect(typeof r.unsignedXdr).toBe('string')
-    await expect(ir({ accion: 'fondear', escrow: ESC, inquilino: INQ.publicKey() }, simular(escrow({ amount: 500 }), '499.5'))).rejects.toThrow(/Tu cuenta tiene 499,5 USDC de prueba/)
+    await expect(ir({ accion: 'fondear', escrow: ESC, inquilino: INQ.publicKey() }, simular(escrow({ amount: 500 }), '499.5'))).rejects.toThrow(/Tu cuenta tiene 499,50 USDC de prueba/)
     await expect(ir({ accion: 'fondear', escrow: ESC, inquilino: INQ.publicKey() }, simular(escrow({ amount: 60_000 }), '70000'))).rejects.toThrow(/máximo/)
   })
   it('con «Obtener USDC de prueba» (tesorería) el depósito sigue con tope de 20', async () => {
@@ -88,7 +88,7 @@ describe('tope de 20 USDC solo para los USDC de Lockumi; con cuenta propia, el s
     await expect(ir({ accion: 'fondear-prueba', escrow: ESC, token: T }, s)).rejects.toThrow(/máximo 20 USDC de prueba/)
     expect(s.llamadas.filter(l => l.url.endsWith('/transactions'))).toHaveLength(0)
   })
-  it('mensaje al crear con cuenta propia', () => expect(mensajeSaldoPropio(12.5)).toBe('Tu cuenta tiene 12,5 USDC de prueba. Escribe un monto de 12,5 o menos, o usa «Obtener USDC de prueba».'))
+  it('mensaje al crear con cuenta propia', () => expect(mensajeSaldoPropio(12.5)).toBe('Tu cuenta tiene 12,50 USDC de prueba. Escribe un monto de 12,50 o menos, o usa «Obtener USDC de prueba».'))
   it('la tesorería envía al inquilino de prueba solo lo que falta, sin pasar del tope', async () => {
     const s = simular(escrow(), '500'); const llam = s.llamadas
     const f = (async (url: string, init?: RequestInit) => url.includes('/accounts/') && !url.includes(P.publicKey())
@@ -143,7 +143,7 @@ describe('desplegar con «USDC de prueba de Lockumi»: el servidor completa la c
   })
   it('pestaña con la versión vieja (sin «origen») y cuenta en 0: explica que hay que recargar la página', async () => {
     await expect(ir({ accion: 'desplegar', contrato: ID, inquilino: G, monto: 2 }, simular(escrow(), '0'))).rejects.toThrow(
-      'Tu cuenta tiene 0 USDC de prueba y el depósito es de 2. Lockumi se actualizó: recarga esta página y vuelve a tocar «Pagar». Así Lockumi pone los USDC de prueba en tu cuenta antes de crear el depósito.')
+      'Tu cuenta tiene 0,00 USDC de prueba y el depósito es de 2,00. Lockumi se actualizó: recarga esta página y vuelve a tocar «Pagar». Así Lockumi pone los USDC de prueba en tu cuenta antes de crear el depósito.')
   })
 })
 

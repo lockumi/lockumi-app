@@ -30,6 +30,8 @@ export interface RespuestaRubro { acepta: boolean; soporte?: { tipo: 'factura' |
 export interface AceptacionReparto { alDueno: number; dueno?: 'si' | 'no'; inquilino?: 'si' | 'no'; fecha: string }
 export interface Reclamo {
   monto: number; motivo: string; fotos: Foto[]; fecha: string; respuesta?: 'aceptado' | 'rechazado'
+  /** Escenario C: cuándo respondió el inquilino (lk_reclamos.respondido_en); de ahí cuenta el plazo de la mediación. */
+  respondido?: string
   /** Prueba completa: reclamo por rubros. */
   rubros?: Rubro[]
   /** Cuándo el aviso del reclamo se entregó al inquilino en la app (empieza su plazo de 7 días, 6.5 b). */
@@ -61,7 +63,9 @@ export interface Aviso {
 export interface RegistroRegla { cuenta: string; alquiler: string; version: string; acepta: boolean; fecha: string; edicion?: string }
 /** Consentimiento en el momento de usar una función (paso 16). */
 export interface Consentimiento { tipo: 'mediacion' | 'correo'; cuenta: string; rol: Rol; alquiler: string; version: string; texto: string; fecha: string; edicion?: string }
-export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string }
+export interface Resultado { inquilino: number; dueno: number; via: 'automatico' | 'acuerdo' | 'mediacion' | 'propuesta' | 'devuelto' | 'simulacion'; fecha: string
+  /** Dos personas (servidor): cómo se cerró la mediación; 'dos_aceptan' = las dos partes aceptaron el reparto. */
+  cierre?: string }
 export interface Alquiler {
   id: string; direccion: string; monto: number; moneda: 'USD' | 'USDC'
   /** Solo con servidor: mi rol según la sesión, si el inquilino ya aceptó y las cuentas G… declaradas. */
@@ -83,7 +87,7 @@ export interface Alquiler {
   /** Paso 16: consentimientos dados al usar una función (mediación; correos en el paso 11). */
   consentimientos?: Consentimiento[]
   /** Paso 16: versión de los Términos del alquiler (sin dato: 1.6-demo) y aceptación de cada parte para pasar a la 1.7-demo. */
-  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string; /** paso16-unido: versión con su fecha (fecha única) */ edicion?: string }
+  terminos?: { version: string; acepta?: Partial<Record<Rol, string>>; desde?: string; /** paso16-unido: versión con su fecha (fecha única) */ edicion?: string; /** escenario C: versión a la que aceptaron pasar */ hacia?: string }
   /** Correos que escribió quien prueba para recibir los avisos (opcional). */
   correos?: Partial<Record<Rol, string>>
   /** Paso 11: avisos ya enviados por correo a cada papel (ids), para no repetirlos. */

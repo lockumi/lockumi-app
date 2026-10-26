@@ -25,12 +25,12 @@ export function AvisoSalida({ a, rol }: { a: Alquiler; rol: Rol }) {
         <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <Fragment key={i}><a href="#/terminos">ver las reglas</a>{t}</Fragment>)}</p>
         <h4>Tus fotos de entrada</h4>
         {a.entrada.cuartos.map((c, i) => <div key={i} className="pila"><strong>{c.nombre}</strong><FotoLista fotos={c.fotos} vacio="Sin fotos de entrada de este espacio." /></div>)}
-        {/* LEGAL: revisar · registro visible en el detalle del caso */}
+        {/* LEGAL: revisado (25/10, lista de Legal) · registro visible en el detalle del caso */}
         <p className="nota">Entregado en la app: {cr(v.entregado)} · Abierto en la app: {cr(v.abierto)}</p>
       </details>
     </section>}
     {!v && rol === 'inquilino' && adelantoPermitido() && faltan > 0 && <section className="pila simulador" aria-labelledby="t-sim-salida">
-      {/* LEGAL: revisar · simulador de días */}
+      {/* LEGAL: revisado (25/10, lista de Legal) · simulador de días */}
       <h3 id="t-sim-salida">Simulador de días (solo red de prueba)</h3>
       <p className="nota">Reloj de la demo: {fechaHoraCR(ahoraDe(a))}, hora de Costa Rica. Faltan {faltan === 1 ? '1 día' : `${faltan} días`} para el aviso de reparación (5 días antes de la salida). No cambia la hora real.</p>
       <button type="button" className="boton boton--secundario" onClick={() => store.cambiar(a.id, x => simularDias(x, faltan), `Solo red de prueba: el reloj de la demo avanzó ${faltan} días, hasta el aviso de 5 días`)}>Ir al aviso de 5 días</button>
