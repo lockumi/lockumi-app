@@ -255,7 +255,7 @@ El correo de invitación de la Parte 4 (dos personas) saldrá con **Resend** des
 - Registros en el DNS de Vercel: DKIM (`resend._domainkey`), SPF del subdominio `send` (MX y TXT), el CNAME `rsend` y DMARC (`_dmarc`, `p=none`).
 - `RESEND_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY` cargadas en Vercel **solo para Preview**, como variables sensibles.
 
-- Escenario C (PR #22, sin publicar): los correos de los alquileres con otra persona (COR-C-00 a COR-C-09) los envía el servidor solo con la casilla marcada (salvo los dos correos de servicio de la cuenta). Están **apagados** y no pueden salir mientras Legal no confirme los textos. El vencimiento de la mediación corre aunque los correos estén apagados (corrida diaria, porque Vercel Hobby no permite un cron por hora, y en cada paso). El build de producción falla mientras quede cualquier marca «LEGAL: revisar» visible. Ver [`docs/correos-c.md`](docs/correos-c.md).
+- Escenario C (PR #22, en master desde el 25/10/2026, merge f9489a6; falta cargar sus variables en Vercel Production para encenderlo): los correos de los alquileres con otra persona (COR-C-00 a COR-C-09) los envía el servidor solo con la casilla marcada (salvo los dos correos de servicio de la cuenta). Están **apagados** y no pueden salir mientras Legal no confirme los textos. El vencimiento de la mediación corre aunque los correos estén apagados (corrida diaria, porque Vercel Hobby no permite un cron por hora, y en cada paso). El build de producción falla mientras quede cualquier marca «LEGAL: revisar» visible. Ver [`docs/correos-c.md`](docs/correos-c.md).
 
 Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de datos de ese correo está en el Aviso de privacidad 1.5-demo (sección «Invitar a otra persona», fase 2).
 
