@@ -379,7 +379,7 @@ Son identificadores públicos (van en URLs del navegador), no secretos. Puestos 
   «25 de octubre de 2026»). El encendido la escribe y la sube en el mismo commit; la guarda del build impide publicar con «[fecha de encendido]».
 - [ ] `VITE_REPUTACION=1` en Production: lo pone el encendido (es de build; sin un deploy nuevo no cambia nada).
 
-Encendida: **25 de octubre de 2026, 8:54 p. m. CR** (1.10-demo · 25 de octubre de 2026). `CAVOS_AUD_EMAIL` = `cavos-email` (del token real de un login con código por correo).
+Encendida: **25 de octubre de 2026, 10:43 p. m. CR** (1.10-demo · 25 de octubre de 2026). `CAVOS_AUD_EMAIL` = `cavos-email` (del token real de un login con código por correo).
 
 **Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica las migraciones `20261025140000` (si falta) y
 `20261025210000_verificar_correo_codigo.sql` (si falta), cada una con su fila en `schema_migrations`, registra la fila de encendido y
