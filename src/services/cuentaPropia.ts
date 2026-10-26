@@ -3,7 +3,8 @@
 // Fuentes: https://docs.freighter.app/docs/guide/usingFreighterWebApp (isConnected, requestAccess, getNetworkDetails, signTransaction)
 //          https://docs.cavos.xyz/docs/stellar (signXdr)
 import { PASSPHRASE_TESTNET } from '../../api/_lib/red'
-import { conectarBilletera, consultarUsdc, firmarXdr, mensajeFirma } from './billetera'
+import { conectarBilletera, consultarUsdc, firmarXdr, mensajeFirma, NO_FIRMANTE } from './billetera'
+import { esTextoSinSesion } from './firmante'
 import { modoReal } from './auth'
 
 export type Firma = 'cavos' | 'freighter'
@@ -20,8 +21,12 @@ export const hayCavos = () => modoReal
 /** Conecta la billetera elegida y devuelve su dirección pública G… */
 export async function conectar(firma: Firma): Promise<string> {
   if (firma === 'cavos') {
-    try { return (await conectarBilletera()).direccion }
-    catch { throw new ErrorCuenta('No pudimos abrir tu cuenta Lockumi. Cierra sesión, vuelve a entrar y toca el botón otra vez.') }
+    let b: Awaited<ReturnType<typeof conectarBilletera>>
+    try { b = await conectarBilletera() }
+    catch (e) { const m = mensajeFirma(e); throw new ErrorCuenta(esTextoSinSesion(m) ? m : 'No pudimos abrir tu cuenta Lockumi. Cierra sesión, vuelve a entrar y toca el botón otra vez.') }
+    // Firmante (26/10): antes devolvía la dirección aunque este dispositivo no pudiera firmar, y el error salía recién al pagar.
+    if (b.estado === 'needs-device-approval') throw new ErrorCuenta(NO_FIRMANTE)
+    return b.direccion
   }
   const f = await import('@stellar/freighter-api')
   if (!(await f.isConnected()).isConnected) throw new ErrorCuenta('No encontramos Freighter en este navegador. Instálalo desde freighter.app y vuelve a tocar el botón.')

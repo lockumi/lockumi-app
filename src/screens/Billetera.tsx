@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { dosPersonas as modoTrustless } from '../servidor/config'
 import { Dibujo } from './dibujos'
-import { abrirTrustlineUsdc, consultarUsdc, mensajeFirma, olvidarBilletera, abreviar, conectarBilletera, detalleError, consultarSaldo, enlaceExplorer, fondear, formatoXlm, type Billetera as B } from '../services/billetera'
+import { AprobarDispositivo, ErrorPago, OfertaLlave } from './Llave'
+import { leerFirmante, recordarFirmante } from '../services/firmante'
+import { probarFirma, NO_FIRMANTE, abrirTrustlineUsdc, consultarUsdc, mensajeFirma, olvidarBilletera, abreviar, conectarBilletera, detalleError, consultarSaldo, enlaceExplorer, fondear, formatoXlm, type Billetera as B } from '../services/billetera'
 
 type Saldo = { t: 'cargando' } | { t: 'ok'; xlm: string } | { t: 'sin-cuenta' } | { t: 'error' }
 
 /** Tarjeta breve de la billetera Stellar testnet (solo con login real de Cavos). */
-export function Billetera() {
+export function Billetera({ email }: { email?: string } = {}) {
   const [b, setB] = useState<B | null>(null)
   // 'oculta': no hay sesión real de Cavos en esta pestaña (p. ej. sesión de demo); 'reintentando': falló y se reintenta sola.
   const [fase, setFase] = useState<'cargando' | 'reintentando' | 'lenta' | 'oculta'>('cargando')
@@ -31,6 +33,15 @@ export function Billetera() {
     try { const x = await consultarSaldo(g); setSaldo(x === null ? { t: 'sin-cuenta' } : { t: 'ok', xlm: x }) } catch { setSaldo({ t: 'error' }) }
   }, [])
   useEffect(() => { if (b) void leer(b.direccion) }, [b, leer])
+  // Firmante (26/10): «Lista ✓» solo si este dispositivo firmó de verdad (al entrar o aquí, una vez). Antes salía «Lista ✓» con
+  // solo conectar, y el error aparecía recién al pagar. La firma de prueba es gratis y no se guarda.
+  const [firma, setFirma] = useState<'si' | 'no' | null>(() => email ? leerFirmante(email) : null)
+  useEffect(() => {
+    if (!b || b.estado === 'needs-device-approval' || firma === 'si') return
+    let vivo = true
+    void probarFirma().then(e => { if (!vivo) return; if (e === 'puede' || e === 'no-firmante') { setFirma(e === 'puede' ? 'si' : 'no'); if (email) recordarFirmante(email, e === 'puede') } })
+    return () => { vivo = false }
+  }, [b, firma, email])
 
   if (fase === 'oculta') return null
   if (!b) return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito" aria-busy="true">
@@ -45,7 +56,18 @@ export function Billetera() {
     setFondeando(true)
     try { await fondear(b.direccion); olvidarBilletera(); await leer(b.direccion) } catch { setSaldo({ t: 'error' }) } finally { setFondeando(false) }
   }
-  return <section className="glass tarjeta billetera ta-cuenta estado--curso" aria-label="Tu cuenta para el depósito">
+  // Dispositivo nuevo (la cuenta se creó en otro): no decimos «Lista», guiamos a aprobarlo con la llave de acceso.
+  if (b.estado !== 'needs-device-approval' && firma !== 'si' && firma !== 'no') return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito" aria-busy="true">
+    <span className="ta-sello"><Dibujo n="reloj" /></span><div className="ta-cuenta__cuerpo">
+    <p className="etiqueta">Tu cuenta para el depósito</p>
+    <p className="nota" role="status">Preparando tu cuenta…</p></div></section>
+  if (b.estado === 'needs-device-approval' || firma === 'no') return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito">
+    <span className="ta-sello"><Dibujo n="escudo" /></span><div className="ta-cuenta__cuerpo">
+    <p className="etiqueta">Tu cuenta para el depósito</p>
+    <p className="error" role="alert">{NO_FIRMANTE}</p>
+    <AprobarDispositivo alAprobar={() => { olvidarBilletera(); setFirma(null); void conectarBilletera().then(setB).catch(() => {}) }} />
+  </div></section>
+  return <>{email && <OfertaLlave email={email} estado={b.estado} />}<section className="glass tarjeta billetera ta-cuenta estado--curso" aria-label="Tu cuenta para el depósito">
     <span className="ta-sello"><Dibujo n="escudo" /></span><div className="ta-cuenta__cuerpo">
     <p className="etiqueta">Tu cuenta para el depósito</p>
     <p className="ta-cuenta__lista"><strong>Lista ✓</strong> <span className="nota">Aquí se guarda y se devuelve el depósito.</span></p>
@@ -65,7 +87,7 @@ export function Billetera() {
       </div>}
       {modoTrustless && saldo.t === 'ok' && <Usdc g={b.direccion} />}
     </details>
-  </div></section>
+  </div></section></>
 }
 
 /** Prueba con Trustless Work: habilitar USDC de testnet (trustline) y cargarlo desde el faucet de Circle.
@@ -89,6 +111,6 @@ function Usdc({ g }: { g: string }) {
       <p className="nota">Para cargar USDC de prueba: copia tu dirección, abre <a className="enlace" href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">faucet.circle.com</a>, elige Stellar Testnet y pega la dirección (20 USDC cada 2 horas).</p>
       <button type="button" className="boton boton--secundario boton--chico" onClick={leer}>Actualizar saldo</button>
     </>}
-    {error && <p className="error" role="alert">{error}</p>}
+    <ErrorPago m={error} />
   </div>
 }

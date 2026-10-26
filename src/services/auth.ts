@@ -82,6 +82,8 @@ export interface AuthService {
   completarRegreso(): Promise<Usuario | null>
   actual(): Usuario | null
   salir(): void
+  /** Quita solo la sesión de Lockumi de este navegador (no la identidad de Cavos ni la llave): para no entrar sin firmante. */
+  olvidarUsuarioLocal(): void
 }
 
 async function social(metodo: 'google' | 'apple'): Promise<Usuario> {
@@ -113,6 +115,7 @@ export const auth: AuthService = {
   sendOtp: (email) => conLimite(proveedor().then(p => p.sendOtp(email))),
   async verifyOtp(email, code) { const r = await (await proveedor()).verifyOtp(email, code); return guardar(aUsuario(r.email, 'correo', r.nombre)) },
   actual() { try { const s = localStorage.getItem(K); return s ? JSON.parse(s) : null } catch { return null } },
+  olvidarUsuarioLocal() { localStorage.removeItem(K) },
   salir() { localStorage.removeItem(K); if (modoReal) void real().then(p => p.salir?.()) },
 }
 
@@ -138,4 +141,12 @@ export async function authCavos() {
   if (!modoReal) return null
   await real()
   return cavosAuth?.restoreIdentity() ? cavosAuth : null
+}
+
+/** Volver a entrar con un clic (sesión perdida o vencida: no hay renovación silenciosa). Google y Apple van directo; con correo
+ *  devuelve false y la pantalla abre la hoja del código. */
+export function volverAEntrar(metodo: Usuario['metodo']): boolean {
+  if (metodo === 'google') { void auth.loginGoogle(); return true }
+  if (metodo === 'apple') { void auth.loginApple(); return true }
+  return false
 }

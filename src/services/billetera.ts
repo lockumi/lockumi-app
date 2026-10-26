@@ -3,11 +3,13 @@
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
 //          https://developers.stellar.org/docs/learn/fundamentals/networks#friendbot (fondeo de testnet)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
+import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
 
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const FRIENDBOT = 'https://friendbot.stellar.org'
 export type EstadoBilletera = 'undeployed' | 'ready' | 'needs-device-approval'
-export interface Billetera { direccion: string; estado: EstadoBilletera }
+/** `llave`: la cuenta tiene una llave de acceso (passkey) guardada; solo se sabe al conectar con `{ llave: true }`. */
+export interface Billetera { direccion: string; estado: EstadoBilletera; llave?: boolean }
 type Fetch = typeof fetch
 
 export const esDireccionStellar = (g: string) => /^G[A-Z2-7]{55}$/.test(g)
@@ -78,30 +80,66 @@ export async function opcionesRecuperacion(auth: AuthRecuperacion, activa: () =>
   return { socialRecovery, ...cred ? { socialRecoveryCredential: cred } : {} } as unknown as Pick<import('@cavos/kit').ConnectOptions, 'socialRecovery' | 'socialRecoveryCredential'>
 }
 
-/** Texto para cuando este dispositivo no puede firmar con la billetera (creada en otro navegador o equipo). */
-export const NO_FIRMANTE = 'Este dispositivo todavía no puede firmar con tu billetera. Sal y vuelve a entrar con la misma cuenta, y paga enseguida. Si sigue igual, entra una vez desde el navegador donde creaste tu cuenta y luego vuelve a intentarlo aquí.'
+/** Texto para cuando este dispositivo no puede firmar con la billetera (creada en otro navegador o equipo). La pantalla
+ *  lo acompaña con el botón «Aprobar con mi llave de acceso» (ver screens/Llave.tsx). */
+export const NO_FIRMANTE = 'Este dispositivo todavía no puede firmar con tu billetera. Apruébalo con tu llave de acceso y vuelve a intentarlo.'
 export const esNoFirmante = (m: string) => /not an authorized signer|needs-device-approval|restore by connecting with the enclave|protected by recovery|complete a fresh social login/i.test(m)
+/** ¿Este texto de error (ya en español) es el de dispositivo no autorizado? */
+export const esTextoNoFirmante = (t: string | null | undefined) => !!t && t.includes(NO_FIRMANTE)
 
 let conexion: Promise<Billetera> | null = null
-/** Conecta la billetera con la identidad del login de Cavos. Solo en modo real. */
-export function conectarBilletera(): Promise<Billetera> {
-  if (import.meta.env.DEV) { // gancho de prueba local, nunca en el build
-    const g = localStorage.getItem('lockumi.billetera.prueba')
-    if (g) return Promise.resolve({ direccion: g, estado: 'undeployed' })
+const prueba = () => import.meta.env.DEV && typeof localStorage !== 'undefined' ? localStorage.getItem('lockumi.billetera.prueba') : null // gancho de prueba local, nunca en el build
+/** Conecta la billetera con la identidad del login de Cavos. Solo en modo real.
+ *  `{ llave: true }`: conecta con la llave de acceso (passkey). Si este dispositivo ya tiene la llave de la cuenta, solo
+ *  averigua si hay una passkey (`llave`); si no la tiene y la cuenta tiene passkey, el vault de Cavos la pide y aprueba
+ *  este dispositivo. Nunca se pasa en las conexiones automáticas (abriría la ventana de Cavos sin que la persona la pida). */
+export function conectarBilletera(o: { llave?: boolean } = {}): Promise<Billetera> {
+  const g = prueba()
+  if (g) {
+    const estado = (localStorage.getItem('lockumi.billetera.prueba.estado') as EstadoBilletera | null) ?? 'undeployed'
+    return Promise.resolve({ direccion: g, estado, ...o.llave ? { llave: localStorage.getItem('lockumi.llave.prueba') === 'si' } : {} })
   }
   if (!modoReal) return Promise.reject(new Error('simulado'))
-  return conexion ??= (async () => {
+  const conectar = async () => {
     const auth = await authCavos()
     if (!auth) throw new ErrorBilletera('sin-identidad', 'No hay identidad de Cavos guardada en este navegador.')
     if (!auth.getAuthToken()) throw new ErrorBilletera('sin-token', 'La sesión de Cavos no tiene token en esta pestaña (se abrió en otra pestaña o se cerró).')
-    const { Cavos } = await import('@cavos/kit')
+    const { Cavos, PasskeyPrf } = await import('@cavos/kit')
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
     const rec = await opcionesRecuperacion(auth)
-    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
+    // Con vault, el objeto PasskeyPrf solo marca recovery "passkey": la passkey la pide el vault en su propio origen.
+    const llave = o.llave ? { passkeyPrf: new PasskeyPrf({ rpName: 'Lockumi' }) } : {}
+    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, ...llave, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
-    return { direccion: w.address, estado: w.status as EstadoBilletera }
-  })().catch(e => { conexion = null; throw e })
+    const b: Billetera = { direccion: w.address, estado: w.status as EstadoBilletera }
+    return o.llave ? { ...b, llave: (w as unknown as { passkeyRestore?: boolean }).passkeyRestore === true } : b
+  }
+  if (o.llave) { const p = conectar(); conexion = p.catch(e => { conexion = null; throw e }); return p }
+  return conexion ??= conectar().catch(e => { conexion = null; throw e })
+}
+/** ¿La cuenta ya tiene llave de acceso? null si no se pudo saber. Solo en un dispositivo que ya puede firmar (no pide nada). */
+export async function consultarLlave(): Promise<boolean | null> {
+  try { const b = await conectarBilletera({ llave: true }); return b.estado === 'needs-device-approval' ? null : b.llave === true } catch { return null }
+}
+/** Crea la llave de acceso (passkey) de la cuenta, en el vault de Cavos. Este dispositivo tiene que poder firmar. */
+export async function crearLlave(): Promise<void> {
+  if (prueba()) { const f = localStorage.getItem('lockumi.llave.prueba.error'); if (f) throw new Error(f); return }
+  const auth = await authCavos(); const id = auth?.restoreIdentity()
+  if (!auth || !id) throw new ErrorBilletera('sin-identidad', 'No hay identidad de Cavos guardada en este navegador.')
+  await conectarBilletera() // el vault tiene que tener la cuenta conectada antes de agregar la passkey
+  const { VaultClient } = await import('@cavos/kit')
+  await VaultClient.attach({ appId: APP_ID }).enrollPasskey({ userId: id.userId, userName: id.email ?? id.userId, appSalt: CAVOS_BILLETERA.appSalt,
+    environment: CAVOS_BILLETERA.environment, authToken: auth.getAuthToken() })
+}
+/** Aprueba este dispositivo con la llave de acceso. Devuelve la billetera ya conectada (estado y `llave`). */
+export async function aprobarConLlave(): Promise<Billetera> {
+  if (prueba()) {
+    const f = localStorage.getItem('lockumi.llave.prueba.error'); if (f) throw new Error(f)
+    return { direccion: prueba()!, estado: localStorage.getItem('lockumi.llave.prueba') === 'si' ? 'ready' : 'needs-device-approval', llave: localStorage.getItem('lockumi.llave.prueba') === 'si' }
+  }
+  olvidarBilletera()
+  return conectarBilletera({ llave: true })
 }
 export const olvidarBilletera = () => { conexion = null; cartera = null }
 
@@ -114,6 +152,7 @@ interface CarteraStellar {
   signXdr(unsignedXdr: string): Promise<string>
   addTrustline(asset: { code: string; issuer: string }, opts?: { sponsored?: boolean }): Promise<string>
   tokenBalance(asset: { code: string; issuer: string }): Promise<string>
+  signMessage?(message: string): Promise<unknown>
 }
 let cartera: CarteraStellar | null = null
 export const USDC_TESTNET = { code: 'USDC', issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' }
@@ -131,8 +170,33 @@ export async function saldoUsdc(): Promise<string> { return (await miCartera()).
 export function mensajeFirma(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)
   if (esNoFirmante(m)) return NO_FIRMANTE
+  // Sesión perdida o vencida (pestaña nueva, token de ~1 h): antes salía el texto técnico «La sesión de Cavos no tiene token…».
+  if (esSinSesion((e as { codigo?: string })?.codigo + ' ' + m)) return SIN_SESION
   if (/user rejected/i.test(m)) return 'Rechazaste la firma en la billetera.'
   if (/policy does not allow/i.test(m)) return 'La configuración de la billetera no permite esta firma (regla de aprobaciones en el panel de Cavos).'
   if (/deployed account|execute\(\)/i.test(m)) return 'Tu cuenta Stellar todavía no existe en testnet. Cárgale XLM de prueba primero.'
   return m
+}
+
+/** Prueba real de firma al entrar: conecta una vez y firma 'lockumi-login' (gratis). La firma se descarta: nunca se guarda.
+ *  Sin reintentos ni conexiones con llave automáticas: un fallo aquí no dispara nada más (el vault solo borra su copia local
+ *  dentro de connect, V:413-427; no volvemos a conectar por nuestra cuenta). Sin Cavos (demo simulada) no hay billetera: 'puede'. */
+export async function probarFirma(): Promise<EstadoFirmante> {
+  const g = prueba()
+  if (!modoReal && !g) return 'puede'
+  try {
+    const b = await conectarBilletera()
+    if (b.estado === 'needs-device-approval') return 'no-firmante'
+    if (g) { const f = localStorage.getItem('lockumi.billetera.prueba.firma'); return f === 'no' ? 'no-firmante' : f === 'sin-sesion' || f === 'error' ? f : 'puede' }
+    if (!cartera?.signMessage) return 'error'
+    await cartera.signMessage(MENSAJE_PRUEBA)
+    return 'puede'
+  } catch (e) { return clasificarFirma(e) }
+}
+/** ¿Hay sesión de Cavos con token en esta pestaña? Sin Cavos (demo) siempre true. No lee ni muestra el token: solo si existe. */
+export async function haySesionFirma(): Promise<boolean> {
+  const g = prueba()
+  if (g) return localStorage.getItem('lockumi.billetera.prueba.sesion') !== 'no'
+  if (!modoReal) return true
+  try { const a = await authCavos(); return !!a && !!a.getAuthToken() } catch { return false }
 }

@@ -38,6 +38,10 @@ import { etapaDeAvance, type EtapaPago } from '../espera'
 import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 import { MasOpciones } from '../prueba/Eliminar'
 import { modoPrueba as redDePrueba } from '../servidor/config'
+import { ErrorPago } from './Llave'
+import { ConSesion } from './Firmante'
+import { esTextoNoFirmante } from '../services/billetera'
+import { esTextoSinSesion } from '../services/firmante'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -56,8 +60,10 @@ export function Contrato({ a, rol }: P) {
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
+    {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera) */}
+    <ConSesion activo={esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && modoDe(a).trustless}>
     <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
-      texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." />
+      texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." /></ConSesion>
   </div>
 }
 
@@ -91,8 +97,10 @@ function PagoSimulado({ a, rol }: P) {
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
-      {p.error}
-      <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} />
+      {/* Firmante (26/10): el error de firma o de sesión trae su botón (aprobar con la llave, o entrar de nuevo) */}
+      {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
+      <ConSesion activo={modoDe(a).trustless && etapa === 0}>
+      <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} /></ConSesion>
     </> : <Espera texto="Esperando que el inquilino pague el depósito." />}
   </section>
 }
@@ -118,7 +126,7 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
     {i < n ? <>
       <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
       <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
-      {err && <p className="error" role="alert">{err}</p>}
+      <ErrorPago m={err} />
       <div className="pie-paso">
         {i > 0 && <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(i - 1) }}>Atrás</button>}
         <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={siguiente}>{i + 1 < n ? 'Siguiente espacio' : 'Revisar y confirmar'}</button>
@@ -295,7 +303,7 @@ export function Invitacion({ a }: { a: Alquiler }) {
       <a className="boton boton--secundario boton--ancho" href={enlaceWhatsApp(link)} target="_blank" rel="noopener noreferrer">{BOTON_WHATSAPP}</a></>
       : <p className="nota">Este aparato no tiene el link guardado.</p>}
     <button type="button" className="enlace" onClick={nuevo}>Crear un link nuevo (el anterior deja de servir)</button>
-    {err && <p className="error" role="alert">{err}</p>}
+    <ErrorPago m={err} />
   </section>
 }
 
@@ -308,7 +316,7 @@ function EscrowReal({ a, rol }: P) {
   if (!modoTrustless || !a.escrowId) return null
   const aprobado = a.historial.some(e => e.texto === APROBADO)
   const correr = async (f: () => Promise<unknown>) => { setOcupado(true); setError(''); try { await f() } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setOcupado(false) } }
-  const err = error && <p className="error" role="alert">{error}</p>
+  const err = error && <ErrorPago m={error} />
   if (a.estado === 'ventana_reclamo') return rol === 'dueno' && !aprobado ? <div className="pila">
     {/* LEGAL: revisado (24/10) · ronda 8 (modo de dos personas, sin uso hoy: la billetera firma la aprobación, trustless.ts:28-30; la liberación la firma el servidor). BLOQUEO: antes de activarlo, Legal reescribe Términos 5.3 */}<p className="nota">Si todo está bien, aprueba ahora la devolución. Tu billetera te pedirá confirmar esta aprobación. La liberación del depósito la firma la cuenta de Lockumi.</p>
     <button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>

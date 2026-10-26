@@ -78,7 +78,7 @@ describe('Aviso v2 flotante con la 2.ª parada de Tab', () => {
   })
   it('<Alertas /> va justo después de «Saltar al contenido» en todas las pantallas con sesión o ingreso', () => {
     const app = leer('../App.tsx')
-    expect(app.match(/\{skip\}\s*<Alertas \/>/g)?.length).toBe(3)   // sin pantalla de volver a aceptar desde el 24/10
+    expect(app.match(/\{skip\}\s*<Alertas \/>/g)?.length).toBe(4)   // + PuertaFirmante (26/10)   // sin pantalla de volver a aceptar desde el 24/10
     expect(app).not.toMatch(/<Pie \/>\s*<Alertas \/>/)
   })
 })

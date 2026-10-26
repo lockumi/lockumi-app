@@ -11,6 +11,7 @@ import { textoFoto } from '../fotos'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { textoFotoPC, selloFoto } from '../prueba/fotosFecha'
 import { estadoFirma, otro, NOMBRE, ErrorFirma, type Firmas } from '../flujo'
+import { ErrorPago } from './Llave'
 
 export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: Foto[]; vacio?: string }) {
   if (!fotos.length) return <p className="nota">{vacio}</p>
@@ -48,7 +49,7 @@ export function CuartoEditor({ a, cual, idx, rol }: { a: Alquiler; cual: 'entrad
       })}</ul></fieldset>
     <label className="campo"><span>Notas (opcional)</span>
       <textarea rows={2} defaultValue={c.nota} onBlur={e => { if (e.target.value !== c.nota) hacer(acciones.nota(a, cual, idx, e.target.value)) }} placeholder="Ej.: rayón pequeño en la puerta" /></label>
-    {err && <p className="error" role="alert">{err}</p>}
+    <ErrorPago m={err} />
     {habiaFirmas && <p className="nota">Si cambias algo, los dos tienen que volver a confirmar.</p>}
   </section>
 }
@@ -83,7 +84,7 @@ export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
       <p>{texto}</p>
       {!listoParaFirmar && <p className="error">Antes de confirmar, cada espacio necesita una foto y todo marcado. Vuelve atrás para completarlo.</p>}
       <label className="check check--grande"><input type="checkbox" checked={ok} disabled={!listoParaFirmar} onChange={e => { setOk(e.target.checked); setErr('') }} /> {casilla}</label>
-      {err && <p className="error" role="alert">{err}</p>}
+      <ErrorPago m={err} />
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={!listoParaFirmar || ocupado} onClick={hacer}>
         {que === 'contrato' ? `Firma como ${NOMBRE[rol]}` : `Confirmar como ${NOMBRE[rol]}`}</button>
     </>}

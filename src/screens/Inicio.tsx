@@ -44,7 +44,7 @@ export function Inicio({ u }: { u: Usuario }) {
       <ol className="ta-pasos" aria-label="Cómo funciona">{PASOS.map(p => <li key={p.t}><span className="ta-pasos__ico"><Dibujo n={p.ico} /></span><strong>{p.t}</strong><span>{p.s}</span></li>)}</ol>
     </div>}
     {aviso && <AvisoLista texto={aviso} cerrar={() => setAviso(null)} />}{/* PROTOTIPO eliminar-alquiler: resultado, arriba para que se vea */}
-    {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera />}
+    {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera email={u.email} />}
     {/* Volver a ver el recorrido (maqueta aprobada; LEGAL: revisado el 23/10) */}
     <section className="glass tarjeta primera-vez" aria-labelledby="pv-t">
       <div><h2 id="pv-t">¿Primera vez?</h2><p className="nota">Mira cómo funciona en 1 minuto.</p></div>

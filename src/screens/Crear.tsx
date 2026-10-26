@@ -27,6 +27,7 @@ import { avisar, alertaCreado } from '../alertas'
 // 26/10/2026: Apple con correo oculto → campo corto para el correo real de los avisos (src/reputacion/CorreoReal.tsx).
 const CorreoReal = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('../reputacion/CorreoReal').then(m => ({ default: m.CorreoReal }))) : null
 import { validarAlquiler, hoyISO, montoNumero, fechaValida, ddmmaa, limitesEntrada, limitesSalida, salidaTrasCambiarEntrada, MONTO_MAX, type Campo, type Errores } from '../validacion'
+import { ErrorPago } from './Llave'
 
 // ---------- Íconos de línea (mismo trazo que .ico) ----------
 const TRAZOS = {
@@ -255,7 +256,7 @@ export function Crear({ u }: { u: Usuario }) {
               {freighter && <button type="button" className="boton boton--secundario boton--ancho" disabled={!!conectando} onClick={() => void usar('freighter')}>{conectando === 'freighter' ? 'Conectando…' : 'Usar Freighter'}</button>}
               {!hayCavos() && !freighter && <p>Para usar tu cuenta, instala Freighter (freighter.app) en este navegador y recarga la página.</p>}
             </div>)}
-        {errCuenta && <p className="error" role="alert">{errCuenta}</p>}
+        <ErrorPago m={errCuenta} />
       </section>}
 
       <section className="na-sec">

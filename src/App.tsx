@@ -5,13 +5,15 @@ import { conAceptacion } from './legal/aceptacion'
 import { rutaLegal } from './legal/documentos'
 import { PaginaLegal } from './legal/PaginaLegal'
 import { Pie } from './legal/Pie'
-import { olvidarBilletera } from './services/billetera'
+import { olvidarBilletera, probarFirma } from './services/billetera'
+import { recordarFirmante, type EstadoFirmante } from './services/firmante'
 import { Alertas } from './Alertas'
 import { avisar, alertaIngreso, alertaIngresoFallo } from './alertas'
 import { modoReal, hayRegreso } from './services/auth'
 import { useHash } from './router'
 import { Barra, Fondo } from './ui'
 import { Login, Entrando } from './screens/Login'
+import { PuertaFirmante } from './screens/Firmante'
 import { Inicio } from './screens/Inicio'
 import { Crear } from './screens/Crear'
 import { Detalle } from './screens/Detalle'
@@ -46,7 +48,17 @@ export default function App() {
   // si no termina, el error queda escrito en Entrar hasta que la persona vuelve a intentar o entra bien.
   const [regreso, setRegreso] = useState<'esperando' | 'fallo' | null>(() => !auth.actual() && hayRegreso() ? 'esperando' : null)
   // Al entrar, la aceptación de los Términos (guardada al marcar la casilla) se copia al usuario.
-  const entro = (x: Usuario) => { setRegreso(null); setU(guardarUsuario(conAceptacion(x))); avisar(alertaIngreso(modoReal)); location.hash = volver() }
+  // Firmante (26/10): al entrar, la billetera firma 'lockumi-login' (gratis). Si este dispositivo no puede firmar, no se entra:
+  // se ve PuertaFirmante (aprobar con la llave de acceso, o abrir Lockumi en el dispositivo de origen). Solo se recuerda sí/no.
+  const [puerta, setPuerta] = useState<{ x: Usuario; e: EstadoFirmante | 'probando' } | null>(null)
+  const pasar = (x: Usuario) => { setPuerta(null); setU(guardarUsuario(conAceptacion(x))); avisar(alertaIngreso(modoReal)); location.hash = volver() }
+  const probar = async (x: Usuario) => {
+    setPuerta({ x, e: 'probando' }); const e = await probarFirma()
+    if (e === 'puede' || e === 'no-firmante') recordarFirmante(x.email, e === 'puede')
+    if (e === 'puede') return pasar(x)
+    auth.olvidarUsuarioLocal(); setU(null); setPuerta({ x, e })   // sin entrar; la identidad de Cavos queda para poder aprobar con la llave
+  }
+  const entro = (x: Usuario) => { setRegreso(null); void probar(x) }
   // Regreso del login con Google/Apple (solo en modo real con VITE_CAVOS_APP_ID). Si falla, se avisa (antes no se veía nada).
   useEffect(() => { auth.completarRegreso().then(x => { if (x) entro(x); else setRegreso(null) }).catch(() => { setRegreso('fallo'); avisar(alertaIngresoFallo()) }) }, [])
   const skip = <a className="skip" href="#contenido" onClick={e => { e.preventDefault(); document.getElementById('contenido')?.focus() }}>Saltar al contenido</a>
@@ -60,6 +72,7 @@ export default function App() {
   const invitado = !u && esRutaInvitacion(r)
   if (invitado) guardarRegreso(r)
   if (!u && regreso === 'esperando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
+  if (puerta) return <Fondo>{skip}<Alertas /><PuertaFirmante x={puerta.x} estado={puerta.e} reintentar={() => void probar(puerta.x)} otraCuenta={() => { setPuerta(null); auth.salir(); olvidarBilletera() }} /></Fondo>
   const entrar = <Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} invitacion={invitado ? { titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION } : undefined} />
   if (!u) return <Fondo>{skip}<Alertas />{entrar}<Pie /></Fondo>
   const conf = modoPrueba ? r.match(/^\/alquiler\/(.+)\/(eliminar|ocultar)$/) : null   // PROTOTIPO eliminar-alquiler
