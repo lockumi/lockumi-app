@@ -292,6 +292,19 @@ describe('modo con dos personas (LOCKUMI_DOS_PERSONAS=1): la persona mediadora r
     expect(s.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!.disputeResolver).toBe(M.publicKey())
     expect(enviadas(s).map(t => t.source)).toEqual([M.publicKey()])
   })
+  it('un depósito de antes del interruptor (disputeResolver = plataforma) lo sigue repartiendo la plataforma (bug 26/10: Error #12)', async () => {
+    const e = escrow({ balance: 1, amount: 1, flags: { disputed: true, released: false, resolved: false } })
+    const s = simular(e); const r = await atenderSolo(ENV2, { accion: 'resolver', escrow: ESC, alDueno: 0.5, reclamado: 1, permiso: permisoDe(configSolo(ENV2), ESC) } as never, '1.2.3.4', s.f, { espera: 0 })
+    const cuerpo = s.llamadas.find(l => l.url.endsWith('resolve-dispute'))!.cuerpo!
+    expect(cuerpo.disputeResolver).toBe(P.publicKey()); expect(enviadas(s).map(t => t.source)).toEqual([P.publicKey()])
+    expect(cuerpo.distributions).toEqual([{ address: DUENO.publicKey(), amount: 0.5 }, { address: INQ.publicKey(), amount: 0.5 }]); expect(r).toMatchObject({ alDueno: 0.5, alInquilino: 0.5 })
+  })
+  it('si el disputeResolver no es una cuenta del servidor, no se reparte', async () => {
+    const e = escrow({ balance: 1, flags: { disputed: true, released: false, resolved: false } }); e.roles.disputeResolver = Keypair.random().publicKey()
+    const s = simular(e)
+    await expect(atenderSolo(ENV2, { accion: 'resolver', escrow: ESC, alDueno: 0.5, reclamado: 1, permiso: permisoDe(configSolo(ENV2), ESC) } as never, '1.2.3.4', s.f, { espera: 0 })).rejects.toMatchObject({ estado: 403 })
+    expect(s.llamadas.some(l => l.url.endsWith('resolve-dispute'))).toBe(false)
+  })
 })
 
 // Legal (25/10, 1:24 a. m.): /api/solo «resolver» solo para quien está autorizado y solo con repartos de la fase 1.
