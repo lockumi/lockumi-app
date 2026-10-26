@@ -30,14 +30,14 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 
 ### Interruptores (encendidos en app.lockumi.com el 25/10/2026, 7:04 p. m. CR)
 
-**C encendido en app.lockumi.com (25/10/2026, 7:04 p. m. CR).** Variables de Vercel Production del proyecto lockumi-app-demo (solo nombres): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, `VITE_CORREOS=1`, `LOCKUMI_DOS_PERSONAS=1`, `CORREOS_C=1`, `CORREO_MEDIACION` (por ahora el buzón de prueba `lockumi@mail.grokbot.com`: todavía no hay correo real de la persona mediadora; cambiarlo cuando exista) y `CRON_SECRET` (rotado a un valor aleatorio nuevo a las 7:03 p. m.; el anterior era «sensible» y no se podía leer). `RESEND_API_KEY` ya existía y no se tocó; ninguna otra variable cambió. Deploy `dpl_FuydsVHksKbrTRNmPcQTFDyDbKjr` (vuelve a desplegar `dpl_7znx5gexZooekP23bt8DvLGVswYY`, commit fb4f178), READY a las 7:04 p. m. CR. Para apagar los correos: quitar `CORREOS_C` y volver a desplegar (el vencimiento de la mediación sigue corriendo).
+**C encendido en app.lockumi.com (25/10/2026, 7:04 p. m. CR).** Variables de Vercel Production del proyecto lockumi-app-demo (solo nombres): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, `VITE_CORREOS=1`, `LOCKUMI_DOS_PERSONAS=1`, `CORREOS_C=1`, `CORREO_MEDIACION` (al encender, el buzón de prueba `lockumi@mail.grokbot.com`; desde el 25/10/2026, Production usa `business.applockumi@gmail.com`, decidido por Katherine el 25/10/2026) y `CRON_SECRET` (rotado a un valor aleatorio nuevo a las 7:03 p. m.; el anterior era «sensible» y no se podía leer). `RESEND_API_KEY` ya existía y no se tocó; ninguna otra variable cambió. Deploy `dpl_FuydsVHksKbrTRNmPcQTFDyDbKjr` (vuelve a desplegar `dpl_7znx5gexZooekP23bt8DvLGVswYY`, commit fb4f178), READY a las 7:04 p. m. CR. Para apagar los correos: quitar `CORREOS_C` y volver a desplegar (el vencimiento de la mediación sigue corriendo).
 
 
 | Variable | Dónde | Qué hace |
 |---|---|---|
 | `VITE_CORREOS=1` | build | Muestra la casilla. (El aviso al servidor después de cada paso sale siempre en los alquileres con otra persona, para revisar el plazo de la mediación; sin `CORREOS_C=1` no envía nada) |
 | `CORREOS_C=1` | servidor | Sin esto, `procesarCorreos` no hace nada (`{ apagado: true }`). El vencimiento de la mediación corre igual |
-| `CORREO_MEDIACION` | servidor | Correo de la persona mediadora (versión separada de COR-C-05 y COR-C-06). Sin él, esa versión se omite |
+| `CORREO_MEDIACION` | servidor | Correo de la persona mediadora (versión separada de COR-C-05 y COR-C-06). Sin él, esa versión se omite. En Production: `business.applockumi@gmail.com` (decidido por Katherine el 25/10/2026); en el E2E local, el buzón de prueba |
 | `CORREOS_ORIGEN` | servidor | Origen de los enlaces (por defecto `https://app.lockumi.com`; solo orígenes permitidos) |
 | `CORREOS_SOLO_BUZON=1` | servidor | Solo envía al buzón de prueba |
 | `LOCKUMI_CORREOS_BORRADOR=1` | local | Excepción del E2E (ver arriba). No funciona en Vercel |

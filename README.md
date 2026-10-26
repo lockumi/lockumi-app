@@ -255,7 +255,7 @@ El correo de invitación de la Parte 4 (dos personas) saldrá con **Resend** des
 - Registros en el DNS de Vercel: DKIM (`resend._domainkey`), SPF del subdominio `send` (MX y TXT), el CNAME `rsend` y DMARC (`_dmarc`, `p=none`).
 - `RESEND_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY` cargadas en Vercel **solo para Preview**, como variables sensibles.
 
-- Escenario C (PR #22, merge f9489a6; bloqueantes de Legal en a5a88ff): **encendido en app.lockumi.com el 25/10/2026 a las 7:04 p. m. CR** (deploy `dpl_FuydsVHksKbrTRNmPcQTFDyDbKjr`; `VITE_DOS_PERSONAS`, `VITE_CORREOS`, `LOCKUMI_DOS_PERSONAS`, `CORREOS_C`, `CORREO_MEDIACION` = buzón de prueba por ahora). E2E contra la app publicada: `node scripts/e2e-c.mjs --real --correos --app https://app.lockumi.com` (111 pasos, 0 fallas). Cómo apagarlo: `docs/prueba-completa.md`, «C encendido».
+- Escenario C (PR #22, merge f9489a6; bloqueantes de Legal en a5a88ff): **encendido en app.lockumi.com el 25/10/2026 a las 7:04 p. m. CR** (deploy `dpl_FuydsVHksKbrTRNmPcQTFDyDbKjr`; `VITE_DOS_PERSONAS`, `VITE_CORREOS`, `LOCKUMI_DOS_PERSONAS`, `CORREOS_C`, `CORREO_MEDIACION`; desde el 25/10/2026, Production usa `business.applockumi@gmail.com` (decidido por Katherine el 25/10/2026; antes, el buzón de prueba `lockumi@mail.grokbot.com`)). E2E contra la app publicada: `node scripts/e2e-c.mjs --real --correos --app https://app.lockumi.com` (111 pasos, 0 fallas). Cómo apagarlo: `docs/prueba-completa.md`, «C encendido».
 
 Detalle en [`docs/correo-resend.md`](docs/correo-resend.md). El tratamiento de datos de ese correo está en el Aviso de privacidad 1.5-demo (sección «Invitar a otra persona», fase 2).
 
