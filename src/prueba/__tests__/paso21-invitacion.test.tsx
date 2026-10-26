@@ -189,7 +189,7 @@ describe('comisión de Trustless Work junto al aviso de la red (Legal 25/10, 10:
 describe('plazo de devolución plegado (OK de Katherine a linea-plazo-v2, 26/10 12:44 a. m.; texto de Legal)', () => {
   const BASE = 'El dueño tiene 7 días para revisar la casa y reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Si el último día cae en domingo o feriado, el plazo pasa al siguiente día hábil. Si no reclama a tiempo, '
   const SOLO = BASE + 'el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.'
-  const SIN = BASE + 'el inquilino recibe su depósito de vuelta cuando cualquiera de los dos abre el alquiler.'
+  const SIN = BASE + 'el inquilino recibe su depósito de vuelta, menos el 0,3 % de comisión de Trustless Work, cuando cualquiera de los dos abre el alquiler.'
   it('corrida encendida: texto literal de Legal con «solo», cerrado al entrar', async () => {
     const { PlazoDevolucion, TEXTO_PLAZO_DEVOLUCION } = await import('../../ui')
     expect(TEXTO_PLAZO_DEVOLUCION).toBe(SOLO)

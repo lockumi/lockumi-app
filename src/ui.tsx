@@ -40,7 +40,7 @@ export const TEXTO_COMISION_TW = 'Trustless Work cobra una comisión del 0,3 % d
 export const TITULO_PLAZO_DEVOLUCION = 'Plazo de devolución'
 const PLAZO_BASE = 'El dueño tiene 7 días para revisar la casa y reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Si el último día cae en domingo o feriado, el plazo pasa al siguiente día hábil. Si no reclama a tiempo, '
 export const TEXTO_PLAZO_DEVOLUCION = PLAZO_BASE + 'el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.'
-export const TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA = PLAZO_BASE + 'el inquilino recibe su depósito de vuelta cuando cualquiera de los dos abre el alquiler.'
+export const TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA = PLAZO_BASE + 'el inquilino recibe su depósito de vuelta, menos el 0,3 % de comisión de Trustless Work, cuando cualquiera de los dos abre el alquiler.'
 let configPublica: Promise<boolean> | null = null
 /** true solo si /api/config confirma la corrida encendida; ante cualquier duda (error, sin red), false = texto sin «solo». */
 export const devolucionAutomatica = () => configPublica ??= fetch('/api/config').then(r => r.ok ? r.json() : null).then(j => j?.devolucionAutomatica === true).catch(() => false)
