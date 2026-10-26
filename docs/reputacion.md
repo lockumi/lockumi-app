@@ -421,6 +421,8 @@ No se implementan (por ahora): perfil solo para registrados, apagar Destacados/N
   enlazan `/terminos-1-10`; los nuevos nacen en la 1.11-demo. Al volver a entrar, la casilla del login aparece sin marcar (lógica del
   login sin cambios).
 - **Publicación:** `node scripts/fecha-1-11.mjs` justo antes del merge (`src/legal/fecha-v111.ts`); sin fecha, el build de producción falla.
+- **Publicada (26/10/2026):** fecha `26 de octubre de 2026` (commit `7e624e0`), merge `04e4424cb884af3ea06db6f1239b09409b12d8c0`, deploy
+  `dpl_6RWVr6RpmUvXTjtNcLYh2Rxy8bqd` (READY 12:04 a. m. CR). Revisiones de producción y waitlist: `docs/prueba-completa.md`.
 - **Para deshacer:** `git revert -m 1 <merge>` y redeploy de producción. `/terminos` vuelve a la 1.10-demo y `/terminos-1-10` deja de
   existir; los registros ya guardados con la 1.11-demo (aceptaciones del login, REP-01, alquileres locales de una persona) se quedan con
   esa etiqueta, pero ninguna ruta mostraría su texto (su link abriría la 1.6-demo, `rutaDe`), así que habría que volver a publicarla o

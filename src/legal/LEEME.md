@@ -100,6 +100,7 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - **Fecha de la 1.11-demo:** `src/legal/fecha-v111.ts` (`FECHA_V111`). El día de la publicación, justo antes del merge:
   `node scripts/fecha-1-11.mjs` (fecha de hoy en Costa Rica) y se sube en el PR. Si sigue «[fecha de publicación]», el build de
   producción de Vercel con `VITE_REPUTACION=1` falla (`revisarFechaV111`, `src/legal/encendido.ts`); los previews la muestran tal cual.
+  Publicada: «26 de octubre de 2026» (merge `04e4424`, deploy `dpl_6RWVr6RpmUvXTjtNcLYh2Rxy8bqd`, 26/10/2026 12:04 a. m. CR).
 - **Privacidad, ronda 1.10 (solo en la 1.11-demo):** «tu nombre visible (tu nombre y la inicial de tu apellido)» (igual que `nombreVisible`,
   `src/reputacion/consentimiento.ts`), «Para descargar tus datos o eliminar tu cuenta, te pedimos un código de 6 números que te enviamos
   por correo.» y «(plazos, reclamo, respuesta, mediación y cierre del alquiler)».
