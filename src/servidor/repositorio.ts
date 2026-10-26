@@ -60,6 +60,9 @@ export async function recargar() {
   // Escenario C (20261025090000): mi casilla de avisos por correo, guardada en el servidor (RLS: solo la mía). Sin la migración, no se usa.
   const cc = dosPersonas ? await sb.from('lk_correos_consentimiento').select('contrato_id, rol, para').in('contrato_id', ids) : null
   const casillas = cc && !cc.error ? (cc.data ?? []) as { contrato_id: string; rol: Rol; para: string }[] : []
+  // PROTOTIPO eliminar-alquiler (20261026010000, sin aplicar): los que oculté de MI lista. Sin la migración, falla y no se usa.
+  const oc = dosPersonas ? await sb.from('lk_ocultos').select('contrato_id').in('contrato_id', ids) : null
+  const ocultos = new Set(oc && !oc.error ? ((oc.data ?? []) as { contrato_id: string }[]).map(x => x.contrato_id) : [])
   const conTerminos = !!tv && !!at && !tv.error && !at.error
   const terminosDe = (id: string): Filas['terminos'] => conTerminos ? { version: ((tv.data ?? []) as { id: string; terminos_version: string | null }[]).find(x => x.id === id)?.terminos_version ?? null,
     aceptaciones: por(at, id) as unknown as NonNullable<Filas['terminos']>['aceptaciones'] } : null
@@ -77,6 +80,7 @@ export async function recargar() {
       eventos: por(es, c.id) as unknown as Filas['eventos'], terminos: terminosDe(c.id) }, yo, r => urls.get(r) ?? '')
     const mias = casillas.filter(x => x.contrato_id === c.id)
     if (mias.length) a.correos = Object.fromEntries(mias.map(x => [x.rol, x.para]))
+    if (ocultos.has(a.id)) a.ocultoParaMi = true
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
@@ -194,6 +198,10 @@ export const servidor = {
   /** Escenario C: la casilla «Acepto que Lockumi me envíe avisos por correo» se guarda en el servidor (quién, cuándo y el texto).
    *  Desmarcarla la borra y el servidor deja de enviar. El papel sale de la sesión, no del navegador. */
   guardarCasillaCorreo: (id: string, para: string, acepta: boolean, texto: string) => yAvisar(id, rpc('lk_guardar_consentimiento_correo', { p_contrato: id, p_para: para, p_acepta: acepta, p_texto: texto })),
+  // PROTOTIPO eliminar-alquiler: el servidor revisa las reglas (dueño, sin la otra persona, sin depósito) y solo toca filas propias.
+  eliminarAlquiler: (id: string) => tras(rpc('lk_eliminar_alquiler', { p_contrato: id })),
+  ocultarAlquiler: (id: string, ocultar: boolean) => tras(rpc('lk_ocultar_alquiler', { p_contrato: id, p_ocultar: ocultar })),
+  reiniciarMiDemo: () => tras(rpc<{ eliminados: number; ocultos: number; quedan: number }>('lk_reiniciar_mi_demo', {})),
   registrarLiquidacion: (id: string, tx: string) => yAvisar(id, rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }
 export type Servidor = typeof servidor

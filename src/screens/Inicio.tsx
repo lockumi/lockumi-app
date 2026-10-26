@@ -11,6 +11,11 @@ import { turno } from '../flujo'
 import { ICONO_ESTADO, claseEstado } from '../estados'
 import { Dibujo } from './dibujos'
 import { EntradaReputacion } from '../reputacion/Entrada'
+import { useState } from 'react'
+import { modoPrueba } from '../servidor/config'
+import { esMio, oculto, tomarAviso } from '../prueba/eliminar'
+import { AvisoLista } from '../prueba/Eliminar'
+import { T as TE } from '../prueba/eliminar-textos'
 
 // Los 3 pasos de la portada, en el orden real de flujo.ts (ETAPAS): las fotos de entrada van después del depósito.
 const PASOS = [
@@ -20,7 +25,12 @@ const PASOS = [
 ]
 
 export function Inicio({ u }: { u: Usuario }) {
-  const todos = useAlquileres()
+  const todosGuardados = useAlquileres()
+  // PROTOTIPO eliminar-alquiler (solo en la red de prueba): la lista muestra SOLO mis alquileres y esconde los que oculté.
+  const [aviso, setAviso] = useState(tomarAviso), [verOcultos, setVerOcultos] = useState(false)
+  const mios = modoPrueba ? todosGuardados.filter(a => esMio(a, u.email)) : todosGuardados
+  const ocultos = mios.filter(a => oculto(a, u.email))
+  const todos = verOcultos ? mios : mios.filter(a => !oculto(a, u.email))
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     {modoSolo ? <div className="hero glass">
       <div><p className="etiqueta">Hola, {u.nombre}</p><h1>Tus alquileres</h1>
@@ -33,6 +43,7 @@ export function Inicio({ u }: { u: Usuario }) {
       <LogoAnimado className="logo-pieza logo-pieza--hero" />
       <ol className="ta-pasos" aria-label="Cómo funciona">{PASOS.map(p => <li key={p.t}><span className="ta-pasos__ico"><Dibujo n={p.ico} /></span><strong>{p.t}</strong><span>{p.s}</span></li>)}</ol>
     </div>}
+    {aviso && <AvisoLista texto={aviso} cerrar={() => setAviso(null)} />}{/* PROTOTIPO eliminar-alquiler: resultado, arriba para que se vea */}
     {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera />}
     {/* Volver a ver el recorrido (maqueta aprobada; LEGAL: revisado el 23/10) */}
     <section className="glass tarjeta primera-vez" aria-labelledby="pv-t">
@@ -50,10 +61,12 @@ export function Inicio({ u }: { u: Usuario }) {
           <p className="ta-turno">{turno(a, rol).tu}</p>
           <div className="ta-datos"><div><small>Depósito</small><strong>{usd(a.monto)}</strong></div>
             <div><small>Fechas</small><span className="ta-fechas"><Dibujo n="cal" />{fecha(a.inicio)} → {fecha(a.fin)}</span></div></div>
-          <p className="nota ta-rol"><span className="chip chip--neutro chip--mini"><Dibujo n="persona" />Eres {NOMBRE_ROL[rol].toLowerCase()}</span><span>{rol === 'dueno' ? 'Inquilino: ' + a.inquilinoEmail : 'Dueño: ' + a.duenoEmail}</span></p>
+          <p className="nota ta-rol">{verOcultos && oculto(a, u.email) && <span className="chip chip--neutro chip--mini">{TE.chipOculto}</span>}<span className="chip chip--neutro chip--mini"><Dibujo n="persona" />Eres {NOMBRE_ROL[rol].toLowerCase()}</span><span>{rol === 'dueno' ? 'Inquilino: ' + a.inquilinoEmail : 'Dueño: ' + a.duenoEmail}</span></p>
         </a></li> })}
     </ul>
+    {ocultos.length > 0 && <p className="ea-ocultos"><button type="button" className="boton boton--secundario boton--chico" aria-pressed={verOcultos} onClick={() => setVerOcultos(v => !v)}>{verOcultos ? TE.esconderOcultos : TE.verOcultos(ocultos.length)}</button></p>}
     <div className="pie nota"><span>{modoSolo ? 'Tus alquileres de prueba se guardan solo en este navegador. El depósito, la aprobación y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales.' : modoVideo ? <>Tus alquileres de prueba se guardan solo en este navegador. El depósito, el reclamo y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales. La persona mediadora es simulada. <Simulado /></> : <>En la demo ves todos los alquileres. Los datos son de ejemplo, ficticios, y se guardan solo en este navegador. <Demo /></>}</span>
-      <button type="button" className="boton boton--secundario boton--chico" onClick={() => { if (confirm('¿Reiniciar la demo? Se borran los cambios.')) store.reiniciar() }}>Reiniciar demo</button></div>
+      {modoPrueba ? <a className="boton boton--secundario boton--chico" href="#/reiniciar">{TE.botonReiniciar}</a>
+        : <button type="button" className="boton boton--secundario boton--chico" onClick={() => { if (confirm('¿Reiniciar la demo? Se borran los cambios.')) store.reiniciar() }}>Reiniciar demo</button>}</div>
   </main>
 }

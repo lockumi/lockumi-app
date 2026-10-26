@@ -36,6 +36,8 @@ import { Expediente } from '../prueba/Expediente'
 import { AvisoSalida } from '../prueba/AvisoSalida'
 import { etapaDeAvance, type EtapaPago } from '../espera'
 import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
+import { MasOpciones } from '../prueba/Eliminar'
+import { modoPrueba as redDePrueba } from '../servidor/config'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -421,6 +423,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
           <p className="mini" style={{ marginTop: 12 }}>Historial</p>
           <ol className="lista historial">{[...a.historial].reverse().map((h, i) => <li key={i}><span>{h.texto}</span><small className="nota">{fechaHora(h.fecha)}{esHash(h.tx) && <> · <a className="enlace" href={'https://stellar.expert/explorer/testnet/tx/' + h.tx} target="_blank" rel="noopener noreferrer">Ver comprobante en la red de prueba</a></>}</small></li>)}</ol>
         </details>
+        {redDePrueba && !ejemplo && <MasOpciones a={a} u={u} />}{/* PROTOTIPO eliminar-alquiler (LEGAL: pendiente) */}
       </aside>
     </div>
   </main>

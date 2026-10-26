@@ -65,6 +65,8 @@ export const store = {
       return c
     }); guardar()
   },
+  /** PROTOTIPO eliminar-alquiler: quita un alquiler de este navegador (solo lo llama prueba/eliminar.ts, que revisa las reglas). */
+  quitar(id: string) { recargar(); datos = datos.filter(a => a.id !== id); guardar() },
   reiniciar() { datos = semilla(); localStorage.removeItem('lockumi.vista'); guardar() },
   subscribe(f: () => void) { subs.add(f); return () => { subs.delete(f) } },
 }

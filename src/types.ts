@@ -94,6 +94,10 @@ export interface Alquiler {
   correosEnviados?: Partial<Record<Rol, string[]>>
   /** Paso 7: alquiler del modo de dos personas (lo marca el servidor compartido). */
   dosPersonas?: boolean
+  /** PROTOTIPO eliminar-alquiler: quién lo ocultó de SU lista (correo en minúsculas → fecha). No borra nada. */
+  ocultoPor?: Record<string, string>
+  /** PROTOTIPO: con otra persona, lo oculté de mi lista (lk_ocultos de mi sesión). */
+  ocultoParaMi?: boolean
 }
 export type PasoRed = 'trustline' | 'compra' | 'escrow' | 'deposito' | 'evidencia' | 'aprobacion' | 'liberacion' | 'duenoTrustline' | 'disputa' | 'resolucion'
 export interface RedPrueba { escrow?: string; /** Permiso del navegador que creó el depósito (lo devuelve /api/solo «desplegar»). */ permiso?: string; dueno?: string; inquilino?: string; inquilinoPrueba?: boolean; firma?: 'cavos' | 'freighter'; usdcListo?: boolean; txs: Partial<Record<PasoRed, string>> }
