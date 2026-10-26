@@ -309,24 +309,35 @@ dejara de publicar `use`, todas las entradas de ese emisor darían 403: volver a
   en un id_token real (login real con Google).
 - `CAVOS_AUD_APPLE` = **`com.cavosx.auth`**: `client_id` de la URL de Apple que arma Cavos. Falta verlo en un identity token real (login real
   con Apple).
-- `CAVOS_AUD_EMAIL`: NO se puede saber sin un token real. Ni el kit 0.4.2 ni la documentación lo dicen. Requiere un login real con código por
+- `CAVOS_AUD_EMAIL`: se llena al encender (`encender-reputacion.sh <AUD>`). NO se puede saber sin un token real. Ni el kit 0.4.2 ni la documentación lo dicen. Requiere un login real con código por
   correo en la app (con `VITE_CAVOS_APP_ID`) y leer el `aud` de `sessionStorage['cavos-kit:token:<cav_…>']` (lo que devuelve
   `getAuthToken()`), sin copiar el token entero. Ese mismo token confirma `email`, el formato del nonce y `exp - iat`.
-Son identificadores públicos (van en URLs del navegador), no secretos. No se configuró nada en Vercel.
+Son identificadores públicos (van en URLs del navegador), no secretos. Puestos en Vercel Production el 25/10, salvo `CAVOS_AUD_EMAIL`.
 
-**Antes de encender (lista):**
-- Con un token REAL del código por correo de Cavos: confirmar que trae `email`. Si no lo trae, ese método de entrada NO puede aceptar
-  REP-01 (el servidor no tiene correo que verificar). Medir también su `exp - iat` y anotarlo arriba.
-- Con tokens reales de Google y Apple: confirmar el formato del `nonce` (`<app id>.<hash>`) y el `aud` de cada emisor.
-- Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros). `CAVOS_APP_ID` es el
-  UUID `514692ec-…`, no `cav_…`; Google y Apple, con los valores de arriba después de verlos en un token real; el del correo, del token real.
-- Volver a leer los tres JWKS y comprobar que siguen con `use` y `alg`.
-- Segundo factor (programado): poner `LOCKUMI_CODIGO_PEPPER` (al azar, 32+ caracteres, solo servidor, NUNCA en el bundle) y `RESEND_API_KEY`
-  en Production. (Los 2 textos propios del segundo factor ya tienen el OK de Legal, 25/10 6:01 p. m.)
-- Aplicar la migración `20261025140000_reputacion.sql` (con OK de Katherine; incluye la sección 7 del segundo factor).
-- Modo servidor encendido (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, con OK): sin eso el segundo factor no se usa.
+**Estado para el encendido (25/10/2026, 8:15 p. m. CR; Katherine: «haz lo que tengas que hacer para que funcione todo al 100», Legal: OK final al PR #26):**
+- [x] En Vercel **Production** (solo nombres; valores de «Valores reales de CAVOS_*»): `CAVOS_APP_ID`, `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE` y
+  `LOCKUMI_CODIGO_PEPPER` (al azar, 32 bytes, sensible; copia fuera del repo). `RESEND_API_KEY` ya estaba (Production y Preview).
+- [ ] `CAVOS_AUD_EMAIL`: **se llena al encender**. Katherine lo lee de un login real con código por correo (el `aud` de su propio token, en su
+  navegador; nadie copia el token). Es el único dato que falta; con él el encendido es un solo comando: `encender-reputacion.sh <AUD>`.
+- [x] Rama al día con master (escenario C): la 1.10-demo se superpone a la edición vigente (desde C, la 1.9-demo); la guarda «LEGAL: revisar»
+  de master y la de la fecha de encendido conviven en `vite.config.ts`.
+- [ ] Migración `20261025140000_reputacion.sql`: **sin aplicar**. No solo agrega: redefine `lk_pascua` (solo cambia `search_path` de `public`
+  a `''`, mismo cuerpo) y agrega 3 disparadores en `lk_participantes` (tabla que master usa). Probada en producción dentro de una transacción
+  que se deshizo (25/10, sin errores; waitlist igual). Se aplica en el paso 1 del encendido, con la fila de `lk_reputacion_encendido`.
+- [ ] `FECHA_ENCENDIDO_REPUTACION` **no es una variable de entorno**: es la constante de `src/legal/fecha-reputacion.ts` (formato
+  «25 de octubre de 2026»). El encendido la escribe y la sube en el mismo commit; la guarda del build impide publicar con «[fecha de encendido]».
+- [ ] `VITE_REPUTACION=1` en Production: lo pone el encendido (es de build; sin un deploy nuevo no cambia nada).
 
-**Producto / al encender:** poner la fecha real en `FECHA_ENCENDIDO_REPUTACION`; aplicar la migración (con OK); límite de consultas y servidor
+Encendida: **todavía no** (fecha de encendido y `CAVOS_AUD_EMAIL`: se escriben al encender).
+
+**Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica la migración y registra la fila de encendido, comprueba la
+waitlist; (2) pone `CAVOS_AUD_EMAIL` y `VITE_REPUTACION=1` en Production; (3) escribe la fecha real aquí y en `src/legal/fecha-reputacion.ts`,
+commit y push; (4) espera el CI, une el PR #26 con merge commit y espera el deploy de producción en READY; (5) comprueba app.lockumi.com (200)
+y que /terminos y /privacidad dicen 1.10-demo y «Pendiente de revisión por abogado».
+**Volver atrás:** promover el deploy anterior en Vercel (o borrar `VITE_REPUTACION` y volver a publicar) y `git revert -m 1 <merge>`. La
+migración se queda (tablas nuevas vacías sin la app; `lk_pascua` igual salvo `search_path`); sin la app encendida nadie escribe en ellas.
+
+**Producto / después de encender:** límite de consultas y servidor
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
 anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
 No se implementan (por ahora): perfil solo para registrados, apagar Destacados/Nuevos, retirar un reclamo, espejo del 10 %.

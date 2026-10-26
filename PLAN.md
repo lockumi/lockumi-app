@@ -194,8 +194,9 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Verificación del correo (Legal 6:04 p. m., BLOQUEANTE): la huella de un solo uso es sobre `iss|sub|iat|nonce`, no sobre la firma (maleable). Pruebas: bit de relleno, ECDSA `s → n−s` y reuso → «ya usado».
 - [x] JWKS reales del enclave, Google y Apple revisados (25/10 6:05 p. m.): todas las llaves publican `use = sig` y `alg`; la regla estricta se mantiene.
 - [x] Valores de CAVOS_* buscados sin secretos: `CAVOS_APP_ID` = UUID interno de Cavos (no el `cav_…`), aud de Google y Apple = `client_id` de Cavos (docs/reputacion.md).
-- [ ] Para encender: confirmar `CAVOS_AUD_GOOGLE`/`CAVOS_AUD_APPLE` con un token real (login con Google y con Apple) y sacar `CAVOS_AUD_EMAIL` de un login real con código por correo; ponerlos en Vercel (Katherine).
-- [ ] Segundo factor, para encender: `LOCKUMI_CODIGO_PEPPER` y `RESEND_API_KEY` en Production.
+- [x] En Vercel Production (25/10): `CAVOS_APP_ID`, `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `LOCKUMI_CODIGO_PEPPER`; `RESEND_API_KEY` ya estaba.
+- [x] Rama al día con master (escenario C); OK final de Legal al PR #26.
+- [ ] Encender: `CAVOS_AUD_EMAIL` se llena al encender (de un login real con código por correo, en el navegador de Katherine) con `encender-reputacion.sh <AUD>`: migración, `VITE_REPUTACION=1`, fecha real en `src/legal/fecha-reputacion.ts`, merge del PR #26 y comprobación (docs/reputacion.md, «Encendido»).
 - [ ] Pendiente de Legal: alquiler abierto al eliminar la cuenta; fecha de publicación de la 1.8-demo; «Ajustes ›» en REP-14/REP-15 (la app no tiene Ajustes).
-- [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles, aplicar la migración.
+- [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles (la migración se aplica al encender).
 
