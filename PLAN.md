@@ -191,6 +191,7 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 
 - [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
 - [x] 26/10/2026 (Legal, 1.13-demo): se quitó la pantalla REP-01 (y REP-01b). El perfil va en la casilla de los Términos de la pantalla de inicio; sin perfil ni alquileres, la misma casilla dentro de «Nuevo alquiler» y de la invitación («Para tu cuenta» / «Para este alquiler»). Ver docs/reputacion.md.
+- [x] 26/10/2026 2:26–2:32 a. m. (Katherine + Legal): sin bloqueo ni casilla «Para tu cuenta»; las cuentas sin perfil siguen sin perfil público (Términos 15.1 / Aviso :104, texto de Legal). SQL `20261026030000_sin_bloqueo_perfil.sql` (revert en `supabase/revert/`). Arreglos del alquiler: final del contador según `devolucionAutomatica`, error de la devolución (seguro / en duda) y «Reloj de la demo adelantado». Recorrido de primera vez ya no se traba en `#/crear`.
 - [x] ~~REP-01 en una pantalla aparte antes de crear la cuenta~~ (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.
 - [x] Cuentas anteriores a la 1.10-demo: sin re-aceptación ni pantallas extra; sin perfil, y sus alquileres no cuentan para nadie (Coordinador, 25/10).
 - [x] Con un borrado pendiente no se crean ni se aceptan alquileres nuevos (app y SQL). El build falla si se enciende con «[fecha de encendido]».

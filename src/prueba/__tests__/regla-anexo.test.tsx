@@ -56,6 +56,6 @@ describe('B.5 Anexo 6-A al crear el alquiler', () => {
     expect(registroAnexo(['Limpieza de canoas'], new Date('2026-10-24T18:00:00Z'))).toEqual({ acepta: '2026-10-24T18:00:00.000Z', reparaciones: ['Limpieza de canoas'] })
   })
   it('«Crear» queda inactivo hasta marcar el Anexo 6-A (solo con el interruptor)', () => {
-    expect(leer("../../screens/Crear.tsx")).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\)( \|\| \(invitar && \(!declara \|\| !aceptaVersion\)\))?( \|\| \(!!perfil && !perfil\.lista\))?\}/)   // paso16-unido: también la declaración al invitar
+    expect(leer("../../screens/Crear.tsx")).toMatch(/disabled=\{ocupado \|\| \(pruebaCompleta\(\) && !anexo\.acepta\)( \|\| \(invitar && \(!declara \|\| !aceptaVersion\)\))?\}/)   // paso16-unido: también la declaración al invitar
   })
 })

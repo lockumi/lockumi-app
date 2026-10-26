@@ -41,23 +41,17 @@ describe('Legal (1): nombre visible', () => {
 })
 
 const CON_ALQ = () => mem.set('lockumi.alquileres.v3', JSON.stringify([alq('a1', 'otra@x.cr', VIEJA.email)]))
-describe('Legal (2), opción (b) del 26/10: sin perfil y sin alquileres → la casilla del perfil dentro de «Nuevo alquiler» y la invitación', () => {
-  it('sin REP-01 ni alquileres: el formulario de siempre con la casilla de los Términos 1.13-demo (sin marcar) y la línea de Legal; sin pantalla aparte', async () => {
-    const { useRanuraPerfil } = await import('../../ranuraPerfil'), { default: R } = await import('../Pantallas')
-    const Formulario = () => { const p = useRanuraPerfil(); return <form><p>PANTALLA-DE-SIEMPRE</p>{p?.casilla}<button disabled={!!p && !p.lista}>Crear</button></form> }
-    for (const r of ['/crear', '/invitacion/00000000-0000-4000-8000-000000000999/abc']) {
-      const h = renderToStaticMarkup(<R u={NUEVA} r={r} salir={() => {}}><Formulario /></R>), t = texto(h)
-      expect(h, r).toContain('PANTALLA-DE-SIEMPRE'); expect(h, r).not.toMatch(/Antes de crear un alquiler o unirte a uno|Antes de crear tu cuenta|Confirmo que soy mayor/)
-      expect(h, r).toMatch(/Acepto los <a href="\/terminos"[^>]*>Términos 1\.13-demo<\/a>, incluido mi perfil de reputación público\./)
-      expect(t, r).toContain('Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver')
-      expect((h.match(/type="checkbox"/g) ?? []).length, r).toBe(1); expect(h, r).not.toMatch(/checked=""/); expect(h, r).toMatch(/<button disabled="">Crear<\/button>/)
+describe('Katherine (26/10, 2:26 a. m.) y Legal (2:27 a. m.): una cuenta sin perfil usa Lockumi normal, sin bloqueos, avisos ni casillas extra', () => {
+  it('sin REP-01 ni alquileres: «Nuevo alquiler» y la invitación de siempre, sin la casilla del perfil ni aviso', async () => {
+    for (const r of ['/crear', '/invitacion/00000000-0000-4000-8000-000000000999/abc', '/', '/alquiler/x']) {
+      const h = await pantalla(NUEVA, r), t = texto(h)
+      expect(h, r).toContain('PANTALLA-DE-SIEMPRE'); expect(h, r).not.toContain('type="checkbox"')
+      expect(t, r).not.toMatch(/Antes de crear un alquiler o unirte a uno|Para tu cuenta|incluido mi perfil de reputación/)
     }
-    for (const r of ['/', '/alquiler/x', '/perfil']) expect(await pantalla(NUEVA, r), r).not.toContain('acepto-perfil-113')
   })
-  it('Crear e Invitación usan la ranura y la invitación separa «Para tu cuenta» y «Para este alquiler»', async () => {
+  it('Crear e Invitación quedan como antes de la 1.13-demo (sin ranura del perfil; en la invitación solo la casilla del alquiler)', async () => {
     const c = await leerArchivo('src/screens/Crear.tsx'), v = await leerArchivo('src/screens/Invitacion.tsx')
-    for (const f of [c, v]) { expect(f).toContain('useRanuraPerfil()'); expect(f).toContain('{perfil?.casilla}'); expect(f).toContain('(!!perfil && !perfil.lista)') }
-    expect(v.indexOf('>Para tu cuenta</p>')).toBeGreaterThan(0); expect(v.indexOf('>Para tu cuenta</p>')).toBeLessThan(v.indexOf('{perfil?.casilla}')); expect(v.indexOf('{perfil?.casilla}')).toBeLessThan(v.indexOf('>Para este alquiler</p>'))
+    for (const f of [c, v]) expect(f).not.toMatch(/useRanuraPerfil|perfil\?\.casilla|Para tu cuenta|Para este alquiler/)
   })
   it('al aceptarla, la aceptación queda en la cuenta y sigue el último paso (nombre y cantón)', async () => {
     const { aceptarRep01, aceptoRep01 } = await import('../consentimiento'); aceptarRep01(NUEVA.email, ['x']); expect(aceptoRep01(NUEVA.email)).toBe(true)

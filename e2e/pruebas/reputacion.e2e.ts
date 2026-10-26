@@ -105,13 +105,13 @@ test.describe('reputación con dos cuentas (local, nunca producción)', () => {
     await vieja.goto('/#/crear'); await expect(vieja.getByText(BORRADO)).toHaveCount(0); await expect(vieja.getByRole('checkbox', { name: /1\.10-demo/ })).toHaveCount(0)
     await expect(vieja.getByRole('heading', { name: /Antes de/ })).toHaveCount(0)
     expect(await vieja.evaluate(e => localStorage.getItem('lockumi.reputacion.v1.' + e), VIEJA)).toBeNull()
-    // Sin REP-01 y sin alquileres (entró por «Ya tengo cuenta: entrar»): antes de crear, la pantalla previa de siempre (Legal, 3:47 p. m.).
+    // Sin REP-01 y sin alquileres (entró por «Ya tengo cuenta: entrar»): «Nuevo alquiler» sin pantallas extra.
     const SIN = 'sin-alquileres@lockumi.com', sin = await cuenta(browser, SIN, 'dueno', false, [])
     await sin.evaluate(({ SIN, v16 }) => localStorage.setItem('lockumi.usuario', JSON.stringify({ email: SIN, nombre: 'Ejemplo', metodo: 'correo', terminos: v16, privacidad: v16 })), { SIN, v16 })
     await sin.reload(); await sin.goto('/#/crear')
-    // Opción (b) (Katherine, 26/10): la casilla del perfil dentro de «Nuevo alquiler», sin pantalla aparte; [Crear] espera a que la marque.
-    await expect(sin.getByRole('heading', { name: /Antes de/ })).toHaveCount(0)
-    await expect(sin.getByRole('checkbox', { name: /Términos 1\.13-demo, incluido mi perfil/ })).not.toBeChecked()
+    // Katherine (26/10, 2:26 a. m.) y Legal (2:27 a. m.): sin perfil, «Nuevo alquiler» de siempre: sin bloqueo, aviso ni casilla del perfil.
+    await expect(sin.getByRole('heading', { name: /Antes de/ })).toHaveCount(0); await expect(sin.getByText(/Antes de crear un alquiler o unirte a uno|Para tu cuenta/)).toHaveCount(0)
+    await expect(sin.getByRole('checkbox', { name: /incluido mi perfil/ })).toHaveCount(0); await expect(sin.getByRole('button', { name: /^Crear/ }).first()).toBeVisible()
     // Puntajes.
     await dueno.goto('/#/perfil/dueno'); await expect(dueno.getByText('4,2 de 5').first()).toBeVisible()          // solo le bajó el reclamo indebido (no el de la cuenta anterior)
     await inq.goto('/#/perfil/inquilino'); await expect(inq.getByText('4,6 de 5').first()).toBeVisible()        // solo le bajó el descuento

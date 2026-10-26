@@ -142,10 +142,10 @@ describe('límite 4: la pantalla previa en otro aparato usa el estado del servid
     expect(await v.necesitaRep01EnServidor('demo@lockumi.com')).toBe(false)
     ;({ v } = await cargar(false)); expect(await v.necesitaRep01EnServidor('demo@lockumi.com')).toBeNull(); expect(srv.necesitaRep01).not.toHaveBeenCalled()
   })
-  it('la puerta de Reputacion usa useRep01Servidor + decidirPrevia', async () => {
+  it('Katherine (26/10, 2:26 a. m.): la puerta de Reputacion ya no pregunta al servidor si falta REP-01 (sin bloqueos ni casillas extra)', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const s = fs.readFileSync('src/reputacion/Pantallas.tsx', 'utf8')
-    expect(s).toMatch(/useRep01Servidor\(u\.email/); expect(s).toMatch(/decidirPrevia\(/)
+    expect(s).not.toMatch(/useRep01Servidor|decidirPrevia\(|RanuraPerfil/)
   })
 })
 

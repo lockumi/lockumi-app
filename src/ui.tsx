@@ -44,9 +44,23 @@ export const TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA = PLAZO_BASE + 'el inquilino rec
 let configPublica: Promise<boolean> | null = null
 /** true solo si /api/config confirma la corrida encendida; ante cualquier duda (error, sin red), false = texto sin «solo». */
 export const devolucionAutomatica = () => configPublica ??= fetch('/api/config').then(r => r.ok ? r.json() : null).then(j => j?.devolucionAutomatica === true).catch(() => false)
-export function PlazoDevolucion({ automatica }: { automatica?: boolean }) {
+/** El valor de devolucionAutomatica() (false mientras pregunta o si falla /api/config). */
+export function useDevolucionAutomatica(automatica?: boolean) {
   const [auto, setAuto] = useState(automatica ?? false)
   useEffect(() => { if (automatica !== undefined) return; let vivo = true; void devolucionAutomatica().then(v => { if (vivo) setAuto(v) }); return () => { vivo = false } }, [automatica])
+  return auto
+}
+// LEGAL: revisado (26/10, 2:28 a. m., OK de Katherine «a, b y c») · contador del plazo con escrow real: mismo final y misma condición que el «Plazo de devolución».
+export const FIN_CONTADOR_AUTO = 'Si no hay reclamo, el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.'
+export const FIN_CONTADOR_SIN_CORRIDA = 'Si no hay reclamo, el inquilino recibe su depósito de vuelta, menos el 0,3 % de comisión de Trustless Work, cuando cualquiera de los dos abre el alquiler.'
+// LEGAL: revisado (26/10, 2:28 a. m.) · error de la devolución: solo si el envío falló sin ninguna transacción aceptada. Si el estado es dudoso
+// (tiempo agotado, sin respuesta, error inesperado), el texto de api/_lib/tw.ts (TEXTO_REVISAR_PAGO), copiado igual (lo exige una prueba).
+export const TEXTO_DEVOLUCION_FALLO = 'No pudimos enviar la devolución a la red de prueba, así que no se pagó nada y el depósito sigue protegido. Toca «Volver a intentar la devolución»; si sigue, escríbenos a business.applockumi@gmail.com.'
+export const TEXTO_DEVOLUCION_DUDA = 'No pudimos confirmar el estado del depósito en la red de prueba, así que no se pagó nada. Escríbenos a business.applockumi@gmail.com y lo revisamos.'
+export const textoErrorDevolucion = (m: string) => /time ?out|timed out|try_again|inesperado|no respondió|confirmar el estado|failed to fetch|network/i.test(m) ? TEXTO_DEVOLUCION_DUDA : TEXTO_DEVOLUCION_FALLO
+export const RELOJ_ADELANTADO = 'Reloj de la demo adelantado'
+export function PlazoDevolucion({ automatica }: { automatica?: boolean }) {
+  const auto = useDevolucionAutomatica(automatica)
   return <Plegable className="plegable--plazo" titulo={TITULO_PLAZO_DEVOLUCION}><p>{auto ? TEXTO_PLAZO_DEVOLUCION : TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA}</p></Plegable>
 }
 /** `comision`: agrega TEXTO_COMISION_TW justo debajo del aviso de la red y, debajo, el plegable «Plazo de devolución» (cerrado). */

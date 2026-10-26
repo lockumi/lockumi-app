@@ -22,9 +22,10 @@ describe('Plazo real en la app', () => {
   it('Detalle: sin «7 días» fijo, sin «a. m..», etiquetas de prueba correctas', () => {
     expect(detalle).not.toMatch(/7 días/)
     // LEGAL: revisado (24/10) · ronda 6: nota de producción con «después de {plazo}»
-    expect(detalle).toContain('Si no hay reclamo, después de {textoPlazo(a)} el depósito de prueba se devuelve completo al inquilino la próxima vez que alguien abra el alquiler. Ninguna de las partes tiene que aprobarlo: lo ejecuta la cuenta de Lockumi.')
+    expect(detalle).toContain('{auto ? FIN_CONTADOR_AUTO : FIN_CONTADOR_SIN_CORRIDA}')   // 26/10 2:28 a. m.: mismo final que el «Plazo de devolución»
     expect(detalle).not.toMatch(/\{fechaHora\(fin\)\}\./)
-    expect(detalle).toContain('después de {textoPlazo(a)} el depósito se devuelve completo al inquilino. En esta demo local no hay red: es solo una simulación.')
+    expect(detalle).not.toMatch(/se devuelve completo/)   // 26/10 2:28 a. m. (a): nunca «se devuelve completo»
+    expect(detalle).toContain('después de {textoPlazo(a)} el depósito se devuelve al inquilino. En esta demo local no hay red: es solo una simulación.')
     expect(detalle).toContain('<h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}')
     // LEGAL: revisado (24/10) · ronda 8: en el ejemplo (modoSolo) el reclamo es simulado
     expect(detalle).toContain('¿Encontraste un daño? Puedes reclamar. <Simulado /> En este ejemplo, el reclamo y la mediación son simulados: no se registran en la red de prueba ni bloquean ningún depósito.</p>')

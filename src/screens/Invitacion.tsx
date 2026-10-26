@@ -11,7 +11,6 @@ import type { Usuario } from '../types'
 import { usd, fecha } from '../ui'
 import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS } from '../prueba/invitacion'
 import { Plegable } from './Plegable'
-import { useRanuraPerfil } from '../ranuraPerfil'
 
 type Datos = Awaited<ReturnType<typeof servidor.verInvitacion>>
 /** Cuenta G… de Cavos, si se puede obtener (solo con login real). No bloquea si falla: se puede agregar después. */
@@ -24,14 +23,9 @@ export async function cuentaPropia(): Promise<string | undefined> {
 /** Legal (ronda 1.10, 25/10, 11:16 p. m.): `bloqueado` = el servidor respondió «Esta invitación es para otro correo»; mientras ese
  *  error está a la vista, «Aceptar invitación» queda desactivado (se sale de ahí volviendo a entrar con el correo invitado). */
 export function ZonaAceptar({ marcada, onMarcar, ocupado, onAceptar, casilla = true, bloqueado = false }: { marcada: boolean; onMarcar: (v: boolean) => void; ocupado: boolean; onAceptar: () => void; casilla?: boolean; bloqueado?: boolean }) {
-  const perfil = useRanuraPerfil()   // Legal (26/10/2026, opción b): cuenta sin perfil → la casilla de los Términos 1.13-demo, sin marcar
   return <><p>Si aceptas, entras como inquilino. Lo siguiente es firmar el contrato.</p>
-    {/* Katherine (26/10, 1:21 a. m.): con las dos casillas, cada una dice para qué es: la del perfil, «Para tu cuenta»; la del alquiler, «Para este alquiler». */}
-    {perfil && <p className="nota casilla-para">Para tu cuenta</p>}
-    {perfil?.casilla}
-    {perfil && casilla && <p className="nota casilla-para">Para este alquiler</p>}
     {casilla && <CasillaVersion id="inv-terminos" marcada={marcada} onCambio={onMarcar} />}
-    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || bloqueado || (casilla && !marcada) || (!!perfil && !perfil.lista)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || bloqueado || (casilla && !marcada)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
 }
 
 /** Paso 21 (orden de publicación, docs/invitacion-enlace.md): antes de aceptar, el correo de la sesión se verifica en el servidor
