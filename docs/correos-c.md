@@ -28,7 +28,10 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 - **Vencimiento de la mediación, con o sin `CORREOS_C`** (Legal 25/10, 5:09 p. m., punto 3): `vencerMediaciones` (`api/_lib/correos-c.ts`) corre aparte de los correos: en la corrida diaria (siempre), después de cada acción con un alquiler en `/api/tw` y en cada aviso de la app (`tipo: 'avisos'`, después de revisar la sesión y que la persona participa). Legal pidió cada hora, pero **Vercel Hobby solo permite un cron diario** (una expresión por hora hace fallar el despliegue: https://vercel.com/docs/cron-jobs/usage-and-pricing), así que queda la corrida diaria más la revisión en cada paso.
 - **Reloj de prueba:** `ahora` solo lo pasa el E2E (no es un parámetro HTTP).
 
-### Interruptores (todos apagados hoy)
+### Interruptores (encendidos en app.lockumi.com el 25/10/2026, 7:04 p. m. CR)
+
+**C encendido en app.lockumi.com (25/10/2026, 7:04 p. m. CR).** Variables de Vercel Production del proyecto lockumi-app-demo (solo nombres): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, `VITE_CORREOS=1`, `LOCKUMI_DOS_PERSONAS=1`, `CORREOS_C=1`, `CORREO_MEDIACION` (por ahora el buzón de prueba `lockumi@mail.grokbot.com`: todavía no hay correo real de la persona mediadora; cambiarlo cuando exista) y `CRON_SECRET` (rotado a un valor aleatorio nuevo a las 7:03 p. m.; el anterior era «sensible» y no se podía leer). `RESEND_API_KEY` ya existía y no se tocó; ninguna otra variable cambió. Deploy `dpl_FuydsVHksKbrTRNmPcQTFDyDbKjr` (vuelve a desplegar `dpl_7znx5gexZooekP23bt8DvLGVswYY`, commit fb4f178), READY a las 7:04 p. m. CR. Para apagar los correos: quitar `CORREOS_C` y volver a desplegar (el vencimiento de la mediación sigue corriendo).
+
 
 | Variable | Dónde | Qué hace |
 |---|---|---|
@@ -94,6 +97,10 @@ Legal 25/10/2026, 5:09 p. m. (bloqueante): los recordatorios se cuentan **hacia 
 - 1 día antes: **COR-C-05 recordatorio** a las dos partes y a la persona mediadora.
 - **Al vencer** (`lk_mediacion_vencimientos`, en cada pasada): se anota la hora en `vencido_en`, se escribe en el historial «Venció el plazo de 3 días hábiles de la Mediación Lockumi (demo) sin el mismo reparto aceptado por las dos partes. No se pagó nada: el monto reclamado sigue retenido y la mediación sigue abierta.» (LEGAL: revisado 25/10) y sale **COR-C-06 «sin acuerdo»** a las dos partes y a la persona mediadora. **No se paga nada ni se aplica ninguna regla** (la 6.5.1 no se ofrece en C); las partes todavía pueden aceptar el mismo reparto en la app.
 - Legal tiene que redactar la frase definitiva de qué pasa al vencer: hoy está en el evento de arriba y en `COR-C-06/vencida` y `COR-C-06/vencida-mediacion`.
+
+## Prueba contra app.lockumi.com (25/10/2026, 7:12 p. m. CR)
+
+`e2e-c.mjs --real --correos --app https://app.lockumi.com`, corrida `E2E-C 20261026T0112-f5e1`: 111 pasos, 0 fallas. Los COR-C-06 y COR-C-07 los mandó el servidor de producción (al pagar o repartir) y el script los contó desde `lk_correos_enviados`; los recordatorios (reloj de prueba) se mandaron desde el script. Todo al buzón `lockumi+e2ec-…@mail.grokbot.com`. Detalle en `docs/prueba-completa.md`, «C encendido».
 
 ## Prueba real (25/10/2026)
 
