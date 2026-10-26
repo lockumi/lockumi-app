@@ -3,6 +3,7 @@ import { modoReal } from './services/auth'
 import { abrirRecorrido } from './recorrido'
 import { modoPrueba, escrowReal } from './servidor/config'
 import { useEffect, useState, type ReactNode } from 'react'
+import { Plegable } from './screens/Plegable'
 import type { Usuario, Alquiler } from './types'
 import { ETAPAS, etapaDe } from './flujo'
 
@@ -34,10 +35,24 @@ export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito sim
 // (api/_lib/centimos.ts:4,12) y docs/testnet-e2e.md:118. La línea del plazo de 7 días NO se agregó: el código no coincide (ver
 // docs/invitacion-enlace.md, «Línea del plazo»).
 export const TEXTO_COMISION_TW = 'Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.'
-/** `comision`: agrega TEXTO_COMISION_TW justo debajo del aviso de la red (fuera de cualquier plegable). */
+// LEGAL: revisado (26/10, 12:44 a. m., OK de Katherine a la hoja linea-plazo-v2): plazo de devolución, plegado y cerrado al entrar.
+// «solo» SOLO si la corrida de cada hora paga (DEVOLUCION_CRON encendido, leído de GET /api/config); si está apagado, termina distinto.
+export const TITULO_PLAZO_DEVOLUCION = 'Plazo de devolución'
+const PLAZO_BASE = 'El dueño tiene 7 días para revisar la casa y reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Si el último día cae en domingo o feriado, el plazo pasa al siguiente día hábil. Si no reclama a tiempo, '
+export const TEXTO_PLAZO_DEVOLUCION = PLAZO_BASE + 'el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.'
+export const TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA = PLAZO_BASE + 'el inquilino recibe su depósito de vuelta cuando cualquiera de los dos abre el alquiler.'
+let configPublica: Promise<boolean> | null = null
+/** true solo si /api/config confirma la corrida encendida; ante cualquier duda (error, sin red), false = texto sin «solo». */
+export const devolucionAutomatica = () => configPublica ??= fetch('/api/config').then(r => r.ok ? r.json() : null).then(j => j?.devolucionAutomatica === true).catch(() => false)
+export function PlazoDevolucion({ automatica }: { automatica?: boolean }) {
+  const [auto, setAuto] = useState(automatica ?? false)
+  useEffect(() => { if (automatica !== undefined) return; let vivo = true; void devolucionAutomatica().then(v => { if (vivo) setAuto(v) }); return () => { vivo = false } }, [automatica])
+  return <Plegable className="plegable--plazo" titulo={TITULO_PLAZO_DEVOLUCION}><p>{auto ? TEXTO_PLAZO_DEVOLUCION : TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA}</p></Plegable>
+}
+/** `comision`: agrega TEXTO_COMISION_TW justo debajo del aviso de la red y, debajo, el plegable «Plazo de devolución» (cerrado). */
 export const Fondo = ({ children, comision = false }: { children: ReactNode; comision?: boolean }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>
   {(modoPrueba || pruebaCompleta()) && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}
-  {(modoPrueba || pruebaCompleta()) && escrowReal && comision && <p className="aviso-red__extra" role="note">{TEXTO_COMISION_TW}</p>}{children}</>
+  {(modoPrueba || pruebaCompleta()) && escrowReal && comision && <><p className="aviso-red__extra" role="note">{TEXTO_COMISION_TW}</p><PlazoDevolucion /></>}{children}</>
 // LEGAL: revisado (24/10, 11:25 p. m.) · con la prueba completa, todos los montos dicen «USDC de prueba» (también la cabecera del detalle)
 // Legal 25/10 5:09 p. m. (punto 8): hora en 12 h («4:44 p. m.», espacios duros) y montos con 2 decimales («0,50»).
 const dos = (n: number) => new Intl.NumberFormat('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)

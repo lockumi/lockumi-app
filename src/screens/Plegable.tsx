@@ -4,10 +4,10 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Icono } from '../ui'
 
-export function Plegable({ titulo, children, abierto: inicial = false }: { titulo: string; children: ReactNode; abierto?: boolean }) {
+export function Plegable({ titulo, children, abierto: inicial = false, className = '' }: { titulo: string; children: ReactNode; abierto?: boolean; className?: string }) {
   const [abierto, setAbierto] = useState(inicial)
   const id = 'plegable-' + useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  return <div className="plegable">
+  return <div className={'plegable' + (className ? ' ' + className : '')}>
     <button type="button" className="cp-abrir" aria-expanded={abierto} aria-controls={id} onClick={() => setAbierto(v => !v)}>
       <span className="cp-abrir__txt">{titulo}</span>
       <span className="cp-abrir__ico"><Icono id="i-chevron" /></span>

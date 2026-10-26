@@ -168,9 +168,12 @@ describe('comisión de Trustless Work junto al aviso de la red (Legal 25/10, 10:
     const { Fondo, TEXTO_COMISION_TW, AVISO_RED } = await import('../../ui')
     expect(TEXTO_COMISION_TW).toBe(L)
     const h = renderToStaticMarkup(<Fondo comision><p>x</p></Fondo>)
-    expect(h).toContain(`<div class="aviso-red" role="note">${AVISO_RED}</div><p class="aviso-red__extra" role="note">${L}</p><p>x</p>`)
+    // paso22 (26/10): debajo, el plegable «Plazo de devolución» (cerrado) y después el contenido de la pantalla
+    expect(h).toContain(`<div class="aviso-red" role="note">${AVISO_RED}</div><p class="aviso-red__extra" role="note">${L}</p><div class="plegable plegable--plazo">`)
+    expect(h).toMatch(/<div class="plegable plegable--plazo"><button type="button" class="cp-abrir" aria-expanded="false" aria-controls="(plegable-[\w-]+)"><span class="cp-abrir__txt">Plazo de devolución<\/span><span class="cp-abrir__ico"><svg class="ico ?" aria-hidden="true" focusable="false"><use href="#i-chevron"><\/use><\/svg><\/span><\/button><div class="cp-completo" id="\1" role="region" aria-label="Plazo de devolución" hidden=""><p>[^<]+<\/p><\/div><\/div><p>x<\/p>/)
     expect(aLaVista(h)).toContain(L)
     expect(renderToStaticMarkup(<Fondo><p>x</p></Fondo>)).not.toContain(L)   // las demás pantallas no cambian
+    expect(renderToStaticMarkup(<Fondo><p>x</p></Fondo>)).not.toContain('Plazo de devolución')
   })
   it('solo en la invitación y en la vista del alquiler (App.tsx); la pantalla sin sesión sigue corta', async () => {
     const app = (await import('../../App.tsx?raw')).default
@@ -180,6 +183,44 @@ describe('comisión de Trustless Work junto al aviso de la red (Legal 25/10, 10:
   it('la línea del plazo de 7 días NO se agregó (el código no coincide: el plazo empieza con «Recibí la casa» o 2 días después de la entrega)', async () => {
     const ui = (await import('../../ui.tsx?raw')).default, inv = (await import('../../screens/Invitacion.tsx?raw')).default
     for (const f of [ui, inv]) expect(f).not.toContain('Cuando el inquilino entrega el inmueble')
+  })
+})
+
+describe('plazo de devolución plegado (OK de Katherine a linea-plazo-v2, 26/10 12:44 a. m.; texto de Legal)', () => {
+  const BASE = 'El dueño tiene 7 días para revisar la casa y reclamar, desde que toca «Recibí la casa» o, si no lo toca, desde 2 días después de la entrega. Si el último día cae en domingo o feriado, el plazo pasa al siguiente día hábil. Si no reclama a tiempo, '
+  const SOLO = BASE + 'el depósito se devuelve solo al inquilino, menos el 0,3 % de comisión de Trustless Work.'
+  const SIN = BASE + 'el inquilino recibe su depósito de vuelta cuando cualquiera de los dos abre el alquiler.'
+  it('corrida encendida: texto literal de Legal con «solo», cerrado al entrar', async () => {
+    const { PlazoDevolucion, TEXTO_PLAZO_DEVOLUCION } = await import('../../ui')
+    expect(TEXTO_PLAZO_DEVOLUCION).toBe(SOLO)
+    const h = renderToStaticMarkup(<PlazoDevolucion automatica />)
+    expect(h).toContain(`<p>${SOLO}</p>`); expect(h).toContain('aria-expanded="false"'); expect(h).toContain('hidden=""')
+    expect(aLaVista(h)).not.toContain(SOLO); expect(aLaVista(h)).toContain('Plazo de devolución')
+  })
+  it('corrida apagada (DEVOLUCION_CRON=0): sin «solo», termina «…cuando cualquiera de los dos abre el alquiler.»', async () => {
+    const { PlazoDevolucion, TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA } = await import('../../ui')
+    expect(TEXTO_PLAZO_DEVOLUCION_SIN_CORRIDA).toBe(SIN)
+    const h = renderToStaticMarkup(<PlazoDevolucion automatica={false} />)
+    expect(h).toContain(`<p>${SIN}</p>`); expect(h).not.toContain('solo al inquilino')
+    expect(renderToStaticMarkup(<PlazoDevolucion />)).toContain(`<p>${SIN}</p>`)   // mientras no se confirma la corrida, sin «solo»
+  })
+  it('GET /api/config: solo la bandera sí/no, igual a la que usa la corrida, sin valores de variables', async () => {
+    const { configPublica } = await import('../../../api/_lib/config-publica')
+    const llave = 'secreto-' + crypto.randomUUID()
+    for (const [v, esperado] of [[undefined, true], ['', true], ['1', true], ['0', false], [' 0 ', false]] as const) {
+      const env = { DEVOLUCION_CRON: v, CRON_SECRET: llave, SUPABASE_SERVICE_ROLE_KEY: llave } as Record<string, string | undefined>
+      const c = configPublica(env); expect(c).toEqual({ devolucionAutomatica: esperado }); expect(JSON.stringify(c)).not.toContain(llave)
+    }
+    const api = (await import('../../../api/config.ts?raw')).default   // el endpoint solo devuelve configPublica(process.env)
+    expect(api).toContain('Response.json(configPublica(process.env)'); expect(api).not.toMatch(/SECRET|KEY|TOKEN/)
+    const dev = (await import('../../../api/_lib/devoluciones.ts?raw')).default
+    expect(dev).toContain('if (!devolucionAutomaticaEncendida(env)) return { apagado: true }')
+  })
+  it('el navegador pide /api/config una sola vez y ante un error muestra el texto sin «solo»', async () => {
+    vi.resetModules(); const f = vi.fn(async () => new Response('x', { status: 500 })); vi.stubGlobal('fetch', f)
+    const { devolucionAutomatica } = await import('../../ui')
+    expect(await devolucionAutomatica()).toBe(false); expect(await devolucionAutomatica()).toBe(false); expect(f).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals(); vi.stubGlobal('localStorage', L.s); vi.stubGlobal('sessionStorage', S.s)
   })
 })
 
