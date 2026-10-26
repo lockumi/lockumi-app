@@ -6,7 +6,7 @@ import { LogoAnimado } from '../LogoAnimado'
 import { alertaIngresoFallo } from '../alertas'
 import { WORDMARK_SVG } from '../wordmark'
 import { CasillaLegal } from '../legal/CasillaLegal'
-import { consentimientoPrivacidad, terminosActual, privacidadActual } from '../legal/documentos'
+import { consentimientoPrivacidad, casillaTerminos, terminosActual, privacidadActual } from '../legal/documentos'
 import { aceptoVersion, borrarAceptacion, guardarAceptacion, validarAceptaciones, erroresTrasCambio, ERRORES_INICIALES, type ClaveLegal } from '../legal/aceptacion'
 
 type Paso = 'opciones' | 'correo' | 'codigo'
@@ -127,8 +127,9 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     {!invitacion && <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
       <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>}
     <div className="casillas-legales">
-      <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos}>
-        Acepto los <a href="/terminos" target="_blank" rel="noopener">Términos y condiciones</a></CasillaLegal>
+      {/* Legal (26/10/2026): con la reputación, la casilla nombra la 1.13-demo y el perfil, con la línea de Legal debajo. Solo cambia el texto. */}
+      <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos} nota={casillaTerminos().linea}>
+        {casillaTerminos().antes}<a href="/terminos" target="_blank" rel="noopener">{casillaTerminos().enlace}</a>{casillaTerminos().despues}</CasillaLegal>
       {pidePrivacidad && <CasillaLegal id="acepto-privacidad" ref={refP} marcada={marcas.privacidad} onCambio={cambiar('privacidad')} error={errores.privacidad}>
         {consentimientoPrivacidad().antes}<a href="/privacidad" target="_blank" rel="noopener">{consentimientoPrivacidad().enlace}</a>{consentimientoPrivacidad().despues}</CasillaLegal>}
     </div>

@@ -102,5 +102,7 @@ export function ejecutarBorrados(ahora = Date.now(), alquileres?: readonly Alqui
 }
 /** Legal (25/10): ¿tiene (o tenía, si pidió eliminar su cuenta) perfil de reputación? Las cuentas anteriores a la 1.10-demo no. */
 export const tienePerfilReputacion = (email: string) => !!leer(email).rep01 || !!solicitudBorrado(email)?.conPerfil
+/** Desde cuándo tiene perfil (la fecha en que lo aceptó); sus alquileres cerrados antes no cuentan (Términos 1.13-demo, 15.1). */
+export const perfilDesde = (email: string) => leer(email).rep01?.fecha
 /** El perfil existe si la persona aceptó REP-01 y no pidió eliminar su cuenta. Si no: «Este perfil ya no está disponible» (REP-09). */
 export const perfilDisponible = (email: string) => !solicitudBorrado(email) && !!leer(email).rep01

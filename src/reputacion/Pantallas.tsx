@@ -3,16 +3,20 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres, store } from '../store'
+import { useAlquileres } from '../store'
 import { ir } from '../router'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
   valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
-import { useReputacion, guardarDatos, aceptarRep01, sinPerfilNiAlquileres, aceptar, activa, aceptarPrevia, previa, vincularPrevia, entrarSinAceptar, quiereEntrar, olvidarEntrar, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
+import { useReputacion, guardarDatos, aceptarRep01, sinPerfilNiAlquileres, aceptar, activa, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
-import { ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, type Solicitud } from './borrado'
+import { ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, perfilDesde, type Solicitud } from './borrado'
+import { CasillaLegal } from '../legal/CasillaLegal'
+import { casillaTerminos, textoCasillaTerminos } from '../legal/documentos'
+import { V_REPUTACION } from '../legal/version17'
+import { RanuraPerfilContexto, type RanuraPerfil } from '../ranuraPerfil'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
 import type { Registro } from './consentimiento'
 import { conServidor } from '../servidor/config'
@@ -20,7 +24,7 @@ import { servidor } from '../servidor/repositorio'
 import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, correoPorConfirmar, oirPorConfirmar, confirmarCorreoConCodigo, reenviarCodigoCorreo,
   type EstadoServidor, type PorConfirmar } from './verificacion'
 import { pedirCodigo, confirmarCodigo, ErrorCodigo, type AccionCodigo } from './segundo-factor'
-import { REP01, REP01_EXISTENTE, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
+import { BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, SEGUNDO_FACTOR, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
 
 // ——— Piezas ———
@@ -87,7 +91,7 @@ export const zonaDe = (canton: string) => zonaVitrina(canton, provinciaDe(canton
 const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
 /** Los alquileres de esta persona en este papel que cuentan para su reputación (los dos con perfil: Legal, 25/10). */
-const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion)
+const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
@@ -171,55 +175,23 @@ const TextoBloque = ({ b, vars }: { b: Bloque; vars: Record<string, string> }) =
   <div className="rp-texto" style={{ marginTop: 10 }}>{b.parrafos.map((t, k) => <p key={k}><Md t={conVars(t, vars)} /></p>)}</div>
 const lista = (xs: string[]) => <ul>{xs.map((t, k) => <li key={k}><Md t={t} /></li>)}</ul>
 
-// ——— REP-01: pantalla aparte, antes de crear la cuenta (las cuentas que ya existían no la ven: Coordinador, 25/10) ———
-// Dos casillas sin marcar (REP-01 y REP-01b); [Continuar] desactivado hasta marcar las dos. Se guarda versión, fecha, hora y texto.
-/** Texto exacto que la persona aceptó (va al registro del consentimiento). */
-export const TEXTO_REP01 = [REP01.titulo, REP01.subtitulo, REP01.intro, ...REP01.puntos, REP01.casilla, REP01.edad]
-/** Lo mismo para una cuenta que ya existe (Legal, revisión de c887895): cambian el título y la nota. */
-export const TEXTO_REP01_EXISTENTE = [REP01_EXISTENTE.titulo, ...TEXTO_REP01.slice(1)]
-export function Rep01({ aviso, onAceptar, onNo, no, extra, pie, titulo = REP01.titulo, noAcuerdo = REP01.noAcuerdo, falta = UI.errRep01 }: { aviso?: ReactNode; onAceptar: () => void; onNo: () => void; no: string; extra?: ReactNode; pie?: ReactNode
-  titulo?: string; noAcuerdo?: string; falta?: string }) {
-  const [casilla, setCasilla] = useState(false), [edad, setEdad] = useState(false), [vista, setVista] = useState<'rep01' | 'ejemplo' | 'calculo'>('rep01')
-  const atras = <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setVista('rep01')}>{REP02.volver}</button></div>
-  if (vista === 'ejemplo') return <Ejemplo02 atras={atras} />
-  if (vista === 'calculo') return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}><TextoCalculo />{atras}</main>
-  const listas = casilla && edad
-  return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
-    {aviso}
-    <section className="glass tarjeta rp-perfil" aria-labelledby="rp-rep01"><Banda mini /><div className="rp-perfil__cuerpo">
-      <h1 id="rp-rep01" className="h2">{titulo}</h1>
-      <div className="rp-texto" style={{ marginTop: 10 }}><h2 className="h3">{REP01.subtitulo}</h2><p><Md t={REP01.intro} /></p>{lista(REP01.puntos)}</div>
-      <ul className="rp-enlaces" style={{ marginTop: 6 }}>
-        <li><button type="button" className="rp-enlace" onClick={() => setVista('ejemplo')}>{REP01.enlaces.ejemplo}<Icono n="der" /></button></li>
-        <li><button type="button" className="rp-enlace" onClick={() => setVista('calculo')}>{REP01.enlaces.calculo}<Icono n="der" /></button></li>
-        <li><a href="#/privacidad">{REP01.enlaces.privacidad}<Icono n="der" /></a></li></ul>
-      <fieldset style={{ border: 0, padding: 0, margin: 'var(--s4) 0 0' }}><legend className="sr-only">{titulo}</legend>
-        <label className="check"><input type="checkbox" checked={casilla} onChange={ev => setCasilla(ev.target.checked)} /><span>{REP01.casilla}</span></label>
-        <label className="check" style={{ marginTop: 10 }}><input type="checkbox" checked={edad} onChange={ev => setEdad(ev.target.checked)} /><span>{REP01.edad}</span></label>
-      </fieldset>
-      <p className="nota" style={{ marginTop: 10 }}>{noAcuerdo}</p>
-      <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" disabled={!listas} aria-describedby={listas ? undefined : 'rp-rep01-falta'} onClick={onAceptar}>{REP01.continuar}</button>
-        <button type="button" className="boton boton--secundario" onClick={onNo}>{no}</button></div>
-      {!listas && <p id="rp-rep01-falta" className="nota" style={{ marginTop: 8 }}>{falta}</p>}
-      {extra}{pie}
-    </div></section>
-  </main>
-}
-/** REP-02 Hoja «Ver un ejemplo de perfil» (Ana M., ficticio). */
-function Ejemplo02({ atras }: { atras: ReactNode }) {
-  return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
-    <section className="glass tarjeta rp-perfil" aria-labelledby="rp-rep02"><Banda /><div className="rp-perfil__cuerpo">
-      <p className="rp-paso">{REP02.titulo}</p>
-      <Avatar nombre={REP02.nombre} rol="inquilino" />
-      <h1 id="rp-rep02" className="rp-nombre">{REP02.nombre}</h1>
-      <div className="rp-fila"><span className="rp-rol rp-rol--inquilino"><Icono n="maleta" />{REP02.papel}</span><span className="chip chip--neutro chip--mini">{REP02.ejemplo}</span></div>
-      <p className="nota" style={{ marginTop: 8 }}>{REP02.canton} · {REP02.desde}</p>
-      <p className="nota">{REP02.cerrados}</p>
-      <div className="rp-puntaje"><Anillo valor={4.6} /><div><div className="rp-linea">{REP02.puntaje}</div></div></div>
-      <h2 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h2><Insignias lista={[...REP02.insignias]} />
-      <p className="rp-aviso">{REP02.aviso}</p>
-      <p className="nota" style={{ marginTop: 8 }}><Md t={REP02.nunca} /></p>
-    </div></section>{atras}</main>
+// ——— El perfil se acepta con la casilla de los Términos 1.13-demo (Legal, 26/10/2026): ya no hay pantalla aparte (REP-01) ———
+/** Texto exacto que la persona aceptó (va al registro del consentimiento): la casilla de los Términos 1.13-demo y la línea de Legal. */
+export const textoPerfil113 = () => textoCasillaTerminos()
+/** Opción (b) de Legal: para una cuenta sin perfil, la misma casilla (sin marcar, con la línea) dentro de «Crear alquiler» o de la
+ *  invitación. Al marcarla se registra como el REP-01 (versión, fecha, hora y texto; también en el servidor) y se sigue. */
+function useCasillaPerfil(u: Usuario, activa: boolean): RanuraPerfil | null {
+  const [marcada, setMarcada] = useState(false), [guardando, setGuardando] = useState(false), [error, setError] = useState<string | null>(null)
+  if (!activa) return null
+  const c = casillaTerminos()
+  const marcar = (v: boolean) => {
+    setMarcada(v); setError(null); if (!v) return
+    try { aceptarRep01(u.email, textoPerfil113()) } catch (e) { setMarcada(false); setError(e instanceof Error ? e.message : UI.errGuardar); return }
+    setGuardando(true)
+    subirAceptacion(u.email, leer(u.email).rep01).then(() => setGuardando(false), () => { setGuardando(false); setError(UI.errPerfil113) })
+  }
+  return { lista: marcada && !guardando && !error, casilla: <CasillaLegal id="acepto-perfil-113" marcada={marcada} onCambio={marcar} error={error} nota={c.linea}>
+    {c.antes}<a href="/terminos" target="_blank" rel="noopener">{c.enlace}</a>{c.despues}</CasillaLegal> }
 }
 /** REP-04 + REP-03 + protección (regla 6). */
 function TextoCalculo() {
@@ -229,17 +201,6 @@ function TextoCalculo() {
     <section className="glass tarjeta rp-texto"><h2 className="h3">{UI.queSePublica}</h2>{lista(SE_PUBLICA)}</section>
     <section className="glass tarjeta rp-texto"><h2 className="h3">{UI.queNoSePublica}</h2>{lista(NO_SE_PUBLICA)}<p><Md t={PROTECCION} /></p></section>
   </>
-}
-
-/** Antes del login (App.tsx la pone alrededor de <Login/> sin tocarlo): REP-01 hasta aceptarla en este navegador; después, el login de siempre. */
-export function Previa({ children }: { children: ReactNode }) {
-  const [hecha, setHecha] = useState(() => !!previa() || quiereEntrar()), [no, setNo] = useState(false)
-  if (hecha) return <>{children}</>
-  if (no) return <Pantalla titulo={UI.noCreasTitulo}><p style={{ marginTop: 8 }}>{UI.noCreasTexto}</p>
-    <div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => setNo(false)}>{UI.volver}</button></div></Pantalla>
-  return <Rep01 no={REP01.noCrear} onNo={() => setNo(true)} onAceptar={() => { try { aceptarPrevia(TEXTO_REP01); setHecha(true) } catch { /* sin almacenamiento */ } }}
-    // Legal (regla 1): una cuenta 1.7-demo sin sesión llega a su login (y a sus alquileres abiertos) sin aceptar nada aquí.
-    pie={<div className="rp-acciones"><button type="button" className="boton boton--secundario" onClick={() => { entrarSinAceptar(); setHecha(true) }}>{REP01.entrar}</button></div>} />
 }
 
 // ——— Pedido de borrado pendiente (Legal, ronda del 25/10, d) ———
@@ -593,14 +554,21 @@ function useNoIndex(activo: boolean) {
 }
 
 /** Con VITE_REPUTACION=1, App.tsx pasa por aquí TODAS las pantallas con sesión:
- *  1) la aceptación previa (REP-01 antes del login) pasa a la cuenta; 2) con un pedido de borrado pendiente, crear o unirse a un
- *  alquiler nuevo muestra el aviso de Legal (los abiertos siguen igual); 3) sin REP-01 (cuentas que ya existían): la app de siempre, sin
- *  perfil público, sin bloqueo y sin pantallas extra (Coordinador, 25/10); 4) con REP-01, el último paso (nombre visible y cantón); 4) las rutas #/perfil/… o la pantalla de siempre (children). */
+ *  1) si entró aceptando los Términos 1.13-demo (la casilla nombra el perfil), se registra su perfil (REP-01) con esa fecha y hora;
+ *  2) con un pedido de borrado pendiente, crear o unirse a un alquiler nuevo muestra el aviso de Legal (los abiertos siguen igual);
+ *  3) sin perfil (cuentas que ya existían): la app de siempre, sin perfil público y sin pantallas extra; si además no tiene alquileres,
+ *  al crear o unirse a su primer alquiler ve la casilla de los Términos 1.13-demo dentro del formulario (opción b de Legal);
+ *  4) con perfil, «Nombre visible y cantón» al crear o unirse a un alquiler (o en #/perfil), nunca entre la entrada e Inicio;
+ *  5) las rutas #/perfil/… o la pantalla de siempre (children). */
 export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: string; salir: () => void; children?: ReactNode }) {
-  // Legal (regla 2): la aceptación previa de esta sesión solo pasa a una cuenta recién creada (sin alquileres en Lockumi).
-  useState(() => { try { olvidarEntrar(); const m = u.email.toLowerCase(); vincularPrevia(u.email, !store.todos().some(x => [x.duenoEmail, x.inquilinoEmail].some(c => c?.toLowerCase() === m))) } catch { /* sin almacenamiento */ } return 0 })
+  // Legal (26/10/2026): aceptar los Términos 1.13-demo en la pantalla de inicio ES aceptar el perfil. Se registra la casilla exacta,
+  // con la fecha y hora de esa aceptación (u.terminos.fecha). Una cuenta con un REP-01 anterior lo conserva (aceptarRep01 no lo pisa).
+  useState(() => { try { if (u.terminos?.version === V_REPUTACION) aceptarRep01(u.email, textoPerfil113(), u.terminos.fecha) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email)
   useEffect(() => { subirAceptacion(u.email, e.rep01).catch(() => { /* se reintenta en la próxima carga; el servidor explica qué hacer si bloquea */ }) }, [u.email, e.rep01])
+  // Lo que había al llegar a esta ruta: si acepta el perfil con la casilla dentro del formulario, el formulario sigue igual (no salta a otro paso).
+  const [alEntrar, setAlEntrar] = useState({ r, rep01: !!e.rep01 })
+  if (alEntrar.r !== r) setAlEntrar({ r, rep01: !!e.rep01 })
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -608,8 +576,11 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // Tarea programada de la demo: borra los pedidos vencidos y, con un alquiler abierto, cuando ya se cerró (nunca toca los alquileres).
   useEffect(() => { try { ejecutarBorrados(Date.now(), todos) } catch { /* sin almacenamiento */ } }, [todos])
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
-  const localPrevia = !e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)
+  // Legal (respuesta a 6c71866, punto 2): sin perfil y sin alquileres → la casilla de los Términos 1.13-demo dentro de crear o unirse.
+  // Límite 4 (4:22 p. m.): en modo servidor manda lo que diga el servidor por el correo; mientras pregunta, «Cargando…».
+  const localPrevia = esNuevo(r) && !alEntrar.rep01 && (!!e.rep01 || sinPerfilNiAlquileres(u.email, todos))
   const previaServidor = useRep01Servidor(u.email, localPrevia && !pendiente), previa = decidirPrevia(localPrevia, previaServidor)
+  const ranura = useCasillaPerfil(u, previa === true && !pendiente)
   // Legal 9:00 p. m.: entró con el código por correo de Cavos → primero «Revisa tu correo» (el código de Lockumi). «Cancelar» la oculta
   // en esta carga; sin el código el servidor no da el correo por verificado (las acciones de la reputación dicen cómo seguir).
   const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
@@ -617,17 +588,12 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
-  // Legal (respuesta a 6c71866, punto 2): sin REP-01 y sin alquileres (p. ej. entró por «Ya tengo cuenta: entrar» o por un enlace mágico
-  // en otra pestaña), la pantalla previa de siempre antes de crear o unirse a su primer alquiler.
-  // Textos literales de Legal (revisión de c887895): título, nota, «Volver» y solo la primera oración del error; el resto es REP-01.
-  // Límite 4 (4:22 p. m.): en modo servidor manda lo que diga el servidor por el correo; mientras pregunta, «Cargando…».
   if (previa === 'cargando') return <main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>
-  if (previa) return <Rep01 no={UI.volver} onNo={() => { location.hash = '/' }}
-    titulo={REP01_EXISTENTE.titulo} noAcuerdo={REP01_EXISTENTE.noAcuerdo} falta={UI.errRep01Existente}
-    onAceptar={() => { try { aceptarRep01(u.email, TEXTO_REP01_EXISTENTE) } catch { /* sin almacenamiento: se queda en la pantalla */ } }} />
-  // Cuenta que ya existía (sin REP-01): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
+  if (ranura) return <RanuraPerfilContexto.Provider value={ranura}>{children}</RanuraPerfilContexto.Provider>
+  // Cuenta que ya existía (sin perfil): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
   if (!e.rep01) return <>{children}</>
-  if (!e.nombre || !e.canton) return <Datos u={u} e={e} salir={salir} />
+  // «Nombre visible y cantón» (Katherine, 26/10): al crear o unirse a un alquiler, o en #/perfil; la entrada lleva directo a Inicio.
+  if ((!e.nombre || !e.canton) && (perfil || esNuevo(r))) return <Datos u={u} e={e} salir={salir} />
   const avisoEl = aviso && !(perfil && a === 'revision') ? <AvisoPuntaje a={aviso} listo={avisoListo} /> : null
   if (!perfil) return <>{avisoEl}{children}</>
   const pantalla = a === 'calculo' ? <Calculo corregir={b === 'corregir'} /> : a === 'llave' ? <Llave /> : a === 'revision' ? <PedirRevision u={u} />

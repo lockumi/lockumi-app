@@ -3,7 +3,7 @@ import { pruebaCompleta, correosActivos } from '../prueba/interruptor'
 import { calcularModos } from '../servidor/config'
 import { condicional, type Interruptores } from './condicional'
 import { versionVigente, datosVersion, desde17, ordenVersion, VERSIONES } from './versiones'
-import { V110, EDICION_V110, V111, EDICION_V111, V_REPUTACION } from './version17'
+import { V110, EDICION_V110, V111, EDICION_V111, V112, EDICION_V112, V_REPUTACION } from './version17'
 
 /** Textos legales: cada `*.md` de esta carpeta es una página (`terminos.md` → `/terminos`).
  *  Para cambiar un texto basta con reemplazar su archivo (ver LEEME.md). */
@@ -82,8 +82,13 @@ function armarPublicado(s: Interruptores, edicion?: string): Record<string, DocL
 const archivosV111 = import.meta.glob('./archivo/04e4424/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 let cacheV111: Record<string, DocLegal> | undefined
 const armarV111 = () => cacheV111 ??= armar(Object.fromEntries(Object.entries(archivosV111).map(([r, t]) => [r.replace('archivo/04e4424/', ''), condicional(t, datosVersion(V111)!.interruptores, EDICION_V111)])))
-/** Una versión publicada (1.7-demo a 1.11-demo), con sus interruptores y su edición (la 1.10-demo y la 1.11-demo, con su fecha). */
-const publicada = (version: string) => version === V111 ? armarV111() : armarPublicado(datosVersion(version)!.interruptores, version === V110 ? EDICION_V110 : undefined)
+// Legal (26/10/2026) · misma regla para la 1.12-demo: copia exacta de src/legal/v17/ en master 4dfa5ae, en src/legal/archivo/4dfa5ae/.
+// src/legal/v17/ pasa a ser la 1.13-demo.
+const archivosV112 = import.meta.glob('./archivo/4dfa5ae/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+let cacheV112: Record<string, DocLegal> | undefined
+const armarV112 = () => cacheV112 ??= armar(Object.fromEntries(Object.entries(archivosV112).map(([r, t]) => [r.replace('archivo/4dfa5ae/', ''), condicional(t, datosVersion(V112)!.interruptores, EDICION_V112)])))
+/** Una versión publicada (1.7-demo a 1.12-demo), con sus interruptores y su edición (la 1.10-demo a la 1.12-demo, con su fecha). */
+const publicada = (version: string) => version === V112 ? armarV112() : version === V111 ? armarV111() : armarPublicado(datosVersion(version)!.interruptores, version === V110 ? EDICION_V110 : undefined)
 /** Los dos textos (terminos, privacidad) de una versión 1.7-demo o posterior: las publicadas desde el archivo; la 1.12-demo, de v17/. */
 const textosDe = (version: string): Record<string, DocLegal> => version === V_REPUTACION ? armar17(datosVersion(version)!.interruptores) : publicada(version)
 const enSuRuta = (version: string) => Object.fromEntries(Object.entries(textosDe(version)).filter(([k]) => k === 'terminos' || k === 'privacidad')
@@ -98,7 +103,7 @@ function docs17(): Record<string, DocLegal> {
   // Con dos personas: la 1.9-demo (la de cada alquiler, versiones.ts:28, migración 20261025050000) y la 1.10-demo (publicada el 25/10 con
   // la reputación; la guardaron los alquileres de una persona de esas cuentas) siempre tienen su ruta; con la reputación, la 1.11-demo
   // (archivada, master 04e4424) y la 1.12-demo (la vigente) también.
-  if (s['dos-personas']) archivo = { ...archivo, ...enSuRuta('1.9-demo'), ...enSuRuta(V110), ...(s.reputacion ? { ...enSuRuta(V111), ...enSuRuta(V_REPUTACION) } : {}) }
+  if (s['dos-personas']) archivo = { ...archivo, ...enSuRuta('1.9-demo'), ...enSuRuta(V110), ...(s.reputacion ? { ...enSuRuta(V111), ...enSuRuta(V112), ...enSuRuta(V_REPUTACION) } : {}) }
   return { ...DOCS, ...vigente, ...DOCS_16_EN_17, ...archivo }
 }
 /** Textos legales vigentes en la app (según el interruptor). */
@@ -134,6 +139,19 @@ export const CONSENTIMIENTO_PRIVACIDAD = {
 // LEGAL: revisado (25/10, lista de Legal) · se agrega «Resend» a la lista de proveedores solo con VITE_CORREOS=1 (la Privacidad 1.7-demo ya lo nombra)
 export const consentimientoPrivacidad = (): typeof CONSENTIMIENTO_PRIVACIDAD | { antes: string; enlace: string; despues: string } =>
   !correosActivos() ? CONSENTIMIENTO_PRIVACIDAD : { ...CONSENTIMIENTO_PRIVACIDAD, despues: CONSENTIMIENTO_PRIVACIDAD.despues.replace('Supabase, Vercel, Cavos y Trustless Work', 'Supabase, Vercel, Cavos, Trustless Work y Resend') }
+
+// LEGAL: revisado (26/10/2026, 1:15 a. m.) · casilla de los Términos 1.13-demo y línea visible, textos literales de Legal. Sin la
+// pantalla aparte de REP-01: el perfil de reputación se acepta con esta casilla (sin marcar). La del Aviso de privacidad no cambia.
+export const LINEA_PERFIL_113 = 'Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver: tu nombre, la inicial de tu apellido y, ' +
+  'desde tu 3.er alquiler cerrado, tu puntaje. Nunca muestra tu dirección, teléfono, correo ni montos. Solo deja de verse si eliminas tu cuenta.'
+export interface TextoCasillaTerminos { antes: string; enlace: string; despues: string; linea?: string }
+/** La casilla de los Términos en la pantalla de inicio: con la reputación, «Acepto los Términos 1.13-demo, incluido mi perfil de
+ *  reputación público.» y la línea de Legal; sin ella, la de siempre («Acepto los Términos y condiciones»). */
+export const casillaTerminos = (): TextoCasillaTerminos => interruptoresLegales().reputacion
+  ? { antes: 'Acepto los ', enlace: `Términos ${V_REPUTACION}`, despues: ', incluido mi perfil de reputación público.', linea: LINEA_PERFIL_113 }
+  : { antes: 'Acepto los ', enlace: 'Términos y condiciones', despues: '' }
+/** El texto exacto de esa casilla (y su línea), para el registro del consentimiento del perfil (versión, fecha, hora y texto). */
+export const textoCasillaTerminos = (c = casillaTerminos()): string[] => [c.antes + c.enlace + c.despues, ...(c.linea ? [c.linea] : [])]
 
 /** Fecha legible: acepta ISO aaaa-mm-dd; si viene en otro formato se muestra tal cual. */
 export const fechaLegible = (f: string | null) => !f ? null : /^\d{4}-\d{2}-\d{2}$/.test(f)

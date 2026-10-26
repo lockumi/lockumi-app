@@ -420,6 +420,8 @@ input[type=range]{width:100%;accent-color:var(--accion);min-height:32px}
 .casillas-legales{margin:var(--s4) 0 var(--s3)}
 .casilla-legal+.casilla-legal{margin-top:var(--s3)}
 .casilla-legal{padding:12px 14px;border:1.5px solid var(--linea);border-radius:var(--r-campo);background:rgba(255,255,255,.75)}
+.casilla-legal__nota{margin:6px 0 0}
+.casilla-para{margin:var(--s3) 0 6px;font-weight:600}
 .casilla-legal--error{border-color:var(--error);background:#fff}
 .casilla-legal__fila{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:22px;cursor:pointer}
 .casilla-legal__fila input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accion);cursor:pointer}

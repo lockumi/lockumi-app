@@ -25,8 +25,8 @@ import { guardarRegreso, tomarRegreso, esRutaInvitacion } from './regreso'
 import { TITULO_INVITACION, SUBTITULO_INVITADO_SIN_SESION } from './prueba/invitacion'
 // Paso 19 · Reputación: interruptor VITE_REPUTACION (apagado por defecto). Apagado, el código ni siquiera entra en el build.
 const Reputacion = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('./reputacion/Pantallas')) : null
-// REP-01 va en una pantalla aparte ANTES de crear la cuenta: envuelve a <Login/> sin cambiar nada del login (ni de Cavos).
-const Previa = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('./reputacion/Pantallas').then(m => ({ default: m.Previa }))) : null
+// Legal (26/10/2026): sin pantalla aparte antes del login. El perfil se acepta con la casilla de los Términos 1.13-demo de la pantalla
+// de inicio (solo cambia su texto; el login y Cavos siguen igual) y Pantallas.tsx lo registra al entrar.
 const volver = tomarRegreso
 export default function App() {
   const [u, setU] = useState(auth.actual()); const r = useHash()
@@ -50,7 +50,7 @@ export default function App() {
   if (invitado) guardarRegreso(r)
   if (!u && regreso === 'esperando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
   const entrar = <Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} invitacion={invitado ? { titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION } : undefined} />
-  if (!u) return <Fondo>{skip}<Alertas />{Previa ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Previa>{entrar}</Previa></Suspense> : entrar}<Pie /></Fondo>
+  if (!u) return <Fondo>{skip}<Alertas />{entrar}<Pie /></Fondo>
   const conf = modoPrueba ? r.match(/^\/alquiler\/(.+)\/(eliminar|ocultar)$/) : null   // PROTOTIPO eliminar-alquiler
   const m = conf ? null : r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)

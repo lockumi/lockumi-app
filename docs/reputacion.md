@@ -34,6 +34,14 @@ la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
 
 ## Flujo
 
+> **Desde la 1.13-demo (Legal, 26/10/2026) — reemplaza lo de abajo sobre la pantalla previa:** ya no hay pantalla REP-01 (ni REP-01b) antes
+> del login. La pantalla de inicio de siempre lleva la casilla «Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.» con la
+> línea de Legal debajo; la del Aviso no cambia. Al entrar con la 1.13-demo, `Pantallas.tsx` guarda versión, fecha, hora y texto
+> (`aceptarRep01` → `subirAceptacion`) y va a Inicio; nombre visible y cantón se piden al crear o unirse al primer alquiler (o en `#/perfil`).
+> Una cuenta sin perfil ni alquileres ve la misma casilla dentro de «Nuevo alquiler» y de la invitación (opción b; en la invitación, «Para tu
+> cuenta» y «Para este alquiler»). Los alquileres cerrados antes de la aceptación del perfil no cuentan (`perfilDesde`, Términos 15.1).
+> SQL: `20261026020000_terminos_113_reputacion.sql` (mensaje del bloqueo apunta a los Términos; revertir con `supabase/revert/`).
+
 1. **Antes de crear la cuenta (REP-01, regla 5):** pantalla aparte, separada de los Términos, con la casilla de REP-01 y la de REP-01b (mayoría de
    edad), las dos sin marcar. [Continuar] está desactivado hasta marcar las dos. Enlaces: «Ver un ejemplo de perfil» (REP-02), «Cómo se calcula el
    puntaje» (REP-04) y «Aviso de privacidad». [No crear mi cuenta] lleva a una pantalla breve («No creaste tu cuenta…», redacción nuestra).
