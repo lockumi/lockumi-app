@@ -111,7 +111,9 @@ async function destinoReal() {
   return { nombre: url.includes('sddgjnuvxzkrhhuczuly') ? 'Supabase de PRODUCCIÓN (datos de prueba marcados)' : 'Supabase ' + new URL(url).host, cuenta, rest: fetch,
     // Paso 21: la misma función que usa /api/verificar-correo (20261025140000, ya aplicada en producción). Huella al azar de un solo uso.
     verificarCorreo: async (uid, correo) => { const r = await rest('rpc/lk_registrar_correo_verificado', { method: 'POST', body: JSON.stringify({ p_usuario: uid, p_correo: correo, p_metodo: 'email', p_huella: createHash('sha256').update(randomUUID()).digest('hex') }) }); if (!r.ok) throw new Error('correo verificado: ' + r.status) },
-    reputacionEncendida: async () => { const r = await rest('lk_reputacion_encendido?select=id'); return r.ok && (await r.json()).length > 0 },
+    // lk_reputacion_encendido no tiene permisos ni para service_role (20261025140000): si la tabla existe pero no se puede leer
+    // (401/403), se toma como encendida (así está en producción desde el paso 21); preparar a las personas no cambia nada si no lo está.
+    reputacionEncendida: async () => { const r = await rest('lk_reputacion_encendido?select=id'); return r.ok ? (await r.json()).length > 0 : r.status === 401 || r.status === 403 },
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
     migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m260: await existe('lk_contratos?select=pago_bloqueo_hasta&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
@@ -121,9 +123,12 @@ async function destinoReal() {
       await rest(`lk_mediadores?nombre=like.${encodeURIComponent('E2E-C %')}`, { method: 'DELETE' })
       await rest(`lk_correos_enviados?para=like.${encodeURIComponent('lockumi+e2ec-%')}`, { method: 'DELETE' })   // correos de cuenta de prueba (sin alquiler)
       // Reputación (paso 19 encendido): correo verificado, REP-01 y perfil de las cuentas de prueba (solo los correos de prueba de E2E-C)
+      const sinPermiso = []
       const deE2e = `or=(correo.like.${encodeURIComponent('lockumi+e2ec-*')},correo.like.${encodeURIComponent('e2e-c+*@lockumi.test')})`
       for (const t of ['lk_reputacion_eventos', 'lk_reputacion_revisiones', 'lk_reputacion_consentimientos', 'lk_reputacion_perfiles', 'lk_reputacion_aceptaciones', 'lk_solicitudes_borrado', 'lk_codigos_correo', 'lk_correos_por_confirmar', 'lk_correos_verificados'])
-        await rest(`${t}?${deE2e}`, { method: 'DELETE' })
+        { const b = await rest(`${t}?${deE2e}`, { method: 'DELETE' }); if (!b.ok) sinPermiso.push(t) }
+      // En producción estas tablas no dan permisos a service_role por la API (403): se avisa en vez de callar
+      if (sinPermiso.length) console.log(`No se pudieron borrar por la API (sin permiso): ${sinPermiso.join(', ')}. Bórralas con SQL junto con las cuentas de prueba (auth.users), como en docs/correos-c.md («Publicación»).`)
       return ids.length } }
 }
 
@@ -554,6 +559,7 @@ if (mig.m260 && !APP) {
     paso('cron-doble', `la app y la corrida de producción piden pagar a la vez: se paga UNA sola vez (${pc ? 'pagó la corrida' : app.tx && !app.yaExistia ? 'pagó la app' : 'lo pagó la corrida programada'}; la app vio ${app.enCurso ? 'el pago en curso' : app.yaExistia ? 'el pago hecho' : app.tx ? 'su propio pago' : 'un error sin pagar'})`, ec.liquidacion_tx)
     for (const [k, id] of [['cron-auto', a], ['cron-doble', c]]) {
       const f7 = await cor07(id); exigir(f7.length === 2, `${k}: el servidor no mandó COR-C-07 a las dos partes (${f7.length})`)
+      for (const f of f7) vistos.add(f.clave)   // ya contados aquí: la segunda pasada no los toma como correos nuevos
       paso(k, `el servidor de producción manda COR-C-07 a las dos partes (${f7.map(f => f.para).sort().join(', ')})`)
     }
     const r2 = await corridaApp()

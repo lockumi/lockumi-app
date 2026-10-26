@@ -88,6 +88,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Botones de red: usa `useProceso` de `src/proceso.tsx` (no se toca dos veces, muestra el avance y el error). Los mensajes de acción no cambian.
 - Simulador de días: los avisos salen al adelantar el reloj de la demo (`src/prueba/sincronizar.ts`); no hay tareas en el servidor.
 - E2E: `npm run e2e` (Playwright, `e2e/*.e2e.ts`; ver `docs/e2e.md`). Los archivos E2E no terminan en `.spec`/`.test` para que vitest no los tome.
+- Corrida programada (paso 22): `/api/borrados` corre **cada hora** (`vercel.json`, Vercel Pro). Lo que dependa del día (recordatorios COR-C-02/04/05) va solo en la corrida de las 09:00 UTC (`esRecordatorio`, `HORA_RECORDATORIOS_UTC`), y el bloqueo de un pago (`SEGUNDOS_BLOQUEO_PAGO`) tiene que seguir siendo mayor que `maxDuration`. Cada migración nueva que se aplique en producción lleva su vuelta atrás en `supabase/revert/` con su prueba en PGlite (como `devoluciones-revert-sql.test.ts`). E2E-C contra producción: `docs/correos-c.md`, «Publicación del paso 22».
 - Reclamos (PR 5): la lógica va en `src/prueba/reclamos.ts` (funciones puras que se prueban sin pantalla); las acciones primero llaman a la cuenta segura (`escrow`) y después cambian el estado, y usan `paso()` para que un doble toque no repita nada.
 - Franja de la red de prueba: su texto es `AVISO_RED` en `src/ui.tsx`; cambiarlo es un cambio visible y necesita el OK de Katherine.
 
