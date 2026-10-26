@@ -131,3 +131,11 @@ describe('Legal (revisión de c97585b)', () => {
     for (const rol of ['dueno', 'inquilino'] as const) expect(calcularPuntaje(ocultos, rol)).toEqual(calcularPuntaje(cerrados, rol))
   })
 })
+
+describe('Legal (OK de PR #35)', () => {
+  it('con dos personas, la invitación eliminada «ya no está disponible» (mismo texto que el servidor)', async () => {
+    const { T } = await import('../eliminar-textos')
+    expect(T.eliminarPuntos(true)[1]).toBe('La invitación deja de funcionar. Si la otra persona abre el enlace, verá que ya no está disponible.')
+    expect(T.eliminarPuntos(true).join(' ')).not.toMatch(/válid/)
+  })
+})

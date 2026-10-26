@@ -1,9 +1,8 @@
-# Eliminar, ocultar y «Reiniciar mi demo» (rama local `eliminar-alquiler-propuesta`, SIN publicar)
+# Eliminar, ocultar y «Reiniciar mi demo» (PR #35, 1.12-demo · 26 de octubre de 2026)
 
-Estado: Legal revisó c97585b (26/10/2026): reglas OK y textos. Falta el OK de Katherine a la imagen
-(`/workspace/lockumi/prueba-completa/capturas/eliminar-alquiler/hoja-eliminar-alquiler-v2.jpg`). Sin push, merge, deploy ni migraciones en
-producción: `supabase/migrations/20261026010000_eliminar_ocultar_reiniciar.sql` es solo un archivo (vuelta atrás:
-`supabase/revert/20261026010000_eliminar_ocultar_reiniciar_revert.sql`).
+Estado: Legal revisó c97585b y dio su OK a PR #35 (26/10/2026); Katherine aprobó la hoja (12:21 a. m. CR). Al publicar se aplica
+`supabase/migrations/20261026010000_eliminar_ocultar_reiniciar.sql` (con su fila en `supabase_migrations.schema_migrations`).
+Vuelta atrás: revertir el merge y correr `supabase/revert/20261026010000_eliminar_ocultar_reiniciar_revert.sql`.
 
 ## Reglas
 - **Eliminar** (solo antes del depósito; con otra persona, solo el dueño y antes de que la otra persona acepte): borra el alquiler.
@@ -32,6 +31,8 @@ producción: `supabase/migrations/20261026010000_eliminar_ocultar_reiniciar.sql`
 
 ### Lo que NO se puede borrar desde la app
 - Registros de los proveedores: logs de Supabase/Postgres, logs de Vercel y el envío del correo de invitación en Resend (quién, a quién y cuándo).
+  El Aviso de privacidad (1.12-demo, «Cuánto tiempo los guardamos») lo dice: «Los registros técnicos que guardan nuestros proveedores
+  (Supabase, Vercel y Resend) se borran según sus propios plazos.» Antes no tenía una frase equivalente.
 - **Riesgo residual (Storage):** la política `lk_fotos_subir` (`e2e.sql:414-415`) deja que un participante suba un archivo a
   `lk-fotos/<contrato>/` en cualquier estado. La app nunca sube fotos antes del depósito, y `lk_registrar_foto` exige un estado de fotos
   (`e2e.sql:274`). Pero un archivo subido a mano antes del depósito no se borraría con el alquiler.
@@ -53,7 +54,8 @@ producción: `supabase/migrations/20261026010000_eliminar_ocultar_reiniciar.sql`
   REP-01 (`lk_sin_perfil_ni_alquileres`, `src/reputacion/consentimiento.ts:67-89`).
 
 ## Textos
-- Confirmación: «Se borra de tu lista, con su contrato y sus datos.» (`src/prueba/eliminar-textos.ts`).
+- Confirmación: «Se borra de tu lista, con su contrato y sus datos.» (`src/prueba/eliminar-textos.ts`). Con dos personas:
+  «La invitación deja de funcionar. Si la otra persona abre el enlace, verá que ya no está disponible.»
 - Invitación eliminada, usada, vencida o que no corresponde: «Esta invitación ya no está disponible. Si todavía la necesitas, pídele
   al dueño que te envíe una nueva.» (`lk_ver_invitacion`, migración línea 102). Es el mismo texto en todos los casos: no revela si el
   alquiler existió ni nada del dueño.

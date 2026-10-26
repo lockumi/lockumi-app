@@ -21,7 +21,7 @@ const BLOBS_111 = { terminos: '24cb024f80829f7ee4a0a982bc0ecb3121fdce8c', privac
 const PUBLICADO_19 = { terminos: '6cdadd4c58f4a80f894101b9465d752ffe90c18852e4011a8176488e1ecffddf', privacidad: '46a3cfe3b1a9661ad7130416a07f12da0bf0c821ee0c22ad4090d957c0ff2002' }
 
 // Textos literales de Legal.
-const P1 = 'Si eliminas un alquiler antes de que tenga depósito, borramos en ese momento ese alquiler y sus datos, incluido el correo de la persona invitada. Ocultar un alquiler solo lo quita de tu lista: no borra nada y sus datos siguen esta misma regla.'
+const P1 = 'Si eliminas un alquiler antes de que tenga depósito, borramos en ese momento ese alquiler y sus datos, incluido el correo de la persona invitada. Los registros técnicos que guardan nuestros proveedores (Supabase, Vercel y Resend) se borran según sus propios plazos. Ocultar un alquiler solo lo quita de tu lista: no borra nada y sus datos siguen esta misma regla.'
 const P2 = 'Si el dueño elimina el alquiler antes de que te unas, borramos tu correo en ese momento.'
 const T4 = 'Esto es distinto de «Reiniciar mi demo» en la app, que solo elimina tus alquileres sin depósito y oculta los que ya terminaron. No toca los alquileres con depósito, los de otras personas ni ningún fondo.'
 const T157 = 'Ocultar un alquiler no cambia tu reputación. Eliminar un alquiler que no tuvo depósito tampoco la cambia.'
@@ -90,6 +90,7 @@ describe('1.12-demo sin volver a aceptar', () => {
     expect(revisarFechaV112({ VITE_REPUTACION: '1', VERCEL_ENV: 'production' }, '[fecha de publicación]')).toMatch(/fecha-1-12\.mjs/)
     expect(revisarFechaV112({ VITE_REPUTACION: '1', VERCEL_ENV: 'preview' }, '[fecha de publicación]')).toBeNull()
     expect(revisarFechaV112({ VITE_REPUTACION: '1', VERCEL_ENV: 'production' }, '27 de octubre de 2026')).toBeNull()
-    expect(FECHA_V112).toBe('[fecha de publicación]')   // se escribe el día de la publicación con scripts/fecha-1-12.mjs
+    expect(FECHA_V112).toBe('26 de octubre de 2026')   // escrita con scripts/fecha-1-12.mjs el día de la publicación
+    expect(revisarFechaV112({ VITE_REPUTACION: '1', VERCEL_ENV: 'production' }, FECHA_V112)).toBeNull()
   })
 })

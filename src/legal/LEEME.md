@@ -86,7 +86,7 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   | 1.9-demo | la de cada alquiler de dos personas (`versiones.ts`, migración 20261025050000) | `/terminos-1-9`, `/privacidad-1-9` (sin la reputación, también `/terminos`) | `archivo/8790b52/`, sin la reputación |
   | 1.10-demo | edición de la cuenta publicada el 25/10/2026 con la reputación | `/terminos-1-10`, `/privacidad-1-10` | `archivo/8790b52/`, con la reputación y su fecha (`EDICION_V110`) |
   | 1.11-demo | edición de la cuenta publicada el 26/10/2026 (PR #33) | `/terminos-1-11`, `/privacidad-1-11` | `archivo/04e4424/`, con su fecha (`EDICION_V111`) |
-  | 1.12-demo | edición de la cuenta vigente con la reputación (eliminar y ocultar un alquiler; rama local, sin publicar) | `/terminos`, `/privacidad` (y `/terminos-1-12`) | `v17/*.md` |
+  | 1.12-demo | edición de la cuenta vigente con la reputación (eliminar y ocultar un alquiler; PR #35) | `/terminos`, `/privacidad` (y `/terminos-1-12`) | `v17/*.md` |
 
 - **Regla de archivo:** una versión publicada no cambia nunca. Las 1.7-demo a 1.10-demo se arman desde `src/legal/archivo/8790b52/`
   (copia exacta de `src/legal/v17/` en master 8790b52, mismo blob de git); `src/legal/v17/*.md` es solo la 1.11-demo. La prueba
@@ -102,17 +102,18 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
   `node scripts/fecha-1-11.mjs` (fecha de hoy en Costa Rica) y se sube en el PR. Si sigue «[fecha de publicación]», el build de
   producción de Vercel con `VITE_REPUTACION=1` falla (`revisarFechaV111`, `src/legal/encendido.ts`); los previews la muestran tal cual.
   Publicada: «26 de octubre de 2026» (merge `04e4424`, deploy `dpl_6RWVr6RpmUvXTjtNcLYh2Rxy8bqd`, 26/10/2026 12:04 a. m. CR).
-- **1.12-demo (Legal, revisión de c97585b, 26/10/2026; rama local `eliminar-alquiler-propuesta`, SIN publicar):** misma regla de archivo.
+- **1.12-demo (Legal, revisión de c97585b, 26/10/2026; OK de Legal a PR #35):** misma regla de archivo.
   La 1.11-demo publicada se congeló en `src/legal/archivo/04e4424/` (copia byte a byte de `src/legal/v17/` en master 04e4424, mismos blobs
   `24cb024…` y `c018149…`) y sale en `/terminos-1-11` y `/privacidad-1-11` con `EDICION_V111` (`publicada()` → `armarV111()` en
   `documentos.ts`). `V_REPUTACION = '1.12-demo'`, en `EDICIONES_CUENTA` después de la 1.11-demo: sin volver a aceptar y sin tarjetas de
   cambio de versión; la 1.9-demo no cambia. Textos literales de Legal en `v17/`: Privacidad «Cuánto tiempo los guardamos» (frase (1)
   después de la de dos personas) y el punto de los 7 días de la invitación (frase (2)); Términos 5.7 (frase (4)) y 15.7 («Ocultar un alquiler
   no cambia tu reputación. Eliminar un alquiler que no tuvo depósito tampoco la cambia.»: el código lo confirma, ver
-  `docs/eliminar-alquiler.md`). La cláusula 12 no cambia. Prueba: `src/legal/__tests__/version-1-12.test.tsx` (blobs, SHA-256 del HTML
+  `docs/eliminar-alquiler.md`). Con el OK a PR #35, Privacidad agrega «Los registros técnicos que guardan nuestros proveedores (Supabase,
+  Vercel y Resend) se borran según sus propios plazos.» La cláusula 12 no cambia. Prueba: `src/legal/__tests__/version-1-12.test.tsx` (blobs, SHA-256 del HTML
   publicado de la 1.11-demo, textos en su lugar, orden y guarda).
-- **Fecha de la 1.12-demo:** `src/legal/fecha-v112.ts` (`FECHA_V112 = '[fecha de publicación]'`). El día de la publicación, justo antes del
-  merge: `node scripts/fecha-1-12.mjs`. Sin fecha, el build de producción de Vercel con `VITE_REPUTACION=1` falla (`revisarFechaV112`).
+- **Fecha de la 1.12-demo:** `src/legal/fecha-v112.ts` = «26 de octubre de 2026» (`node scripts/fecha-1-12.mjs`, justo antes del merge de PR #35).
+  Sin fecha, el build de producción con `VITE_REPUTACION=1` falla (`revisarFechaV112`).
 - **Privacidad, ronda 1.10 (desde la 1.11-demo):** «tu nombre visible (tu nombre y la inicial de tu apellido)» (igual que `nombreVisible`,
   `src/reputacion/consentimiento.ts`), «Para descargar tus datos o eliminar tu cuenta, te pedimos un código de 6 números que te enviamos
   por correo.» y «(plazos, reclamo, respuesta, mediación y cierre del alquiler)».
