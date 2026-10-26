@@ -156,8 +156,10 @@ const CORREO = /[^\s@]+@[^\s@]+\.[^\s@]+/, TELEFONO = /(\+?\d[\d\s().-]{6,}\d)/
 /** Última barrera: si algún texto que va a la cadena trae datos del alquiler o de las personas, no se despliega. */
 export function sinDatosPersonales(textos: string[], k: Pick<Contrato, 'direccion'>) {
   const dir = (k.direccion ?? '').trim().toLowerCase()
-  for (const t of textos) {
-    const x = t.toLowerCase()
+  for (const t0 of textos) {
+    // La huella del acta (« · sha256:<64 hex>») no es un dato personal: si trae 8 o más cifras seguidas (≈42 % de las huellas),
+    // la regla del teléfono la confundía y la devolución no se podía aprobar. Se revisa el resto del texto, no la huella.
+    const t = t0.replace(/sha256:[0-9a-f]{64}\b/gi, 'sha256:'), x = t.toLowerCase()
     if ((dir && x.includes(dir)) || CORREO.test(t) || TELEFONO.test(t)) throw new ErrorTw(500, 'Un texto para la cadena contiene datos personales; no se despliega.')
   }
 }
