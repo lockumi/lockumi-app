@@ -38,9 +38,15 @@ la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
 > del login. La pantalla de inicio de siempre lleva la casilla «Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.» con la
 > línea de Legal debajo; la del Aviso no cambia. Al entrar con la 1.13-demo, `Pantallas.tsx` guarda versión, fecha, hora y texto
 > (`aceptarRep01` → `subirAceptacion`) y va a Inicio; nombre visible y cantón se piden al crear o unirse al primer alquiler (o en `#/perfil`).
-> Una cuenta sin perfil ni alquileres ve la misma casilla dentro de «Nuevo alquiler» y de la invitación (opción b; en la invitación, «Para tu
-> cuenta» y «Para este alquiler»). Los alquileres cerrados antes de la aceptación del perfil no cuentan (`perfilDesde`, Términos 15.1).
-> SQL: `20261026020000_terminos_113_reputacion.sql` (mensaje del bloqueo apunta a los Términos; revertir con `supabase/revert/`).
+> **Cuentas sin perfil (Katherine 2:26 a. m. y Legal 2:27 a. m., 26/10; Ley 8968 art. 5):** sin bloqueo, aviso, casilla extra ni volver a
+> aceptar. Usan Lockumi normal, sin perfil público; sus alquileres no se publican ni cuentan. Si más adelante aceptan los Términos en la pantalla
+> de inicio, reciben su perfil desde ese momento y lo cerrado antes no cuenta (`perfilDesde`, Términos 15.1, Aviso :104). «Nuevo alquiler» y la
+> invitación quedan como antes (en la invitación, solo la casilla del alquiler). El servidor sigue sin contar alquileres donde falte un perfil.
+> SQL: `20261026030000_sin_bloqueo_perfil.sql` quita el disparador `lk_sin_perfil_tras_encendido` y su mensaje; revertir con
+> `supabase/revert/20261026030000_sin_bloqueo_perfil_revert.sql` (lo devuelve con el mensaje de la 20261026020000). Lo de abajo sobre la
+> pantalla previa y ese disparador queda solo como historia.
+> **Recorrido de primera vez (26/10, 2:32 a. m.):** mientras dura, «Nombre visible y cantón» no tapa `#/crear` (los pasos 2 y 3 señalan el
+> formulario); al terminar, vuelve a pedirse al crear. Prueba: `node scripts/recorrido/trabado.mjs`.
 
 1. **Antes de crear la cuenta (REP-01, regla 5):** pantalla aparte, separada de los Términos, con la casilla de REP-01 y la de REP-01b (mayoría de
    edad), las dos sin marcar. [Continuar] está desactivado hasta marcar las dos. Enlaces: «Ver un ejemplo de perfil» (REP-02), «Cómo se calcula el

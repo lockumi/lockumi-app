@@ -421,6 +421,8 @@ input[type=range]{width:100%;accent-color:var(--accion);min-height:32px}
 .casilla-legal+.casilla-legal{margin-top:var(--s3)}
 .casilla-legal{padding:12px 14px;border:1.5px solid var(--linea);border-radius:var(--r-campo);background:rgba(255,255,255,.75)}
 .casilla-legal__nota{margin:6px 0 0}
+/* «Reloj de la demo adelantado» junto al contador (26/10): discreto, paleta de la marca (#FFB08A en rgb). */
+.reloj-adelantado{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;background:var(--fondo);border:1px solid rgb(255 176 138);color:var(--cafe);font-size:12px;font-weight:600;vertical-align:middle}
 .casilla-para{margin:var(--s3) 0 6px;font-weight:600}
 .casilla-legal--error{border-color:var(--error);background:#fff}
 .casilla-legal__fila{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:22px;cursor:pointer}
@@ -924,3 +926,4 @@ html.sin-scroll{overflow:hidden}
 /* Paso 16: versión de los Términos en el contrato (solo con la prueba completa) */
 .ct__version{margin:6px 0 0;font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
 .ct__version a{color:inherit;text-decoration:underline}
+

@@ -12,7 +12,7 @@ import { estadoAceptaciones, type Aceptacion } from '../servidor/aceptaciones'
 import { modoReal } from '../services/auth'
 import { NOMBRE_ROL, type Alquiler, type Rol, type Foto, type Usuario } from '../types'
 import { fotoEjemplo } from '../demoFotos'
-import { Demo, Simulado, Icono, LineaTiempo, usd, fecha, fechaHora } from '../ui'
+import { Demo, Simulado, Icono, LineaTiempo, usd, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
 import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
@@ -144,7 +144,7 @@ export function EnCurso({ a }: P) {
 
 export function Ventana({ a, rol }: P) {
   const { servidor: modoServidor, solo: modoSolo, video: modoVideo, escrowReal } = modoDe(a)
-  const fin = +new Date(a.ventanaInicio!) + plazoMs(a); const [, tick] = useState(0); const [form, setForm] = useState(false); const p = useProceso()
+  const fin = +new Date(a.ventanaInicio!) + plazoMs(a); const [, tick] = useState(0); const [form, setForm] = useState(false); const p = useProceso(), auto = useDevolucionAutomatica()
   useEffect(() => { const t = setInterval(() => tick(k => k + 1), 30_000); return () => clearInterval(t) }, [])
   const resta = Math.max(0, fin - ahoraDe(a)); const dias = Math.floor(resta / DIA); const horas = Math.floor(resta % DIA / 3_600_000)
   // Al terminar el plazo sin reclamos se devuelve el depósito (con escrow real: aprobación del dueño de prueba + devolución).
@@ -153,16 +153,16 @@ export function Ventana({ a, rol }: P) {
   const adelantar = () => { if (adelantoPermitido()) store.cambiar(a.id, x => { x.diasSimulados += Math.ceil(resta / DIA) }, 'Solo red de prueba: se adelantó el plazo') }
   useEffect(() => { if (!modoSolo && resta === 0 && !a.reclamo) void devolver() }, [resta, a.id, a.reclamo]) // eslint-disable-line
   return <section className="pila"><h2>{textoPlazo(a)} para reclamos</h2>
-    <div className="cuenta" role="timer"><span className="cuenta__n">{dias}</span> días <span className="cuenta__n">{horas}</span> horas</div>
+    <div className="cuenta" role="timer"><span className="cuenta__n">{dias}</span> días <span className="cuenta__n">{horas}</span> horas{a.diasSimulados > 0 && <span className="reloj-adelantado">{RELOJ_ADELANTADO}</span>}</div>
     {modoSolo ? <p className="nota">En esta prueba no hay que esperar el plazo: si todo está bien, el dueño de prueba aprueba y el depósito vuelve al inquilino en la red de prueba.</p>
       // LEGAL: revisado (24/10) · ronda 6: «Si no hay reclamo, después de {plazo}…». La devolución la dispara la app abierta (efecto de arriba) y la firma el servidor de Lockumi
-      : escrowReal ? <p className="nota">Termina el {conPunto(fechaHora(fin))} Si no hay reclamo, después de {textoPlazo(a)} el depósito de prueba se devuelve completo al inquilino la próxima vez que alguien abra el alquiler. Ninguna de las partes tiene que aprobarlo: lo ejecuta la cuenta de Lockumi.</p>
+      : escrowReal ? <p className="nota">Termina el {conPunto(fechaHora(fin))} {auto ? FIN_CONTADOR_AUTO : FIN_CONTADOR_SIN_CORRIDA}</p>
       // LEGAL: revisado (25/10, lista de Legal) · C (alquileres de dos personas sin versión guardada): textos aprobados de la devolución automática, sin «demo local»
       : esDosPersonas(a) ? <p className="nota">Termina el {conPunto(fechaHora(fin))} {rol === 'dueno' ? TEXTO_AUTO_DUENO : TEXTO_AUTO_INQUILINO}</p>
       // LEGAL: revisado (24/10) · demo local sin red
-      : <p className="nota">Termina el {conPunto(fechaHora(fin))} Si no hay reclamos, después de {textoPlazo(a)} el depósito se devuelve completo al inquilino. En esta demo local no hay red: es solo una simulación.</p>}
+      : <p className="nota">Termina el {conPunto(fechaHora(fin))} Si no hay reclamos, después de {textoPlazo(a)} el depósito se devuelve al inquilino. En esta demo local no hay red: es solo una simulación.</p>}
     {resta === 0 && !a.reclamo && !modoSolo && (p.ocupado ? <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>{p.avance || 'Devolviendo el depósito…'}</p></div>
-      : p.err ? <>{p.error}<button type="button" className="boton boton--primario boton--ancho" onClick={() => void devolver()}>Volver a intentar la devolución</button></> : null)}
+      : p.err ? <>{escrowReal ? <p className="error" role="alert">{textoErrorDevolucion(p.err)}</p> : p.error}<button type="button" className="boton boton--primario boton--ancho" onClick={() => void devolver()}>Volver a intentar la devolución</button></> : null)}
     {modoSolo && <CierreReal a={a} rol={rol} />}
     {modoVideo && resta > 0 && rol === 'inquilino' && (form ? <FormReclamo a={a} onCancelar={() => setForm(false)} /> : <div className="pila">
       <p className="nota">La regla: el dueño tiene {textoPlazo(a)} para reclamar. Si no reclama, después de ese plazo el depósito se devuelve al inquilino.</p>{/* LEGAL: revisado (24/10) */}

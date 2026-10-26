@@ -23,7 +23,7 @@ const BLOBS_112 = { terminos: '395ed8f7db6c1936c96a34a211f619dc68385797', privac
 const CASILLA = 'Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.'
 const LINEA = 'Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver: tu nombre, la inicial de tu apellido y, desde tu 3.er alquiler cerrado, tu puntaje. Nunca muestra tu dirección, teléfono, correo ni montos. Solo deja de verse si eliminas tu cuenta.'
 const T151 = 'que se crea con tu cuenta cuando aceptas estos Términos'
-const T151_FIN = 'Las cuentas que no tenían perfil de reputación reciben uno cuando aceptan esta versión. Sus alquileres cerrados antes de eso no se publican ni cuentan para la reputación.'
+const T151_FIN = 'Las cuentas creadas antes de aceptar el perfil de reputación siguen usando Lockumi sin perfil público, y sus alquileres no se publican ni cuentan para la reputación. Si más adelante aceptan estos Términos en la pantalla de inicio, reciben su perfil desde ese momento, y sus alquileres cerrados antes de eso no cuentan.'
 const P101 = 'Lo aceptas al marcar la casilla de los Términos, que nombra el perfil y sale sin marcar.'
 
 describe('archivo de la 1.12-demo', () => {

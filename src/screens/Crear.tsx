@@ -6,7 +6,6 @@ import { acciones, accionesServidor } from '../acciones'
 import { cuentaPropia } from './Invitacion'
 import { CasillaVersion } from '../prueba/CasillaVersion'
 import { CasillaLegal } from '../legal/CasillaLegal'
-import { useRanuraPerfil } from '../ranuraPerfil'
 import { versionActual } from '../prueba/version'
 import { ir } from '../router'
 import type { Usuario } from '../types'
@@ -140,7 +139,6 @@ function CampoCalendario({ id, etiqueta, valor, min, max, error, contexto, alDer
 type InfoClave = 'red' | 'usdc' | 'fechas'
 
 export function Crear({ u }: { u: Usuario }) {
-  const perfil = useRanuraPerfil()   // null salvo una cuenta sin perfil con VITE_REPUTACION=1 (opción b de Legal)
   const [f, setF] = useState({ direccion: '', monto: '', email: '', inicio: '', fin: '' })
   const [tocado, setTocado] = useState<Partial<Record<Campo, boolean>>>({}); const [enviado, setEnviado] = useState(false)
   const [reglas, setReglas] = useState<string[]>(['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState('')
@@ -186,7 +184,6 @@ export function Crear({ u }: { u: Usuario }) {
   })
   const elegirFin = (iso: string) => { setAvisoFin(''); poner('fin', iso) }
   const crear = async () => {
-    if (perfil && !perfil.lista) return
     setEnviado(true)
     const primero = (['direccion', 'monto', 'inicio', 'fin', 'email'] as Campo[]).find(k => errores[k])
     if (primero) { document.getElementById('f-' + primero + (primero === 'inicio' || primero === 'fin' ? '-boton' : ''))?.focus(); return }
@@ -298,9 +295,7 @@ export function Crear({ u }: { u: Usuario }) {
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
       {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}
       {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
-      {/* Legal (26/10/2026, opción b): cuenta sin perfil → la casilla de los Términos 1.13-demo aquí, sin marcar (solo con VITE_REPUTACION=1). */}
-      {perfil?.casilla}
-      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta) || (invitar && (!declara || !aceptaVersion)) || (!!perfil && !perfil.lista)}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
+      <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta) || (invitar && (!declara || !aceptaVersion))}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
       {prueba1 ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
         : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}

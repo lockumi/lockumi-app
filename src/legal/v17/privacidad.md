@@ -100,8 +100,8 @@ No usamos tus datos para publicidad y no los vendemos. Para usar Lockumi, calcul
 ## Perfil de reputación
 Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con tu cuenta. **Cualquier persona en internet** con el enlace puede verlo. Lo aceptas al marcar la casilla de los Términos, que nombra el perfil y sale sin marcar. Si no lo aceptas, puedes no crear tu cuenta, sin costo.
 
-<!-- LEGAL: revisado (26/10, 1.13-demo) · cuentas sin perfil: las dos oraciones literales de Legal para Términos 15.1, repetidas aquí (a confirmar en el OK final de Legal) -->
-Las cuentas que no tenían perfil de reputación reciben uno cuando aceptan esta versión. Sus alquileres cerrados antes de eso no se publican ni cuentan para la reputación.
+<!-- LEGAL: revisado (26/10) · cuentas sin perfil: texto literal de Legal (2:27 a. m.), igual que Términos 15.1 -->
+Las cuentas creadas antes de aceptar el perfil de reputación siguen usando Lockumi sin perfil público, y sus alquileres no se publican ni cuentan para la reputación. Si más adelante aceptan estos Términos en la pantalla de inicio, reciben su perfil desde ese momento, y sus alquileres cerrados antes de eso no cuentan.
 
 <!-- LEGAL: revisado (25/10) · persona por correo (texto de Legal, con «solicitudes» en vez de «pedidos»); ronda 1.10 (25/10, 11:16 p. m.), solo en la 1.11-demo (PR #33): frase del código de 6 números (texto literal de Legal) y «tu nombre visible (tu nombre y la inicial de tu apellido)» en «Datos que se publican»; la 1.10-demo publicada está en src/legal/archivo/8790b52/ -->
 Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus solicitudes por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos. Para descargar tus datos o eliminar tu cuenta, te pedimos un código de 6 números que te enviamos por correo.

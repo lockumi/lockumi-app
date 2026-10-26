@@ -1,28 +1,27 @@
 // Paso 19 · Pantallas de la reputación («coral con amor», sin casitas ni ilustraciones). Se cargan solo con VITE_REPUTACION=1
 // (carga diferida desde App.tsx), junto con su CSS propio (reputacion.css, solo clases .rp-*). Una pantalla = un paso.
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
 import { useAlquileres } from '../store'
 import { ir } from '../router'
+import { suscribirRecorrido, recorridoEnCurso } from '../recorrido'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
   valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
-import { useReputacion, guardarDatos, aceptarRep01, sinPerfilNiAlquileres, aceptar, activa, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
+import { useReputacion, guardarDatos, aceptarRep01, aceptar, activa, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
 import { enviarAvisoReputacion } from './correo'
 import { PROVINCIAS, provinciaDe } from './cantones'
 import { ejecutarBorrados, solicitudBorrado, abiertosDe, tienePerfilReputacion, perfilDesde, type Solicitud } from './borrado'
-import { CasillaLegal } from '../legal/CasillaLegal'
-import { casillaTerminos, textoCasillaTerminos } from '../legal/documentos'
+import { textoCasillaTerminos } from '../legal/documentos'
 import { V_REPUTACION } from '../legal/version17'
-import { RanuraPerfilContexto, type RanuraPerfil } from '../ranuraPerfil'
 import { EJEMPLOS, type Ejemplo } from './ejemplos'
 import type { Registro } from './consentimiento'
 import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
-import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, correoPorConfirmar, oirPorConfirmar, confirmarCorreoConCodigo, reenviarCodigoCorreo,
-  type EstadoServidor, type PorConfirmar } from './verificacion'
+import { asegurarCorreo, eliminarCuenta, correoPorConfirmar, oirPorConfirmar, confirmarCorreoConCodigo, reenviarCodigoCorreo,
+  type PorConfirmar } from './verificacion'
 import { pedirCodigo, confirmarCodigo, ErrorCodigo, type AccionCodigo } from './segundo-factor'
 import { BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, SEGUNDO_FACTOR, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
@@ -91,6 +90,7 @@ export const zonaDe = (canton: string) => zonaVitrina(canton, provinciaDe(canton
 const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
 /** Los alquileres de esta persona en este papel que cuentan para su reputación (los dos con perfil: Legal, 25/10). */
+// Legal (26/10, 2:27 a. m.; Ley 8968, art. 5): un alquiler cuenta solo si las dos partes tienen perfil, y solo si cerró después de aceptarlo.
 const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
@@ -178,21 +178,6 @@ const lista = (xs: string[]) => <ul>{xs.map((t, k) => <li key={k}><Md t={t} /></
 // ——— El perfil se acepta con la casilla de los Términos 1.13-demo (Legal, 26/10/2026): ya no hay pantalla aparte (REP-01) ———
 /** Texto exacto que la persona aceptó (va al registro del consentimiento): la casilla de los Términos 1.13-demo y la línea de Legal. */
 export const textoPerfil113 = () => textoCasillaTerminos()
-/** Opción (b) de Legal: para una cuenta sin perfil, la misma casilla (sin marcar, con la línea) dentro de «Crear alquiler» o de la
- *  invitación. Al marcarla se registra como el REP-01 (versión, fecha, hora y texto; también en el servidor) y se sigue. */
-function useCasillaPerfil(u: Usuario, activa: boolean): RanuraPerfil | null {
-  const [marcada, setMarcada] = useState(false), [guardando, setGuardando] = useState(false), [error, setError] = useState<string | null>(null)
-  if (!activa) return null
-  const c = casillaTerminos()
-  const marcar = (v: boolean) => {
-    setMarcada(v); setError(null); if (!v) return
-    try { aceptarRep01(u.email, textoPerfil113()) } catch (e) { setMarcada(false); setError(e instanceof Error ? e.message : UI.errGuardar); return }
-    setGuardando(true)
-    subirAceptacion(u.email, leer(u.email).rep01).then(() => setGuardando(false), () => { setGuardando(false); setError(UI.errPerfil113) })
-  }
-  return { lista: marcada && !guardando && !error, casilla: <CasillaLegal id="acepto-perfil-113" marcada={marcada} onCambio={marcar} error={error} nota={c.linea}>
-    {c.antes}<a href="/terminos" target="_blank" rel="noopener">{c.enlace}</a>{c.despues}</CasillaLegal> }
-}
 /** REP-04 + REP-03 + protección (regla 6). */
 function TextoCalculo() {
   return <>
@@ -537,15 +522,6 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
 
 /** Rutas que crean o unen a un alquiler NUEVO (bloqueadas mientras hay un pedido de borrado pendiente). */
 const esNuevo = (r: string) => r === '/crear' || r.startsWith('/invitacion/')
-/** Límite 4: en modo servidor, si este aparato dice que falta REP-01, se pregunta al servidor por el correo (otro aparato pudo aceptarla). */
-function useRep01Servidor(email: string, activo: boolean): EstadoServidor {
-  const [x, setX] = useState<{ email: string; v: EstadoServidor } | null>(null)
-  useEffect(() => { if (!activo || !conServidor) return; let vivo = true
-    necesitaRep01EnServidor(email).then(v => { if (vivo) setX({ email, v }) }, () => { if (vivo) setX({ email, v: 'error' }) })
-    return () => { vivo = false } }, [email, activo])
-  if (!conServidor) return null
-  return x && x.email === email ? x.v : 'cargando'
-}
 /** Regla 6: los perfiles no aparecen en buscadores (noindex en todas las rutas #/perfil). */
 function useNoIndex(activo: boolean) {
   useEffect(() => { if (!activo || typeof document === 'undefined') return
@@ -556,8 +532,8 @@ function useNoIndex(activo: boolean) {
 /** Con VITE_REPUTACION=1, App.tsx pasa por aquí TODAS las pantallas con sesión:
  *  1) si entró aceptando los Términos 1.13-demo (la casilla nombra el perfil), se registra su perfil (REP-01) con esa fecha y hora;
  *  2) con un pedido de borrado pendiente, crear o unirse a un alquiler nuevo muestra el aviso de Legal (los abiertos siguen igual);
- *  3) sin perfil (cuentas que ya existían): la app de siempre, sin perfil público y sin pantallas extra; si además no tiene alquileres,
- *  al crear o unirse a su primer alquiler ve la casilla de los Términos 1.13-demo dentro del formulario (opción b de Legal);
+ *  3) sin perfil (cuentas que ya existían): la app de siempre, sin perfil público, sin pantallas, casillas ni avisos extra y sin
+ *  bloqueos (Katherine, 26/10 2:26 a. m.: la aceptación solo ocurre con la casilla de la pantalla de inicio);
  *  4) con perfil, «Nombre visible y cantón» al crear o unirse a un alquiler (o en #/perfil), nunca entre la entrada e Inicio;
  *  5) las rutas #/perfil/… o la pantalla de siempre (children). */
 export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: string; salir: () => void; children?: ReactNode }) {
@@ -566,9 +542,6 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   useState(() => { try { if (u.terminos?.version === V_REPUTACION) aceptarRep01(u.email, textoPerfil113(), u.terminos.fecha) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email)
   useEffect(() => { subirAceptacion(u.email, e.rep01).catch(() => { /* se reintenta en la próxima carga; el servidor explica qué hacer si bloquea */ }) }, [u.email, e.rep01])
-  // Lo que había al llegar a esta ruta: si acepta el perfil con la casilla dentro del formulario, el formulario sigue igual (no salta a otro paso).
-  const [alEntrar, setAlEntrar] = useState({ r, rep01: !!e.rep01 })
-  if (alEntrar.r !== r) setAlEntrar({ r, rep01: !!e.rep01 })
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -576,24 +549,19 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // Tarea programada de la demo: borra los pedidos vencidos y, con un alquiler abierto, cuando ya se cerró (nunca toca los alquileres).
   useEffect(() => { try { ejecutarBorrados(Date.now(), todos) } catch { /* sin almacenamiento */ } }, [todos])
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
-  // Legal (respuesta a 6c71866, punto 2): sin perfil y sin alquileres → la casilla de los Términos 1.13-demo dentro de crear o unirse.
-  // Límite 4 (4:22 p. m.): en modo servidor manda lo que diga el servidor por el correo; mientras pregunta, «Cargando…».
-  const localPrevia = esNuevo(r) && !alEntrar.rep01 && (!!e.rep01 || sinPerfilNiAlquileres(u.email, todos))
-  const previaServidor = useRep01Servidor(u.email, localPrevia && !pendiente), previa = decidirPrevia(localPrevia, previaServidor)
-  const ranura = useCasillaPerfil(u, previa === true && !pendiente)
   // Legal 9:00 p. m.: entró con el código por correo de Cavos → primero «Revisa tu correo» (el código de Lockumi). «Cancelar» la oculta
   // en esta carga; sin el código el servidor no da el correo por verificado (las acciones de la reputación dicen cómo seguir).
   const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
+  const enRecorrido = useSyncExternalStore(suscribirRecorrido, recorridoEnCurso, () => false)
   if (porConfirmar && !omitido) return <ConfirmarCorreo key={porConfirmar.correo} p={porConfirmar} cancelar={() => setOmitido(true)} />
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>
-  if (previa === 'cargando') return <main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>
-  if (ranura) return <RanuraPerfilContexto.Provider value={ranura}>{children}</RanuraPerfilContexto.Provider>
   // Cuenta que ya existía (sin perfil): no tiene perfil y sigue igual. Solo «Eliminar mi cuenta» (arriba) sigue disponible.
   if (!e.rep01) return <>{children}</>
   // «Nombre visible y cantón» (Katherine, 26/10): al crear o unirse a un alquiler, o en #/perfil; la entrada lleva directo a Inicio.
-  if ((!e.nombre || !e.canton) && (perfil || esNuevo(r))) return <Datos u={u} e={e} salir={salir} />
+  // Durante el «Recorrido de primera vez» no se muestra: los pasos 2 y 3 señalan el formulario de «Nuevo alquiler» (26/10, 2:32 a. m.).
+  if ((!e.nombre || !e.canton) && (perfil || (esNuevo(r) && !enRecorrido))) return <Datos u={u} e={e} salir={salir} />
   const avisoEl = aviso && !(perfil && a === 'revision') ? <AvisoPuntaje a={aviso} listo={avisoListo} /> : null
   if (!perfil) return <>{avisoEl}{children}</>
   const pantalla = a === 'calculo' ? <Calculo corregir={b === 'corregir'} /> : a === 'llave' ? <Llave /> : a === 'revision' ? <PedirRevision u={u} />

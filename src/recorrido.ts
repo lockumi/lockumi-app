@@ -58,6 +58,12 @@ const esperar = (sel: string, ms = 3000) => new Promise<Element | null>(listo =>
   const fin = Date.now() + ms; const mirar = () => { const e = document.querySelector(sel); if (e || Date.now() > fin) listo(e); else requestAnimationFrame(mirar) }; mirar() })
 let activo: Driver | null = null
 export const recorridoActivo = () => !!activo?.isActive()
+// 26/10 (2:32 a. m.): quien tapa el formulario de «Nuevo alquiler» (p. ej. «Nombre visible y cantón») se aparta mientras dura el recorrido;
+// si no, los pasos 2 y 3 no encuentran su bloque y el recorrido se queda trabado.
+let enCurso = false; const subsActivo = new Set<() => void>()
+const ponerEnCurso = (v: boolean) => { if (v !== enCurso) { enCurso = v; subsActivo.forEach(f => f()) } }
+export const suscribirRecorrido = (f: () => void) => { subsActivo.add(f); return () => { subsActivo.delete(f) } }
+export const recorridoEnCurso = () => enCurso
 
 /** Abre el recorrido. `u` marca «visto» al terminar o al saltar (también con Esc). El foco vuelve a quien lo abrió. */
 export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q }: { desde?: number; quien?: HTMLElement } = {}) {
@@ -102,12 +108,12 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
     onCloseClick: () => cerrar(),
     onDestroyStarted: () => { void marcarVisto(u); d.destroy() },   // Esc = Saltar
     onDestroyed: () => {
-      activo = null
+      activo = null; ponerEnCurso(false)
       if ((location.hash.slice(1) || '/') !== origen) location.hash = origen
       setTimeout(() => { if (quien?.isConnected) quien.focus({ preventScroll: true }) }, 0)
     },
   })
-  activo = d
+  activo = d; ponerEnCurso(true)
   const p = PASOS_RECORRIDO[desde]; if (p.estado) ponerEjemplo(p.estado)
   if ((location.hash.slice(1) || '/') !== p.ruta) location.hash = p.ruta
   void esperar(selectorDe(p)).then(() => d.drive(desde))

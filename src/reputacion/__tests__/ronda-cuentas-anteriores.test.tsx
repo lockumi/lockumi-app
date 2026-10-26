@@ -137,9 +137,9 @@ describe('Legal (26/10/2026): con la reputación encendida, aceptar en la pantal
 })
 
 describe('Legal: textos literales', () => {
-  it('Términos 15.1 y Aviso (1.13-demo, Legal 26/10): las cuentas que no tenían perfil reciben uno al aceptar esta versión; lo anterior no cuenta', async () => {
+  it('Términos 15.1 y Aviso (1.13-demo, Legal 26/10): texto de Legal de las 2:27 a. m. (cuentas sin perfil)', async () => {
     const t = await legal('terminos.md'), p = await legal('privacidad.md')
-    const T = 'Las cuentas que no tenían perfil de reputación reciben uno cuando aceptan esta versión. Sus alquileres cerrados antes de eso no se publican ni cuentan para la reputación.'
+    const T = 'Las cuentas creadas antes de aceptar el perfil de reputación siguen usando Lockumi sin perfil público, y sus alquileres no se publican ni cuentan para la reputación. Si más adelante aceptan estos Términos en la pantalla de inicio, reciben su perfil desde ese momento, y sus alquileres cerrados antes de eso no cuentan.'
     const P101 = 'Usar Lockumi incluye un perfil de reputación público y fijo, que se crea con tu cuenta. **Cualquier persona en internet** con el enlace puede verlo. Lo aceptas al marcar la casilla de los Términos, que nombra el perfil y sale sin marcar. Si no lo aceptas, puedes no crear tu cuenta, sin costo.'
     expect(t.split('\n').find(l => l.startsWith('15.1 '))!.endsWith(T)).toBe(true); expect(t).toContain('que se crea con tu cuenta cuando aceptas estos Términos.')
     expect(await leerArchivo('src/legal/v17/privacidad.md')).toContain(P101); expect(p).toContain(T)
