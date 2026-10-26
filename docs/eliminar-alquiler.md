@@ -68,3 +68,26 @@ Vuelta atrás: revertir el merge y correr `supabase/revert/20261026010000_elimin
 - `olvidar-invitacion.test.ts`
 - `src/prueba/__tests__/eliminar-alquiler.test.ts`
 - `src/legal/__tests__/version-1-12.test.tsx`
+
+## Publicado (PR #35, 26/10/2026, hora de Costa Rica)
+- Fecha de la 1.12-demo con `node scripts/fecha-1-12.mjs` («26 de octubre de 2026», commit `6641b4c`). PR #35 en verde (Lint, tests y build; Vercel) →
+  merge `eefd0572834827a902d459026dbc5bcaee4b768d` (Lockumi, 12:45 a. m.) → deploy de producción `dpl_6seNq357tgANnCJfrvxtDuEmXWfB`
+  (READY 12:45 a. m., app.lockumi.com).
+- Migración `20261026010000_eliminar_ocultar_reiniciar` aplicada a las 12:45 a. m. (Management API, una transacción con su fila en
+  `supabase_migrations.schema_migrations`). Verificado: fila registrada, `lk_borrar_alquiler` y `lk_se_puede_eliminar` sin permisos para
+  `anon` ni `authenticated`, `lk_eliminar_alquiler`/`lk_reiniciar_mi_demo`/`lk_ver_invitacion` solo para `authenticated`, `lk_ocultos` en 0,
+  `lk_contratos` igual (7). El encabezado del archivo de la migración todavía dice «no se aplicó»: es del momento en que se escribió.
+- `prueba-completa/scripts/prod-eliminar-35.mjs` (12:47–12:48 a. m.) **todo OK**:
+  - `/terminos` y `/privacidad` = «Versión 1.12-demo · 26 de octubre de 2026», con el mismo HTML que el build de eefd057, la frase de los
+    registros de proveedores y la 15.7;
+  - `/terminos-1-11` y `/privacidad-1-11` tienen el mismo HTML que `/terminos` y `/privacidad` de 7582483 (1.11-demo);
+  - `/terminos-1-9` y `/privacidad-1-9` no cambian;
+  - la pantalla de eliminar usó datos «Ejemplo» guardados solo en el navegador de prueba, que se borraron.
+- Waitlist igual antes y después (12:49 a. m.): `waitlist` 2 filas `3b7472599f6777f360aa2f9dd7832386`, `waitlist_intentos` 1 fila
+  `8a0f91b5d81476b2f6ed8554b32449ac`.
+- Hoja: `prueba-completa/capturas/eliminar-alquiler/produccion/hoja-eliminar-alquiler-produccion.jpg` (en la caja).
+- **Para deshacer:**
+  1. `git revert -m 1 eefd057` y deploy. La guarda de fechas no bloquea, porque la 1.11-demo ya tiene fecha.
+  2. Correr `supabase/revert/20261026010000_eliminar_ocultar_reiniciar_revert.sql` (una transacción; quita las 7 funciones y `lk_ocultos`,
+     restaura `lk_ver_invitacion` y borra su fila de `schema_migrations`), por el SQL Editor o la Management API.
+  3. Los alquileres ya eliminados no vuelven.
