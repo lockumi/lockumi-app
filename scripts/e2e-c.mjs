@@ -76,6 +76,8 @@ async function destinoSimulado() {
     return new Response('ruta no simulada: ' + t, { status: 500 })
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
+    // Paso 21 (20261025230000): lo que hace /api/verificar-correo con la clave de servicio después de comprobar el inicio de sesión.
+    verificarCorreo: async (uid, correo) => { await q(null, `insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); await q(null, `insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, lower(btrim($2)), 'email') on conflict do nothing`, [uid, correo]) },
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
     migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true }), limpiar: async () => 0 }
@@ -96,6 +98,8 @@ async function destinoReal() {
   }
   const existe = async ruta => (await rest(ruta)).ok
   return { nombre: url.includes('sddgjnuvxzkrhhuczuly') ? 'Supabase de PRODUCCIÓN (datos de prueba marcados)' : 'Supabase ' + new URL(url).host, cuenta, rest: fetch,
+    // Paso 21: la misma función que usa /api/verificar-correo (20261025140000, ya aplicada en producción). Huella al azar de un solo uso.
+    verificarCorreo: async (uid, correo) => { const r = await rest('rpc/lk_registrar_correo_verificado', { method: 'POST', body: JSON.stringify({ p_usuario: uid, p_correo: correo, p_metodo: 'email', p_huella: createHash('sha256').update(randomUUID()).digest('hex') }) }); if (!r.ok) throw new Error('correo verificado: ' + r.status) },
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
     migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
@@ -232,6 +236,7 @@ async function hastaPlazo(k, conPago, ventana = VENTANA) {
   paso(k, `el dueño crea el alquiler e invita (link de 7 días, con la declaración y los Términos ${TERMINOS})`)
   if (CORREOS) await invitarPorCorreo(k, id)
   await inquilino.rpc('lk_ver_invitacion', { p_contrato: id, p_token: r.token })
+  await D.verificarCorreo(inquilino.uid, correo('inquilino', k))   // paso 21: la sesión del inquilino entró con el correo invitado
   await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino', k), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
   const acept = await inquilino.filas('lk_aceptaciones_terminos', id); exigir(['dueno', 'inquilino'].every(x => acept.some(a => a.rol === x && a.version === TERMINOS && a.aceptado_en)), 'faltan las aceptaciones de los Términos')
   paso(k, `el inquilino se une con su propia cuenta, aceptando los Términos ${TERMINOS} y el Aviso de privacidad`)

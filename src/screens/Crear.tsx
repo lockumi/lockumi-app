@@ -13,7 +13,7 @@ import { LogoAnimado } from '../LogoAnimado'
 import { modoSolo, modoPrueba, escrowReal as escrowRealApp, dosPersonas } from '../servidor/config'
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
-import { declaracionInvitacion, enviarInvitacionUnaVez, nombreInvitacion } from '../prueba/invitacion'
+import { declaracionInvitacion, enviarInvitacionUnaVez, nombreInvitacion, tokenDeLink } from '../prueba/invitacion'
 import { SuscripcionB8, RendimientoB13 } from '../prueba/SuscripcionPC'
 import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
 import { store, activarServidor } from '../store'
@@ -196,7 +196,7 @@ export function Crear({ u }: { u: Usuario }) {
         ? await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: u.email, ...(escrowReal && origen === 'propia' && propia && { propia: { g: propia.g, firma: propia.firma } }) }, DUENO_PRUEBA)
         : await acciones.crear({ direccion: f.direccion.trim(), monto: m, inicio: f.inicio, fin: f.fin, reglas, inquilinoEmail: f.email.trim() }, u.email, await cuentaPropia())
       // Prueba completa: registro del Anexo 6-A aceptado al crear (fecha y reparaciones de uso marcadas).
-      if (invitar) { activarServidor(); void enviarInvitacionUnaVez(r.id, f.email.trim(), nombreInvitacion(u.nombre)) }
+      if (invitar) { activarServidor(); void enviarInvitacionUnaVez(r.id, f.email.trim(), nombreInvitacion(u.nombre), tokenDeLink(r.link)) }
       if (pruebaCompleta() && !modoServidor && !invitar) store.cambiar(r.id, x => { x.anexo = registroAnexo(reparacionesDe(anexo)) }, 'Anexo 6-A aceptado')
       avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))
       ir('/alquiler/' + r.id)

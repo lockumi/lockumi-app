@@ -10,10 +10,14 @@ export const REMITENTE = 'Lockumi <invitaciones@lockumi.com>'
 const EMAIL = /^[^\s@<>"',;]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/i
 const ID = /^[a-z0-9-]{2,40}$/i
 const NOMBRE = /^[\p{L} .'-]{1,60}$/u
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, TOKEN_INV = /^[0-9a-f]{64}$/
+/** paso21: dirección del botón del correo de invitación. Con el token, abre la invitación de ESE alquiler (la app guarda la ruta
+ *  mientras la persona inicia sesión y vuelve ahí). Sin token (pedido de una versión anterior de la app), la app. */
+export const enlaceInvitacion = (origen: string, alquiler: string, token?: string) => token ? `${origen}/#/invitacion/${alquiler}/${token}` : `${origen}/`
 /** Orígenes permitidos para el enlace a la app: app.lockumi.com (red de prueba, paso 11), las vistas previas y la app local. */
 export const origenPermitido = (o: string) => o === 'https://app.lockumi.com' || /^https:\/\/lockumi-app-demo-[a-z0-9-]+\.vercel\.app$/.test(o) || /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/.test(o)
 
-export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento' | 'reputacion'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string
+export interface PedidoCorreo { tipo: 'aviso' | 'invitacion' | 'consentimiento' | 'reputacion'; para: string; /** Solo en tipo 'consentimiento': casilla marcada (true) o desmarcada (false). */ acepta?: boolean; /** Paso 11: la casilla «Acepto que Lockumi me envíe avisos por correo» marcada en el momento de uso. */ consentimiento?: boolean; alquiler: string; plantilla?: Plantilla; datos?: DatosAviso; rol?: 'dueno' | 'inquilino'; nombre?: string; /** paso21: token del link de invitación (64 hex). El botón del correo abre ESA invitación (#/invitacion/<alquiler>/<token>). */ token?: string
   /** Solo en tipo 'reputacion' (paso 19, REP-12): qué aviso, las líneas públicas del puntaje y la fecha de cierre. */ aviso?: 'cambio' | 'vencido'; antes?: string; despues?: string; fechaMs?: number }
 
 // Todos los textos de los correos viven en api/_lib/textos-correos.ts (lista en docs/correos-c.md).
@@ -75,6 +79,21 @@ function validarReputacion(p: PedidoCorreo): PedidoCorreo {
   return { tipo: 'reputacion', para: p.para.trim(), alquiler: p.alquiler, aviso: p.aviso, despues: p.despues, ...(p.aviso === 'cambio' ? { antes: p.antes, fechaMs: p.fechaMs } : {}) }
 }
 
+// paso21: con Supabase (clave de servicio), el token del correo tiene que ser el link vigente de ese alquiler (se compara su huella
+// con lk_contratos.invitacion_hash). Así el correo nunca lleva un link que no sirve. Sin Supabase, solo se revisa el formato.
+const SIN_LINK = 'El link de esta invitación ya no sirve. Toca «Crear un link nuevo (el anterior deja de servir)» en el alquiler y compártelo.'
+async function exigirTokenVigente(env: Record<string, string | undefined>, alquiler: string, token: string, f: typeof fetch) {
+  const s = servicio(env); if (!s) return
+  let hash: string | null | undefined
+  try {
+    const r = await f(`${s.url}/rest/v1/lk_contratos?id=eq.${encodeURIComponent(alquiler)}&select=invitacion_hash`, { headers: { apikey: s.llave, authorization: `Bearer ${s.llave}` } })
+    if (!r.ok) throw new Error(String(r.status))
+    hash = ((await r.json()) as { invitacion_hash: string | null }[])[0]?.invitacion_hash
+  } catch { throw new ErrorCorreo(502, 'No pudimos enviar el correo ahora. Comparte el enlace para unirse desde la app.') }
+  const huella = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)))].map(b => b.toString(16).padStart(2, '0')).join('')
+  exigir(hash && hash === huella, 409, SIN_LINK)
+}
+
 const num = (n: unknown, max = 50_000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max
 /** Valida el pedido; devuelve el pedido limpio. */
 export function validar(p: PedidoCorreo): PedidoCorreo {
@@ -86,7 +105,8 @@ export function validar(p: PedidoCorreo): PedidoCorreo {
   if (p.tipo === 'invitacion') {
     exigir(p.rol === 'dueno' || p.rol === 'inquilino', 400, 'Papel inválido.')
     exigir(typeof p.nombre === 'string' && NOMBRE.test(p.nombre.trim()), 400, 'El nombre visible solo puede tener letras y espacios (hasta 60).')
-    return { tipo: 'invitacion', consentimiento: true, para: p.para.trim(), alquiler: p.alquiler, rol: p.rol, nombre: p.nombre!.trim() }
+    exigir(p.token === undefined || (typeof p.token === 'string' && TOKEN_INV.test(p.token) && UUID.test(p.alquiler)), 400, 'El enlace de la invitación no es válido. Toca «Crear un link nuevo (el anterior deja de servir)» en el alquiler y vuelve a invitar.')
+    return { tipo: 'invitacion', consentimiento: true, para: p.para.trim(), alquiler: p.alquiler, rol: p.rol, nombre: p.nombre!.trim(), ...(p.token && { token: p.token }) }
   }
   exigir(PLANTILLAS.includes(p.plantilla as Plantilla), 400, 'Aviso inválido.')
   const d = p.datos ?? {} as DatosAviso
@@ -108,7 +128,7 @@ export function armar(p: PedidoCorreo, origen: string) {
     botones = [{ texto: REP12.porque, url: `${origen}/#/perfil/calculo` }, { texto: REP12.revision, url: `${origen}/#/perfil/revision` }]
   } else if (p.tipo === 'invitacion') {
     asunto = ASUNTO_INVITACION
-    cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: BOTON_INVITACION, url: `${origen}/` }]
+    cuerpo = textoInvitacion(p.nombre!, p.rol!); botones = [{ texto: BOTON_INVITACION, url: enlaceInvitacion(origen, p.alquiler, p.token) }]
   } else {
     // LEGAL: revisado (24/10) · LEGAL-correos-2104.md, punto 3: en el correo, «depósito» pasa a «depósito de prueba»
     const c = textoAviso(p.plantilla!, p.datos!), dp = (x: string) => x.replace(/depósito(?! de prueba)/g, 'depósito de prueba')
@@ -147,6 +167,7 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
   const llave = env.RESEND_API_KEY?.trim()
   exigir(llave, 503, 'El correo no está configurado en este servidor. Los avisos siguen en la app.')
   limite('ip:' + ip, 40); limite('para:' + p.para.toLowerCase(), 15)
+  if (p.tipo === 'invitacion' && p.token) await exigirTokenVigente(env, p.alquiler, p.token, f)
   if (p.tipo === 'invitacion') await registrarInvitacion(env, p, f)
   const c = armar(p, origen)
   const clave = p.tipo === 'invitacion' ? `inv:${p.alquiler}` : p.tipo === 'reputacion' ? `rep:${p.para.toLowerCase()}:${p.aviso}:${p.alquiler}:${p.despues}` : `aviso:${p.alquiler}:${p.plantilla}:${p.para}`

@@ -37,7 +37,7 @@ for (const [n, w] of [['movil', 390], ['escritorio', 1280]]) {
 
   const revisar = async pantalla => {
     const b = p.locator('.cp-abrir'); const reg = p.locator('.cp-completo')
-    ok(await b.count() === 1, `${pantalla}: un solo botón «Ver contrato completo»`)
+    ok(await b.count() === 1, `${pantalla}: un solo botón «Contrato de alquiler…» (paso21; antes «Ver contrato completo»)`)
     const m = await b.evaluate(e => { const r = e.getBoundingClientRect(); return { alto: r.height, tag: e.tagName, tipo: e.getAttribute('type'), exp: e.getAttribute('aria-expanded'), ctrl: e.getAttribute('aria-controls'),
       letra: Math.min(...[...e.querySelectorAll('*'), e].filter(x => x.childNodes.length && [...x.childNodes].some(c => c.nodeType === 3 && c.textContent.trim())).map(x => parseFloat(getComputedStyle(x).fontSize))) } })
     ok(m.tag === 'BUTTON' && m.tipo === 'button', `${pantalla}: es <button type="button">`)
@@ -56,7 +56,7 @@ for (const [n, w] of [['movil', 390], ['escritorio', 1280]]) {
     await p.keyboard.press('Tab'); ok(await b.evaluate(e => document.activeElement === e), `${pantalla}: se llega con Tab`)
     await p.keyboard.press('Enter'); await p.waitForTimeout(350)
     ok(await b.getAttribute('aria-expanded') === 'true' && await p.locator('.cp-completo').isVisible(), `${pantalla}: Enter abre`)
-    ok((await b.innerText()).includes('Ocultar contrato completo'), `${pantalla}: abierto dice «Ocultar contrato completo»`)
+    ok((await b.innerText()).includes('Contrato de alquiler'), `${pantalla}: abierto sigue diciendo «Contrato de alquiler…» (paso21)`)
     await p.keyboard.press('Space'); await p.waitForTimeout(350)
     ok(await b.getAttribute('aria-expanded') === 'false' && await p.locator('.cp-completo').isHidden(), `${pantalla}: Espacio cierra`)
     ok(await b.evaluate(e => document.activeElement === e), `${pantalla}: el foco queda en el botón`)

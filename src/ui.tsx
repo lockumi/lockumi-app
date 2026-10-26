@@ -29,8 +29,15 @@ export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
 export const AVISO_RED = 'Red de prueba de Stellar: sin dinero real.'
 /** Mismo aviso mientras el depósito sea simulado (modoVideo): no promete movimientos reales en la red. */
 export const AVISO_RED_SIMULADO = 'Red de prueba: sin dinero real, depósito simulado'
-export const Fondo = ({ children }: { children: ReactNode }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>
-  {(modoPrueba || pruebaCompleta()) && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}{children}</>
+// LEGAL: revisado (Legal 25/10, 10:30 p. m., texto literal) · paso21 v3: junto al aviso de la red, solo en la invitación y en la vista del
+// alquiler (App.tsx), y solo con escrow real (donde sale AVISO_RED). Coincide con el código: COMISION_TW = 0.003 por monto liberado
+// (api/_lib/centimos.ts:4,12) y docs/testnet-e2e.md:118. La línea del plazo de 7 días NO se agregó: el código no coincide (ver
+// docs/invitacion-enlace.md, «Línea del plazo»).
+export const TEXTO_COMISION_TW = 'Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.'
+/** `comision`: agrega TEXTO_COMISION_TW justo debajo del aviso de la red (fuera de cualquier plegable). */
+export const Fondo = ({ children, comision = false }: { children: ReactNode; comision?: boolean }) => <><div className="aurora" aria-hidden="true"><div className="blob blob--1"/><div className="blob blob--2"/><div className="blob blob--3"/></div>
+  {(modoPrueba || pruebaCompleta()) && <div className="aviso-red" role="note">{escrowReal ? AVISO_RED : AVISO_RED_SIMULADO}</div>}
+  {(modoPrueba || pruebaCompleta()) && escrowReal && comision && <p className="aviso-red__extra" role="note">{TEXTO_COMISION_TW}</p>}{children}</>
 // LEGAL: revisado (24/10, 11:25 p. m.) · con la prueba completa, todos los montos dicen «USDC de prueba» (también la cabecera del detalle)
 // Legal 25/10 5:09 p. m. (punto 8): hora en 12 h («4:44 p. m.», espacios duros) y montos con 2 decimales («0,50»).
 const dos = (n: number) => new Intl.NumberFormat('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)

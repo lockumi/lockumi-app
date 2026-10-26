@@ -1,0 +1,74 @@
+# Paso 21 · El link del correo de invitación (25/10/2026; v2 10:10 p. m., v3 10:30 p. m.; publicado sobre la reputación el 25/10)
+
+> **Publicación (25/10/2026, con el OK de Katherine, 10:40 p. m. CR):** rama `paso21-sobre-reputacion` = master con la reputación ya
+> encendida (merge `f87c8b8`, PR #26) + los commits de `paso21-invitacion-fix` (7f30f1e, 5f8ba02, 96eb146; aprobados por Legal) traídos con
+> cherry-pick; choques en `api/_lib/correo.ts` y `src/App.tsx` resueltos quedándose con las dos ramas (el enlace de la invitación y REP-12;
+> `Previa` de REP-01 envolviendo a `Login` con el título de la invitación). `Invitacion.tsx` llama `asegurarCorreo(u.email)` antes de
+> aceptar (`aceptarConCorreo`; solo con `VITE_REPUTACION=1`, con import diferido; prueba `src/prueba/__tests__/paso21-asegurar-correo.test.ts`).
+> Las pruebas SQL de PGlite y `supabase-local.mjs` crean `auth.users` (con la reputación, `lk_correos_verificados` la referencia).
+> Merge, deploy y migración `20261025230000` en producción: ver «Publicado» al final.
+
+## Qué pasaba
+- La persona invitada abría el botón del correo y la app se abría **sin la invitación**: después de entrar caía en Inicio, sin alquileres.
+- Causa: el botón del correo (COR-C-00) apuntaba a la raíz de la app. En master f6e3254, `api/_lib/correo.ts:81`: `botones = [{ texto: BOTON_INVITACION, url: \`${origen}/\` }]`. Además, la app no mandaba el token al pedir el correo (`src/prueba/invitacion.ts`, `enviarInvitacionUnaVez`; `src/screens/Crear.tsx:199`), así que el servidor no podía armar el link.
+- Sin `#/invitacion/<alquiler>/<token>` en la dirección, `src/App.tsx:40` no guardaba a dónde volver y `volver()` daba `/`. El resto (la ruta de la invitación, unirse y «Tus alquileres») funcionaba si se abría el link copiado a mano.
+
+## Por qué el E2E-C (111 pasos) no lo vio
+`scripts/e2e-c.mjs` no abre un navegador ni el correo: arma el correo con `atenderCorreo` (`:208-211`) y solo revisa que salga y quede registrado. La persona invitada se une llamando directo a `lk_ver_invitacion` y `lk_aceptar_invitacion_con_terminos` con el token que devuelve `lk_crear_contrato_con_terminos` (`:229-235`). La dirección del botón nunca se probó.
+
+## Arreglo
+- **Servidor (`api/_lib/correo.ts`)**: el pedido de invitación trae `token` (64 hex) y `alquiler` (UUID); el botón y el texto plano llevan a `enlaceInvitacion(origen, alquiler, token)` = `<origen>/#/invitacion/<alquiler>/<token>`. Con Supabase, `exigirTokenVigente` compara el SHA-256 del token con `lk_contratos.invitacion_hash` **antes** de gastar el único correo (409 «El link de esta invitación ya no sirve…» si no coincide). Sin token (una app vieja en caché) el botón sigue abriendo la app, como antes.
+- **App**: `Crear` manda `tokenDeLink(r.link)`; `src/regreso.ts` guarda la ruta de la invitación en sessionStorage y, de respaldo, en localStorage por 30 minutos (por si el regreso de Google o Apple o el correo abren otra pestaña). Solo guarda rutas `/invitacion/<uuid>/<64 hex>` y se borra al usarla.
+- **Pantalla Entrar sin sesión** (v2, Katherine y Legal 25/10 10:15 p. m., aprobada): corta, título «Te invitaron a un alquiler» y subtítulo «Inicia sesión para verlo». Sin el nombre del dueño y sin «firmar». Es el mismo `Login` (`Login invitacion={{titulo, subtitulo}}`, `src/screens/Login.tsx:124-127`): para la persona invitada solo se esconde la lista de beneficios y se agrega el subtítulo; casillas, «Entrar», la nota y Google/Apple/correo no cambian. La lógica de entrar no cambió. No hay servicio que dé el nombre del dueño (Legal lo quitó).
+- **Mensaje del dueño** (texto de Legal, v2): con correo enviado, «Te enviamos el enlace a {correo}. La persona invitada tiene que entrar con ese correo. Si quieres, también puedes copiarlo y compartirlo por WhatsApp.» (`src/prueba/invitacion.ts:35`); sin correo, solo el link con «Copiar link» y «Compartir por WhatsApp» (aprobado).
+
+## Pruebas
+- `src/prueba/__tests__/paso21-invitacion.test.tsx`: href del botón con y sin token (HTML y texto), token y alquiler inválidos, token que no es el vigente (409, sin registrar ni llamar a Resend), la app manda el token y guarda el correo solo si salió, regreso (una vez, respaldo de 30 min, solo rutas de invitación), pantalla corta de Entrar (sin beneficios, sin dueño, sin «firmar», con casilla, /terminos y Entrar), tarjeta del dueño con y sin correo, texto de otro correo, y **plegables**: con todos cerrados se ven la casilla, los links a /terminos y /privacidad, «Aceptar invitación» (invitación) y «Leí el contrato…», la casilla y la firma (contrato), el depósito y «sin dinero real».
+- `src/servidor/__tests__/invitacion-correo-verificado-sql.test.ts` (7, PGlite con todas las migraciones): NEGATIVA (sesión B con otro correo verificado → texto de Legal, el link sigue sirviendo para A), POSITIVA (sesión A con el correo invitado verificado, aunque cambien mayúsculas y espacios), `p_email_cavos` no cuenta, sin correo verificado, dueño, token malo, un solo uso, 7 días, y la tabla cerrada para `authenticated`.
+- `src/servidor/__tests__/reglas-solo-dueno-sql.test.ts`: el inquilino **no puede** cambiar las reglas.
+- **E2E del link real (local, sin red):** `npm run e2e:invitacion` (`scripts/paso21-invitacion/e2e-enlace.mjs`). Vite local; Supabase **local de prueba** (`scripts/paso21-invitacion/supabase-local.mjs`: PGlite con todas las migraciones, el navegador habla con `http://supabase.ejemplo.local` y Playwright contesta); `/api/correo` con el `atenderCorreo` real y Resend falso. El dueño invita; el href del botón se abre en un **navegador nuevo sin sesión** (pantalla corta); otra persona entra con `lockumi+otro-ejemplo@…` y ve el texto de otro correo (pantalla), y con ese correo verificado el servidor también lo rechaza; la invitada entra, llega a la invitación (plegable cerrado, casilla y botón a la vista, aire bajo el título ≥ 16 px), su correo queda verificado (como lo haría `api/codigo-correo`), acepta, la base guarda **ese** correo para **esa** sesión, ve «Contrato de alquiler (Ejemplo)» cerrado y el alquiler en «Tus alquileres». Con `RAIZ=<copia de master> ANTES=1` corre master solo para capturas. El token nunca se imprime ni queda en las capturas.
+- Hojas de capturas (fuera del repo): `prueba-completa/capturas/paso21-invitacion/hoja-paso21-invitacion.jpg` (v1, `hoja.py`), `hoja-paso21-invitacion-v2.jpg` (ANTES master f6e3254 / AHORA, teléfono y escritorio; `hoja-v2.py`) y `hoja-paso21-invitacion-v3.jpg` (solo las filas con la línea de la comisión: invitación y vista del alquiler; `hoja-v3.py`).
+- La E2E también exige la línea de la comisión justo debajo del aviso de la red, visible y fuera de los plegables, en la invitación y en el alquiler, y que no salga en la pantalla sin sesión ni en «Tus alquileres» (captura `9-alquiler-arriba`).
+
+## Quién puede aceptar (Legal, 25/10 10:10 p. m.): solo el correo invitado VERIFICADO
+- Migración nueva `supabase/migrations/20261025230000_invitacion_correo_verificado.sql` (no aplicada en ningún lado). `lk_aceptar_invitacion` (la usa `lk_aceptar_invitacion_con_terminos`) acepta **solo** si `lower(trim(email_inquilino))` está en `lk_correos_verificados` para `auth.uid()` (`:38-46`). `p_email_cavos` sigue en la firma pero no decide; se guarda el correo verificado (`:47`).
+- Se mantiene: token guardado como huella SHA-256 (`lk_ver_invitacion`), un solo uso (`:49`), 7 días (`lk_invitacion_7_dias`) y el dueño no puede aceptar (`:37`).
+- Errores: con otro correo verificado, el texto de Legal «Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.» (`:45`; el mismo en la app, `src/prueba/invitacion.ts:40`, `src/screens/Invitacion.tsx:61`). Si la sesión no tiene **ningún** correo verificado: «No pudimos confirmar el correo de tu cuenta. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.» (`:42`, texto ya revisado por Legal para la reputación).
+- **Cómo se llena `lk_correos_verificados`** (solo en la rama `paso19-reputacion`): `api/verificar-correo` (token de Cavos con el correo, Google/Apple) y `api/codigo-correo` (código de 6 números, `lk_confirmar_correo_pendiente`, migración `20261025210000`), con la clave de servicio (`lk_registrar_correo_verificado`). La app los llama (`asegurarCorreo`) solo con `VITE_REPUTACION=1`. Nada de esto está en master.
+- **Dependencia:** con master solo, después de aplicar 230000 **ninguna persona invitada real puede aceptar** (nadie llena la tabla). Por eso la migración no se aplica sola.
+
+## Orden para publicar (hecho el 25/10/2026)
+1. Encender la reputación (PR #26, `VITE_REPUTACION=1`, migraciones `20261025140000` y `20261025210000`, variables `CAVOS_AUD_*`).
+2. Rebasar `paso21-invitacion-fix` sobre `paso19-reputacion` y, en `Invitacion.tsx`, llamar `asegurarCorreo(u.email)` antes de aceptar (quien entró con correo y código termina «Revisa tu correo»).
+3. Publicar la app y, enseguida, con el OK de Katherine, aplicar `20261025230000`. El orden de migraciones 140000 < 210000 < 230000 sirve: 230000 crea la tabla solo si falta, con la misma definición.
+- `scripts/e2e-c.mjs` en modo real necesita 230000 en la base de destino (verifica el correo del inquilino con `lk_registrar_correo_verificado`).
+
+### Cómo rebasar (sin resolver aquí los choques de la rama de reputación)
+- Revisión sin tocar nada: `git merge-tree --write-tree --name-only paso19-reputacion paso21-invitacion-fix`. Choques esperados: `api/_lib/correo.ts`, `src/App.tsx`; se mezclan solos `PLAN.md`, `README.md` y el resto.
+- En una rama nueva (no en `paso19-reputacion`): `git switch -c paso21-sobre-reputacion paso21-invitacion-fix && git rebase paso19-reputacion`; en cada choque quedarse con lo de las dos ramas (en `App.tsx`, las rutas y el `Login` de las dos; en `correo.ts`, el enlace de la invitación y lo de la reputación), correr pruebas y `npm run e2e:invitacion`.
+
+## Plegables (Katherine y Legal, 25/10 10:15 p. m.)
+- Componente `src/screens/Plegable.tsx` (botón con `aria-expanded` y `aria-controls`, región con `hidden`; un toque abre). Cerrados por defecto; el texto de adentro no cambia; las reglas siguen de solo lectura.
+- Títulos: **«Reglas del alquiler»** (reglas en la invitación, `Invitacion.tsx:59`) y **«Contrato de alquiler (Ejemplo)»** (contrato en la vista del alquiler, `ContratoDoc.tsx:23`, línea «Reglas, depósito, reclamos, mediación y firmas»). No hay plegable de «Términos y condiciones»: en estas vistas los Términos son solo links de una línea.
+- Siempre a la vista, fuera del plegable: la casilla con /terminos y /privacidad y el botón de aceptar o firmar; el aviso «Red de prueba de Stellar: sin dinero real.» (todas las pantallas) y el monto del depósito (tarjeta de la invitación y resumen del contrato).
+- **Comisión (v3, Legal 25/10 10:30 p. m.):** «Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.» va justo debajo de «Red de prueba de Stellar: sin dinero real.» (`TEXTO_COMISION_TW` y `Fondo comision`, `src/ui.tsx`), solo en la invitación y en la vista del alquiler (`src/App.tsx`, `<Fondo comision={!!(inv || m)}>`) y solo con escrow real (donde sale ese aviso). No sale en la pantalla sin sesión ni en «Tus alquileres». Coincide con el código: `COMISION_TW = 0.003` por cada monto (`api/_lib/centimos.ts:4,12`; `api/_lib/textos-correos.ts:38,43`), `docs/testnet-e2e.md:118`, liberación real 1,994 + 0,006 de 2 USDC (README «Prueba en testnet»).
+- **Línea del plazo: NO se agregó** («Cuando el inquilino entrega el inmueble, el dueño tiene 7 días para revisarlo y reclamar. Si no reclama, el depósito se devuelve al inquilino.»). El código (igual en master f6e3254 y en esta rama) hace otra cosa:
+  - **Inicio:** no corre desde la entrega. La entrega (`entregado_en`) se anota cuando los dos confirman las fotos de salida y el caso pasa a `ventana_reclamo` (`supabase/migrations/20261025060000_c_plazos_y_textos.sql:54-66`, `lk_al_entregar`); con plazos en días el plazo todavía no corre (`ventana_inicio` vacío, `:61`). Empieza cuando el dueño toca «Recibí la casa» (`lk_recibi_casa`, `:72-84`) o, si no, 2 días después de la entrega (`lk_inicio_plazo`, `:68-70`).
+  - **Duración:** 7 días **naturales**; si el último día cae en domingo o feriado de ley de Costa Rica, termina el siguiente día hábil (`lk_fin_plazo`, `:40-48`). En la red de prueba con plazos cortos (`VITE_VENTANA_SEGUNDOS`) no se mueve y empieza al entregar (`:61`).
+  - **Devolución:** no es inmediata ni del todo automática. En la base, el caso se cierra «automatico» con el cron diario `/api/borrados` (`vercel.json` crons `0 9 * * *` = 3:00 a. m. CR; `api/_lib/borrados.ts:21` → `lk_vencimientos`, migración `:144-158`) o antes si alguien abre el alquiler (`Detalle.tsx:152` → `lk_cerrar_sin_reclamo`, `:106-116`). Con Vercel Hobby el cron corre una vez al día: puede tardar hasta ~24 h (Términos 6.5 a: «Puede tardar hasta 24 horas…»). **El pago en la red** (`devolver-automatico`, `api/_lib/tw.ts:300-313`, o `liberar`, `:294-298`) lo dispara solo la app al abrir el alquiler (`src/acciones.ts:216-227`, `Detalle.tsx:152` o el botón «Liberar el depósito al inquilino», `:317`); el cron no paga.
+  - **Monto:** se devuelve todo **menos el 0,3 %** de Trustless Work (evento `:151`).
+  - El texto que ya coincide es el del contrato (Legal, `ContratoDoc.tsx:49`) y los Términos 6.5 a (`src/legal/v17/terminos.md:110`), dentro del plegable «Contrato de alquiler (Ejemplo)». Para una línea corta a la vista hace falta un texto nuevo de Legal.
+- Título de la invitación con más aire (`.inv-titulo`, `src/index.css:645`).
+
+## Reglas: solo el dueño
+- Servidor: `lk_contratos` solo tiene `select` para `authenticated` (`20261017000000_lockumi_e2e.sql:384-395`), y las reglas solo se escriben al crear (`lk_crear_contrato`, `:155-175`, quien crea queda como dueño). El inquilino no tiene cómo cambiarlas.
+- App: el inquilino ve las reglas como texto en la invitación (`Invitacion.tsx:59`, plegado) y en el contrato (`ContratoDoc.tsx:32-33`). No hay botón de **rechazar** la invitación (solo «Aceptar invitación»): queda para una segunda vuelta (PLAN.md).
+
+## Volver atrás (invitación v3)
+1. Base: `supabase/revert/20261025230000_invitacion_correo_verificado_revert.sql` (una transacción: restaura `lk_aceptar_invitacion` como estaba en
+   producción antes de 230000, mismos permisos, y quita su fila de `schema_migrations`). Mismo mecanismo que las migraciones: `POST /v1/projects/<ref>/database/query`.
+2. Código: `git revert -m 1 <merge del paso 21>` en master y esperar el deploy (o promover el deploy de la reputación en Vercel).
+- Volver atrás la reputación obliga a hacer esto antes: sin la reputación nadie llena `lk_correos_verificados` y, con 230000, nadie podría aceptar.
+
+## Publicado
+- (se completa al publicar: merge, deploy, migración, prueba en app.lockumi.com)

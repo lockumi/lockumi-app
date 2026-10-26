@@ -42,6 +42,9 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 | `CORREOS_SOLO_BUZON=1` | servidor | Solo envía al buzón de prueba |
 | `LOCKUMI_CORREOS_BORRADOR=1` | local | Excepción del E2E (ver arriba). No funciona en Vercel |
 
+## Botón de la invitación (COR-C-00), paso 21
+El botón lleva a `<origen>/#/invitacion/<alquiler>/<token>` (`enlaceInvitacion` en `api/_lib/correo.ts`); antes llevaba a la raíz de la app y la persona invitada no veía la invitación. El servidor solo envía si el token es el link vigente del alquiler. Ver [`invitacion-enlace.md`](invitacion-enlace.md).
+
 ## Base de datos: `supabase/migrations/20261025090000_c_correos.sql`
 
 Solo agrega (3 tablas y 9 funciones nuevas, permisos y RLS de esas tablas). No cambia ni borra nada existente; el test `c-correos-sql.test.ts` lo comprueba (huella de las tablas `lk_*` y de `waitlist*` antes y después, nombres nuevos, sin `drop`/`alter`/`truncate` de tablas existentes, sin DML fuera de funciones).

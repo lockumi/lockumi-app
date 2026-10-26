@@ -8,7 +8,7 @@ export const CASILLA_CORREO = 'Acepto que Lockumi me envíe avisos por correo'
 const EMAIL = /^[^\s@<>"',;]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/i
 export const puedeEnviarAvisos = (correo: string, acepta: boolean) => acepta && EMAIL.test(correo.trim())
 
-type Pedido = { tipo: 'aviso'; plantilla: Plantilla; datos: DatosAviso } | { tipo: 'invitacion'; rol: 'dueno' | 'inquilino'; nombre: string }
+type Pedido = { tipo: 'aviso'; plantilla: Plantilla; datos: DatosAviso } | { tipo: 'invitacion'; rol: 'dueno' | 'inquilino'; nombre: string; token?: string }
 /** Envía un correo por /api/correo. Devuelve un mensaje que explica qué hacer si falla. */
 export async function enviarCorreo(para: string, alquiler: string, acepta: boolean, p: Pedido): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!puedeEnviarAvisos(para, acepta)) return { ok: false, error: 'Escribe un correo como nombre@correo.com y marca la casilla para recibir los avisos.' }

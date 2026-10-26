@@ -372,21 +372,32 @@ Son identificadores públicos (van en URLs del navegador), no secretos. Puestos 
   navegador; nadie copia el token). Es el único dato que falta; con él el encendido es un solo comando: `encender-reputacion.sh <AUD>`.
 - [x] Rama al día con master (escenario C): la 1.10-demo se superpone a la edición vigente (desde C, la 1.9-demo); la guarda «LEGAL: revisar»
   de master y la de la fecha de encendido conviven en `vite.config.ts`.
-- [ ] Migración `20261025140000_reputacion.sql`: **sin aplicar**. No solo agrega: redefine `lk_pascua` (solo cambia `search_path` de `public`
+- [x] Migración `20261025140000_reputacion.sql`: aplicada en producción (antes del encendido; `20261025210000` el 25/10 a las 10:43 p. m. CR, en el encendido). Antes: No solo agrega: redefine `lk_pascua` (solo cambia `search_path` de `public`
   a `''`, mismo cuerpo) y agrega 3 disparadores en `lk_participantes` (tabla que master usa). Probada en producción dentro de una transacción
   que se deshizo (25/10, sin errores; waitlist igual). Se aplica en el paso 1 del encendido, con la fila de `lk_reputacion_encendido`.
-- [ ] `FECHA_ENCENDIDO_REPUTACION` **no es una variable de entorno**: es la constante de `src/legal/fecha-reputacion.ts` (formato
+- [x] `FECHA_ENCENDIDO_REPUTACION` **no es una variable de entorno**: es la constante de `src/legal/fecha-reputacion.ts` (formato
   «25 de octubre de 2026»). El encendido la escribe y la sube en el mismo commit; la guarda del build impide publicar con «[fecha de encendido]».
-- [ ] `VITE_REPUTACION=1` en Production: lo pone el encendido (es de build; sin un deploy nuevo no cambia nada).
+- [x] `VITE_REPUTACION=1` en Production: lo pone el encendido (es de build; sin un deploy nuevo no cambia nada).
 
 Encendida: **25 de octubre de 2026, 10:43 p. m. CR** (1.10-demo · 25 de octubre de 2026). `CAVOS_AUD_EMAIL` = `cavos-email` (del token real de un login con código por correo).
+
+**Publicación real (25/10/2026, CR; equipo de Vercel en Pro desde las 10:40 p. m.):** commit de la fecha `429f1ab` (10:43 p. m.), merge del PR #26
+`f87c8b86ec727e976191b99729f9cc1f52417795` (10:45 p. m.), deploy de producción `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP` en READY y en app.lockumi.com
+(10:45 p. m.; el anterior era `dpl_E3TJaZLMvYh6t6KqoxhcAEJJDQhX`, f6e3254), fila de `lk_reputacion_encendido` a las 10:45:45 p. m.
+Una línea anterior decía «8:54 p. m.»: ese intento **nunca quedó encendido** (se pusieron las variables, pero no hubo merge ni deploy).
+`encender-reputacion.sh` ahora lee el plan real del equipo en la API de Vercel (Hobby 100 deploys en 24 h, Pro 6000) y escribe siempre la
+hora real. E2E de producción (`prueba-completa/e2e-reputacion-produccion.sh`, 10:48–10:51 p. m.): TODO OK (2 cuentas de prueba, REP-01,
+descargar y eliminar con el código del correo, limpieza total; waitlist igual: 2 filas `3b7472599f6777f360aa2f9dd7832386`, 1 fila
+`8a0f91b5d81476b2f6ed8554b32449ac`). Hoja de capturas: `prueba-completa/capturas/encendido-reputacion-20261025/hoja-encendido-reputacion.jpg` (fuera del repo).
+**Ojo:** desde el paso 21 (invitación v3, migración `20261025230000`) aceptar una invitación depende de `lk_correos_verificados`, que llena
+la reputación. Volver atrás la reputación obliga a volver atrás también la invitación v3 (docs/invitacion-enlace.md, «Volver atrás»).
 
 **Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica las migraciones `20261025140000` (si falta) y
 `20261025210000_verificar_correo_codigo.sql` (si falta), cada una con su fila en `schema_migrations`, registra la fila de encendido y
 comprueba la waitlist; (2) pone `CAVOS_AUD_EMAIL` y `VITE_REPUTACION=1` en Production; (3) escribe la fecha real aquí y en `src/legal/fecha-reputacion.ts`,
 commit y push; (4) espera el CI, une el PR #26 con merge commit y espera el deploy de producción en READY; (5) comprueba app.lockumi.com (200)
 y que /terminos y /privacidad dicen 1.10-demo y «Pendiente de revisión por abogado».
-**Volver atrás:** promover el deploy anterior en Vercel (o borrar `VITE_REPUTACION` y volver a publicar) y `git revert -m 1 <merge>`. La
+**Volver atrás:** primero la invitación v3 (si ya se publicó: `supabase/revert/20261025230000_invitacion_correo_verificado_revert.sql` y su `git revert -m 1`); después promover `dpl_E3TJaZLMvYh6t6KqoxhcAEJJDQhX` en Vercel (o borrar `VITE_REPUTACION` y volver a publicar), `delete from public.lk_reputacion_encendido;` y `git revert -m 1 f87c8b86ec727e976191b99729f9cc1f52417795`. La
 migración se queda (tablas nuevas vacías sin la app; `lk_pascua` igual salvo `search_path`); sin la app encendida nadie escribe en ellas.
 
 **Producto / después de encender:** límite de consultas y servidor

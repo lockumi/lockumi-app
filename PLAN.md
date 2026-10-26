@@ -2,6 +2,15 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Paso 21 (25 oct 2026, publicado sobre la reputación): el link del correo de invitación abre la invitación
+- [x] Publicación (OK de Katherine 10:40 p. m. CR; Legal aprobó 96eb146): rama `paso21-sobre-reputacion` (cherry-pick sobre master con la reputación), `asegurarCorreo(u.email)` antes de aceptar, migración `20261025230000` en producción después del deploy. Volver atrás: docs/invitacion-enlace.md. Pendiente: prueba con dos cuentas reales (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).
+- Causa: el botón del correo de invitación llevaba a la raíz de la app (`api/_lib/correo.ts:81` en f6e3254) y la app no mandaba el token; la persona invitada caía en Inicio después de entrar.
+- Arreglo: botón a `#/invitacion/<alquiler>/<token>` (token comprobado contra el link vigente antes de enviar), regreso guardado también en localStorage 30 min, título de Legal en Entrar sin sesión y mensaje de Legal en la tarjeta del dueño con «Compartir por WhatsApp». Sin migraciones en la v1.
+- E2E nuevo `npm run e2e:invitacion`: abre el link REAL del correo en un navegador sin sesión. Detalle en [`docs/invitacion-enlace.md`](docs/invitacion-enlace.md).
+- **v2 (Legal y Katherine, 25/10 10:10–10:15 p. m.):** migración nueva `20261025230000_invitacion_correo_verificado.sql` (no aplicada): solo acepta el correo invitado VERIFICADO de esa sesión (`lk_correos_verificados`); otro correo → «Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.». **Depende de la reputación** (paso 19): publicar primero la reputación, rebasar, publicar la app y después aplicar 230000. Mensaje del dueño nuevo, Entrar sin sesión corta («Te invitaron a un alquiler» / «Inicia sesión para verlo»), más aire bajo el título y plegables cerrados «Reglas del alquiler» y «Contrato de alquiler (Ejemplo)». E2E local sin red (Supabase de prueba con PGlite).
+- **v3 (Legal 25/10, 10:30 p. m.):** «Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.» justo debajo del aviso de la red, en la invitación y en la vista del alquiler. La línea del plazo de 7 días **no** se agregó: el código no coincide (empieza con «Recibí la casa» o 2 días después de la entrega, 7 días naturales con domingos y feriados, cierre por el cron diario o al abrir el alquiler, pago en la red solo al abrir el alquiler). Detalle en [`docs/invitacion-enlace.md`](docs/invitacion-enlace.md).
+- **Segunda vuelta (pendiente):** botón para **rechazar** la invitación (con texto de Legal); una línea corta del plazo para reclamar que diga lo que hace el código (texto nuevo de Legal); que el cron diario también pague en la red la devolución automática (hoy solo la app al abrir el alquiler).
+
 ## Franja: texto nuevo (publicado con el OK de Katherine)
 - Franja de la red de prueba (pedido de Legal, 24/10 11:25 p. m.): el texto pasa de «Red de prueba: depósitos reales en testnet, sin valor» a «Red de prueba de Stellar: sin dinero real.». CAMBIO VISIBLE en producción, publicado con el OK de Katherine (24/10, 11:39 p. m.).
 
@@ -178,7 +187,7 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [ ] Entrada en el menú de la cuenta (avatar) de la maqueta: la app todavía no tiene ese menú.
 - [x] Publicado en `master` el 24 oct 2026 (OK de Katherine).
 
-## Paso 19 · Reputación (25 oct 2026, rama `paso19-reputacion`, borrador)
+## Paso 19 · Reputación (25 oct 2026; encendida en app.lockumi.com, PR #26, merge `f87c8b8`, deploy `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP`, 10:45 p. m. CR)
 
 - [x] Interruptor `VITE_REPUTACION` (apagado por defecto; apagado, las pantallas no entran en el build y la app se ve igual).
 - [x] REP-01 en una pantalla aparte antes de crear la cuenta (casilla sin marcar + REP-01b, [Continuar] desactivado hasta marcarlas), con versión, fecha, hora y texto. El login no cambia.

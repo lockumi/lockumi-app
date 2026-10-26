@@ -10,7 +10,7 @@ import type { Alquiler } from '../../types'
 const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
 
-const { ContratoDoc, Documento, TEXTO_VER, TEXTO_OCULTAR, TEXTO_CONTENIDO } = await import('../ContratoDoc')
+const { ContratoDoc, Documento, TITULO_CONTRATO, TEXTO_CONTENIDO } = await import('../ContratoDoc')
 const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readFileSync(r: URL, c: 'utf8'): string }
 const css = fs.readFileSync(new URL('../../index.css', import.meta.url), 'utf8')
 
@@ -46,7 +46,9 @@ describe('contrato plegable', () => {
     expect(b, 'botón').not.toBeNull()
     expect(b![1]).toBe('false')
     expect(html).toContain(`<div class="cp-completo" id="${b![2]}" role="region" aria-label="Contrato completo" hidden="">`)
-    expect(html).toContain(TEXTO_VER); expect(html).toContain(`<small>${TEXTO_CONTENIDO}</small>`); expect(html).not.toContain(TEXTO_OCULTAR)
+    // paso21: el título dice qué contiene («Contrato de alquiler», con «(Ejemplo)» en la prueba) y no cambia al abrir
+    expect(TITULO_CONTRATO).toMatch(/^Contrato de alquiler( \(Ejemplo\))?$/)
+    expect(html).toContain(`<span class="cp-abrir__txt">${TITULO_CONTRATO}<small>${TEXTO_CONTENIDO}</small></span>`); expect(html).not.toMatch(/Ver contrato completo|Ocultar contrato completo/)
   })
   it('cerrado: el resumen, el pie y «Descargar o imprimir» quedan a la vista; Reglas, depósito, reclamos, mediación y firmas, plegados', () => {
     const { region, visible } = partir(renderToStaticMarkup(<ContratoDoc a={A} />))
@@ -54,12 +56,12 @@ describe('contrato plegable', () => {
     for (const t of PLEGADO) { expect(region, t).toContain(t); expect(visible, t).not.toContain('<h3>' + t + '</h3>') }
     expect(region).not.toContain('Este contrato se guarda solo en tu navegador')
   })
-  it('el botón abre y cierra: alterna el estado y cambia el texto, aria-expanded y hidden', () => {
+  it('el botón abre y cierra: alterna el estado, aria-expanded y hidden (el título es el mismo)', () => {
     const alternar = vi.fn()
     const boton = buscarBoton(Documento({ a: A, plegado: { abierto: false, alternar, id: 'x' } }))
     expect(boton).not.toBeNull(); boton!.props.onClick(); expect(alternar).toHaveBeenCalledTimes(1)
     const abierto = renderToStaticMarkup(<Documento a={A} plegado={{ abierto: true, alternar, id: 'x' }} />)
-    expect(abierto).toContain('aria-expanded="true" aria-controls="x"'); expect(abierto).toContain(TEXTO_OCULTAR)
+    expect(abierto).toContain('aria-expanded="true" aria-controls="x"'); expect(abierto).toContain(TITULO_CONTRATO)
     expect(abierto).toContain('<div class="cp-completo" id="x" role="region" aria-label="Contrato completo">')
     const cerrado = renderToStaticMarkup(<Documento a={A} plegado={{ abierto: false, alternar, id: 'x' }} />)
     expect(cerrado).toContain('aria-expanded="false"'); expect(cerrado).toContain('aria-label="Contrato completo" hidden=""')

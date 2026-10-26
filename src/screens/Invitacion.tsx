@@ -9,6 +9,8 @@ import { conectarBilletera } from '../services/billetera'
 import { ir } from '../router'
 import type { Usuario } from '../types'
 import { usd, fecha } from '../ui'
+import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS } from '../prueba/invitacion'
+import { Plegable } from './Plegable'
 
 type Datos = Awaited<ReturnType<typeof servidor.verInvitacion>>
 /** Cuenta G… de Cavos, si se puede obtener (solo con login real). No bloquea si falla: se puede agregar después. */
@@ -24,6 +26,21 @@ export function ZonaAceptar({ marcada, onMarcar, ocupado, onAceptar, casilla = t
     <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || (casilla && !marcada)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
 }
 
+/** Paso 21 (orden de publicación, docs/invitacion-enlace.md): antes de aceptar, el correo de la sesión se verifica en el servidor
+ *  (api/verificar-correo; con correo y código de Cavos termina en «Revisa tu correo»). Solo con VITE_REPUTACION=1: apagado, el código
+ *  de la reputación no entra en el build. Nunca lanza: si no se pudo, el servidor rechaza con un texto que dice cómo seguir. */
+export async function asegurarCorreo(email: string) {
+  if (import.meta.env.VITE_REPUTACION !== '1') return
+  const { asegurarCorreo: asegurar } = await import('../reputacion/verificacion')
+  await asegurar(email).catch(() => false)
+}
+
+/** Aceptar = primero asegurar el correo verificado en el servidor y después lk_aceptar_invitacion_con_terminos (migración 20261025230000). */
+export async function aceptarConCorreo(id: string, token: string, email: string) {
+  await asegurarCorreo(email)
+  await servidor.aceptarInvitacion(id, token, email, await cuentaPropia(), dosPersonas ? versionActual() : undefined)
+}
+
 export function Invitacion({ id, token, u }: { id: string; token: string; u: Usuario }) {
   const [d, setD] = useState<Datos | null>(null); const [err, setErr] = useState(''); const [ocupado, setOcupado] = useState(false)
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
@@ -31,25 +48,32 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
   if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')
-    try { await servidor.aceptarInvitacion(id, token, u.email, await cuentaPropia(), dosPersonas ? versionActual() : undefined); activarServidor(); ir('/alquiler/' + id) }
+    try { await aceptarConCorreo(id, token, u.email); activarServidor(); ir('/alquiler/' + id) }
     catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos aceptar la invitación. Intenta de nuevo.'); setOcupado(false) }
   }
   return <main id="contenido" tabIndex={-1} className="cont cont--form" style={{ paddingBottom: 48 }}>
-    <h1>Te invitaron a un alquiler</h1>
+    <h1 className="inv-titulo">{TITULO_INVITACION}</h1>
     <div className="glass glass--fuerte tarjeta pila">
       {!d && !err && <p className="nota">Cargando la invitación…</p>}
-      {d && <>
-        <ul className="lista resumen">
-          <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
-          <li><span>Entrada</span><strong>{fecha(d.inicio)}</strong></li><li><span>Salida</span><strong>{fecha(d.fin)}</strong></li>
-          <li><span>Dueño</span><strong className="cortar">{d.email_dueno}</strong></li></ul>
-        {d.reglas?.length > 0 && <><p className="mini">Reglas</p><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></>}
-        {u.email.toLowerCase() !== d.email_inquilino
-          ? <p className="error" role="alert">Esta invitación es para {d.email_inquilino}. Sal y entra con ese correo.</p>
-          : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} />}
-      </>}
+      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} />}
       {err && <p className="error" role="alert">{err}</p>}
       <a href="#/" className="enlace">Ir a tus alquileres</a>
     </div>
   </main>
+}
+
+/** paso21: lo que se ve con la invitación cargada. Resumen (lugar, depósito, fechas, dueño) a la vista; las reglas, plegadas y
+ *  cerradas; la casilla de los Términos y el Aviso de privacidad (con sus enlaces) y «Aceptar invitación», siempre a la vista. */
+export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void }) {
+  return <>
+    <ul className="lista resumen">
+      <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
+      <li><span>Entrada</span><strong>{fecha(d.inicio)}</strong></li><li><span>Salida</span><strong>{fecha(d.fin)}</strong></li>
+      <li><span>Dueño</span><strong className="cortar">{d.email_dueno}</strong></li></ul>
+    {/* paso21: las reglas (solo lectura, sin campos) van plegadas y cerradas; la casilla, sus enlaces y «Aceptar invitación» quedan a la vista */}
+    {d.reglas?.length > 0 && <Plegable titulo={TITULO_PLEGABLE_REGLAS}><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></Plegable>}
+    {u.email.trim().toLowerCase() !== d.email_inquilino?.trim().toLowerCase()
+      ? <p className="error" role="alert">{TEXTO_OTRO_CORREO}</p>
+      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} />}
+  </>
 }

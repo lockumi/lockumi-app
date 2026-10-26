@@ -199,7 +199,7 @@ Regla de Katherine: el diseño que ya existe no se toca; solo se agregan pantall
    - Un Supabase local necesita Docker y la Supabase CLI. Esta caja no los tiene, así que el script lo revisa y lo avisa.
    - Si el único destino es producción, el E2E de testnet **solo** corre con `--prod-datos-prueba`, que escribe datos de prueba marcados en esa base. Sin esa opción, hace el ensayo simulado y sale con el código 3.
 3. **Build** de la rama con `VITE_PRUEBA_COMPLETA=1 VITE_DOS_PERSONAS=1 VITE_TRUSTLESS=1 VITE_ORIGEN_PUBLICO=https://app.lockumi.com` (con `VITE_CORREOS` apagado) en `/tmp/c-build-<commit>`. Si ya existe para ese commit, se reutiliza.
-4. **E2E de dos cuentas:** `scripts/e2e-c.mjs`.
+4. **E2E de dos cuentas:** `scripts/e2e-c.mjs`. No abre el correo ni un navegador: el link del botón del correo de invitación lo prueba `npm run e2e:invitacion` ([`invitacion-enlace.md`](invitacion-enlace.md), paso 21).
    - Dos sesiones anónimas propias (dueño e inquilino) y una persona mediadora de prueba llaman a las mismas funciones `lk_*` que la app y al mismo `/api/tw` (`api/_lib/tw.ts`, cargado en el proceso).
    - El build local no tiene Cavos, así que las firmas de la billetera (depósito y aprobación) las hacen cuentas Stellar desechables de testnet: Friendbot, trustline y USDC del DEX.
    - Cuatro alquileres corren en paralelo, con un plazo de 60 s cada uno. Las llamadas a Trustless Work van en fila para que no choquen los números de secuencia:
@@ -251,3 +251,12 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 - **Apagar C:** borrar (o poner en 0) `CORREOS_C` y `VITE_DOS_PERSONAS` en Vercel Production (`DELETE /v9/projects/<proyecto>/env/<id>`, o Settings → Environment Variables) y volver a desplegar; o promover de nuevo `dpl_7znx5gexZooekP23bt8DvLGVswYY` (sin las variables nuevas no cambia nada: las variables se leen al desplegar). Código: `git revert -m 1 a5a88ff31c179517f252aa389b3b15bb09a89418` (bloqueantes) y `git revert -m 1 f9489a6d8ea568fa2899b500f20a088a0148b462` (C).
 
 **Ensayo sin llaves:** `./correr-c.sh --simulado` hace el mismo recorrido con PGlite (todas las migraciones), el `/api/tw` de verdad y Trustless Work falso. Los hashes simulados nunca se muestran como enlaces. La prueba `scripts/__tests__/e2e-c-simulado.test.ts` lo mantiene verde en CI.
+
+## Reputación encendida en app.lockumi.com (25/10/2026, 10:45 p. m. CR)
+- `./encender-reputacion.sh 'cavos-email'` (ensayo y luego `--si`; el equipo de Vercel ya está en Pro: el script lee el plan real): migración `20261025210000` aplicada (10:43 p. m.), `VITE_REPUTACION=1` y `CAVOS_AUD_EMAIL`, commit de la fecha `429f1ab`, merge del PR #26 `f87c8b86ec727e976191b99729f9cc1f52417795`, deploy `dpl_FjGNMRmKrHjJ15gCbhzPdYaqpiXP` (READY 10:45 p. m.), fila de `lk_reputacion_encendido` (10:45:45 p. m.); `/terminos` y `/privacidad` en 1.10-demo · 25 de octubre de 2026.
+- E2E de producción `prueba-completa/e2e-reputacion-produccion.sh` (10:48–10:51 p. m.): **TODO OK**. La primera corrida (10:46 p. m.) falló por el propio script: pedía el código de «eliminar» sin esperar el minuto entre códigos (límite del servidor, a propósito) y leía columnas en camelCase que Postgres devuelve en minúsculas; arreglado en `prueba-completa/scripts/e2e-reputacion.mjs` (espera 65 s, alias entre comillas). Hoja: `prueba-completa/capturas/encendido-reputacion-20261025/hoja-encendido-reputacion.jpg` (en la caja). Waitlist igual antes y después.
+- Volver atrás: docs/reputacion.md («Volver atrás»); primero la invitación v3 si ya se publicó.
+
+## Invitación v3 sobre la reputación (paso 21, 25/10/2026)
+- Local: suite completa, `tsc -b`, `oxlint`, build (también con `VITE_REPUTACION=1`) y `CHROME=/usr/bin/google-chrome npm run e2e:invitacion` en verde (capturas en `prueba-completa/capturas/paso21-invitacion/sobre-reputacion/`).
+- Producción: ver docs/invitacion-enlace.md («Publicado»). La prueba con dos cuentas reales queda **PENDIENTE** (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).
