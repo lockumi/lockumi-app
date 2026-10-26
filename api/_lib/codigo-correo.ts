@@ -172,7 +172,11 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
   if (accion === 'verificar_correo') {
     let c: string | null
     try { c = await rpc<string>(s, 'lk_confirmar_correo_pendiente', { p_usuario: uid }, f) } catch { return error(403, 'codigo') }
-    return c ? { estado: 200, cuerpo: { hecho: true, correo: c } } : error(403, 'codigo')
+    if (!c) return error(403, 'codigo')
+    // Código por correo de Cavos (20261026070000): el correo quedó 'cavos-email'; se traen a esta sesión los alquileres de ese correo.
+    let vinculados = 0
+    try { vinculados = Number(await rpc<number>(s, 'lk_vincular_alquileres', { p_usuario: uid, p_correo: c }, f)) || 0 } catch { /* el correo igual quedó verificado */ }
+    return { estado: 200, cuerpo: { hecho: true, correo: c, ...(vinculados > 0 && { vinculados }) } }
   }
   // 'invitacion': lk_confirmar_invitacion_codigo usa el código (un solo uso) y registra el correo invitado verificado para ESE alquiler y
   // ESTA sesión (lk_invitaciones_verificadas). Después se acepta con la sesión de la persona, como lo haría la app (mismas funciones).

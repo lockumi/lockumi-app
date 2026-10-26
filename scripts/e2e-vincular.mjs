@@ -4,6 +4,7 @@
 // de B verificado por Cavos → lk_vincular_alquileres la trae (rol inquilino; B ya no lo ve); idempotente; con el correo verificado solo
 // por el código de Lockumi, nada. Como un token real de Cavos no se puede fabricar, el registro del correo verificado (lo que
 // /api/verificar-correo hace tras validar el token) se hace con la clave de servicio: mismo RPC, misma llamada.
+// Código por correo de Cavos («cavos-email», 20261026070000): también trae; el código de invitación de Lockumi («email»), no.
 // Con --app (navegador): C con la cuenta B → «Eres inquilino» y el pie nuevo; entra la cuenta A en el mismo navegador → la sesión C se
 // termina (sesión nueva, lista sin el alquiler de B); con el correo de A verificado → «Eres dueño»; «Salir» borra la sesión.
 // Limpieza total y waitlist igual. Nunca imprime tokens ni claves.
@@ -81,6 +82,9 @@ try {
     ok(await p.evaluate(() => !localStorage.getItem('lockumi.sesion-servidor') && !localStorage.getItem('lockumi.sesion-correo')), '«Salir»: la sesión anónima se terminó')
     await b.close()
   }
+  // Login con código por correo de Cavos (20261026070000): el correo confirmado queda «cavos-email» y también trae el alquiler.
+  const sF = await sesionNueva(); await verificar(sF.user.id, correo('b'), 'cavos-email')
+  ok(await vincular(sF.user.id, correo('b')) === 1 && await rolDe(sF, contrato) === 'inquilino', 'código por correo de Cavos («cavos-email»): trae el lugar de inquilino')
 } catch (e) { ok(false, 'error: ' + String(e?.message ?? e).slice(0, 200)) } finally {
   if (contrato) await sql(`delete from public.lk_contratos where id = '${contrato}'`)
   const lista = ids.filter(i => /^[0-9a-f-]{36}$/.test(i)).map(i => `'${i}'`).join(',')

@@ -268,5 +268,7 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Pie (Katherine, único cambio visible): «Tus alquileres de prueba se guardan en tu cuenta.» en el modo de dos personas.
 - [x] E2E sin correos reales: `node scripts/e2e-vincular.mjs [--app URL]` (re-vincular, código de Lockumi no vale, cambio de cuenta,
   rol, «Salir», limpieza y waitlist).
-- [ ] Pendiente (después): login con código por correo (enclave, aud «cavos-email») no trae alquileres de otro navegador: el correo
-  queda verificado con el código de Lockumi y la base no lo distingue.
+- [x] Login con código por correo de Cavos (Coordinador, 26/10 10:21 a. m.): el token del enclave («cavos-email») se valida en el
+  servidor y, con el código a ESE correo, el correo queda con método **«cavos-email»** (antes «email») y trae los alquileres igual que
+  Google/Apple. El código de invitación de Lockumi sigue «email» y nunca trae. Migración `20261026070000_vincular_cavos_email.sql`,
+  revert `supabase/revert/20261026070000_vincular_cavos_email_revert.sql`; prueba `vincular-cavos-email.test.ts`.

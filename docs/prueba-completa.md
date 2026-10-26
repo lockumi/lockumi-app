@@ -302,6 +302,9 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 - **Pie:** «Tus alquileres de prueba se guardan en tu cuenta.» (antes «…solo en este navegador», ya no era cierto).
 - **E2E:** `node scripts/e2e-vincular.mjs [--app https://app.lockumi.com]` (cuentas …@lockumi.test, sin correos; el registro del correo
   verificado se hace con la clave de servicio porque un token real de Cavos no se puede fabricar).
-- **No cubre:** login con código por correo (método `email`, verificado con el código de Lockumi).
+- **Código por correo de Cavos (20261026070000):** el correo por confirmar solo nace de un token del enclave validado en el servidor;
+  con el código, `lk_confirmar_correo_pendiente` lo registra como «cavos-email» y `/api/codigo-correo` (`verificar_correo`) llama a
+  `lk_vincular_alquileres`. El código de invitación de Lockumi queda «email» y no trae nada. Revert:
+  `supabase/revert/20261026070000_vincular_cavos_email_revert.sql` («cavos-email» → «email»).
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).

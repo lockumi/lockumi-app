@@ -110,7 +110,7 @@ describe('token de correo de Cavos con aud «cavos-email»: hace falta el códig
     expect(await codigo(u, { paso: 'confirmar', accion: 'verificar_correo', codigo: otro(cod) })).toEqual({ estado: 403, cuerpo: { error: ERRORES.codigo, motivo: 'codigo' } })
     expect(await verificado(u)).toEqual([])
     expect(await codigo(u, { paso: 'confirmar', accion: 'verificar_correo', codigo: cod })).toEqual({ estado: 200, cuerpo: { hecho: true, correo: c } })
-    expect(await verificado(u)).toEqual([{ correo: c, metodo: 'email' }]); expect(await activo(u)).toBe(c)
+    expect(await verificado(u)).toEqual([{ correo: c, metodo: 'email' }]); expect(await activo(u)).toBe(c)   // con 20261026070000: «cavos-email» (vincular-cavos-email.test.ts)
     expect((await uno<{ n: number }>('select count(*)::int n from public.lk_correos_por_confirmar where usuario = $1', [u])).n).toBe(0)
     expect((await codigo(u, { paso: 'confirmar', accion: 'verificar_correo', codigo: cod })).estado).toBe(403)   // un solo uso
     // Ya verificado: el segundo factor de siempre va a ese correo (aquí 429 «minuto»: el límite es por correo, el código de recién cuenta).
