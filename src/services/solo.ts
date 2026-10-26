@@ -64,12 +64,22 @@ export function maximoAGastar(precio: number) {
 export async function obtenerUsdc(objetivo: number, avance: (t: string) => void = () => {}): Promise<{ g: string; txs: Txs; saldo: string }> {
   if (!montoValido(objetivo, TOPE_USDC)) throw new ErrorSolo(`Puedes pedir hasta ${TOPE_USDC} USDC de prueba.`)
   if (usarPrueba()) { avance('Preparando el inquilino de prueba y enviando USDC de prueba…'); const r = await prepararCuentaPrueba(objetivo); return { ...r, saldo: (await consultarUsdc(r.g)) ?? '0' } }
-  const g = (await conectarBilletera()).direccion; const txs: Txs = {}
+  return prepararCuentaCavos(objetivo, avance)
+}
+
+/** La cuenta de la billetera Cavos existe en testnet (Friendbot) y tiene la trustline de USDC (la firma la persona). Si ya está, solo lee. */
+export async function asegurarTrustline(avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; trustline?: string }> {
+  const g = (await conectarBilletera()).direccion
+  if (esperada && g !== esperada) throw new ErrorSolo('No pudimos preparar el depósito. Intenta de nuevo en un momento.')   // otra billetera: no tocamos nada
   if (await consultarSaldo(g) === null) { avance('Activando tu cuenta con XLM de prueba gratis…'); await fondear(g); olvidarBilletera() }
-  if (await consultarUsdc(g) === null) {
-    avance('Habilitando USDC en tu cuenta…')
-    try { txs.trustline = await abrirTrustlineUsdc() } catch (e) { throw new ErrorSolo(mensajeFirma(e)) }
-  }
+  if (await consultarUsdc(g) !== null) return { g }
+  avance('Habilitando USDC en tu cuenta…')
+  try { return { g, trustline: await abrirTrustlineUsdc() } } catch (e) { throw new ErrorSolo(mensajeFirma(e)) }
+}
+
+/** Cuenta Cavos lista para pagar `objetivo`: Friendbot si hace falta → trustline → path payment XLM→USDC (signXdr) por lo que falte. */
+export async function prepararCuentaCavos(objetivo: number, avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; txs: Txs; saldo: string }> {
+  const { g, trustline } = await asegurarTrustline(avance, esperada); const txs: Txs = { ...(trustline && { trustline }) }
   const saldo = Number(await consultarUsdc(g) ?? 0), falta = Math.round((objetivo - saldo) * 1e7) / 1e7
   if (falta > 0) {
     avance('Consultando el precio de prueba…')

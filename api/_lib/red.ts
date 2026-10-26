@@ -43,3 +43,8 @@ export function exigirTestnet(passphrase: string, ...urls: string[]) {
 export const enlaceTx = (h: string) => `${EXPLORADOR}/tx/${h}`
 export const enlaceCuenta = (g: string) => `${EXPLORADOR}/account/${g}`
 export const enlaceContrato = (c: string) => `${EXPLORADOR}/contract/${c}`
+
+/** 26/10/2026 (texto de Katherine): en lugar de un error técnico de Trustless Work u Horizon al preparar o pagar el depósito. */
+export const NO_PREPARAR_DEPOSITO = 'No pudimos preparar el depósito. Intenta de nuevo en un momento.'
+/** Mensajes técnicos (en inglés o con códigos HTTP) que nunca se muestran tal cual. */
+export const esTecnico = (m: string) => /Trustless Work|Horizon|respondió \d{3}|Friendbot|trustline|statusCode/i.test(m)

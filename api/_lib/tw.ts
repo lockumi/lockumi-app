@@ -9,6 +9,7 @@
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, type Transaction } from '@stellar/stellar-sdk'
 import { repartoCentimos } from './centimos.js'
+import { NO_PREPARAR_DEPOSITO, esTecnico } from './red.js'
 
 export type Entorno = Record<string, string | undefined>
 export class ErrorTw extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
@@ -94,6 +95,23 @@ export function firmarComoMediador(c: Config, xdr: string) {
   t.sign(c.mediadorFirma); return t.toXDR()
 }
 const enviar = (c: Config, signedXdr: string, f = fetch) => tw(c, '/helper/send-transaction', { signedXdr }, f)
+
+/** ¿La cuenta existe en testnet y tiene la trustline de USDC (emisor de Circle)? Si Horizon no responde, se deja pasar: decide TW. */
+export async function tieneUsdc(g: string, f = fetch): Promise<boolean> {
+  const r = await f('https://horizon-testnet.stellar.org/accounts/' + g).catch(() => null)
+  if (!r) return true
+  if (r.status === 404) return false
+  if (!r.ok) return true
+  const d = await r.json().catch(() => ({})) as { balances?: { asset_code?: string; asset_issuer?: string }[] }
+  return !!d.balances?.some(b => b.asset_code === 'USDC' && b.asset_issuer === USDC_TESTNET.emisor)
+}
+/** 26/10/2026: lo que ve la persona. Los errores técnicos (Trustless Work, Horizon, códigos HTTP, en inglés) quedan en el log del
+ *  servidor; en pantalla, el depósito dice NO_PREPARAR_DEPOSITO y los demás pasos el aviso de la red de prueba de siempre (A12). */
+export function mensajeParaPersona(accion: unknown, m: string): string {
+  if (!esTecnico(m)) return m
+  return accion === 'desplegar' || accion === 'fondear' || accion === 'enviar-fondear' ? NO_PREPARAR_DEPOSITO
+    : 'La red de prueba está lenta o no respondió. Espera un minuto y vuelve a tocar el botón.' // LEGAL: revisado A12 (24/10)
+}
 
 // ── Supabase (lectura con service role; la identidad sale del token de sesión del usuario) ──
 export async function usuario(c: Config, bearer: string | null, f = fetch) {
@@ -368,7 +386,9 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       if (k.escrow_contract_id) return { contractId: k.escrow_contract_id, yaExistia: true }
       const inquilino = cuenta(k, 'inquilino'), dueno = cuenta(k, 'dueno')
       exigir(new Set([inquilino, dueno, P]).size === 3, 409, 'Las cuentas del dueño, el inquilino y la plataforma tienen que ser distintas.')
-      // TW valida que approver, receiver y platformAddress existan y tengan trustline de USDC; si no, responde 400 con el motivo.
+      // TW exige que el receiver (el inquilino) exista y tenga la trustline de USDC (probado en testnet el 26/10/2026: el approver
+      // no). La app del inquilino la prepara antes de pedir esto (services/trustless.ts); si aún falta, no se llama a TW.
+      if (!(await tieneUsdc(inquilino, f))) { console.error('tw desplegar: la cuenta del inquilino no existe o no tiene la trustline de USDC', k.id); throw new ErrorTw(409, NO_PREPARAR_DEPOSITO) }
       const pub = datosOnChain(k)
       sinDatosPersonales([pub.title, pub.description, ...pub.milestones.map(m => m.description)], k)
       const j = await tw(c, '/deployer/single-release', {

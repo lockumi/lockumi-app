@@ -17,6 +17,7 @@ function simular(contrato: Record<string, unknown>, uid = 'u-inq') {
     const cuerpo = init?.body ? JSON.parse(String(init.body)) : undefined; llamadas.push({ url, init, cuerpo })
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
+    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return ok({ balances: [{ asset_code: 'USDC', asset_issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', balance: '100' }] })
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([contrato])
     { const pg = pagoFalso({ cid: CID, monto: 20, receiver: INQ, releaseSigner: P.publicKey(), disputeResolver: P.publicKey() })(url); if (pg) return pg }   // paso 22: bloqueo y estado del escrow
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
