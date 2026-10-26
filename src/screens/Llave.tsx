@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { VolverAEntrar } from './Firmante'
+import { auth } from '../services/auth'
+import { esTextoSinSesion } from '../services/firmante'
 import { aprobarConLlave, consultarLlave, crearLlave, esTextoNoFirmante, olvidarBilletera } from '../services/billetera'
 import { TEXTOS_LLAVE as T, debeOfrecer, guardarRegistro, leerRegistro, mensajeLlave, navegadorPermite, posponer, resultadoAprobar } from '../services/llave'
 
@@ -61,5 +64,6 @@ export function AprobarDispositivo({ alAprobar }: { alAprobar?: () => void }) {
 /** Error de pago en pantalla: si es el de dispositivo no autorizado, suma el botón para aprobarlo. */
 export function ErrorPago({ m, alAprobar }: { m: string | null | undefined; alAprobar?: () => void }) {
   if (!m) return null
-  return <><p className="error" role="alert">{m}</p>{esTextoNoFirmante(m) && <AprobarDispositivo alAprobar={alAprobar} />}</>
+  const u = esTextoSinSesion(m) ? auth.actual() : null
+  return <><p className="error" role="alert">{m}</p>{esTextoNoFirmante(m) && <AprobarDispositivo alAprobar={alAprobar} />}{u && <VolverAEntrar u={u} alVolver={alAprobar} />}</>
 }

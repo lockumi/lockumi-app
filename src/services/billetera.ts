@@ -3,6 +3,7 @@
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
 //          https://developers.stellar.org/docs/learn/fundamentals/networks#friendbot (fondeo de testnet)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
+import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
 
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const FRIENDBOT = 'https://friendbot.stellar.org'
@@ -151,6 +152,7 @@ interface CarteraStellar {
   signXdr(unsignedXdr: string): Promise<string>
   addTrustline(asset: { code: string; issuer: string }, opts?: { sponsored?: boolean }): Promise<string>
   tokenBalance(asset: { code: string; issuer: string }): Promise<string>
+  signMessage?(message: string): Promise<unknown>
 }
 let cartera: CarteraStellar | null = null
 export const USDC_TESTNET = { code: 'USDC', issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' }
@@ -168,8 +170,33 @@ export async function saldoUsdc(): Promise<string> { return (await miCartera()).
 export function mensajeFirma(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)
   if (esNoFirmante(m)) return NO_FIRMANTE
+  // Sesión perdida o vencida (pestaña nueva, token de ~1 h): antes salía el texto técnico «La sesión de Cavos no tiene token…».
+  if (esSinSesion((e as { codigo?: string })?.codigo + ' ' + m)) return SIN_SESION
   if (/user rejected/i.test(m)) return 'Rechazaste la firma en la billetera.'
   if (/policy does not allow/i.test(m)) return 'La configuración de la billetera no permite esta firma (regla de aprobaciones en el panel de Cavos).'
   if (/deployed account|execute\(\)/i.test(m)) return 'Tu cuenta Stellar todavía no existe en testnet. Cárgale XLM de prueba primero.'
   return m
+}
+
+/** Prueba real de firma al entrar: conecta una vez y firma 'lockumi-login' (gratis). La firma se descarta: nunca se guarda.
+ *  Sin reintentos ni conexiones con llave automáticas: un fallo aquí no dispara nada más (el vault solo borra su copia local
+ *  dentro de connect, V:413-427; no volvemos a conectar por nuestra cuenta). Sin Cavos (demo simulada) no hay billetera: 'puede'. */
+export async function probarFirma(): Promise<EstadoFirmante> {
+  const g = prueba()
+  if (!modoReal && !g) return 'puede'
+  try {
+    const b = await conectarBilletera()
+    if (b.estado === 'needs-device-approval') return 'no-firmante'
+    if (g) { const f = localStorage.getItem('lockumi.billetera.prueba.firma'); return f === 'no' ? 'no-firmante' : f === 'sin-sesion' || f === 'error' ? f : 'puede' }
+    if (!cartera?.signMessage) return 'error'
+    await cartera.signMessage(MENSAJE_PRUEBA)
+    return 'puede'
+  } catch (e) { return clasificarFirma(e) }
+}
+/** ¿Hay sesión de Cavos con token en esta pestaña? Sin Cavos (demo) siempre true. No lee ni muestra el token: solo si existe. */
+export async function haySesionFirma(): Promise<boolean> {
+  const g = prueba()
+  if (g) return localStorage.getItem('lockumi.billetera.prueba.sesion') !== 'no'
+  if (!modoReal) return true
+  try { const a = await authCavos(); return !!a && !!a.getAuthToken() } catch { return false }
 }

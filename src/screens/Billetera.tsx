@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { dosPersonas as modoTrustless } from '../servidor/config'
 import { Dibujo } from './dibujos'
 import { AprobarDispositivo, ErrorPago, OfertaLlave } from './Llave'
-import { NO_FIRMANTE, abrirTrustlineUsdc, consultarUsdc, mensajeFirma, olvidarBilletera, abreviar, conectarBilletera, detalleError, consultarSaldo, enlaceExplorer, fondear, formatoXlm, type Billetera as B } from '../services/billetera'
+import { leerFirmante, recordarFirmante } from '../services/firmante'
+import { probarFirma, NO_FIRMANTE, abrirTrustlineUsdc, consultarUsdc, mensajeFirma, olvidarBilletera, abreviar, conectarBilletera, detalleError, consultarSaldo, enlaceExplorer, fondear, formatoXlm, type Billetera as B } from '../services/billetera'
 
 type Saldo = { t: 'cargando' } | { t: 'ok'; xlm: string } | { t: 'sin-cuenta' } | { t: 'error' }
 
@@ -32,6 +33,15 @@ export function Billetera({ email }: { email?: string } = {}) {
     try { const x = await consultarSaldo(g); setSaldo(x === null ? { t: 'sin-cuenta' } : { t: 'ok', xlm: x }) } catch { setSaldo({ t: 'error' }) }
   }, [])
   useEffect(() => { if (b) void leer(b.direccion) }, [b, leer])
+  // Firmante (26/10): «Lista ✓» solo si este dispositivo firmó de verdad (al entrar o aquí, una vez). Antes salía «Lista ✓» con
+  // solo conectar, y el error aparecía recién al pagar. La firma de prueba es gratis y no se guarda.
+  const [firma, setFirma] = useState<'si' | 'no' | null>(() => email ? leerFirmante(email) : null)
+  useEffect(() => {
+    if (!b || b.estado === 'needs-device-approval' || firma === 'si') return
+    let vivo = true
+    void probarFirma().then(e => { if (!vivo) return; if (e === 'puede' || e === 'no-firmante') { setFirma(e === 'puede' ? 'si' : 'no'); if (email) recordarFirmante(email, e === 'puede') } })
+    return () => { vivo = false }
+  }, [b, firma, email])
 
   if (fase === 'oculta') return null
   if (!b) return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito" aria-busy="true">
@@ -47,11 +57,15 @@ export function Billetera({ email }: { email?: string } = {}) {
     try { await fondear(b.direccion); olvidarBilletera(); await leer(b.direccion) } catch { setSaldo({ t: 'error' }) } finally { setFondeando(false) }
   }
   // Dispositivo nuevo (la cuenta se creó en otro): no decimos «Lista», guiamos a aprobarlo con la llave de acceso.
-  if (b.estado === 'needs-device-approval') return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito">
+  if (b.estado !== 'needs-device-approval' && firma !== 'si' && firma !== 'no') return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito" aria-busy="true">
+    <span className="ta-sello"><Dibujo n="reloj" /></span><div className="ta-cuenta__cuerpo">
+    <p className="etiqueta">Tu cuenta para el depósito</p>
+    <p className="nota" role="status">Preparando tu cuenta…</p></div></section>
+  if (b.estado === 'needs-device-approval' || firma === 'no') return <section className="glass tarjeta billetera ta-cuenta estado--pendiente" aria-label="Tu cuenta para el depósito">
     <span className="ta-sello"><Dibujo n="escudo" /></span><div className="ta-cuenta__cuerpo">
     <p className="etiqueta">Tu cuenta para el depósito</p>
     <p className="error" role="alert">{NO_FIRMANTE}</p>
-    <AprobarDispositivo alAprobar={() => { olvidarBilletera(); void conectarBilletera().then(setB).catch(() => {}) }} />
+    <AprobarDispositivo alAprobar={() => { olvidarBilletera(); setFirma(null); void conectarBilletera().then(setB).catch(() => {}) }} />
   </div></section>
   return <>{email && <OfertaLlave email={email} estado={b.estado} />}<section className="glass tarjeta billetera ta-cuenta estado--curso" aria-label="Tu cuenta para el depósito">
     <span className="ta-sello"><Dibujo n="escudo" /></span><div className="ta-cuenta__cuerpo">
