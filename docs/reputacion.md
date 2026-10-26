@@ -404,3 +404,24 @@ migración se queda (tablas nuevas vacías sin la app; `lk_pascua` igual salvo `
 público de perfiles (usando `lk_perfil_visible`); encender `VITE_CORREOS` cuando haya consentimiento para correos. Límite conocido: una cuenta
 anterior sin alquileres se trata como nueva (ve la pantalla previa antes de su primer alquiler).
 No se implementan (por ahora): perfil solo para registrados, apagar Destacados/Nuevos, retirar un reclamo, espejo del 10 %.
+
+### Legal, ronda 1.10 y 1.11-demo (25/10/2026, 11:16 y 11:33 p. m. CR; PR #33)
+- **Casilla y link:** la invitación decía «Acepto los Términos 1.9-demo…» y el link abría `/terminos` (con la reputación, otra edición).
+  Ahora cada casilla y línea de versión abre la versión guardada: la 1.9-demo de los alquileres de dos personas en `/terminos-1-9` y
+  `/privacidad-1-9` (el servidor exige la versión del alquiler, `20261025050000_terminos_por_alquiler.sql:57-60`), la 1.10-demo en
+  `/terminos-1-10` y `/privacidad-1-10`, y la 1.11-demo en `/terminos` y `/privacidad`.
+- **Decisión de Legal (11:33 p. m.):** regla de archivo (cada versión publicada, byte a byte, en su ruta; `src/legal/archivo/8790b52/`) y
+  **1.11-demo** para la edición de la cuenta con la reputación, fechada el día de la publicación, **sin volver a aceptar** (los fines y
+  destinatarios no cambian). La 1.10-demo queda archivada tal como se publicó a las 10:45 p. m.; la 1.9-demo no cambia.
+- **Privacidad (solo 1.11-demo):** «tu nombre visible (tu nombre y la inicial de tu apellido)» (coincide con `nombreVisible` y REP-01);
+  frase del código de 6 números (coincide con `SEGUNDO_FACTOR` y `/api/codigo-correo`); «cierre del alquiler». Sigue «Pendiente de
+  revisión por abogado».
+- **Cuentas:** quien aceptó REP-01 en la 1.10-demo sigue con su perfil y sus registros (no se le vuelve a pedir); las aceptaciones nuevas
+  guardan `1.11-demo · {fecha}` (`VERSION_TEXTOS`). Los alquileres de una persona ya creados en la 1.10-demo siguen en la 1.10-demo y
+  enlazan `/terminos-1-10`; los nuevos nacen en la 1.11-demo. Al volver a entrar, la casilla del login aparece sin marcar (lógica del
+  login sin cambios).
+- **Publicación:** `node scripts/fecha-1-11.mjs` justo antes del merge (`src/legal/fecha-v111.ts`); sin fecha, el build de producción falla.
+- **Para deshacer:** `git revert -m 1 <merge>` y redeploy de producción. `/terminos` vuelve a la 1.10-demo y `/terminos-1-10` deja de
+  existir; los registros ya guardados con la 1.11-demo (aceptaciones del login, REP-01, alquileres locales de una persona) se quedan con
+  esa etiqueta, pero ninguna ruta mostraría su texto (su link abriría la 1.6-demo, `rutaDe`), así que habría que volver a publicarla o
+  guardarla como archivo.

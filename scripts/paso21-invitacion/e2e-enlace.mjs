@@ -152,7 +152,14 @@ try {
     const srv = await g.locator('p.error[role="alert"]', { hasText: OTRO_CORREO }).count()
     log('servidor con otro correo verificado responde el texto de Legal:', !!srv, '· sigue en la invitación:', /^#\/invitacion\//.test(await g.evaluate(() => location.hash)))
     if (!srv) falla('El servidor no respondió «Esta invitación es para otro correo…». En pantalla: ' + JSON.stringify(await g.locator('[role="alert"]').allInnerTexts()) + ' · sesiones: ' + sb.uids(ci).length)
+    // Legal, ronda 1.10 (25/10, 11:16 p. m.): mientras el error está a la vista, «Aceptar invitación» queda desactivado
+    const desactivado = await g.getByRole('button', { name: 'Aceptar invitación' }).isDisabled()
+    log('con «Esta invitación es para otro correo…» a la vista, «Aceptar invitación» desactivado:', desactivado)
+    if (!desactivado) falla('Con el error de otro correo a la vista, «Aceptar invitación» sigue activo')
     await captura(g, '8-otro-correo-servidor', () => g.locator('p.error[role="alert"]').last().scrollIntoViewIfNeeded())
+    // «Sal de Lockumi y vuelve a entrar»: la pantalla se carga de nuevo (sin el error) y se vuelve a marcar la casilla
+    await g.reload(); await g.waitForTimeout(2500); await entendido(g)
+    if (await cas.count() && !(await cas.isChecked())) await cas.check()
   }
   // 3b) lo que hace /api/verificar-correo al entrar con el correo invitado → acepta
   if (conTabla) await sb.verificar(uid, INVITADO)

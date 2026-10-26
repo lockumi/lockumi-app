@@ -15,6 +15,14 @@ Desde el 20 de octubre de 2026, **todo cambio publicado en app.lockumi.com tiene
 - `PLAN.md` (sección «Estado actual»).
 - `docs/` (por ejemplo, [`docs/correo-resend.md`](docs/correo-resend.md)) y `src/legal/LEEME.md` si cambian los textos legales.
 
+Links a los textos legales: si una pantalla nombra una versión («Términos 1.9-demo») o la guarda (casilla, línea de versión del contrato, «ver las reglas» de un alquiler), el link tiene que abrir **esa** versión: usa `rutaTerminos(v)` / `rutaPrivacidad(v)` de `src/legal/documentos.ts`, nunca `/terminos` fijo (con la reputación, `/terminos` es la edición de la cuenta, hoy la 1.11-demo).
+
+**Regla de archivo (Legal, PR #33, 25/10/2026):** una versión publicada no se vuelve a editar nunca y queda en su propia ruta (`/terminos-1-9`, `/terminos-1-10`, …). Para cambiar un texto visible ya publicado:
+1. Crea una versión nueva (p. ej. 1.12-demo) en `src/legal/versiones.ts` (`VERSIONES` si es la de un escenario, `EDICIONES_CUENTA` si es la edición de la cuenta) y en `src/legal/version17.ts`, con su fecha.
+2. Antes de tocar `src/legal/v17/*.md`, congela lo publicado: copia los `.md` de master a `src/legal/archivo/<commit>/` (byte a byte, mismo blob de git) y arma desde ahí las versiones ya publicadas (`publicada()` en `documentos.ts`).
+3. Agrega una prueba que compare el HTML archivado con el publicado (SHA-256, como `src/legal/__tests__/archivo-versiones.test.tsx`) y que cada link abra su versión.
+4. Si la versión nueva lleva la fecha del día de la publicación, déjala en un archivo aparte con una guarda de build (como `src/legal/fecha-v111.ts` + `scripts/fecha-1-11.mjs`).
+
 Textos de correos: todos van en `api/_lib/textos-correos.ts` y en la lista de [`docs/correos-c.md`](docs/correos-c.md). Un texto nuevo se marca `legal: 'revisar'` con el comentario «LEGAL: revisar» encima; mientras quede uno, el servidor no envía y el build de producción falla. Para probarlos solo existe `LOCKUMI_CORREOS_BORRADOR=1` en tu máquina (nunca en Vercel) y solo al buzón de prueba `lockumi@mail.grokbot.com`. La guarda (`api/_lib/guarda-correos.ts`) también busca cualquier comentario «LEGAL: revisar» en `src/`, `api/` y `supabase/migrations/`: el build de producción falla mientras quede uno. Formatos: la hora siempre en 12 h con espacio fijo («9:00 a. m.», `horaCR`/`fechaHoraCR` en `api/_lib/plazos.ts`, `fechaHora` en `src/ui.tsx`) y los montos siempre con 2 decimales. Si cambias un texto, corre `node scripts/textos-correos-doc.mjs` para regenerar la sección «Textos» de `docs/correos-c.md`.
 
 Montos de C (Legal 25/10, 6:10 p. m.): los montos del depósito y del reparto van con 2 decimales y suman el depósito; **solo** lo que llega a cada parte y la comisión de Trustless Work van con 4 decimales exactos (`repartoCentimos` y `cuatroDecimales` de `api/_lib/centimos.ts`, `llegaPrueba` en la app). Recordatorios de C: por día calendario de Costa Rica (`lk_dia_cr`), nunca «faltan menos de 24 h».

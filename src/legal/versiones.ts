@@ -4,7 +4,7 @@
 // una cuenta nueva acepta la versión vigente en «Entrar» y cada función nueva tiene su casilla (casillaDeFuncion). Un alquiler
 // firmado conserva su versión salvo que los dos acepten.
 import type { Interruptor, Interruptores } from './condicional'
-import { V17, FECHA_V17 } from './version17'
+import { V17, FECHA_V17, V110, FECHA_ENCENDIDO_REPUTACION, V_REPUTACION, FECHA_V111 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
 // LEGAL: revisado (25/10, lista de Legal) · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
@@ -20,10 +20,19 @@ export const VERSIONES: VersionLegal[] = [
   { version: '1.8-demo', fecha: FECHA_V18, escenario: 'B', interruptores: { 'dos-personas': false, correos: true } },
   { version: '1.9-demo', fecha: FECHA_V19, escenario: 'C', interruptores: { 'dos-personas': true, correos: true } },
 ]
-const ORDEN = ['1.6-demo', ...VERSIONES.map(v => v.version)]
+// Legal (PR #33, 25/10/2026, 11:33 p. m.): las ediciones DE LA CUENTA (con la reputación; C + reputación). No son la versión de un
+// escenario (versionVigente sigue igual: un alquiler de dos personas nace en la 1.9-demo), pero cada una tiene su fecha y su ruta:
+// la 1.10-demo, archivada tal como se publicó (/terminos-1-10), y la 1.11-demo, la vigente con la reputación (/terminos).
+// Van después de la 1.9-demo: un alquiler en la 1.10-demo o la 1.11-demo nunca ve «pasar a la versión …» (puedeCambiarA).
+export const EDICIONES_CUENTA: VersionLegal[] = [
+  { version: V110, fecha: FECHA_ENCENDIDO_REPUTACION, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
+  { version: V_REPUTACION, fecha: FECHA_V111, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
+]
+const TODAS = [...VERSIONES, ...EDICIONES_CUENTA]
+const ORDEN = ['1.6-demo', ...TODAS.map(v => v.version)]
 /** Posición de una versión (1.6-demo = 0); una versión desconocida va al final para no tratarla como vieja. */
 export const ordenVersion = (v: string) => { const i = ORDEN.indexOf(v); return i < 0 ? ORDEN.length : i }
-export const datosVersion = (v: string) => VERSIONES.find(x => x.version === v)
+export const datosVersion = (v: string) => TODAS.find(x => x.version === v)
 /** Versión que describe lo encendido. El modo de dos personas siempre lleva la 1.9-demo (sus textos son los de C). */
 export const versionVigente = (s: Interruptores): string => s['dos-personas'] ? '1.9-demo' : s.correos ? '1.8-demo' : V17
 /** «1.8-demo · 1 de noviembre de 2026»; solo para la 1.7-demo y posteriores. */

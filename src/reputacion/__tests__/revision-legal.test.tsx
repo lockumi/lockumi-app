@@ -21,9 +21,12 @@ beforeEach(() => { vi.resetModules(); mem.clear(); ses.clear(); vi.unstubAllEnvs
 describe('VERSIÓN: 1.10-demo con la fecha real de encendido (una sola constante)', () => {
   it('VERSION_TEXTOS = «{versión} · {fecha}»; la fecha es una sola constante, a fijar al encender', async () => {
     const v = await import('../../legal/version17'), { VERSION_TEXTOS } = await import('../consentimiento')
-    expect(v.V_REPUTACION).toBe('1.10-demo'); expect(v.EDICION_REPUTACION).toBe(`1.10-demo · ${v.FECHA_ENCENDIDO_REPUTACION}`)
+    // Legal (PR #33): la edición de la cuenta es ahora la 1.11-demo, con la fecha del día de la publicación (fecha-v111.ts); la 1.10-demo
+    // queda archivada con su fecha real de encendido (EDICION_V110, /terminos-1-10).
+    expect(v.V_REPUTACION).toBe('1.11-demo'); expect(v.EDICION_REPUTACION).toBe(`1.11-demo · ${v.FECHA_V111}`)
+    expect(v.EDICION_V110).toBe(`1.10-demo · ${v.FECHA_ENCENDIDO_REPUTACION}`)
     expect(VERSION_TEXTOS).toBe(v.EDICION_REPUTACION)
-    for (const f of ['src/reputacion/consentimiento.ts', 'src/reputacion/textos.ts', 'src/legal/condicional.ts']) expect(await leerArchivo(f)).not.toContain(v.FECHA_ENCENDIDO_REPUTACION)
+    for (const f of ['src/reputacion/consentimiento.ts', 'src/reputacion/textos.ts', 'src/legal/condicional.ts']) { expect(await leerArchivo(f)).not.toContain(v.FECHA_ENCENDIDO_REPUTACION); expect(await leerArchivo(f)).not.toContain(v.FECHA_V111) }
   })
   it('con la reputación, el Aviso y los Términos dicen la 1.10-demo (nunca la etiqueta 1.7-demo ya publicada); apagada, siguen en 1.7-demo', async () => {
     const { EDICION_REPUTACION, EDICION_V17 } = await import('../../legal/version17'), { edicionDe, versionVigente } = await import('../../legal/versiones')

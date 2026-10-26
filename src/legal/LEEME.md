@@ -77,6 +77,32 @@ como `{ version, fecha }` y en el usuario (`lockumi.usuario` → `terminos`, `pr
 - Con dos personas, la versión queda guardada por alquiler en el servidor (`terminos_version`, migración 20261025050000) y la casilla
   «Acepto los Términos 1.9-demo y el Aviso de privacidad» (`CasillaVersion`) se marca al crear invitando y al unirse; quién y cuándo, en
   `lk_aceptaciones_terminos`. `// LEGAL: revisar`.
+- **Cada link abre la versión guardada (Legal, ronda 1.10, 25/10, 11:16 p. m., y PR #33, 11:33 p. m.):** la casilla, la línea de versión
+  del contrato, «Ver los Términos …», «ver las reglas» y «Ver las condiciones (cláusula 6.5.1)» usan `rutaTerminos(v)` / `rutaPrivacidad(v)`
+  (`src/legal/documentos.ts`) con la versión del alquiler. Rutas (escenario C, dos personas):
+
+  | Versión | Qué es | Ruta | Texto |
+  |---|---|---|---|
+  | 1.9-demo | la de cada alquiler de dos personas (`versiones.ts`, migración 20261025050000) | `/terminos-1-9`, `/privacidad-1-9` (sin la reputación, también `/terminos`) | `archivo/8790b52/`, sin la reputación |
+  | 1.10-demo | edición de la cuenta publicada el 25/10/2026 con la reputación | `/terminos-1-10`, `/privacidad-1-10` | `archivo/8790b52/`, con la reputación y su fecha (`EDICION_V110`) |
+  | 1.11-demo | edición de la cuenta vigente con la reputación | `/terminos`, `/privacidad` (y `/terminos-1-11`) | `v17/*.md` |
+
+- **Regla de archivo:** una versión publicada no cambia nunca. Las 1.7-demo a 1.10-demo se arman desde `src/legal/archivo/8790b52/`
+  (copia exacta de `src/legal/v17/` en master 8790b52, mismo blob de git); `src/legal/v17/*.md` es solo la 1.11-demo. La prueba
+  `src/legal/__tests__/archivo-versiones.test.tsx` compara el HTML de cada ruta archivada con el SHA-256 del que publicaba master 8790b52
+  y revisa que cada link (1.9, 1.10, 1.11) abra su texto y muestre su número de versión. Para una versión nueva, ver `CONTRIBUTING.md`.
+- **1.11-demo (sin volver a aceptar):** `V_REPUTACION = '1.11-demo'` (`version17.ts`), en `EDICIONES_CUENTA` (`versiones.ts`), ordenada
+  después de la 1.9-demo y la 1.10-demo, así que ningún alquiler en la 1.10-demo ve «pasar a la versión …». No es versión de escenario:
+  `versionVigente` sigue en la 1.9-demo (dos personas) y el servidor sigue exigiendo la versión guardada en cada alquiler. Los alquileres
+  nuevos de una persona (`store.ts`, `Regla.tsx`) y las aceptaciones nuevas guardan la 1.11-demo; REP-01 guarda `1.11-demo · {fecha}` y
+  no compara versiones (`lk_necesita_rep01` depende solo de si la cuenta aceptó). Al volver a entrar, la casilla del login aparece sin
+  marcar para quien aceptó la 1.10-demo (la lógica del login no cambió; ya pasaba de la 1.9-demo a la 1.10-demo).
+- **Fecha de la 1.11-demo:** `src/legal/fecha-v111.ts` (`FECHA_V111`). El día de la publicación, justo antes del merge:
+  `node scripts/fecha-1-11.mjs` (fecha de hoy en Costa Rica) y se sube en el PR. Si sigue «[fecha de publicación]», el build de
+  producción de Vercel con `VITE_REPUTACION=1` falla (`revisarFechaV111`, `src/legal/encendido.ts`); los previews la muestran tal cual.
+- **Privacidad, ronda 1.10 (solo en la 1.11-demo):** «tu nombre visible (tu nombre y la inicial de tu apellido)» (igual que `nombreVisible`,
+  `src/reputacion/consentimiento.ts`), «Para descargar tus datos o eliminar tu cuenta, te pedimos un código de 6 números que te enviamos
+  por correo.» y «(plazos, reclamo, respuesta, mediación y cierre del alquiler)».
 - **Marcas (lista de Legal del 25/10, `legal/revision-marcas-pr22.md`):** lo que Legal dio por bueno lleva `// LEGAL: revisado (25/10, lista de Legal)`; las 19 correcciones van literales. Los errores nuevos del servidor (migraciones 030000–070000 y `api/_lib/tw.ts`) tienen el texto final de Legal del 25/10, 4:56 a. m., y la marca `LEGAL: revisado (25/10, 4:56 a. m., Legal)` (lista en `legal/errores-servidor-c.md`). En `src` y `api` solo queda `src/alertas.ts:5`. «Todo bien, devolver» y el texto de después de aprobar («en cuanto la red de prueba lo confirme») quedaron revisados por Legal el 25/10, 4:33 a. m. `src/prueba/__tests__/c-lista-marcas.test.tsx` las cuenta.
 - Al subir de versión no se vuelve a pedir nada al entrar con la sesión abierta: sin aviso de «Términos actualizados» en «Tus alquileres»
   ni pantalla de volver a aceptar (decisión de Katherine, 25/10). Una cuenta nueva acepta la 1.9-demo en «Entrar» y cada función nueva tiene su casilla. Un alquiler firmado sigue con su versión salvo que los dos acepten.
