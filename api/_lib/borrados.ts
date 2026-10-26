@@ -7,12 +7,15 @@
 // no hace nada. Antes de publicar: aplicar 20261025030000 y 20261025040000 (si no, lk_vencimientos falla y solo corren los borrados).
 import { servicio, rpc, borrarObjetos } from './supabase.js'
 import { procesarCorreos, vencerMediaciones, type Resultado } from './correos-c.js'
+import { pagarDevoluciones, type SalidaDevoluciones } from './devoluciones.js'
+import { sinSecretos } from './tw.js'
 
 export const DIAS_MEDIACION = 30
 export interface Vencimientos { automatico: number; mediacion: number }
-export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; vencidas?: number | { error: string }; correos?: { enviados: number; omitidos: number; vencidas: number } | { error: string } }
+export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; devoluciones?: SalidaDevoluciones; vencidas?: number | { error: string }; correos?: { enviados: number; omitidos: number; vencidas: number } | { error: string } }
 
 export async function ejecutarBorrados(env: Record<string, string | undefined>, f: typeof fetch = fetch): Promise<ResultadoBorrados> {
+  const inicio = Date.now()
   const s = servicio(env)
   if (!s) throw new Error('Faltan SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en el servidor: no se borró nada.')
   // B2 (escenario C): plazos vencidos (5.3 d: 100 % al inquilino; 6.5 c / 6.5.1: regla o mediación). Si la migración
@@ -31,6 +34,9 @@ export async function ejecutarBorrados(env: Record<string, string | undefined>, 
   // Escenario C (docs/correos-c.md): la corrida diaria vence el plazo de la mediación (P-06) SIEMPRE, con o sin CORREOS_C (Legal 25/10,
   // 5:09 p. m., punto 3; Vercel Hobby solo permite un cron diario). Con CORREOS_C=1, además envía los correos pendientes.
   r.vencidas = await vencerMediaciones(env, {}, f).catch((e: unknown) => ({ error: e instanceof Error ? e.message : 'error' }))
+  // Paso 22 (api/_lib/devoluciones.ts): paga en la red de prueba las devoluciones sin reclamo que siguen sin pagar (las que
+  // lk_vencimientos acaba de cerrar y las de corridas anteriores), ANTES de los correos: así el COR-C-07 sale en la misma corrida.
+  r.devoluciones = await pagarDevoluciones(env, { inicio }, f).catch((e: unknown) => ({ error: sinSecretos(e instanceof Error ? e.message : 'error', env) }))
   if (env.CORREOS_C === '1') r.correos = await procesarCorreos(env, {}, f).then((x: Resultado) => ({ enviados: x.enviados.length, omitidos: x.omitidos.length, vencidas: x.vencidas }), (e: unknown) => ({ error: e instanceof Error ? e.message : 'error' }))
   return r
 }

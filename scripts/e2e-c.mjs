@@ -15,6 +15,10 @@
 //                                                Contra la app publicada: cada paso de Trustless Work va por POST <app>/api/tw (el servidor de
 //                                                producción, con sus llaves y CORREOS_C), no por api/_lib/tw.ts en el proceso. Los correos que ya
 //                                                mandó el servidor (cierres COR-C-07) se cuentan desde lk_correos_enviados.
+//   TRUSTLESS_WORK_API_KEY=… node scripts/e2e-c.mjs --red [--salida DIR]
+//                                                Paso 22: base en memoria (PGlite, con 20261026000000) + Trustless Work testnet DE VERDAD, con
+//                                                plataforma y mediadora desechables. No toca Supabase de producción ni manda correos reales.
+//   Casos cron-auto / cron-liberar / cron-doble (paso 22): la corrida diaria de verdad (ejecutarBorrados) paga sola y una sola vez.
 //   node scripts/e2e-c.mjs --limpiar --real      Borra los datos de prueba marcados («E2E-C …») del destino.
 // Salida: <DIR>/estado.json (ids, hashes, enlaces) e informe.md. Los datos de prueba llevan la marca «E2E-C <corrida>» en la dirección
 // y correos @lockumi.test. Cada corrida crea alquileres nuevos: nunca reintenta un pago ya hecho (y «repartir» es idempotente).
@@ -22,9 +26,9 @@ import { createServer } from 'vite'
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, chmodSync } from 'node:fs'
 import { randomUUID, randomBytes, createHash } from 'node:crypto'
 import { BUZON, correoPrueba, fetchSoloBuzon } from './correos-e2e.mjs'
-import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, Asset, Horizon, nativeToScVal, BASE_FEE } from '@stellar/stellar-sdk'
+import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, Asset, Horizon, StrKey, nativeToScVal, BASE_FEE } from '@stellar/stellar-sdk'
 
-const A = process.argv.slice(2), REAL = A.includes('--real'), LIMPIAR = A.includes('--limpiar'), CORREOS = !REAL || A.includes('--correos')
+const A = process.argv.slice(2), REAL = A.includes('--real'), RED = REAL || A.includes('--red'), LIMPIAR = A.includes('--limpiar'), CORREOS = !REAL || A.includes('--correos')
 const APP = A.includes('--app') ? String(A[A.indexOf('--app') + 1] || '').replace(/\/$/, '') : ''
 const SALIDA = (A[A.indexOf('--salida') + 1] && A.includes('--salida') ? A[A.indexOf('--salida') + 1] : 'e2e-c-salida').replace(/\/$/, '')
 const CORRIDA = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13) + '-' + randomBytes(2).toString('hex'), MARCA = 'E2E-C ' + CORRIDA
@@ -58,6 +62,8 @@ async function destinoSimulado() {
   const rest = async (url, init = {}) => {
     const u = new URL(url), t = u.pathname.split('/').pop(), p = Object.fromEntries(u.searchParams), m = init.method ?? 'GET', b = init.body ? JSON.parse(init.body) : null
     const ok = j => new Response(JSON.stringify(j), { status: 200 }), id = p.id?.slice(3) ?? p.contrato_id?.slice(3)
+    if (t === 'lk_contratos' && m === 'GET' && p.select?.startsWith('liquidacion_tx,pago_'))   // paso 22: estado del pago (api/_lib/tw.ts estadoPago)
+      return ok(await q(null, `select liquidacion_tx, pago_tx_pendiente, pago_revisar from public.lk_contratos where id = $1`, [id]))
     if (t === 'lk_contratos' && m === 'GET') { const [k] = await q(null, `select id, estado, monto::float8 monto, direccion, escrow_contract_id, resultado, liquidacion_tx from public.lk_contratos where id = $1`, [id])
       return ok(k ? [{ ...k, lk_participantes: await q(null, `select rol, usuario::text usuario, direccion_stellar from public.lk_participantes where contrato_id = $1`, [id]) }] : []) }
     if (t === 'lk_contratos' && m === 'PATCH') { const cond = p.liquidacion_tx === 'is.null' ? ' and liquidacion_tx is null' : p.liquidacion_tx?.startsWith('eq.') ? ` and liquidacion_tx = '${p.liquidacion_tx.slice(3).replace(/'/g, '')}'` : ''
@@ -80,7 +86,7 @@ async function destinoSimulado() {
     verificarCorreo: async (uid, correo) => { await q(null, `insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); await q(null, `insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, lower(btrim($2)), 'email') on conflict do nothing`, [uid, correo]) },
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
-    migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true }), limpiar: async () => 0 }
+    migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true, m260: true }), limpiar: async () => 0 }
 }
 async function destinoReal() {
   const { createClient } = await import('@supabase/supabase-js')
@@ -102,7 +108,7 @@ async function destinoReal() {
     verificarCorreo: async (uid, correo) => { const r = await rest('rpc/lk_registrar_correo_verificado', { method: 'POST', body: JSON.stringify({ p_usuario: uid, p_correo: correo, p_metodo: 'email', p_huella: createHash('sha256').update(randomUUID()).digest('hex') }) }); if (!r.ok) throw new Error('correo verificado: ' + r.status) },
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
-    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
+    migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m260: await existe('lk_contratos?select=pago_bloqueo_hasta&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
     limpiar: async () => {
       const r = await rest(`lk_contratos?direccion=like.${encodeURIComponent('E2E-C %')}&select=id`); const ids = r.ok ? (await r.json()).map(x => x.id) : []
       for (const id of ids) await rest(`lk_contratos?id=eq.${id}`, { method: 'DELETE' })
@@ -112,24 +118,49 @@ async function destinoReal() {
 }
 
 // ── Trustless Work falso (solo --simulado): devuelve XDR válidos de la cuenta que tiene que firmar ──
-function twFalso(c) {
-  const CID = 'C' + 'A'.repeat(55)
-  const xdrDe = origen => new TransactionBuilder(new Account(origen, String(1e6 + Math.floor(Math.random() * 1e9))), { fee: '100', networkPassphrase: Networks.TESTNET })
-    .addOperation(Operation.invokeContractFunction({ contract: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', function: 'x', args: [new Address(origen).toScVal(), nativeToScVal(1, { type: 'i128' })] })).setTimeout(60).build().toXDR()
+// Paso 22: con estado (cada escrow con su contractId, saldo y banderas, como get-escrow-by-contract-ids de TW) y Horizon falso
+// (solo las transacciones enviadas aquí «existen»). Con --red, todo lo que no es Supabase va a la red de prueba de verdad.
+function twFalso(c, red = false) {
+  const escrows = new Map(), porHash = new Map(), enviadas = new Set()
+  const xdrDe = (origen, op) => { const t = new TransactionBuilder(new Account(origen, String(1e6 + Math.floor(Math.random() * 1e9))), { fee: '100', networkPassphrase: Networks.TESTNET })
+    .addOperation(Operation.invokeContractFunction({ contract: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', function: 'x', args: [new Address(origen).toScVal(), nativeToScVal(1, { type: 'i128' })] })).setTimeout(60).build()
+    porHash.set(t.hash().toString('hex'), op); return t.toXDR() }
+  const aplicar = op => {   // lo que cambia en el escrow cuando la red acepta la transacción
+    if (!op) return null
+    if (op.ruta === 'single-release') { escrows.set(op.cid, { roles: op.b.roles, amount: op.b.amount, balance: 0, flags: { disputed: false, released: false, resolved: false } }); return op.cid }
+    const e = escrows.get(op.b.contractId); if (!e) return null
+    if (op.ruta === 'fund-escrow') e.balance += Number(op.b.amount)
+    if (op.ruta === 'dispute-escrow') { if (e.flags.disputed || e.flags.released || e.flags.resolved) throw new Error('Escrow already in dispute or released'); e.flags.disputed = true }
+    if (op.ruta === 'release-funds') { if (e.flags.released || e.flags.resolved || e.flags.disputed) throw new Error('Escrow already released'); e.flags.released = true; e.balance = 0 }
+    if (op.ruta === 'resolve-dispute') { if (!e.flags.disputed || e.flags.resolved) throw new Error('Escrow not in dispute'); e.flags.resolved = true; e.balance = 0 }
+    return op.b.contractId
+  }
   return async (url, init) => {
     const b = init?.body ? JSON.parse(init.body) : {}, ok = j => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) { const uid = c.tokens.get(String(init.headers.authorization).replace('Bearer ', '')); return uid ? ok({ id: uid }) : new Response('{}', { status: 401 }) }
     if (url.includes('/rest/v1/')) return c.rest(url, init)
-    if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS', contractId: CID })
-    const quien = { 'single-release': b.signer, 'fund-escrow': b.signer, 'change-milestone-status': b.serviceProvider, 'approve-milestone': b.approver, 'release-funds': b.releaseSigner, 'dispute-escrow': b.signer, 'resolve-dispute': b.disputeResolver }[url.split('/').pop()]
-    return quien ? ok({ unsignedTransaction: xdrDe(quien) }) : new Response('{"message":"no simulado"}', { status: 404 })
+    if (red) return fetch(url, init)
+    if (url.startsWith('https://horizon-testnet.stellar.org/transactions/')) { const h = url.split('/').pop(); return enviadas.has(h) ? ok({ hash: h, successful: true }) : new Response('{"status":404}', { status: 404 }) }
+    if (url.includes('/helper/get-escrow-by-contract-ids')) {
+      const id = decodeURIComponent(new URL(url).searchParams.get('contractIds[]') ?? ''), e = escrows.get(id)
+      return ok(e ? [{ contractId: id, amount: e.amount, balance: e.balance, roles: e.roles, flags: { ...e.flags } }] : [])
+    }
+    if (url.endsWith('/helper/send-transaction')) {
+      const h = TransactionBuilder.fromXDR(b.signedXdr, Networks.TESTNET).hash().toString('hex')
+      if (enviadas.has(h)) return new Response('{"message":"tx_bad_seq"}', { status: 400 })
+      let cid; try { cid = aplicar(porHash.get(h)) } catch (x) { return new Response(JSON.stringify({ message: x.message }), { status: 400 }) }
+      enviadas.add(h); return ok({ status: 'SUCCESS', contractId: cid ?? 'C' + 'A'.repeat(55) })
+    }
+    const ruta = url.split('/').pop()
+    const quien = { 'single-release': b.signer, 'fund-escrow': b.signer, 'change-milestone-status': b.serviceProvider, 'approve-milestone': b.approver, 'release-funds': b.releaseSigner, 'dispute-escrow': b.signer, 'resolve-dispute': b.disputeResolver }[ruta]
+    return quien ? ok({ unsignedTransaction: xdrDe(quien, { ruta, b, cid: ruta === 'single-release' ? StrKey.encodeContract(randomBytes(32)) : null }) }) : new Response('{"message":"no simulado"}', { status: 404 })
   }
 }
 
 // ── Cuentas Stellar desechables (solo --real): Friendbot, trustline de USDC y USDC comprado en el DEX de testnet ──
 const USDC = new Asset('USDC', 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'), HZ = new Horizon.Server('https://horizon-testnet.stellar.org')
 async function cuentaStellar(usdc) {
-  const kp = Keypair.random(); if (!REAL) return kp
+  const kp = Keypair.random(); if (!RED) return kp
   const fb = await fetch('https://friendbot.stellar.org/?addr=' + kp.publicKey()); if (!fb.ok) throw new Error('Friendbot ' + fb.status)
   const yo = await HZ.loadAccount(kp.publicKey())
   const t = new TransactionBuilder(yo, { fee: String(Number(BASE_FEE) * 10), networkPassphrase: Networks.TESTNET }).addOperation(Operation.changeTrust({ asset: USDC }))
@@ -145,8 +176,15 @@ const { procesarCorreos, enviarCorreoCuenta, abrirCorreo, paginaAbrir } = await 
 const D = REAL ? await destinoReal() : await destinoSimulado()
 if (LIMPIAR) { log('Borrados', await D.limpiar(), 'alquileres marcados E2E-C en', D.nombre); await vite.close(); process.exit(0) }
 if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (CORREOS && !env.RESEND_API_KEY) falta.push('RESEND_API_KEY'); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
+else if (RED) {   // paso 22 · --red: base en memoria (PGlite, con la migración nueva) y Trustless Work de testnet DE VERDAD. Solo pide
+  // TRUSTLESS_WORK_API_KEY; la plataforma y la cuenta que resuelve disputas son cuentas desechables de testnet (Friendbot + trustline USDC).
+  if (!env.TRUSTLESS_WORK_API_KEY) { log('Falta TRUSTLESS_WORK_API_KEY (testnet) para --red.'); process.exit(2) }
+  const [P, M] = await Promise.all([cuentaStellar(0), cuentaStellar(0)])
+  Object.assign(env, { LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://simulado.supabase.co', SUPABASE_ANON_KEY: 'sim', SUPABASE_SERVICE_ROLE_KEY: 'sim', RESEND_API_KEY: 'sim' })
+  SECRETOS.push(P.secret(), M.secret())
+}
 else { const P = Keypair.random(), M = Keypair.random(); Object.assign(env, { TRUSTLESS_WORK_API_KEY: 'sim', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://simulado.supabase.co', SUPABASE_ANON_KEY: 'sim', SUPABASE_SERVICE_ROLE_KEY: 'sim', RESEND_API_KEY: 'sim' }) }
-const fTw = REAL ? fetch : twFalso(D)
+const fTw = REAL ? fetch : twFalso(D, RED)
 // Correos: Resend de verdad solo en --real --correos; en --simulado un Resend falso. Siempre detrás del corte al buzón de prueba.
 const resendFalso = async (url, init) => /^https:\/\/api\.resend\.com\//.test(String(url)) ? new Response(JSON.stringify({ id: 'sim-' + randomUUID() }), { status: 200 }) : fTw(url, init)
 const fCorreo = fetchSoloBuzon(REAL ? fetch : resendFalso), ORIGEN_CORREO = 'https://app.lockumi.com', enviados = []
@@ -185,14 +223,14 @@ const cronDiaAntes = (t, n) => `${new Date(Date.parse(new Date(+new Date(t) - 6 
 const { vencimiento } = await vite.ssrLoadModule('/api/_lib/plazos.ts')
 const finPlazo = (t, seg) => new Date(vencimiento(+new Date(t), seg * 1000).fin).toISOString()
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
-const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && REAL ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (REAL ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
+const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && RED ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (RED ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
 const twDirecto = APP ? async (cta, pedido) => {
   const r = await fetch(APP + '/api/tw', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + cta.token, origin: APP }, body: JSON.stringify(pedido) })
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(`${APP}/api/tw ${pedido.accion}: ${r.status} ${j.error ?? ''}`); return j
 } : (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
 const tw = (cta, pedido) => enFila(() => twDirecto(cta, pedido))
 const mig = await D.migraciones()
-log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'}`)
+log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'} · 26000000 (paso 22) ${mig.m260 ? 'aplicada' : 'FALTA'}`)
 if (!mig.m060) log('  (sin 20261025060000, «Todo bien, devolver» no libera al aprobar: el flujo «aprobada» falla)')
 if (!mig.m050) { log('✘ falta la migración 20261025050000 (Términos por alquiler) en el destino: sin ella no se puede crear ni unirse'); process.exit(1) }
 
@@ -200,7 +238,7 @@ const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await 
 await D.hacerMediador(mediador.uid)
 const correo = (r, k) => CORREOS ? correoPrueba(k, r) : `e2e-c+${CORRIDA.toLowerCase()}-${k}-${r}@lockumi.test`
 log('Preparando cuentas de testnet (dueño e inquilino desechables)…')
-const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 4 + 1)])   // 4 alquileres con depósito (aprobada, silencio-dueno, mediacion, recordatorios)
+const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 7 + 1)])   // 7 alquileres con depósito (aprobada, silencio-dueno, mediacion, recordatorios y los tres de la corrida diaria del paso 22)
 const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una foto de prueba
 const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 92 * 864e5).toISOString().slice(0, 10)
 // Igual que declaracionInvitacion() de la app: con VITE_CORREOS=1 la declaración incluye el correo de invitación.
@@ -374,6 +412,94 @@ const flujos = {
   },
 }
 await Promise.all(Object.entries(flujos).map(([k, f]) => f().catch(e => { fallas.push(`${k}: ${limpio(e.message)}`); log(`✘ [${k}] ${limpio(e.message)}`) })))
+// ── Paso 22 · la corrida diaria (/api/borrados → api/_lib/devoluciones.ts) PAGA sola en la red de prueba ──
+// cron-auto:    vence el plazo del dueño y NADIE abre el alquiler → la corrida cierra (lk_vencimientos) y devuelve el 100 % (disputa + resolución).
+// cron-liberar: el dueño aprueba y la liberación falla en la red (falla inyectada) → queda «devuelto» sin pagar → la corrida libera (release-funds).
+// cron-doble:   la app y la corrida pagan EL MISMO caso a la vez → se paga una sola vez (bloqueo lk_tomar_pago).
+// Después: otra corrida no paga nada; la app ve el pago ya hecho; el escrow está pagado en TW. Solo con la migración 20261026000000
+// (--simulado y --red; en --real, solo si ya está aplicada en el destino) y sin --app (hace falta inyectar la falla).
+if (mig.m260 && !APP) {
+  const { ejecutarBorrados } = await vite.ssrLoadModule('/api/_lib/borrados.ts')
+  const { DEVUELTO_AUTO, liberadoTexto, leerEscrowTw, configuracion } = await vite.ssrLoadModule('/api/_lib/tw.ts')
+  const porCid = {}, cuenta = (cid, k) => { porCid[cid] ??= { 'dispute-escrow': 0, 'release-funds': 0, 'resolve-dispute': 0 }; porCid[cid][k]++ }
+  let fallarLiberacion = null   // contractId cuyo PRIMER release-funds falla (la red «se cae» al aprobar)
+  let cidDoble = null, avisarLectura = null   // cron-doble: la app entra justo cuando la corrida ya tomó el caso y lee el escrow
+  const leyoDoble = new Promise(r => { avisarLectura = r })
+  const fCron = async (url, init) => {
+    if (cidDoble && String(url).includes('get-escrow-by-contract-ids') && String(url).includes(cidDoble) && avisarLectura) {
+      const r = avisarLectura; avisarLectura = null; r(); await new Promise(z => setTimeout(z, 1500)) }
+    const m = String(url).match(/\/escrow\/single-release\/(dispute-escrow|release-funds|resolve-dispute)$/)
+    if (m) { const cid = JSON.parse(init.body).contractId; cuenta(cid, m[1])
+      if (m[1] === 'release-funds' && cid === fallarLiberacion) { fallarLiberacion = null; return new Response('{"message":"falla inyectada por la prueba"}', { status: 503 }) } }
+    return fC(url, init)
+  }
+  const twCron = (cta, pedido) => enFila(() => atender(env, pedido, 'Bearer ' + cta.token, fCron))
+  const envCron = { ...envC, DEVOLUCIONES_POR_CORRIDA: '5', DEVOLUCIONES_SEGUNDOS: '900' }
+  const corrida = () => enFila(() => ejecutarBorrados(envCron, fCron))
+  const vencer = async (k, id) => { if (!REAL) await D.q(null, `update public.lk_contratos set ventana_inicio = now() - interval '2 minutes' where id = $1`, [id]); else await esperarPlazo(k) }
+  const eventos = async (id, texto) => (await D.leer('lk_eventos', id)).filter(e => e.texto === texto)
+  try {
+    const [a, b, c] = await Promise.all([hastaPlazo('cron-auto', true), hastaPlazo('cron-liberar', true), hastaPlazo('cron-doble', true)])
+    Object.assign(ids, { cronAuto: a, cronLiberar: b, cronDoble: c })
+    // cron-liberar: «Todo bien, devolver» con la red caída en la liberación
+    const { unsignedXdr } = await twCron(dueno, { accion: 'aprobar', contrato: b })
+    fallarLiberacion = (await estado(b)).escrow_contract_id
+    const ap = await twCron(dueno, { accion: 'enviar', contrato: b, paso: 'aprobar', signedXdr: firmar(kpD, unsignedXdr) })
+    exigir(!ap.liberacion && ap.errorLiberacion, 'la falla inyectada no dejó el caso sin pagar')
+    const eb = await estado(b); exigir(eb.estado === 'cerrado' && eb.resultado.via === 'devuelto' && !eb.liquidacion_tx, 'cron-liberar no quedó «devuelto» sin pagar')
+    paso('cron-liberar', 'el dueño aprueba; la liberación falla en la red (inyectada): queda cerrado «devuelto» y sin pagar', ap.tx)
+    await vencer('cron-auto', a); paso('cron-auto', 'vence el plazo del dueño y nadie abre el alquiler (ni lk_cerrar_sin_reclamo ni /api/tw)')
+    await vencer('cron-doble', c); exigir(await dueno.rpc('lk_cerrar_sin_reclamo', { p_contrato: c }), 'cron-doble no cerró')
+    exigir((await estado(a)).estado === 'ventana_reclamo', 'cron-auto se cerró antes de la corrida')
+    // La corrida diaria y la app pagan cron-doble A LA VEZ: la app pide pagar mientras la corrida tiene el caso tomado
+    cidDoble = (await estado(c)).escrow_contract_id
+    const [r1, app] = await Promise.all([ejecutarBorrados(envCron, fCron),
+      Promise.race([leyoDoble, new Promise(z => setTimeout(z, 120000))]).then(() => twCron(inquilino, { accion: 'devolver-automatico', contrato: c })).catch(x => ({ error: limpio(x.message) }))])
+    log('  corrida 1 · devoluciones: ' + limpio(JSON.stringify(r1.devoluciones)) + ' · app (cron-doble): ' + limpio(JSON.stringify(app)))
+    exigir(!('error' in (r1.devoluciones ?? {})), 'la corrida no pudo pagar: ' + JSON.stringify(r1.devoluciones))
+    // Con la red de verdad, dos transacciones de la plataforma a la vez pueden chocar por la secuencia: ese caso queda para la próxima
+    // corrida (el bloqueo espera 5 min; aquí se adelanta el reloj) y nunca se paga dos veces.
+    if (!REAL) await D.q(null, `update public.lk_contratos set pago_bloqueo_hasta = now() - interval '1 second' where id = any($1::uuid[]) and liquidacion_tx is null`, [`{${a},${b},${c}}`])
+    const r2 = await corrida(); log('  corrida 2 · devoluciones: ' + limpio(JSON.stringify(r2.devoluciones)))
+    const [ea, eb2, ec] = [await estado(a), await estado(b), await estado(c)]
+    const hex = /^[0-9a-f]{64}$/
+    exigir(ea.estado === 'cerrado' && ea.resultado.via === 'automatico' && Number(ea.resultado.inquilino) === MONTO && hex.test(ea.liquidacion_tx ?? ''), 'cron-auto: la corrida no cerró y pagó')
+    const evA = await eventos(a, DEVUELTO_AUTO); exigir(evA.length === 1 && evA[0].tx_hash === ea.liquidacion_tx, 'cron-auto: falta el evento con el hash (o hay más de uno)')
+    paso('cron-auto', 'la corrida diaria cierra el caso (lk_vencimientos) y devuelve el 100 % al inquilino en la red (disputa + resolución)', ea.liquidacion_tx)
+    exigir(hex.test(eb2.liquidacion_tx ?? ''), 'cron-liberar: la corrida no liberó')
+    const evB = await eventos(b, liberadoTexto({ monto: Number(eb2.monto) })); exigir(evB.length === 1 && evB[0].tx_hash === eb2.liquidacion_tx, 'cron-liberar: falta el evento con el hash (o hay más de uno)')
+    paso('cron-liberar', 'la corrida diaria libera el 100 % con release-funds (la aprobación del dueño ya estaba en la cadena)', eb2.liquidacion_tx)
+    exigir(hex.test(ec.liquidacion_tx ?? ''), 'cron-doble: no quedó pagado')
+    const evC = await eventos(c, DEVUELTO_AUTO); exigir(evC.length === 1, `cron-doble: ${evC.length} eventos de devolución (se esperaba 1)`)
+    const cidA = ea.escrow_contract_id, cidB = eb2.escrow_contract_id, cidC = ec.escrow_contract_id
+    log('  pedidos a TW por escrow: ' + JSON.stringify({ 'cron-auto': porCid[cidA], 'cron-liberar': porCid[cidB], 'cron-doble': porCid[cidC] }))
+    if (!RED) exigir(app.enCurso === true && !app.tx, 'cron-doble: la app no vio el pago en curso: ' + JSON.stringify(app))
+    if (!RED) exigir(porCid[cidC]['resolve-dispute'] === 1 && porCid[cidC]['dispute-escrow'] === 1, 'cron-doble: se pidió pagar más de una vez')
+    exigir(porCid[cidA]['release-funds'] === 0 && porCid[cidB]['dispute-escrow'] === 0, 'se eligió mal entre «liberar» y «devolver-automatico»')
+    paso('cron-doble', `la app y la corrida pagan a la vez: se paga UNA sola vez (${app.tx ? 'pagó la app' : app.enCurso ? 'la app vio el pago en curso' : app.yaExistia ? 'la app vio el pago hecho' : 'la app falló sin pagar'})`, ec.liquidacion_tx)
+    for (const [k, id] of [['cron-auto', a], ['cron-liberar', b], ['cron-doble', c]]) {   // la misma corrida, ya con el hash, manda COR-C-07
+      const f7 = (await D.leer('lk_correos_enviados', id)).filter(f => f.estado === 'enviado' && f.correo === 'COR-C-07')
+      exigir(f7.length === 2, `${k}: la corrida no mandó COR-C-07 a las dos partes (${f7.length})`)
+      paso(k, `la misma corrida manda COR-C-07 a las dos partes (${f7.map(f => f.para).sort().join(', ')})`)
+    }
+    const antes = JSON.stringify(porCid)
+    const r3 = await corrida()
+    exigir(r3.devoluciones?.pendientes === 0 && JSON.stringify(porCid) === antes, 'otra corrida volvió a intentar pagar: ' + JSON.stringify(r3.devoluciones))
+    paso('cron-auto', 'otra corrida (o un reintento) no paga nada: no quedan devoluciones pendientes')
+    const otra = await twCron(inquilino, { accion: 'devolver-automatico', contrato: a })
+    exigir(otra.yaExistia && otra.tx === ea.liquidacion_tx && JSON.stringify(porCid) === antes, 'la app volvió a pagar un caso ya pagado por la corrida')
+    paso('cron-auto', 'la app abre el alquiler después: ve el pago ya hecho (mismo hash), sin pagar otra vez', otra.tx)
+    const ct = configuracion(env)
+    for (const [k, cid, bandera] of [['cron-auto', cidA, 'resolved'], ['cron-liberar', cidB, 'released'], ['cron-doble', cidC, 'resolved']]) {
+      const e = await leerEscrowTw(ct, cid, fTw); exigir(e.flags?.[bandera] === true && Number(e.balance ?? 0) === 0, `${k}: el escrow no quedó pagado en TW: ` + JSON.stringify(e.flags))
+      paso(k, `Trustless Work: el escrow quedó ${bandera === 'resolved' ? 'resuelto' : 'liberado'} y con saldo 0`)
+    }
+    if (RED) for (const [k, h] of [['cron-auto', ea.liquidacion_tx], ['cron-liberar', eb2.liquidacion_tx], ['cron-doble', ec.liquidacion_tx]]) {
+      const j = await (await fetch('https://horizon-testnet.stellar.org/transactions/' + h)).json(); exigir(j.successful === true, `${k}: Horizon no muestra la transacción como exitosa`)
+      paso(k, 'Horizon (testnet): la transacción del pago salió bien', h)
+    }
+  } catch (e) { fallas.push('paso 22 · corrida diaria: ' + limpio(e.message)); log('✘ [paso 22] ' + limpio(e.message)) }
+} else omitidos.push(`paso 22 · corrida diaria: ${APP ? 'con --app no se puede inyectar la falla' : 'falta la migración 20261026000000 en el destino'}`)
 // COR-C-08 y COR-C-09: correos de servicio de la cuenta (sin casilla). Una sola vez por pedido.
 try {
   const pedido = Date.now(), para = correoPrueba('cuenta', 'dueno'), paraB = correoPrueba('cuenta', 'inquilino')
@@ -392,13 +518,13 @@ htmls.forEach((h, i) => writeFileSync(`${SALIDA}/correos/${String(i + 1).padStar
 writeFileSync(SALIDA + '/correos/indice.json', JSON.stringify(htmls.map((h, i) => ({ archivo: `${String(i + 1).padStart(2, '0')}.html`, para: h.to, asunto: h.subject, plantilla: enviadosC[i]?.plantilla ?? null })), null, 2))
 const seg = Math.round((Date.now() - t0) / 1000)
 mkdirSync(SALIDA, { recursive: true })
-const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { activos: CORREOS, enviados, servidor: enviadosC,
+const est = { corrida: MARCA, modo: REAL ? 'real (testnet)' : RED ? 'red (testnet de verdad, base en memoria)' : 'simulado', destino: D.nombre, migraciones: mig, segundos: seg, ids, pasos, fallas, omitidos, correos: { activos: CORREOS, enviados, servidor: enviadosC,
   // Lo que la app NO envía en C (modo servidor): no se finge. Ver docs/prueba-completa.md.
   no_cubiertos: [] } }
 writeFileSync(SALIDA + '/estado.json', JSON.stringify(est, null, 2))
 writeFileSync(SALIDA + '/capa-capturas.json', JSON.stringify(capa, (k, v) => v instanceof Date ? v.toISOString() : v, 2))
 if (REAL) { writeFileSync(SALIDA + '/sesiones.json', JSON.stringify({ dueno: dueno.sesion, inquilino: inquilino.sesion })); chmodSync(SALIDA + '/sesiones.json', 0o600) }   // solo para las capturas; vencen solas
-const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}, 060000 ${mig.m060 ? 'sí' : 'NO'}`,
+const md = [`# E2E escenario C · ${est.modo}`, '', `- Corrida: ${MARCA} · destino: ${D.nombre} · ${seg} s`, `- Migraciones en el destino: 030000 ${mig.m030 ? 'sí' : 'NO'}, 040000 ${mig.m040 ? 'sí' : 'NO'}, 050000 ${mig.m050 ? 'sí' : 'NO'}, 20261026000000 ${mig.m260 ? 'sí' : 'NO'}, 060000 ${mig.m060 ? 'sí' : 'NO'}`,
   `- Resultado: ${fallas.length ? fallas.length + ' fallas' : 'todo en verde'}${omitidos.length ? ` · ${omitidos.length} omitido(s)` : ''}`, '', '| Alquiler | Paso | Transacción |', '|---|---|---|',
   ...pasos.map(p => `| ${p.alquiler} | ${p.paso} | ${p.tx ? (p.enlace ? `[${p.tx.slice(0, 10)}…](${p.enlace})` : `simulada ${p.tx.slice(0, 10)}…`) : ''} |`), '', ...fallas.map(f => '- FALLA: ' + f), ...omitidos.map(o => '- OMITIDO: ' + o),
   ...(CORREOS ? ['', '## Correos', '', '| Alquiler | Correo | Para | Id de Resend | Enviado (UTC) |', '|---|---|---|---|---|', ...enviados.map(c => `| ${c.caso} | ${c.asunto} | ${c.para} | ${c.resend_id} | ${c.enviado_en} |`), '',

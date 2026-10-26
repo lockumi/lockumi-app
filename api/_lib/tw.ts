@@ -63,10 +63,11 @@ export function responderLlaves(e: Entorno, url: string): Response {
 }
 
 // ── Trustless Work ──
-async function tw<T = Record<string, unknown>>(c: Config, ruta: string, cuerpo: unknown, f = fetch): Promise<T> {
-  const r = await f(c.base + ruta, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': c.llave }, body: JSON.stringify(cuerpo) })
+async function tw<T = Record<string, unknown>>(c: Config, ruta: string, cuerpo: unknown, f = fetch, metodo: 'POST' | 'GET' = 'POST'): Promise<T> {
+  const r = await f(c.base + ruta, { method: metodo, headers: { 'content-type': 'application/json', 'x-api-key': c.llave }, body: metodo === 'GET' ? undefined : JSON.stringify(cuerpo) })
   const t = await r.text(); let j: Record<string, unknown> = {}; try { j = JSON.parse(t) } catch { /* texto */ }
-  if (!r.ok) throw new ErrorTw(r.status === 429 ? 429 : 502, `Trustless Work ${ruta} respondió ${r.status}: ${String(j.message ?? t).slice(0, 300)}`)
+  // Paso 22: el mensaje de TW nunca lleva la llave (igual que api/_lib/solo.ts), aunque TW la repitiera en su respuesta.
+  if (!r.ok) throw new ErrorTw(r.status === 429 ? 429 : 502, `Trustless Work ${ruta.split('?')[0]} respondió ${r.status}: ${String(j.message ?? t).split(c.llave).join('[llave]').slice(0, 300)}`)
   return j as T
 }
 const sinFirmar = (j: Record<string, unknown>) => {
@@ -206,13 +207,136 @@ async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
   return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
 }
 
-/** release-funds firmado por la plataforma (releaseSigner): el 100 % al inquilino (receiver), menos la comisión de Trustless Work. */
-async function liberarTodo(c: Config, k: Contrato, f = fetch) {
-  const j = await tw(c, '/escrow/single-release/release-funds', { contractId: k.escrow_contract_id, releaseSigner: c.plataforma.publicKey() }, f)
-  const firmada = firmarComoPlataforma(c, sinFirmar(j)); await enviar(c, firmada, f)
-  const tx = hashTx(firmada)
-  await anotar(c, k.id, { liquidacion_tx: tx }, `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)`, tx, f)
-  return tx
+
+// ── Paso 22 · Devolución sin reclamo, idempotente: la app («liberar», «devolver-automatico», «Todo bien, devolver») y la corrida
+// diaria (/api/borrados → api/_lib/devoluciones.ts) pagan por AQUÍ, con el mismo bloqueo en la base (20261026000000):
+//  1. lk_tomar_pago: un solo pedido a la vez por caso (el bloqueo dura más que la función de Vercel: maxDuration 60 s).
+//  2. Se mira el escrow en Trustless Work ANTES de pagar: si no cuadra con el alquiler o ya se pagó sin que tengamos el hash, NO se
+//     paga (pago_revisar) y lo mira una persona. Si ya se pagó con el hash pendiente (corte después de enviar), solo se anota.
+//  3. lk_anotar_pago_pendiente guarda el hash firmado ANTES de enviarlo (si el bloqueo venció, no se envía).
+//  4. Si la disputa ya estaba abierta (un intento anterior se cortó), solo se resuelve.
+// En la red, además, el contrato del escrow no deja pagar dos veces: un segundo envío fallaría (y no se anotaría).
+export const SEGUNDOS_BLOQUEO_PAGO = 300
+export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
+export const liberadoTexto = (k: Pick<Contrato, 'monto'>) => `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)`
+export type ModoDevolucion = 'liberar' | 'devolver-automatico'
+export type Devolucion = { tx?: string; disputaTx?: string | null; yaExistia?: true; enCurso?: true; recuperado?: true }
+// LEGAL: revisar · texto nuevo (paso 22): la app lo muestra solo si el escrow no cuadra con el alquiler o ya se pagó sin que tengamos
+// la transacción (no debería pasar); la corrida diaria lo cuenta como «revisar». No se paga nada hasta que una persona lo mire.
+export const TEXTO_REVISAR_PAGO = 'No pudimos confirmar el estado del depósito en la red de prueba, así que no se pagó nada. Escríbenos a business.applockumi@gmail.com y lo revisamos.'
+export class ErrorRevisar extends ErrorTw { motivo: string; constructor(motivo: string) { super(409, TEXTO_REVISAR_PAGO); this.motivo = motivo } }
+
+/** Quita de un mensaje la llave de TW, las claves de Supabase, cualquier llave secreta de Stellar (S…) y tokens tipo JWT. */
+export function sinSecretos(m: string, e: Entorno = {}): string {
+  let x = String(m)
+  for (const [k, v] of Object.entries(e)) if (v && v.trim().length >= 8 && /KEY|SECRET|TOKEN|PASSWORD|PEPPER/i.test(k)) x = x.split(v.trim()).join('[secreto]')
+  return x.replace(/\bS[A-Z2-7]{55}\b/g, '[secreto]').replace(/\beyJ[\w-]+\.[\w-]+\.[\w-]+/g, '[secreto]').slice(0, 300)
+}
+async function rpcPago<T>(c: Config, fn: string, args: Record<string, unknown>, f = fetch): Promise<T> {
+  const r = await rest(c, 'rpc/' + fn, { method: 'POST', body: JSON.stringify(args) }, f)
+  // Sin la migración 20261026000000 (orden de publicación: primero la migración, después el código) no se paga nada.
+  if (r.status === 404) throw new ErrorTw(503, `Falta configurar en el servidor: ${fn} (migración 20261026000000).`)
+  if (!r.ok) throw new ErrorTw(500, 'No se pudo guardar en el servidor: ' + (await r.text()).slice(0, 200))
+  if (r.status === 204) return undefined as T
+  return await r.json().catch(() => undefined) as T
+}
+const soltarPago = (c: Config, id: string, token: string, error: string | null, revisar = false, esperar = false, f = fetch) =>
+  rpcPago<void>(c, 'lk_soltar_pago', { p_contrato: id, p_token: token, p_error: error, p_revisar: revisar, p_esperar: esperar }, f)
+/** El bloqueo venció mientras se pagaba (no debería: dura 5 min y la función 60 s): no se envía y no se toca el bloqueo de otro. */
+class BloqueoVencido extends Error {}
+async function estadoPago(c: Config, id: string, f = fetch) {
+  const r = await rest(c, `lk_contratos?id=eq.${id}&select=liquidacion_tx,pago_tx_pendiente,pago_revisar`, {}, f)
+  const [x] = r.ok ? await r.json().catch(() => []) as { liquidacion_tx: string | null; pago_tx_pendiente: string | null; pago_revisar: boolean }[] : []
+  return x ?? { liquidacion_tx: null, pago_tx_pendiente: null, pago_revisar: false }
+}
+export interface EscrowTw { contractId: string; balance?: number | string; roles?: Partial<Record<'approver' | 'serviceProvider' | 'platformAddress' | 'releaseSigner' | 'disputeResolver' | 'receiver', string>>; flags?: { disputed?: boolean; released?: boolean; resolved?: boolean } }
+/** Estado del escrow en Trustless Work, validado en la cadena (validateOnChain=true). Solo lectura. */
+export async function leerEscrowTw(c: Config, id: string, f = fetch): Promise<EscrowTw> {
+  exigir(C.test(id), 400, 'La cuenta segura del depósito no es válida.')
+  const j = await tw<unknown>(c, `/helper/get-escrow-by-contract-ids?contractIds[]=${id}&validateOnChain=true`, undefined, f, 'GET')
+  const e = (Array.isArray(j) ? j[0] : j) as EscrowTw | undefined
+  if (!e || e.contractId !== id) throw new ErrorTw(502, 'Trustless Work no devolvió el escrow pedido.')
+  return e
+}
+/** ¿La transacción entró y salió bien en testnet? (Horizon, solo lectura). */
+async function txExitosa(tx: string, f = fetch) {
+  const r = await f(`${HORIZON_TESTNET}/transactions/${tx}`).catch(() => null)
+  return !!r?.ok && ((await r.json().catch(() => ({}))) as { successful?: boolean }).successful === true
+}
+/** Igual que src/acciones.ts:224-226 con el modo de dos personas (siempre con la prueba completa): con la aprobación del dueño en la
+ *  cadena → «liberar» (release-funds); sin ella → «devolver-automatico» (disputa + resolución con el 100 % al inquilino). */
+export async function modoDevolucion(c: Config, k: Contrato, f = fetch): Promise<ModoDevolucion> {
+  if (k.resultado?.via === 'devuelto') return 'liberar'   // lk_cerrar_aprobado solo cierra así con la aprobación anotada
+  return (await aprobadoPorDueno(c, k.id, f)) ? 'liberar' : 'devolver-automatico'
+}
+/** El único camino que paga una devolución sin reclamo (100 % al inquilino). Idempotente: ver arriba. */
+export async function devolverAlInquilino(c: Config, k: Contrato, modo: ModoDevolucion, f = fetch): Promise<Devolucion> {
+  const P = c.plataforma.publicKey(), via = k.resultado?.via
+  if (modo === 'liberar') {
+    exigir(k.estado === 'cerrado' && (via === 'automatico' || via === 'devuelto') && !!k.escrow_contract_id, 409, 'Solo se libera así un contrato cerrado sin reclamo.')
+    if (k.liquidacion_tx) return { tx: k.liquidacion_tx, yaExistia: true }
+  } else {
+    exigir(k.estado === 'cerrado' && via === 'automatico' && !!k.escrow_contract_id, 409, 'La devolución automática solo corre cuando vence el plazo del dueño sin reclamo.')
+    if (k.liquidacion_tx) { await asegurarEventoMediador(c, k.id, DEVUELTO_AUTO, k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }
+    exigir(!(await aprobadoPorDueno(c, k.id, f)), 409, 'El dueño ya aprobó la devolución: se libera sin disputa. Vuelve a abrir el alquiler.')
+    exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
+    // Trustless Work: quien resuelve no puede abrir la disputa (Dispute Escrow), así que tienen que ser cuentas distintas.
+    exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
+  }
+  const texto = modo === 'liberar' ? liberadoTexto(k) : DEVUELTO_AUTO
+  const id = k.escrow_contract_id!, inquilino = cuenta(k, 'inquilino')
+  const token = crypto.randomUUID()
+  if (!(await rpcPago<boolean>(c, 'lk_tomar_pago', { p_contrato: k.id, p_token: token, p_segundos: SEGUNDOS_BLOQUEO_PAGO }, f))) {
+    const x = await estadoPago(c, k.id, f)
+    if (x.liquidacion_tx) return { tx: x.liquidacion_tx, yaExistia: true }
+    if (x.pago_revisar) throw new ErrorRevisar('marcado para revisar')
+    return { enCurso: true }   // otro pedido (la app o la corrida) lo está pagando ahora: no se hace nada
+  }
+  const revisar = async (motivo: string): Promise<never> => { await soltarPago(c, k.id, token, motivo, true, false, f); throw new ErrorRevisar(motivo) }
+  const finalizar = async (tx: string) => {   // el pago ya está en la red: evento (si falta) y después el hash en el contrato
+    await asegurarEventoMediador(c, k.id, texto, tx, f)
+    const r = await rest(c, `lk_contratos?id=eq.${k.id}&liquidacion_tx=is.null`, { method: 'PATCH', body: JSON.stringify({ liquidacion_tx: tx }) }, f)
+    if (!r.ok) throw new ErrorTw(500, `El pago se hizo en la red de prueba (${tx}), pero no se pudo guardar en el historial. Vuelve a abrir el alquiler.`)
+  }
+  const pendiente = async (tx: string) => {
+    if (!(await rpcPago<boolean>(c, 'lk_anotar_pago_pendiente', { p_contrato: k.id, p_token: token, p_tx: tx }, f))) throw new BloqueoVencido()
+  }
+  let enviada = false
+  try {
+    const e = await leerEscrowTw(c, id, f)
+    const r = e.roles ?? {}
+    if (r.receiver !== inquilino || r.releaseSigner !== P || (modo === 'devolver-automatico' && r.disputeResolver !== c.mediador))
+      return await revisar('el escrow no cuadra con el alquiler (cuentas)')
+    const saldo = e.balance === undefined || e.balance === null || e.balance === '' ? null : Number(e.balance)
+    if (e.flags?.released || e.flags?.resolved || saldo === 0) {
+      const { pago_tx_pendiente: h } = await estadoPago(c, k.id, f)
+      if (h && await txExitosa(h, f)) { await finalizar(h); await soltarPago(c, k.id, token, null, false, false, f); return { tx: h, recuperado: true } }
+      return await revisar('el escrow ya está pagado y no tenemos la transacción')
+    }
+    if (saldo !== null && centavos(saldo) !== centavos(k.monto)) return await revisar('el saldo del escrow no es el depósito')
+    let disputaTx: string | null = null, tx: string
+    if (modo === 'liberar') {
+      const j = await tw(c, '/escrow/single-release/release-funds', { contractId: id, releaseSigner: P }, f)
+      const firmada = firmarComoPlataforma(c, sinFirmar(j)); tx = hashTx(firmada)
+      await pendiente(tx); enviada = true; await enviar(c, firmada, f)
+      await anotar(c, k.id, { liquidacion_tx: tx }, texto, tx, f)
+    } else {
+      if (!e.flags?.disputed) {   // en un reintento la disputa ya puede estar abierta: solo se resuelve
+        const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: id, signer: P }, f)
+        const abierta = firmarComoPlataforma(c, sinFirmar(d)); enviada = true; await enviar(c, abierta, f); disputaTx = hashTx(abierta)
+      }
+      const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: id, disputeResolver: c.mediador, distributions: repartoAutomatico(k) }, f)
+      const firmada = firmarComoMediador(c, sinFirmar(j)); tx = hashTx(firmada)
+      await pendiente(tx); enviada = true; await enviar(c, firmada, f)
+      await anotarMediador(c, k.id, texto, tx, f)
+    }
+    await soltarPago(c, k.id, token, null, false, false, f).catch(() => {})
+    return modo === 'liberar' ? { tx } : { tx, disputaTx }
+  } catch (x) {
+    if (x instanceof BloqueoVencido) return { enCurso: true }
+    if (!(x instanceof ErrorRevisar)) await soltarPago(c, k.id, token, sinSecretos(x instanceof Error ? x.message : String(x)), false, enviada, f).catch(() => {})
+    throw x
+  }
 }
 /** lk_cerrar_aprobado (service_role): true si cerró el caso por la aprobación del dueño. */
 async function cerrarAprobado(c: Config, id: string, f = fetch) {
@@ -287,32 +411,17 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       // plazo. El servidor cierra el caso (lk_cerrar_aprobado: sin reclamo y con la aprobación anotada) y la plataforma
       // (releaseSigner) libera en el mismo pedido. Si la red falla, el caso queda cerrado y la app reintenta con «liberar».
       if (!(await cerrarAprobado(c, k.id, f))) return { tx, estado: r.status ?? null }
-      try { return { tx, estado: r.status ?? null, liberacion: await liberarTodo(c, k, f) } }
+      try { return { tx, estado: r.status ?? null, liberacion: (await devolverAlInquilino(c, await contrato(c, k.id, f), 'liberar', f)).tx } }
       // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
       catch { return { tx, estado: r.status ?? null, errorLiberacion: 'La aprobación quedó en la red de prueba, pero todavía no se pudo entregar el depósito. Vuelve a abrir el alquiler para reintentarlo.' } }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
       // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.
-      exigir(k.estado === 'cerrado' && (k.resultado?.via === 'automatico' || k.resultado?.via === 'devuelto') && !!k.escrow_contract_id, 409, 'Solo se libera así un contrato cerrado sin reclamo.')
-      if (k.liquidacion_tx) return { tx: k.liquidacion_tx, yaExistia: true }
-      return { tx: await liberarTodo(c, k, f) }
+      // Paso 22: mismo camino idempotente que la corrida diaria (bloqueo + estado del escrow); si la corrida lo está pagando, { enCurso }.
+      return await devolverAlInquilino(c, k, 'liberar', f)
     }
-    case 'devolver-automatico': { // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño
-      exigir(k.estado === 'cerrado' && k.resultado?.via === 'automatico' && !!k.escrow_contract_id, 409, 'La devolución automática solo corre cuando vence el plazo del dueño sin reclamo.')
-      if (k.liquidacion_tx) { await asegurarEventoMediador(c, k.id, DEVUELTO_AUTO, k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }
-      exigir(!(await aprobadoPorDueno(c, k.id, f)), 409, 'El dueño ya aprobó la devolución: se libera sin disputa. Vuelve a abrir el alquiler.')
-      exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
-      // Trustless Work: quien resuelve no puede abrir la disputa (Dispute Escrow), así que tienen que ser cuentas distintas.
-      exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
-      const reparto = repartoAutomatico(k)
-      const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: k.escrow_contract_id, signer: P }, f)
-      const abierta = firmarComoPlataforma(c, sinFirmar(d)); await enviar(c, abierta, f)
-      const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: k.escrow_contract_id, disputeResolver: c.mediador, distributions: reparto }, f)
-      const firmada = firmarComoMediador(c, sinFirmar(j)); await enviar(c, firmada, f)
-      const tx = hashTx(firmada)
-      await anotarMediador(c, k.id, DEVUELTO_AUTO, tx, f)
-      return { tx, disputaTx: hashTx(abierta) }
-    }
+    case 'devolver-automatico': // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño (paso 22: idempotente)
+      return await devolverAlInquilino(c, k, 'devolver-automatico', f)
     case 'repartir': {    // PR #22: acuerdo o mediación con las dos aceptaciones → disputa (plataforma) + resolución (cuenta mediadora)
       if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) {
         await asegurarEventoMediador(c, k.id, textoReparto(k), k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }

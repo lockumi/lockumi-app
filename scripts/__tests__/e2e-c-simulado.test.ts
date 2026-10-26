@@ -25,7 +25,7 @@ describe('E2E del escenario C (simulado, sin llaves)', () => {
     expect(capa.mediacion.aceptaciones).toHaveLength(1)
     // Correos (VITE_CORREOS=1): la invitación de cada caso sale por el mismo atenderCorreo de /api/correo, solo al buzón de prueba
     const inv = e.correos.enviados.filter((c: { tipo: string }) => c.tipo === 'invitacion')
-    expect(inv.map((c: { caso: string }) => c.caso).sort()).toEqual(['aprobada', 'mediacion', 'recordatorios', 'silencio-dueno', 'silencio-inquilino'])
+    expect(inv.map((c: { caso: string }) => c.caso).sort()).toEqual(['aprobada', 'cron-auto', 'cron-doble', 'cron-liberar', 'mediacion', 'recordatorios', 'silencio-dueno', 'silencio-inquilino'])
     for (const c of inv) { expect(c.para).toBe(`lockumi+e2ec-${c.caso}-inquilino@mail.grokbot.com`); expect(c.asunto).toBe('Te invitaron a un alquiler de ejemplo en la demo de Lockumi') }
     expect(pasos).toContain('aprobada: un segundo correo de invitación se rechaza (un solo correo por alquiler)')
     expect(e.correos.enviados.every((c: { para: string }) => /^lockumi\+e2ec-[a-z-]+@mail\.grokbot\.com$/.test(c.para))).toBe(true)
@@ -35,6 +35,18 @@ describe('E2E del escenario C (simulado, sin llaves)', () => {
     expect([...plantillas].sort()).toEqual(Object.keys(TEXTOS).sort())
     expect(e.correos.servidor.every((c: { para: string }) => /^lockumi\+e2ec-[a-z-]+@mail\.grokbot\.com$/.test(c.para))).toBe(true)
     expect(pasos).toContain('cuenta: el mismo pedido no envía COR-C-08 dos veces')
+    // Paso 22: la corrida diaria paga sola, una sola vez, aunque la app pague a la vez
+    for (const t of [
+      'cron-auto: la corrida diaria cierra el caso (lk_vencimientos) y devuelve el 100 % al inquilino en la red (disputa + resolución)',
+      'cron-liberar: la corrida diaria libera el 100 % con release-funds (la aprobación del dueño ya estaba en la cadena)',
+      'cron-doble: la app y la corrida pagan a la vez: se paga UNA sola vez (la app vio el pago en curso)',
+      'cron-auto: otra corrida (o un reintento) no paga nada: no quedan devoluciones pendientes',
+      'cron-auto: la app abre el alquiler después: ve el pago ya hecho (mismo hash), sin pagar otra vez',
+      'cron-auto: Trustless Work: el escrow quedó resuelto y con saldo 0',
+      'cron-liberar: Trustless Work: el escrow quedó liberado y con saldo 0',
+      'cron-auto: la misma corrida manda COR-C-07 a las dos partes (lockumi+e2ec-cron-auto-dueno@mail.grokbot.com, lockumi+e2ec-cron-auto-inquilino@mail.grokbot.com)',
+    ]) expect(pasos).toContain(t)
+
     expect(salida).not.toMatch(/S[A-Z2-7]{55}/)   // ninguna llave secreta de Stellar en la salida
   }, 130_000)
 })

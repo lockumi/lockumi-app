@@ -24,7 +24,7 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 - **Sin disparadores en la base:** el servidor calcula lo pendiente con `lk_correos_pendientes(alquiler, ahora)` en tres momentos:
   1. después de cada paso en la app (`POST /api/correo { tipo: 'avisos', alquiler }`, solo una persona del alquiler);
   2. después de pagar en `/api/tw` (enviar, liberar, devolver-automatico, repartir);
-  3. en la corrida diaria `/api/borrados` (cron de `vercel.json`, 09:00 UTC = 3:00 a. m. de Costa Rica, con `CRON_SECRET`): recordatorios y vencimiento de la mediación.
+  3. en la corrida diaria `/api/borrados` (cron de `vercel.json`, 09:00 UTC = 3:00 a. m. de Costa Rica, con `CRON_SECRET`): recordatorios y vencimiento de la mediación. Desde el paso 22 (rama `paso22-devolucion-automatica`, sin publicar), la corrida **paga primero** las devoluciones sin reclamo y después manda los correos, así que COR-C-07 sale en la misma corrida (ver abajo).
 - **Vencimiento de la mediación, con o sin `CORREOS_C`** (Legal 25/10, 5:09 p. m., punto 3): `vencerMediaciones` (`api/_lib/correos-c.ts`) corre aparte de los correos: en la corrida diaria (siempre), después de cada acción con un alquiler en `/api/tw` y en cada aviso de la app (`tipo: 'avisos'`, después de revisar la sesión y que la persona participa). Legal pidió cada hora, pero **Vercel Hobby solo permite un cron diario** (una expresión por hora hace fallar el despliegue: https://vercel.com/docs/cron-jobs/usage-and-pricing), así que queda la corrida diaria más la revisión en cada paso.
 - **Reloj de prueba:** `ahora` solo lo pasa el E2E (no es un parámetro HTTP).
 
@@ -44,6 +44,41 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 
 ## Botón de la invitación (COR-C-00), paso 21
 El botón lleva a `<origen>/#/invitacion/<alquiler>/<token>` (`enlaceInvitacion` en `api/_lib/correo.ts`); antes llevaba a la raíz de la app y la persona invitada no veía la invitación. El servidor solo envía si el token es el link vigente del alquiler. Ver [`invitacion-enlace.md`](invitacion-enlace.md).
+
+## Paso 22 · La corrida diaria paga la devolución sin reclamo (rama `paso22-devolucion-automatica`, NO publicada)
+
+Términos 5.3 d): si el dueño no reclama en su plazo, el 100 % vuelve al inquilino **aunque nadie abra el alquiler**. Antes la corrida solo cerraba el caso (`lk_vencimientos`) y el pago lo disparaba la app al abrirlo (`src/acciones.ts:216-227`). Ahora `/api/borrados` (`api/_lib/borrados.ts`) llama a `pagarDevoluciones` (`api/_lib/devoluciones.ts`) **después** de `lk_vencimientos` y del vencimiento de la mediación y **antes** de los correos:
+
+- **Qué paga:** `lk_devoluciones_pendientes` (migración `20261026000000_devolucion_automatica.sql`): `cerrado` con `via` `automatico` (venció el plazo) o `devuelto` (el dueño aprobó y la liberación no llegó a la red), con escrow, sin `liquidacion_tx`, sin reclamo, sin marca de revisión y sin nadie pagándolo. Los más viejos primero. Nunca acuerdo, mediación ni casos abiertos.
+- **Cómo paga:** igual que la app (`modoDevolucion`): con la aprobación del dueño en la cadena → `release-funds` (firma la plataforma); sin ella → `dispute-escrow` (plataforma) + `resolve-dispute` con el 100 % al inquilino (mediadora). Un solo camino para la app y la corrida: `devolverAlInquilino` (`api/_lib/tw.ts`).
+- **Nunca dos veces:** `lk_tomar_pago` (bloqueo atómico de 5 min con un token por pedido; la función de Vercel dura 60 s como máximo). Antes de pagar se lee el escrow en Trustless Work (`get-escrow-by-contract-ids`, validado en la cadena): cuentas (inquilino, plataforma, mediadora), saldo = depósito y banderas. El hash firmado se guarda **antes** de enviarlo (`lk_anotar_pago_pendiente`): si la red lo acepta y el servidor se corta, el próximo intento lo confirma en Horizon y solo lo anota. Si la disputa ya estaba abierta (reintento), solo se resuelve. Si el escrow ya está pagado sin que tengamos el hash, o no cuadra, **no se paga**: queda `pago_revisar` y lo mira una persona.
+- **La app durante la corrida:** si la corrida tiene el caso tomado, `/api/tw` responde `{ enCurso: true }` sin error (la app ya ignora una respuesta sin `tx`); al volver a abrirlo ve el pago hecho. Nada cambia en pantalla.
+- **Fallas:** un caso que falla no frena a los demás. El error queda en `pago_error` (300 caracteres, sin llaves: `sinSecretos`) y en el registro de Vercel como `[devoluciones] <alquiler> …`. Si no se envió nada, se reintenta en la próxima corrida; si ya se envió algo, espera a que venza el bloqueo (5 min).
+- **Por corrida:** de a uno (las transacciones salen de la misma cuenta de la plataforma), hasta `DEVOLUCIONES_POR_CORRIDA` casos (5; tope 20) y sin empezar uno nuevo después de `DEVOLUCIONES_SEGUNDOS` (30 s desde el inicio de la corrida; `maxDuration` es 60 s). Lo que no entra queda para la próxima corrida (`sinTiempo` lo cuenta). Una devolución automática son dos transacciones con confirmación en testnet (unos segundos cada una), así que en 30 s pueden entrar menos de 5 casos.
+- **Apagar:** `DEVOLUCION_CRON=0` (los vencimientos, borrados y correos siguen).
+- **Texto nuevo (LEGAL: revisar):** `TEXTO_REVISAR_PAGO` en `api/_lib/tw.ts` («No pudimos confirmar el estado del depósito en la red de prueba, así que no se pagó nada. Escríbenos a business.applockumi@gmail.com y lo revisamos.»). Solo se ve si el escrow no cuadra o ya se pagó sin el hash (no debería pasar). La guarda de build (`api/_lib/guarda-correos.ts`) no deja publicar mientras esté la marca. El historial usa los textos ya aprobados («Devolución automática: …» y «Se liberó el depósito al inquilino …»). La respuesta 503 «Falta configurar en el servidor: … (migración 20261026000000).» sigue el patrón ya aprobado.
+
+| Variable | Dónde | Qué hace |
+|---|---|---|
+| `DEVOLUCION_CRON=0` | servidor | Apaga el pago en la corrida diaria. Sin definir: encendido |
+| `DEVOLUCIONES_POR_CORRIDA` | servidor | Casos por corrida (5 por defecto, 1 a 20) |
+| `DEVOLUCIONES_SEGUNDOS` | servidor | No empieza un caso nuevo después de estos segundos desde el inicio de la corrida (30 por defecto) |
+
+**Orden para publicar:** 1) aplicar `20261026000000_devolucion_automatica.sql` (sin ella, «liberar» y «devolver-automatico» responden 503 y la corrida no paga nada); 2) **antes del primer despliegue**, revisar `select c.id, c.creado_en, c.resultado from lk_contratos c where c.id in (select lk_devoluciones_pendientes(50));` en el SQL Editor: la primera corrida pagaría **todos** esos casos (incluidos alquileres viejos de prueba sin pagar). Si hay casos que no se deben pagar, desplegar con `DEVOLUCION_CRON=0` y decidir antes; 3) quitar la marca «LEGAL: revisar» cuando Legal apruebe el texto; 4) desplegar.
+
+**Hobby o Pro:** en Hobby el cron corre una vez al día (y Vercel no garantiza el minuto dentro de la hora), así que la devolución puede tardar hasta ~24 h después del vencimiento (o más si hay más de 5 casos o una corrida falla: 5 por día). Para un depósito alcanza como «automático», pero **Pro es mejor**: cambiar `vercel.json` a `"schedule": "0 * * * *"` (cada hora; con Hobby ese cambio hace fallar el despliegue). Así el retraso baja a ≤1 h, un fallo se reintenta en una hora y la mediación vence a tiempo (Legal pidió cada hora). Con Pro se puede subir `maxDuration` y `DEVOLUCIONES_SEGUNDOS`/`DEVOLUCIONES_POR_CORRIDA`; el bloqueo (300 s, `SEGUNDOS_BLOQUEO_PAGO`) tiene que seguir siendo mayor que `maxDuration` (lo revisa `devoluciones-cron.test.ts`).
+
+**Pruebas:** `src/servidor/__tests__/devoluciones-cron.test.ts` (12: no paga dos veces con dos corridas y la app a la vez, reintento, corte después de la disputa, pago que entró sin respuesta, un caso que falla no frena a los demás, solo vencidos sin reclamo, revisar, tope y tiempo, apagado, sin secretos, bloqueo > maxDuration), `devoluciones-sql.test.ts` (5, PGlite: la migración) y `scripts/e2e-c.mjs` (casos `cron-auto`, `cron-liberar`, `cron-doble`; con `--simulado` y con `--red`).
+
+**Corrida en la red de prueba de verdad** (`e2e-c.mjs --red`, 25/10/2026, 11:07 p. m. CR; base en memoria con la migración, Trustless Work testnet real, plataforma y mediadora desechables):
+
+| Caso | Qué pasó | Pago (stellar.expert, testnet) |
+|---|---|---|
+| cron-auto | Vence el plazo del dueño y nadie abre el alquiler: la corrida cierra (`lk_vencimientos`), abre la disputa (plataforma) y la resuelve (mediadora) con el 100 % al inquilino | https://stellar.expert/explorer/testnet/tx/adef36fc6ccbd23823d2468ab6a3228cf45771b53d35911730da80142f7f8fdd |
+| cron-liberar | El dueño aprueba ([tx](https://stellar.expert/explorer/testnet/tx/b6e20ff0cae5cac326a7daf102cf24dab7f149289fdbc941cee8d89f5ccdd70f)), la liberación falla (falla inyectada), queda «devuelto» sin pagar; la corrida libera con `release-funds` | https://stellar.expert/explorer/testnet/tx/90e46cba064cbdafcbc611e53b381ccb39b63782f8631be8aae2bbb74ee7e757 |
+| cron-doble | La app pide «devolver-automatico» mientras la corrida tiene el caso tomado: la app ve «en curso» y se paga una sola vez (1 disputa, 1 resolución) | https://stellar.expert/explorer/testnet/tx/dde2efdfb18b28503b1183283cac10f6e59061b15eca2d8d2c56a45730b0e323 |
+
+Después: otra corrida no pide nada a Trustless Work (`pendientes: 0`); la app ve el pago hecho (mismo hash); `get-escrow-by-contract-ids` (validateOnChain) muestra los tres escrows resueltos/liberados y con saldo 0; Horizon, las tres transacciones `successful`; COR-C-07 a las dos partes de cada caso, enviado por la misma corrida (Resend simulado, solo al buzón de prueba). 160 pasos, 0 fallas, 227 s. Ninguna llave en el registro ni en el informe (revisado).
 
 ## Base de datos: `supabase/migrations/20261025090000_c_correos.sql`
 

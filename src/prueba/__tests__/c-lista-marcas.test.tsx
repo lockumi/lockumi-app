@@ -31,7 +31,11 @@ describe('1) marcas: las 109 OK se quitan; solo quedan las de textos nuevos', ()
     // (textos-correos.ts), en la guarda que los bloquea (correos-c.ts y guarda-correos.ts: nombran la marca), en el texto nuevo de
     // la casilla de C (AvisosCorreo.tsx) y en la línea nueva de la Privacidad 1.9-demo. La guarda impide enviarlos y publicarlos.
     const CORREOS_C = ['api/_lib/textos-correos.ts', 'api/_lib/correos-c.ts', 'api/_lib/guarda-correos.ts', 'src/prueba/AvisosCorreo.tsx', 'src/legal/v17/privacidad.md']
-    expect(hallados.filter(h => !CORREOS_C.includes(h.split(':')[0]))).toEqual(['src/alertas.ts:5'])
+    // Paso 22 (devolución automática desde la corrida diaria): UN texto nuevo del servidor espera a Legal, TEXTO_REVISAR_PAGO en
+    // api/_lib/tw.ts (solo se ve si el escrow no cuadra; la guarda impide publicarlo hasta el OK).
+    const paso22 = hallados.filter(h => h.startsWith('api/_lib/tw.ts:'))
+    expect(paso22).toHaveLength(1)
+    expect(hallados.filter(h => !CORREOS_C.includes(h.split(':')[0]) && !paso22.includes(h))).toEqual(['src/alertas.ts:5'])
     // Legal 25/10, 5:09 p. m.: la casilla de C (AvisosCorreo.tsx) ya está revisada; queda solo la línea de la Privacidad 1.9-demo.
     // Legal 25/10, 5:31 p. m.: OK para publicar C; ya no queda ninguna marca en src/legal ni src/prueba.
     expect(hallados.filter(h => h.startsWith('src/legal/') || h.startsWith('src/prueba/'))).toEqual([])
