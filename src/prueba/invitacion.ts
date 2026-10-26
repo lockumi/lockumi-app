@@ -21,6 +21,13 @@ export const EVENTO_CORREO_INVITACION = 'lk-invitacion-correo'
 export const correoInvitacionEnviado = (alquiler: string): string | null => { try { return localStorage.getItem(claveCorreo(alquiler)) } catch { return null } }
 /** Eliminar un alquiler: borra la marca de envío y el correo al que salió la invitación desde este aparato. */
 export const olvidarInvitacionEnviada = (alquiler: string) => { try { localStorage.removeItem(clave(alquiler)); localStorage.removeItem(claveCorreo(alquiler)) } catch { /* sin almacenamiento */ } }
+/** «Crear un link nuevo (el anterior deja de servir)» (26/10/2026): el link del correo de invitación ya no sirve. La tarjeta deja de decir
+ *  «Te enviamos el enlace a…» y queda como cuando no salió el correo (solo el link nuevo con «Copiar link» y WhatsApp). La marca de
+ *  envío se queda: sigue habiendo un solo correo de invitación por alquiler (Legal, paso16-unido). */
+export const linkNuevoSinCorreo = (alquiler: string) => {
+  try { localStorage.removeItem(claveCorreo(alquiler)) } catch { /* sin almacenamiento */ }
+  if (typeof dispatchEvent === 'function') dispatchEvent(new Event(EVENTO_CORREO_INVITACION))
+}
 /** Token del link de invitación (…/#/invitacion/<id>/<token>), o undefined. */
 export const tokenDeLink = (link?: string) => link?.match(/\/#\/invitacion\/[0-9a-f-]{36}\/([0-9a-f]{64})$/)?.[1]
 /** Envía el correo de invitación una sola vez por alquiler (solo con VITE_CORREOS=1). El servidor también lo exige.

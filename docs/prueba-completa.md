@@ -314,6 +314,11 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   «apple-real», y `lk_vincular_alquileres` del correo real). `lk_tengo_correo_real()` evita volver a preguntar. En otro aparato,
   `/api/verificar-correo` con el token de Apple busca `lk_correo_real_de` y trae también esos alquileres. Revert:
   `supabase/revert/20261026080000_correo_real_apple_revert.sql`.
+- **Reinicio y link de invitación (26/10/2026):** «Reiniciar mi demo» solo borra u oculta lo propio; un alquiler nuevo nace con su link
+  vigente (7 días) y se abre igual desde cualquier sesión. «Crear un link nuevo (el anterior deja de servir)» cambia la huella del link: el
+  del correo de invitación deja de servir («Esta invitación ya no está disponible…») y, como hay un solo correo por alquiler, la tarjeta
+  deja de decir «Te enviamos el enlace a…» (`linkNuevoSinCorreo`): se comparte el link nuevo con «Copiar link» o WhatsApp. E2E sin
+  correos: `node scripts/e2e-reinicio-invitacion.mjs`.
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).
 

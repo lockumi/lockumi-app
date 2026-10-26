@@ -121,6 +121,16 @@ describe('pantallas', () => {
     expect(html).not.toContain('Te enviamos el enlace'); expect(html).not.toContain('Envía este link a')
     expect(html).toContain('Copiar link'); expect(html).toContain(BOTON_WHATSAPP)
   })
+  it('«Crear un link nuevo»: el link del correo ya no sirve, así que la tarjeta deja de decir «Te enviamos el enlace…» (un solo correo por alquiler)', async () => {
+    const { linkNuevoSinCorreo } = await import('../invitacion')
+    L.m.set('lk:invitacion-correo:' + ID, 'luis.demo@lockumi.com'); L.m.set('lk:invitacion-enviada:' + ID, '2026-10-26T17:02:36Z')
+    linkNuevoSinCorreo(ID)
+    expect(correoInvitacionEnviado(ID)).toBeNull(); expect(L.m.has('lk:invitacion-enviada:' + ID)).toBe(true)
+    const { Invitacion } = await import('../../screens/Detalle')
+    expect(renderToStaticMarkup(<Invitacion a={A} />)).not.toContain('Te enviamos el enlace')
+    const src = (await import('../../screens/Detalle.tsx?raw')).default
+    expect(src).toMatch(/setLink\(await servidor\.nuevaInvitacion\(a\.id\)\); linkNuevoSinCorreo\(a\.id\)/)
+  })
 })
 
 /** Quita del HTML lo que está dentro de bloques `hidden` (lo que el navegador no muestra con los plegables cerrados). */

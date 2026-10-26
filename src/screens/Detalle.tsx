@@ -28,7 +28,7 @@ import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
 import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, TEXTO_SOLOS_DOS, montoPrueba, llegaPrueba, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
-import { correoInvitacionEnviado, EVENTO_CORREO_INVITACION, textoEnlaceEnviado, BOTON_WHATSAPP, enlaceWhatsApp } from '../prueba/invitacion'
+import { correoInvitacionEnviado, linkNuevoSinCorreo, EVENTO_CORREO_INVITACION, textoEnlaceEnviado, BOTON_WHATSAPP, enlaceWhatsApp } from '../prueba/invitacion'
 import { PlazoDueno } from '../prueba/PlazoDueno'
 import { ReclamoPC, FormRubros, SeAplico } from '../prueba/ReclamoPC'
 import { MediacionPC, ResueltoSimulacion, GuardarDatosMediacion } from '../prueba/MediacionPC'
@@ -283,7 +283,7 @@ function Mediacion({ a, rol }: P) {
 export function Invitacion({ a }: { a: Alquiler }) {
   const [link, setLink] = useState(a.invitacion ?? ''); const [copiado, setCopiado] = useState(false); const [err, setErr] = useState('')
   const copiar = async () => { try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { setErr('No pudimos copiar. Mantén presionado el link para copiarlo.') } }
-  const nuevo = async () => { try { setLink(await servidor.nuevaInvitacion(a.id)); setErr('') } catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos crear el link.') } }
+  const nuevo = async () => { try { setLink(await servidor.nuevaInvitacion(a.id)); linkNuevoSinCorreo(a.id); setErr('') } catch (e) { setErr(e instanceof Error ? e.message : 'No pudimos crear el link.') } }
   // paso21: si el correo de invitación salió, se dice a dónde; si no, solo el link con «Copiar link» y WhatsApp.
   const [enviado, setEnviado] = useState(() => correoInvitacionEnviado(a.id))
   useEffect(() => { const f = () => setEnviado(correoInvitacionEnviado(a.id)); addEventListener(EVENTO_CORREO_INVITACION, f); return () => removeEventListener(EVENTO_CORREO_INVITACION, f) }, [a.id])

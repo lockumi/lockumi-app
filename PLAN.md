@@ -289,3 +289,10 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   (método «apple», < 10 min) de ese correo oculto; el código de invitación («email») nunca trae. Migración
   `20261026080000_correo_real_apple.sql`, revert `supabase/revert/20261026080000_correo_real_apple_revert.sql`; prueba
   `correo-real-apple.test.ts`; E2E `scripts/e2e-vincular.mjs` (paso «apple-real»). Doc: `docs/prueba-completa.md`.
+- [x] «Esta invitación ya no está disponible» después de «Reiniciar mi demo» (Katherine, 26/10 11:05 a. m.): el reinicio NO deja nada
+  inválido (alquiler nuevo con link vigente, sin ocultos, sin vencer). El correo salió 11:02:36 a. m. CR con el link vigente (el servidor lo
+  comprueba) y a las 11:03:34 a. m. la sesión del dueño tocó «Crear un link nuevo (el anterior deja de servir)» (`lk_nueva_invitacion`,
+  evento «Se generó un link de invitación nuevo»): el link del correo murió y la tarjeta seguía diciendo «Te enviamos el enlace a…».
+  Arreglo sin textos nuevos: con el link nuevo, la tarjeta queda como sin correo (solo el link con «Copiar link» y WhatsApp,
+  `linkNuevoSinCorreo`); sigue un solo correo por alquiler. E2E `scripts/e2e-reinicio-invitacion.mjs` (reinicio → alquiler nuevo →
+  abrir el link → link nuevo). Doc: `docs/prueba-completa.md`.
