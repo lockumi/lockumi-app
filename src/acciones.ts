@@ -208,9 +208,13 @@ const remoto: Acciones = {
   nota: (a, etapa, c, n) => servidor.nota(a.id, etapa, c, n).then(() => {}),
   agregarFoto: (a, etapa, c, f) => servidor.agregarFoto(a.id, etapa, c, f).then(() => {}),
   // Sin Trustless Work el pago queda registrado sin transacción (tx null). Con TW: escrow real en testnet y su hash.
-  pagar: async a => { await servidor.registrarPago(a.id, modoDe(a).trustless ? await trustless.depositar(a.id) : null) },
+  pagar: async (a, avance = nada) => { await servidor.registrarPago(a.id, modoDe(a).trustless ? await trustless.depositar(a.id, a.monto, avance, a.cuentas?.inquilino) : null) },
   iniciarSalida: a => servidor.iniciarSalida(a.id).then(() => {}),
-  reclamar: (a, m, mot, fotos) => servidor.reclamar(a.id, m, mot, fotos).then(() => {}),
+  // 26/10/2026: el dueño puede recibir USDC en el reparto; al reclamar deja lista su cuenta (sin bloquear el reclamo si falla).
+  reclamar: async (a, m, mot, fotos) => {
+    if (modoDe(a).trustless) await trustless.prepararDueno(a.cuentas?.dueno).catch(e => console.warn('[Lockumi] cuenta del dueño:', e instanceof Error ? e.message : e))
+    await servidor.reclamar(a.id, m, mot, fotos)
+  },
   // PR #22: si el inquilino acepta, el servidor cierra por acuerdo y /api/tw paga el reparto en la red («repartir»).
   async responder(a, acepta) { await servidor.responder(a.id, acepta); if (acepta && modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
   async cerrarSinReclamo(a) {

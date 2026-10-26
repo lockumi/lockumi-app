@@ -20,6 +20,7 @@ function simular(k: Record<string, unknown>, uid: string) {
     a.push({ url, cuerpo: init?.body ? JSON.parse(String(init.body)) : undefined })
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
+    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return ok({ balances: [{ asset_code: 'USDC', asset_issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', balance: '100' }] })
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([k])
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS', contractId: CID })

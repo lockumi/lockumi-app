@@ -2,6 +2,10 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+
+## Depósito de dos personas: trustline del inquilino (26/10/2026)
+Trustless Work rechazaba el deploy (400, role receiver) porque la cuenta Cavos del inquilino no existía en testnet. Ahora la app del inquilino la prepara antes (Friendbot, trustline, USDC de prueba), el servidor la revisa antes de llamar a TW y el error técnico ya no se ve («No pudimos preparar el depósito. Intenta de nuevo en un momento.»). Detalle: [docs/prueba-completa.md](docs/prueba-completa.md#depósito-de-dos-personas-la-cuenta-del-inquilino-sin-trustline-26102026).
+
 ## Invitación abierta con otra cuenta: código al correo invitado (26 oct 2026, aprobado por Katherine)
 
 - **Síntoma:** Katherine entró con Apple (correo distinto o `@privaterelay.appleid.com`) para aceptar una invitación enviada a su Hotmail y vio «Esta invitación es para otro correo…», sin forma de seguir.

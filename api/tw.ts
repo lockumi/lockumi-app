@@ -1,5 +1,5 @@
 // POST /api/tw · Proxy de Trustless Work (Vercel Function, runtime Node). La llave sale de process.env y no se envía nunca al navegador.
-import { atender, responderLlaves, ErrorTw, type Pedido } from './_lib/tw.js'
+import { atender, responderLlaves, ErrorTw, mensajeParaPersona, type Pedido } from './_lib/tw.js'
 import { procesarCorreos, vencerMediaciones } from './_lib/correos-c.js'
 
 /** Escenario C: después de pagar en la red de prueba, salen los correos de cierre (COR-C-07) de ese alquiler, si CORREOS_C=1. */
@@ -22,6 +22,10 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     const estado = e instanceof ErrorTw ? e.estado : 500
     if (!(e instanceof ErrorTw)) console.error('tw', e)
-    return Response.json({ error: e instanceof ErrorTw ? e.message : 'Error inesperado del servidor.' }, { status: estado })
+    if (!(e instanceof ErrorTw)) return Response.json({ error: 'Error inesperado del servidor.' }, { status: estado })
+    const accion = p.accion === 'enviar' && (p as { paso?: string }).paso === 'fondear' ? 'enviar-fondear' : p.accion
+    const visible = mensajeParaPersona(accion, e.message)
+    if (visible !== e.message) console.error('tw', String(p.accion), estado, e.message)   // el detalle técnico, solo en el servidor
+    return Response.json({ error: visible }, { status: estado })
   }
 }

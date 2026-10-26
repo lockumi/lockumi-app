@@ -155,6 +155,7 @@ function twFalso(c, red = false) {
     if (url.endsWith('/auth/v1/user')) { const uid = c.tokens.get(String(init.headers.authorization).replace('Bearer ', '')); return uid ? ok({ id: uid }) : new Response('{}', { status: 401 }) }
     if (url.includes('/rest/v1/')) return c.rest(url, init)
     if (red) return fetch(url, init)
+    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return ok({ balances: [{ asset_code: 'USDC', asset_issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', balance: '100' }] })
     if (url.startsWith('https://horizon-testnet.stellar.org/transactions/')) { const h = url.split('/').pop(); return enviadas.has(h) ? ok({ hash: h, successful: true }) : new Response('{"status":404}', { status: 404 }) }
     if (url.includes('/helper/get-escrow-by-contract-ids')) {
       const id = decodeURIComponent(new URL(url).searchParams.get('contractIds[]') ?? ''), e = escrows.get(id)
