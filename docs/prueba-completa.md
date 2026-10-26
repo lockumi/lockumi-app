@@ -308,3 +308,17 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   `supabase/revert/20261026070000_vincular_cavos_email_revert.sql` («cavos-email» → «email»).
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).
+
+## Pagar desde cualquier dispositivo (26/10/2026)
+
+- **Causa:** sin recuperación, `@cavos/kit` 0.4.2 deja la llave solo en el navegador que creó la billetera; en otro dispositivo el
+  estado es `needs-device-approval` y la firma falla con «this device is not an authorized signer of the wallet».
+- **Arreglo (solo lo que el kit soporta):** recuperación social por el enclave de Cavos (README «Hardware-isolated social recovery»).
+  `src/services/billetera.ts` → `opcionesRecuperacion`: si el panel la tiene activa, `Cavos.connect` recibe `socialRecovery` y
+  `socialRecoveryCredential` (token del login, ≤ 5 min, un solo uso). El navegador de origen sella la billetera al entrar; un
+  dispositivo nuevo la recupera al entrar con la misma cuenta.
+- **Texto:** «Este dispositivo todavía no puede firmar con tu billetera. Sal y vuelve a entrar con la misma cuenta, y paga enseguida.
+  Si sigue igual, entra una vez desde el navegador donde creaste tu cuenta y luego vuelve a intentarlo aquí.»
+- **Requisito:** Cavos → App → recuperación social activa (production). Sin eso el código no cambia nada.
+- **Prueba en producción:** `node scripts/e2e-dispositivo.mjs` (sin correos ni login real; revisa el build, la configuración de Cavos y
+  la waitlist). Volver atrás: `git revert -m 1 <merge>`.

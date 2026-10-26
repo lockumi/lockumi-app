@@ -272,3 +272,11 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   servidor y, con el código a ESE correo, el correo queda con método **«cavos-email»** (antes «email») y trae los alquileres igual que
   Google/Apple. El código de invitación de Lockumi sigue «email» y nunca trae. Migración `20261026070000_vincular_cavos_email.sql`,
   revert `supabase/revert/20261026070000_vincular_cavos_email_revert.sql`; prueba `vincular-cavos-email.test.ts`.
+- [x] Pagar desde cualquier dispositivo (Katherine, 26/10 10:29 a. m.): «kit/stellar: this device is not an authorized signer of the
+  wallet» salía porque conectábamos con `recovery: "none"`: la llave de la billetera solo vive en el navegador donde se creó y en otro
+  queda `needs-device-approval`. Ahora `conectarBilletera` pasa, como el `CavosProvider` oficial, un `SocialRecoveryClient` (enclave
+  Nitro, medidas `DEFAULT_SOCIAL_RECOVERY_ATTESTATION`) y la credencial fresca del login, solo si el panel de Cavos tiene la
+  recuperación social activa (`/api/recovery/social/config`; si está apagada, todo queda igual). El error se muestra en español
+  (`NO_FIRMANTE`). **Pendiente de Katherine:** activar la recuperación social en el panel de Cavos (entorno production) y, para una
+  billetera ya creada, entrar una vez desde el navegador de origen para sellarla. Prueba `dispositivo-firmante.test.ts`; E2E
+  `scripts/e2e-dispositivo.mjs`.
