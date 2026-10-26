@@ -57,4 +57,9 @@ describe('privacidad on-chain', () => {
     expect(() => sinDatosPersonales(['Tel +506 8888-1234'], k)).toThrow(ErrorTw)
     expect(() => sinDatosPersonales([TEXTO_ONCHAIN], k)).not.toThrow()
   })
+  it('la huella sha256 del acta no se confunde con un teléfono (aunque traiga 8 o más cifras seguidas)', () => {
+    const huella = '1234567890' + 'a'.repeat(54)
+    expect(() => sinDatosPersonales([`Acta de salida firmada por ambas partes · sha256:${huella}`], { direccion: '' })).not.toThrow()
+    expect(() => sinDatosPersonales([`Acta · sha256:${huella} · Tel +506 8888-1234`], { direccion: '' })).toThrow(ErrorTw)
+  })
 })
