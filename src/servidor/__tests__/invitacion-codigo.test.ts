@@ -63,7 +63,9 @@ beforeAll(async () => {
   for (const m of fs.readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort()) await db.exec(fs.readFileSync('supabase/migrations/' + m, 'utf8'))
   await db.exec('grant usage on schema public to authenticated')
   for (const u of [DUENO, APPLE, OTRA]) await db.query('insert into auth.users(id) values ($1)', [u])
-  await verificar(APPLE, RELAY); await verificar(OTRA, 'otra.persona@lockumi.com')
+  await verificar(APPLE, RELAY); await verificar(OTRA, 'otra.persona@lockumi.com'); await verificar(DUENO, 'demo@lockumi.com')
+  // Como en producción: la reputación encendida (el disparador lk_participante_correo_verificado exige un correo verificado de la cuenta).
+  await db.exec('insert into public.lk_reputacion_encendido default values')
 }, 60_000)
 
 describe('textos', () => {
@@ -87,7 +89,7 @@ describe("acción 'invitacion' de /api/codigo-correo", () => {
     expect(mal.estado).toBe(403); expect(mal.cuerpo.motivo).toBe('codigo'); expect(await inquilino(r.id)).toBeUndefined()
     const ok = await llamar(APPLE, { paso: 'confirmar', accion: 'invitacion', codigo: codigoDe(enviados[0]!), contrato: r.id, token: r.token })
     expect(ok).toEqual({ estado: 200, cuerpo: { hecho: true, contrato: r.id } })
-    expect(await inquilino(r.id)).toEqual({ usuario: APPLE, email_cavos: INVITADO })
+    expect(await inquilino(r.id)).toEqual({ usuario: APPLE, email_cavos: RELAY })   // el correo de la CUENTA (20261026050000)
     expect(await uno(`select correo from public.lk_invitaciones_verificadas where contrato_id = $1 and usuario = $2`, [r.id, APPLE])).toEqual({ correo: INVITADO })
     // El correo invitado NO pasa a ser el de la cuenta (lk_correos_verificados no cambia).
     expect(await uno(`select count(*)::int n from public.lk_correos_verificados where usuario = $1 and correo = $2`, [APPLE, INVITADO])).toEqual({ n: 0 })
@@ -118,9 +120,17 @@ describe("acción 'invitacion' de /api/codigo-correo", () => {
   it('la revert vuelve atrás (y la migración se puede volver a aplicar)', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     await db.exec(`create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations (version text primary key)`)
+    await db.exec(fs.readFileSync('supabase/revert/20261026050000_invitacion_codigo_cuenta_revert.sql', 'utf8'))
     await db.exec(fs.readFileSync('supabase/revert/20261026040000_invitacion_codigo_revert.sql', 'utf8'))
     expect(await uno(`select to_regclass('public.lk_invitaciones_verificadas') t`)).toEqual({ t: null })
     await expect(db.query(`insert into public.lk_codigos_correo(usuario, correo, accion, huella, sal, vence_en) values ($1, 'a@b.c', 'invitacion', $2, $3, now())`, [APPLE, 'a'.repeat(64), 'b'.repeat(32)])).rejects.toThrow(/check/)
     await db.exec(fs.readFileSync('supabase/migrations/20261026040000_invitacion_codigo.sql', 'utf8'))
+    await db.exec(fs.readFileSync('supabase/migrations/20261026050000_invitacion_codigo_cuenta.sql', 'utf8'))
+  })
+  it('sin código y con el correo invitado verificado en la cuenta: igual que siempre (queda el correo invitado)', async () => {
+    const r = await crear(); const S = '00000000-0000-4000-8000-0000000004c1'
+    await db.query('insert into auth.users(id) values ($1) on conflict do nothing', [S]); await verificar(S, INVITADO)
+    await aceptarDirecto(S, r.id, r.token)
+    expect(await inquilino(r.id)).toEqual({ usuario: S, email_cavos: INVITADO })
   })
 })
