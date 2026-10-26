@@ -246,3 +246,27 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [ ] Pendiente de Legal: alquiler abierto al eliminar la cuenta; fecha de publicación de la 1.8-demo; «Ajustes ›» en REP-14/REP-15 (la app no tiene Ajustes).
 - [ ] Pendiente de producto: correos de aviso (VITE_CORREOS), límite de consultas en el servidor, servidor público de perfiles (la migración se aplica al encender).
 
+
+## Tus alquileres en cualquier dispositivo (26/10/2026, Katherine; aprobado por el Coordinador)
+
+- [x] Causa: «Tus alquileres» se ve por la sesión anónima de Supabase de cada navegador; al entrar en otro navegador (o después de borrar
+  los datos del sitio) la sesión es nueva y no veía los alquileres de la persona.
+- [x] Arreglo: después de un login cuyo correo verificó **Cavos** (token de Google o Apple que `/api/verificar-correo` valida en el
+  servidor; el correo sale del token, nunca del cliente), el servidor llama a `lk_vincular_alquileres(sesión, correo)` y los lugares de
+  esa persona (dueño e inquilino, con sus firmas, aceptaciones y ocultos) pasan a la sesión actual. No vale un correo verificado solo con
+  el código de Lockumi (método `email`) ni uno sin verificar. Idempotente; solo clave de servicio; registro en `lk_vinculaciones`
+  (sin correos). Sin pantallas ni textos nuevos: la lista se recarga sola.
+- [x] Migración `20261026060000_vincular_alquileres.sql`; revert `supabase/revert/20261026060000_vincular_alquileres_revert.sql`
+  (devuelve cada lugar movido a su sesión de antes). Código: `git revert -m 1 <merge>`.
+- [x] Pruebas: `vincular-alquileres-sql.test.ts` (PGlite) y `verificar-correo-api.test.ts` (servidor). Detalle y prueba en producción:
+  `docs/prueba-completa.md`.
+- [x] Una sesión por cuenta (Katherine, iPhone Safari: Gmail en una pestaña y Apple en otra mostraban «Eres dueño» con la cuenta de
+  Apple): la sesión anónima queda atada al correo de la cuenta (`lockumi.sesion-correo`, `src/servidor/cuenta-sesion.ts`). Al entrar
+  con otra cuenta o al «Salir» se termina (signOut, se borra `lockumi.sesion-servidor`) y la lista se vacía; la sesión nueva recibe los
+  alquileres del correo verificado por Cavos. Otra pestaña que cambia de cuenta recarga esta. Lista y rol salen de la cuenta actual.
+- [x] Misma cuenta dueña e inquilina del mismo alquiler: se trae el lugar de **dueño** (una sesión tiene un solo lugar por alquiler).
+- [x] Pie (Katherine, único cambio visible): «Tus alquileres de prueba se guardan en tu cuenta.» en el modo de dos personas.
+- [x] E2E sin correos reales: `node scripts/e2e-vincular.mjs [--app URL]` (re-vincular, código de Lockumi no vale, cambio de cuenta,
+  rol, «Salir», limpieza y waitlist).
+- [ ] Pendiente (después): login con código por correo (enclave, aud «cavos-email») no trae alquileres de otro navegador: el correo
+  queda verificado con el código de Lockumi y la base no lo distingue.

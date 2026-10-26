@@ -284,3 +284,24 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 - **Arreglo:** antes de crear la cuenta segura, la app del inquilino hace lo mismo que «Obtener USDC de prueba» con Cavos (`prepararCuentaCavos` en `src/services/solo.ts`): Friendbot si la cuenta no existe → trustline de USDC (la confirma la persona en Cavos) → USDC de prueba del exchange de testnet por lo que falte para el monto (tope de gasto `MAX_XLM_COMPRA`). Si ya está lista, solo lee Horizon. Solo si la billetera conectada es la del alquiler. El servidor (`/api/tw`, `desplegar`) revisa en Horizon la trustline del inquilino antes de llamar a TW. El dueño deja lista su cuenta (Friendbot + trustline) al abrir un reclamo, porque solo así puede recibir USDC en un reparto; si falla, el reclamo sigue igual.
 - **Errores:** los mensajes técnicos de TW/Horizon quedan en el log del servidor (`console.error('tw', …)`) y en la consola del navegador. En pantalla: depósito → «No pudimos preparar el depósito. Intenta de nuevo en un momento.» (texto de Katherine); otros pasos → el aviso de la red de siempre (A12). Prueba: `src/services/__tests__/deposito-trustline.test.ts`.
 - **Volver atrás:** sin migración; `git revert -m 1 <merge>` y esperar el deploy.
+
+### Tus alquileres en cualquier dispositivo (26/10/2026)
+
+- **Qué pasaba:** cada navegador tiene su sesión anónima de Supabase y la base muestra un alquiler solo a la sesión que está en
+  `lk_participantes.usuario`. Katherine volvió a entrar con Apple en otro navegador y «Tus alquileres» quedó vacío (su alquiler seguía
+  intacto con la sesión de antes).
+- **Arreglo:** `/api/verificar-correo`, solo en el camino del token de Google/Apple (después de registrar el correo con la huella de un
+  solo uso), llama a `lk_vincular_alquileres(uid, correo del token)`. La función exige que esa sesión tenga el correo verificado con
+  método `google`/`apple` en los últimos 10 minutos y mueve los lugares con ese `email_cavos` (y sus filas en firmas, aceptaciones,
+  consentimiento, ocultos, reputación) a la sesión nueva. Se salta un alquiler si la sesión ya es parte de él o si los dos lugares tienen
+  ese correo. La respuesta trae `vinculados` (sin texto); la app recarga la lista y conecta el servidor.
+- **Una sesión por cuenta:** `src/servidor/cuenta-sesion.ts` ata la sesión anónima al correo de la cuenta (`lockumi.sesion-correo`).
+  Con otra cuenta (o una sesión vieja sin correo guardado) y al «Salir»: signOut, se borra `lockumi.sesion-servidor` y la lista se vacía
+  antes de leer; otra pestaña que cambia de cuenta recarga esta. Así «Eres dueño» / «Eres inquilino» y la lista son de la cuenta actual.
+  Si la misma cuenta es dueña e inquilina del mismo alquiler, se trae el lugar de dueño.
+- **Pie:** «Tus alquileres de prueba se guardan en tu cuenta.» (antes «…solo en este navegador», ya no era cierto).
+- **E2E:** `node scripts/e2e-vincular.mjs [--app https://app.lockumi.com]` (cuentas …@lockumi.test, sin correos; el registro del correo
+  verificado se hace con la clave de servicio porque un token real de Cavos no se puede fabricar).
+- **No cubre:** login con código por correo (método `email`, verificado con el código de Lockumi).
+- **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
+- **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).

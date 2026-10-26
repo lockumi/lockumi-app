@@ -9,14 +9,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET_FOTOS, VENTANA_SEGUNDOS, dosPer
 import { linkInvitacion } from './origen'
 import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
 import type { Aceptacion } from './aceptaciones'
+import { usarCuentaCon, salirCon, K_SESION } from './cuenta-sesion'
 
 export class ErrorServidor extends Error {}
 let cliente: Promise<SupabaseClient> | null = null
 export const supabase = () => cliente ??= import('@supabase/supabase-js').then(({ createClient }) =>
-  createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: 'lockumi.sesion-servidor' } }))
+  createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: K_SESION } }))
 
 /** Sesión anónima por aparato: la identidad de Supabase que RLS usa (auth.uid()). Se vincula al alquiler al crearlo o aceptar la invitación. */
 export async function sesion(): Promise<string> {
+  if (cambio) await cambio.p
   const sb = await supabase()
   const { data } = await sb.auth.getSession()
   if (data.session) return data.session.user.id
@@ -36,6 +38,19 @@ const rpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Prom
 // ── Caché y suscripción ──
 let datos: Alquiler[] = []; let yo = ''; let cargado = false
 const subs = new Set<() => void>(); const avisar = () => subs.forEach(f => f())
+// Cuenta de esta sesión (cuenta-sesion.ts): al cambiar de cuenta o salir, la lista de la cuenta anterior se borra de inmediato.
+let cambio: { c: string; p: Promise<boolean> } | null = null
+const deps = { get storage() { return localStorage }, salir: async () => (await supabase()).auth.signOut() }
+const vaciar = () => { datos = []; yo = ''; cargado = false; avisar() }
+/** Llamar con el correo de la cuenta que entró (al entrar y al cargar la app). Si la sesión era de otra cuenta, la termina. */
+export function usarCuenta(correo: string): Promise<boolean> {
+  const c = correo.trim().toLowerCase()
+  if (cambio?.c === c) return cambio.p
+  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(() => { cargado = true; avisar() }) } return otra }).catch(() => false)
+  cambio = { c, p }; return p
+}
+/** Al salir: termina la sesión anónima de esta cuenta y borra su lista. */
+export async function salirDeCuenta() { cambio = null; await salirCon(deps).catch(() => {}); vaciar() }
 const urls = new Map<string, string>()
 const INV = 'lockumi.invitaciones'
 const invitaciones = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(INV) || '{}') } catch { return {} } }
@@ -160,12 +175,14 @@ export const servidor = {
   /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase.
    *  codigo: true (403, Legal 25/10 9:00 p. m.) = token de correo con aud «cavos-email»: el correo queda por confirmar con el código de
    *  6 números que Lockumi mandó (motivo: 'minuto' | 'hora' | 'envio' si no salió uno nuevo). */
-  async verificarCorreo(tokenCavos: string): Promise<{ correo: string; codigo?: boolean; motivo?: string }> {
+  async verificarCorreo(tokenCavos: string): Promise<{ correo: string; codigo?: boolean; motivo?: string; vinculados?: number }> {
     const r = await fetch('/api/verificar-correo', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenSesion()}` },
       body: JSON.stringify({ token: tokenCavos }) })
-    const j = await r.json().catch(() => ({})) as { correo?: string; error?: string; codigo?: boolean; motivo?: string }
+    const j = await r.json().catch(() => ({})) as { correo?: string; error?: string; codigo?: boolean; motivo?: string; vinculados?: number }
     if (j.codigo === true && j.correo) return { correo: j.correo, codigo: true, ...(typeof j.motivo === 'string' && { motivo: j.motivo }) }   // 403: falta el código
     if (!r.ok || !j.correo) throw new ErrorServidor(j.error ?? 'No pudimos confirmar el correo de tu cuenta.')
+    // El servidor trajo a esta sesión los alquileres de este correo (otro navegador o dispositivo): se cargan sin aviso.
+    if (typeof j.vinculados === 'number' && j.vinculados > 0) { await recargar().catch(() => {}); return { correo: j.correo, vinculados: j.vinculados } }
     return { correo: j.correo }
   },
   actualizarCuenta: (id: string, cuenta: string) => tras(rpc('lk_actualizar_direccion', { p_contrato: id, p_direccion_stellar: cuenta })),

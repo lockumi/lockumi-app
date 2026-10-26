@@ -6,7 +6,7 @@ import { ETIQUETA_ESTADO, type Usuario } from '../types'
 import { Demo, Simulado, usd, fecha } from '../ui'
 import { modoReal } from '../services/auth'
 import { Billetera } from './Billetera'
-import { modoSolo, modoVideo } from '../servidor/config'
+import { modoSolo, modoVideo, dosPersonas } from '../servidor/config'
 import { turno } from '../flujo'
 import { ICONO_ESTADO, claseEstado } from '../estados'
 import { Dibujo } from './dibujos'
@@ -65,7 +65,7 @@ export function Inicio({ u }: { u: Usuario }) {
         </a></li> })}
     </ul>
     {ocultos.length > 0 && <p className="ea-ocultos"><button type="button" className="boton boton--secundario boton--chico" aria-pressed={verOcultos} onClick={() => setVerOcultos(v => !v)}>{verOcultos ? TE.esconderOcultos : TE.verOcultos(ocultos.length)}</button></p>}
-    <div className="pie nota"><span>{modoSolo ? 'Tus alquileres de prueba se guardan solo en este navegador. El depósito, la aprobación y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales.' : modoVideo ? <>Tus alquileres de prueba se guardan solo en este navegador. El depósito, el reclamo y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales. La persona mediadora es simulada. <Simulado /></> : <>En la demo ves todos los alquileres. Los datos son de ejemplo, ficticios, y se guardan solo en este navegador. <Demo /></>}</span>
+    <div className="pie nota"><span>{modoSolo ? 'Tus alquileres de prueba se guardan solo en este navegador. El depósito, la aprobación y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales.' : modoVideo ? <>{dosPersonas ? 'Tus alquileres de prueba se guardan en tu cuenta.' : 'Tus alquileres de prueba se guardan solo en este navegador.'} El depósito, el reclamo y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales. La persona mediadora es simulada. <Simulado /></> : <>En la demo ves todos los alquileres. Los datos son de ejemplo, ficticios, y se guardan solo en este navegador. <Demo /></>}</span>
       {modoPrueba ? <a className="boton boton--secundario boton--chico" href="#/reiniciar">{TE.botonReiniciar}</a>
         : <button type="button" className="boton boton--secundario boton--chico" onClick={() => { if (confirm('¿Reiniciar la demo? Se borran los cambios.')) store.reiniciar() }}>Reiniciar demo</button>}</div>
   </main>

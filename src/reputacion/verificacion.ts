@@ -7,7 +7,7 @@
 // · Límite 4: la pantalla previa de REP-01 en otro aparato se decide con lk_necesita_rep01 (por el correo verificado).
 import type { Alquiler } from '../types'
 import { conServidor } from '../servidor/config'
-import { servidor } from '../servidor/repositorio'
+import { servidor, usarCuenta } from '../servidor/repositorio'
 import { authCavos } from '../services/auth'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
 import { confirmarCodigo, pedirCodigo, ErrorCodigo, type MotivoCodigo } from './segundo-factor'
@@ -36,6 +36,7 @@ export function asegurarCorreo(email: string): Promise<boolean> {
   if (!conServidor) return Promise.resolve(true)
   if (activo?.c === c) return activo.p
   const p = (async () => {
+    await usarCuenta(c)   // la sesión de otra cuenta se termina antes de verificar (cuenta-sesion.ts)
     const token = (await authCavos())?.getAuthToken()
     if (!token || enviados.has(token)) return false
     enviados.add(token)
@@ -44,6 +45,8 @@ export function asegurarCorreo(email: string): Promise<boolean> {
       if (normalizar(r.correo) === c) { porConfirmar = { c, correo: r.correo, ...(r.motivo && MOTIVOS_AVISO.has(r.motivo) && { motivo: r.motivo as MotivoCodigo }) }; avisar() }
       return false
     }
+    // Alquileres traídos de otro navegador (20261026060000): conecta el servidor a las pantallas abiertas para que «Tus alquileres» los muestre.
+    if (r.vinculados) void import('../store').then(m => m.activarServidor()).catch(() => {})
     return normalizar(r.correo) === c
   })().catch(() => false)
   const yo = { c, p }

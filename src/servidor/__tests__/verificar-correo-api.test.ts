@@ -252,3 +252,37 @@ describe('Legal 6:04 p. m. · JWKS reales (copia del 25/10, 6:05 p. m.): todas l
     expect(llaveValida({ ...e!, use: undefined }, 'ES256')).toBe(false); expect(llaveValida({ ...e!, use: 'enc' }, 'ES256')).toBe(false); expect(llaveValida(e!, 'RS256')).toBe(false)
   })
 })
+
+// Tus alquileres en cualquier dispositivo (26/10/2026, migración 20261026060000): tras verificar con el token de Google/Apple, el
+// servidor llama a lk_vincular_alquileres con la sesión y el correo DEL TOKEN (nunca uno que mande el cliente).
+describe('atenderVerificacion · trae los alquileres de ese correo a esta sesión', () => {
+  const conVincular = (f: typeof fetch, respuesta: () => Response) => vi.fn(async (url: string, init?: RequestInit) =>
+    url.endsWith('/rest/v1/rpc/lk_vincular_alquileres') ? respuesta() : f(url, init)) as unknown as typeof fetch & { mock: { calls: [string, RequestInit | undefined][] } }
+  it('Apple: llama con el correo del token (no el del cuerpo) y responde vinculados', async () => {
+    const { apple, f, base } = await escenario(), g = conVincular(f, () => new Response('2', { status: 200 }))
+    const t = await firmar(apple, { ...base, iss: 'https://appleid.apple.com', aud: 'aud-apple-de-cavos', email: 'X1@privaterelay.appleid.com', email_verified: 'true' })
+    const r = await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t, correo: 'intruso@ejemplo.com' }, g, AHORA)
+    expect(r).toEqual({ estado: 200, cuerpo: { correo: 'x1@privaterelay.appleid.com', vinculados: 2 } })
+    const llamadas = g.mock.calls.filter(([u]) => u.endsWith('lk_vincular_alquileres'))
+    expect(llamadas).toHaveLength(1)
+    expect(JSON.parse(String(llamadas[0]![1]!.body))).toEqual({ p_usuario: '00000000-0000-4000-8000-000000000001', p_correo: 'x1@privaterelay.appleid.com' })
+    expect((llamadas[0]![1]!.headers as Record<string, string>).authorization).toBe('Bearer servicio-de-prueba')
+  })
+  it('nada que mover o la base falla: la misma respuesta de siempre; token ya usado: no se llama', async () => {
+    for (const resp of [() => new Response('0', { status: 200 }), () => new Response('{"message":"x"}', { status: 500 })]) {
+      const { google, f, base } = await escenario(), g = conVincular(f, resp)
+      const t = await firmar(google, { ...base, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'ana@ejemplo.com', email_verified: true })
+      expect(await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t }, g, AHORA)).toEqual({ estado: 200, cuerpo: { correo: 'ana@ejemplo.com' } })
+      expect((await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: t }, g, AHORA)).estado).toBe(403)
+      expect(g.mock.calls.filter(([u]) => u.endsWith('lk_vincular_alquileres'))).toHaveLength(1)
+    }
+  })
+  it('token de correo con código de Lockumi (aud «cavos-email») o token inválido: nunca se llama', async () => {
+    const { enclave, intruso, f, base } = await escenario(), g = conVincular(f, () => new Response('1', { status: 200 }))
+    const e = await firmar(enclave, { ...base, nonce: 'hash-del-secreto', iss: 'https://enclave.cavos.xyz', aud: 'cavos-email', email: 'c@ejemplo.com' })
+    await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: e }, g, AHORA)
+    const malo = await firmar(intruso, { ...base, iss: 'https://accounts.google.com', aud: 'aud-google-de-cavos', email: 'a@ejemplo.com', email_verified: true })
+    expect((await atenderVerificacion(ENV, 'Bearer sesion-ok', { token: malo }, g, AHORA)).estado).toBe(403)
+    expect(g.mock.calls.filter(([u]) => u.endsWith('lk_vincular_alquileres'))).toHaveLength(0)
+  })
+})
