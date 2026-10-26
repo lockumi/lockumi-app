@@ -32,6 +32,7 @@ Rama `testnet-e2e` (sale de 76b66e8). No se publicó nada: sin push, sin deploy,
 - **Disputa y reparto**:
   - Disputar: `dispute-escrow {contractId, signer}`; solo pueden hacerlo approver o serviceProvider, y el resolver no puede disputar.
   - Resolver: `resolve-dispute {contractId, disputeResolver, distributions:[{address, amount}]}`. La suma tiene que ser igual al saldo del escrow.
+  - Firma el `disputeResolver` que quedó guardado en el escrow al crearlo, no el de la configuración de hoy: los depósitos de antes de `LOCKUMI_DOS_PERSONAS=1` nombran a la plataforma (`resolvedorDe` en `api/_lib/solo.ts`). Con otra cuenta, el contrato responde `Error(Contract, #12)` (26/10/2026).
   - Fuentes: https://docs.trustlesswork.com/trustless-work/api-rest/deploy/change-dispute-flag · https://docs.trustlesswork.com/trustless-work/api-rest/deploy/resolving-disputes · https://docs.trustlesswork.com/trustless-work/introduction/developer-resources/types/payloads/resolve-dispute
 - **Tokens de testnet**: USDC de Circle, emisor `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`; faucet https://faucet.circle.com. Fuente: https://docs.trustlesswork.com/trustless-work/introduction/stellar-and-soroban-the-backbone-of-trustless-work/testnet-tokens
 - **Comprobado con la llave real**, solo armando la XDR del deploy, sin firmar ni enviar:

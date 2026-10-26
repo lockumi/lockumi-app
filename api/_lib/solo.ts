@@ -151,6 +151,14 @@ export function validarEscrow(c: ConfigSolo, e: Escrow, receiver?: string) {
   exigir(!e.inconsistencies?.inconsistencyFound, 409, 'Los datos de la cuenta segura no coinciden con la red. Espera unos segundos y vuelve a intentarlo.')
   if (receiver !== undefined) exigir(e.roles.receiver === receiver, 403, 'El depósito tiene que salir de la cuenta que lo recibe de vuelta.')
 }
+/** Cuenta que firma el reparto: la que el escrow nombra como disputeResolver (la persona mediadora o, en depósitos de antes
+ *  de LOCKUMI_DOS_PERSONAS=1, la plataforma). Si no es ninguna de las dos cuentas del servidor, no se puede repartir. */
+export function resolvedorDe(c: ConfigSolo, e: Pick<Escrow, 'roles'>): Keypair {
+  const r = e.roles.disputeResolver
+  if (r === c.R) return c.resolvedor
+  if (r === c.P) return c.plataforma
+  throw new ErrorTw(403, 'Esta cuenta segura no es de Lockumi.')
+}
 /** Única llamada a contrato permitida en una transacción: contrato y método esperados. */
 export function exigirLlamada(t: Transaction, contrato: string | null, metodos: string[]) {
   exigir(t.operations.length === 1 && t.operations[0].type === 'invokeHostFunction', 400, 'Transacción inesperada.')
@@ -393,7 +401,7 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       const dueno = duenoDe(c, e.engagementId)
       return { tx: await firmarYEnviar(c, dueno, '/escrow/single-release/dispute-escrow', { contractId: p.escrow, signer: dueno.publicKey() }, p.escrow, ['dispute_escrow'], f) }
     }
-    case 'resolver': {    // reparto del reclamo (acuerdo o persona mediadora): resolve_dispute firmado por quien resuelve (c.R: la plataforma, o la persona mediadora con LOCKUMI_DOS_PERSONAS=1)
+    case 'resolver': {    // reparto del reclamo (acuerdo o persona mediadora): resolve_dispute firmado por el disputeResolver del escrow (resolvedorDe)
       const e = await leerHasta(c, p.escrow, x => x.flags.disputed || x.flags.resolved, f, 6, opciones.espera); validarEscrow(c, e); exigirAutorizado(c, e, p)
       if (e.flags.resolved) return { yaResuelto: true }
       exigir(e.flags.disputed, 409, 'Este depósito no tiene un reclamo abierto.')
@@ -405,7 +413,10 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
       exigir(p.alDueno <= p.reclamado, 400, `El dueño no puede recibir más de lo que reclamó (${p.reclamado} USDC de prueba).`)
       const alInquilino = Math.round((saldo - p.alDueno) * 1e7) / 1e7
       const distributions = [{ address: e.roles.approver, amount: p.alDueno }, { address: e.roles.receiver, amount: alInquilino }].filter(d => d.amount > 0)
-      const tx = await firmarYEnviar(c, c.resolvedor, '/escrow/single-release/resolve-dispute', { contractId: p.escrow, disputeResolver: c.R, distributions }, p.escrow, ['resolve_dispute'], f)
+      // Firma quien el escrow nombra como disputeResolver, no la configuración de hoy: los depósitos creados antes de
+      // LOCKUMI_DOS_PERSONAS=1 nombran a la plataforma (con la mediadora, el contrato respondía Error #12 y la app mostraba el error de red).
+      const k = resolvedorDe(c, e)
+      const tx = await firmarYEnviar(c, k, '/escrow/single-release/resolve-dispute', { contractId: p.escrow, disputeResolver: k.publicKey(), distributions }, p.escrow, ['resolve_dispute'], f)
       return { tx, alDueno: p.alDueno, alInquilino }
     }
   }
