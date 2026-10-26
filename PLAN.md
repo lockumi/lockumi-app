@@ -280,3 +280,12 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   (`NO_FIRMANTE`). **Pendiente de Katherine:** activar la recuperación social en el panel de Cavos (entorno production) y, para una
   billetera ya creada, entrar una vez desde el navegador de origen para sellarla. Prueba `dispositivo-firmante.test.ts`; E2E
   `scripts/e2e-dispositivo.mjs`.
+- [x] Correo real para avisos con Apple (Katherine por el Coordinador, 26/10 10:18 a. m.): con Apple y un correo
+  `@privaterelay.appleid.com` los avisos no llegan. Dentro de «Crear alquiler» y de la invitación, un campo corto («Correo para avisos»)
+  pide UNA vez un correo real y lo confirma con el código de 6 números (acción `correo_real`). Se guarda para esa cuenta de Apple en
+  `lk_correos_reales` (origen «apple-real», NO en `lk_correos_verificados`: el correo activo, las invitaciones y la reputación no
+  cambian). Los avisos (`/api/correo`, correos C) y los códigos de eliminar/descargar van al correo real (`lk_correo_aviso`).
+  `lk_vincular_alquileres` trae los alquileres del correo real SOLO si ESTA sesión tiene un token de Apple verificado en el servidor
+  (método «apple», < 10 min) de ese correo oculto; el código de invitación («email») nunca trae. Migración
+  `20261026080000_correo_real_apple.sql`, revert `supabase/revert/20261026080000_correo_real_apple_revert.sql`; prueba
+  `correo-real-apple.test.ts`; E2E `scripts/e2e-vincular.mjs` (paso «apple-real»). Doc: `docs/prueba-completa.md`.

@@ -19,6 +19,9 @@ const conCodigo = import.meta.env.VITE_REPUTACION === '1'
 const PedirCodigo = conCodigo ? lazy(() => import('../reputacion/InvitacionCodigo').then(m => ({ default: m.PedirCodigoInvitacion }))) : null
 const PantallaCodigo = conCodigo ? lazy(() => import('../reputacion/InvitacionCodigo').then(m => ({ default: m.CodigoInvitacion }))) : null
 type Abierto = import('../reputacion/InvitacionCodigo').Abierto
+// 26/10/2026: Apple con correo oculto → campo corto para el correo real de los avisos (src/reputacion/CorreoReal.tsx).
+const CorreoReal = conCodigo ? lazy(() => import('../reputacion/CorreoReal').then(m => ({ default: m.CorreoReal }))) : null
+const esRelay = (e: string) => /@privaterelay\.appleid\.com$/i.test(e.trim())
 /** Cuenta G… de Cavos, si se puede obtener (solo con login real). No bloquea si falla: se puede agregar después. */
 export async function cuentaPropia(): Promise<string | undefined> {
   if (!modoReal) return undefined
@@ -71,6 +74,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
       {!d && !err && <p className="nota">Cargando la invitación…</p>}
       {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} bloqueado={err.includes(TEXTO_OTRO_CORREO)} otroCorreo={otroCorreo} />}
       {err && <p className="error" role="alert">{err}</p>}
+      {d && CorreoReal && esRelay(u.email) && <Suspense fallback={null}><CorreoReal email={u.email} /></Suspense>}
       <a href="#/" className="enlace">Ir a tus alquileres</a>
     </div>
   </main>

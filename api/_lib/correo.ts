@@ -5,7 +5,7 @@ import { PLANTILLAS, RUBROS_VALIDOS, textoAviso, botonesAviso, segunRegla, type 
 
 export class ErrorCorreo extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
 const exigir = (ok: unknown, estado: number, m: string): void => { if (!ok) throw new ErrorCorreo(estado, m) }
-import { servicio, rpc } from './supabase.js'
+import { servicio, rpc, correoAviso } from './supabase.js'
 export const REMITENTE = 'Lockumi <invitaciones@lockumi.com>'
 const EMAIL = /^[^\s@<>"',;]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/i
 const ID = /^[a-z0-9-]{2,40}$/i
@@ -183,7 +183,8 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
   const r = await f('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': clave.slice(0, 256) },
-    body: JSON.stringify({ from: REMITENTE, to: [p.para], subject: c.asunto, html: c.html, text: c.texto }),
+    // Apple con correo oculto: el aviso va al correo real guardado (20261026080000); la casilla y los límites siguen con el de la cuenta.
+    body: JSON.stringify({ from: REMITENTE, to: [await correoAviso(servicio(env), p.para, f)], subject: c.asunto, html: c.html, text: c.texto }),
   })
   const j = await r.json().catch(() => ({})) as { id?: string; message?: string }
   if (!(r.ok && j.id)) {

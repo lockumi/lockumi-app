@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { es } from 'react-day-picker/locale'
 import 'react-day-picker/style.css'
@@ -24,6 +24,8 @@ import { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio } from '../s
 import { conectar, saldoPropio, hayFreighter, hayCavos, NOMBRE_FIRMA, type Firma } from '../services/cuentaPropia'
 import { abreviar } from '../services/billetera'
 import { avisar, alertaCreado } from '../alertas'
+// 26/10/2026: Apple con correo oculto → campo corto para el correo real de los avisos (src/reputacion/CorreoReal.tsx).
+const CorreoReal = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('../reputacion/CorreoReal').then(m => ({ default: m.CorreoReal }))) : null
 import { validarAlquiler, hoyISO, montoNumero, fechaValida, ddmmaa, limitesEntrada, limitesSalida, salidaTrasCambiarEntrada, MONTO_MAX, type Campo, type Errores } from '../validacion'
 
 // ---------- Íconos de línea (mismo trazo que .ico) ----------
@@ -291,6 +293,7 @@ export function Crear({ u }: { u: Usuario }) {
         {invitar && <CasillaLegal id="f-declara" marcada={declara} onCambio={setDeclara}>{declaracionInvitacion()}</CasillaLegal>}
         {invitar && <CasillaVersion id="f-terminos-version" marcada={aceptaVersion} onCambio={setAceptaVersion} />}</section>}
 
+      {modoServidor && CorreoReal && /@privaterelay\.appleid\.com$/i.test(u.email.trim()) && <Suspense fallback={null}><CorreoReal email={u.email} className="na-sec pila" /></Suspense>}
       {enviado && cuantos > 0 && <p className="error na-error" role="alert">Revisa {cuantos === 1 ? 'el campo marcado' : `los ${cuantos} campos marcados`} y vuelve a intentarlo.</p>}
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
       {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}

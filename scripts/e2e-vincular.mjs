@@ -5,6 +5,10 @@
 // por el código de Lockumi, nada. Como un token real de Cavos no se puede fabricar, el registro del correo verificado (lo que
 // /api/verificar-correo hace tras validar el token) se hace con la clave de servicio: mismo RPC, misma llamada.
 // Código por correo de Cavos («cavos-email», 20261026070000): también trae; el código de invitación de Lockumi («email»), no.
+// Correo real para avisos con Apple («apple-real», 20261026080000): G (Apple con correo oculto) guarda el correo de B con un código
+// confirmado (mismos RPC que /api/codigo-correo tras comparar el código; sin mandar correos); una sesión nueva con el token de Apple de
+// ese correo oculto trae el lugar de B; con el código de invitación («email») del correo oculto, no se puede guardar ni traer. El correo
+// oculto de prueba (…@privaterelay.appleid.com) nunca recibe nada. Con --app, además /api/codigo-correo rechaza un correo inválido.
 // Con --app (navegador): C con la cuenta B → «Eres inquilino» y el pie nuevo; entra la cuenta A en el mismo navegador → la sesión C se
 // termina (sesión nueva, lista sin el alquiler de B); con el correo de A verificado → «Eres dueño»; «Salir» borra la sesión.
 // Limpieza total y waitlist igual. Nunca imprime tokens ni claves.
@@ -85,12 +89,26 @@ try {
   // Login con código por correo de Cavos (20261026070000): el correo confirmado queda «cavos-email» y también trae el alquiler.
   const sF = await sesionNueva(); await verificar(sF.user.id, correo('b'), 'cavos-email')
   ok(await vincular(sF.user.id, correo('b')) === 1 && await rolDe(sF, contrato) === 'inquilino', 'código por correo de Cavos («cavos-email»): trae el lugar de inquilino')
+  // Correo real para avisos con Apple (20261026080000).
+  const relay = `e2e-vinc-g-${corrida}@privaterelay.appleid.com`, sG = await sesionNueva(); await verificar(sG.user.id, relay, 'apple')
+  ok((await rpc('lk_correo_real_por_confirmar', { p_usuario: sG.user.id, p_correo: correo('b') })).j === correo('b'), 'Apple con correo oculto: correo real por confirmar')
+  const nc = await rpc('lk_codigo_nuevo', { p_usuario: sG.user.id, p_correo: correo('b'), p_accion: 'correo_real', p_huella: randomBytes(32).toString('hex'), p_sal: randomBytes(16).toString('hex') })
+  ok(nc.j?.id && (await rpc('lk_codigo_confirmar', { p_id: nc.j.id })).j === true, 'código «correo_real» creado y confirmado (sin mandar correo)')
+  ok((await rpc('lk_confirmar_correo_real', { p_usuario: sG.user.id })).j === correo('b') && (await rpc('lk_correo_aviso', { p_correo: relay })).j === correo('b'), 'guardado «apple-real»: los avisos del correo oculto van al real')
+  ok((await rpc('lk_tengo_correo_real', {}, sG.access_token)).j === true, 'la app no vuelve a preguntar (lk_tengo_correo_real)')
+  const sI = await sesionNueva(); await verificar(sI.user.id, relay, 'email')
+  ok((await rpc('lk_correo_real_por_confirmar', { p_usuario: sI.user.id, p_correo: correo('i') })).status === 403 && await vincular(sI.user.id, correo('b')) === 0, 'código de invitación («email») del correo oculto: ni guarda ni trae')
+  const sH = await sesionNueva(); await verificar(sH.user.id, relay, 'apple')
+  ok((await rpc('lk_correo_real_de', { p_correo: relay })).j === correo('b') && await vincular(sH.user.id, correo('b')) === 1 && await rolDe(sH, contrato) === 'inquilino', 'otro aparato con el token de Apple: trae el lugar del correo real')
+  if (APP) { const r = await fetch(`${APP}/api/codigo-correo`, { method: 'POST', headers: { authorization: `Bearer ${sH.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ paso: 'pedir', accion: 'correo_real', correo: 'no-es-correo' }) })
+    ok(r.status === 400, '/api/codigo-correo: correo inválido rechazado (sin correo)') }
 } catch (e) { ok(false, 'error: ' + String(e?.message ?? e).slice(0, 200)) } finally {
   if (contrato) await sql(`delete from public.lk_contratos where id = '${contrato}'`)
   const lista = ids.filter(i => /^[0-9a-f-]{36}$/.test(i)).map(i => `'${i}'`).join(',')
-  if (lista) { await sql(`delete from public.lk_correos_verificados where usuario in (${lista})`); await sql(`delete from auth.users where id in (${lista})`) }
-  const quedan = (await sql(`select (select count(*) from public.lk_contratos where direccion like 'Ejemplo · E2E-VINC ${corrida}%') c, (select count(*) from auth.users where id in (${lista || "'00000000-0000-0000-0000-000000000000'"})) u`))[0]
-  ok(Number(quedan.c) === 0 && Number(quedan.u) === 0, 'limpieza: sin alquiler ni cuentas de prueba')
+  await sql(`delete from public.lk_correos_reales where correo_apple like 'e2e-vinc-g-${corrida}@%'`)
+  if (lista) { await sql(`delete from public.lk_correos_reales_por_confirmar where usuario in (${lista})`); await sql(`delete from public.lk_codigos_correo where usuario in (${lista})`); await sql(`delete from public.lk_correos_verificados where usuario in (${lista})`); await sql(`delete from auth.users where id in (${lista})`) }
+  const quedan = (await sql(`select (select count(*) from public.lk_contratos where direccion like 'Ejemplo · E2E-VINC ${corrida}%') c, (select count(*) from auth.users where id in (${lista || "'00000000-0000-0000-0000-000000000000'"})) u, (select count(*) from public.lk_correos_reales where correo_apple like 'e2e-vinc-g-${corrida}@%') r`))[0]
+  ok(Number(quedan.c) === 0 && Number(quedan.u) === 0 && Number(quedan.r) === 0, 'limpieza: sin alquiler ni cuentas de prueba')
   const H1 = (await sql(HUELLA))[0]; ok(JSON.stringify(H0) === JSON.stringify(H1), 'waitlist igual: ' + JSON.stringify(H1))
   console.log(hora(), fallas ? `${fallas} FALLA(S)` : 'TODO OK'); process.exit(fallas ? 1 : 0)
 }

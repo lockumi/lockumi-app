@@ -145,6 +145,8 @@ export const SEGUNDO_FACTOR = {
     envio: 'No pudimos enviarte el código. Vuelve a intentarlo en un minuto.',
     // LEGAL: revisado (25/10) · mismo texto del servidor (lk_correo_de_sesion): la sesión no tiene un correo verificado
     correo: 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.',
+    // 26/10/2026 (correo real para avisos con Apple)
+    invalido: 'Escribe un correo válido que no sea el oculto de Apple.',
   },
 }
 
