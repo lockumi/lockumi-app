@@ -33,10 +33,8 @@ describe('marcas «LEGAL: revisar» visibles', () => {
     expect(() => revisarBuildCorreos({ VERCEL_ENV: 'preview' }, una)).not.toThrow()
     expect(() => revisarBuildCorreos({ VERCEL_ENV: 'production' }, una)).toThrow(/LEGAL: revisar/)
   })
-  it('en el repositorio solo queda la marca del paso 22 (OK de Legal para publicar C, 25/10, 5:31 p. m.)', async () => {
-    // Paso 22: TEXTO_REVISAR_PAGO (api/_lib/tw.ts) espera a Legal; mientras tanto el build de producción no sigue.
-    const m = marcasPorRevisar(await repo())
-    expect(m).toHaveLength(1); expect(m[0]).toMatch(/^api\/_lib\/tw\.ts:\d+$/)
+  it('en el repositorio no queda ninguna marca (OK de Legal para publicar C, 25/10, 5:31 p. m.)', async () => {
+    expect(marcasPorRevisar(await repo())).toEqual([])
   })
 
 })

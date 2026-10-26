@@ -1,4 +1,4 @@
-// Paso 22 · La devolución sin reclamo es automática de verdad: la corrida diaria (/api/borrados, vercel.json «crons») PAGA en la red
+// Paso 22 · La devolución sin reclamo es automática de verdad: la corrida programada (/api/borrados, vercel.json «crons», cada hora) PAGA en la red
 // de prueba los casos cerrados sin reclamo que siguen sin pagar, aunque nadie abra el alquiler. Mismo criterio que la app
 // (src/acciones.ts:224-226): con la aprobación del dueño → «liberar»; sin ella → «devolver-automatico» (100 % al inquilino).
 // Paga por el MISMO camino idempotente que /api/tw (devolverAlInquilino en api/_lib/tw.ts): bloqueo en la base + estado del escrow

@@ -41,10 +41,12 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
     const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 1, '/rpc/lk_mediacion_por_borrar': [] }, ['/rpc/lk_vencimientos'])
     expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null, vencidas: 0, devoluciones: { error: expect.any(String) } })
   })
-  it('B2 · vercel.json programa /api/borrados una vez al día', async () => {
+  it('B2 · paso 22: vercel.json programa /api/borrados cada hora y el bloqueo del pago dura más que la función', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
-    const v = JSON.parse(fs.readFileSync('vercel.json', 'utf8')) as { crons?: { path: string; schedule: string }[] }
-    expect(v.crons).toEqual([{ path: '/api/borrados', schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/) }])
+    const v = JSON.parse(fs.readFileSync('vercel.json', 'utf8')) as { crons?: { path: string; schedule: string }[]; functions: Record<string, { maxDuration: number }> }
+    expect(v.crons).toEqual([{ path: '/api/borrados', schedule: '0 * * * *' }])
+    const { SEGUNDOS_BLOQUEO_PAGO } = await import('../../../api/_lib/tw')
+    expect(SEGUNDOS_BLOQUEO_PAGO).toBeGreaterThan(v.functions['api/*.ts'].maxDuration)
   })
   it('sin las variables de Supabase no hace nada y lo explica; solo corre con CRON_SECRET', async () => {
     await expect(ejecutarBorrados({}, falso({}))).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY/)

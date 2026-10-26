@@ -221,8 +221,8 @@ export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const liberadoTexto = (k: Pick<Contrato, 'monto'>) => `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)`
 export type ModoDevolucion = 'liberar' | 'devolver-automatico'
 export type Devolucion = { tx?: string; disputaTx?: string | null; yaExistia?: true; enCurso?: true; recuperado?: true }
-// LEGAL: revisar · texto nuevo (paso 22): la app lo muestra solo si el escrow no cuadra con el alquiler o ya se pagó sin que tengamos
-// la transacción (no debería pasar); la corrida diaria lo cuenta como «revisar». No se paga nada hasta que una persona lo mire.
+// Texto del paso 22 (Legal: OK tal cual, 25/10/2026 11:15 p. m. CR): la app lo muestra solo si el escrow no cuadra con el alquiler o
+// ya se pagó sin que tengamos la transacción (no debería pasar); la corrida lo cuenta como «revisar». No se paga nada hasta que una persona lo mire.
 export const TEXTO_REVISAR_PAGO = 'No pudimos confirmar el estado del depósito en la red de prueba, así que no se pagó nada. Escríbenos a business.applockumi@gmail.com y lo revisamos.'
 export class ErrorRevisar extends ErrorTw { motivo: string; constructor(motivo: string) { super(409, TEXTO_REVISAR_PAGO); this.motivo = motivo } }
 
@@ -417,7 +417,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
       // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.
-      // Paso 22: mismo camino idempotente que la corrida diaria (bloqueo + estado del escrow); si la corrida lo está pagando, { enCurso }.
+      // Paso 22: mismo camino idempotente que la corrida programada (bloqueo + estado del escrow); si la corrida lo está pagando, { enCurso }.
       return await devolverAlInquilino(c, k, 'liberar', f)
     }
     case 'devolver-automatico': // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño (paso 22: idempotente)

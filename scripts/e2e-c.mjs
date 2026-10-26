@@ -18,7 +18,10 @@
 //   TRUSTLESS_WORK_API_KEY=… node scripts/e2e-c.mjs --red [--salida DIR]
 //                                                Paso 22: base en memoria (PGlite, con 20261026000000) + Trustless Work testnet DE VERDAD, con
 //                                                plataforma y mediadora desechables. No toca Supabase de producción ni manda correos reales.
-//   Casos cron-auto / cron-liberar / cron-doble (paso 22): la corrida diaria de verdad (ejecutarBorrados) paga sola y una sola vez.
+//   Casos cron-auto / cron-liberar / cron-doble (paso 22): la corrida programada de verdad (ejecutarBorrados) paga sola y una sola vez.
+//                                                Con --app: cron-auto y cron-doble con la corrida de la app publicada (GET <app>/api/borrados
+//                                                con CRON_SECRET del entorno); cron-liberar se omite (necesita una falla inyectada).
+//   Reputación (paso 19, encendida en producción y en --simulado): cada sesión verifica su correo y acepta REP-01 antes de crear o unirse.
 //   node scripts/e2e-c.mjs --limpiar --real      Borra los datos de prueba marcados («E2E-C …») del destino.
 // Salida: <DIR>/estado.json (ids, hashes, enlaces) e informe.md. Los datos de prueba llevan la marca «E2E-C <corrida>» en la dirección
 // y correos @lockumi.test. Cada corrida crea alquileres nuevos: nunca reintenta un pago ya hecho (y «repartir» es idempotente).
@@ -35,7 +38,7 @@ const CORRIDA = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13) + '-'
 const VENTANA = 60, MONTO = Number(process.env.E2E_C_MONTO || 2), RECLAMO = MONTO / 2, ACORDADO = MONTO / 4
 const enlace = h => 'https://stellar.expert/explorer/testnet/tx/' + h
 const env = { ...process.env }
-const SECRETOS = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_SECRET', 'RESEND_API_KEY'].map(k => env[k]).filter(Boolean)
+const SECRETOS = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_SECRET', 'RESEND_API_KEY', 'CRON_SECRET'].map(k => env[k]).filter(Boolean)
 const limpio = t => SECRETOS.reduce((s, x) => s.split(x).join('[secreto]'), String(t))
 const log = (...x) => console.log(limpio(x.join(' ')))
 const espera = ms => new Promise(r => setTimeout(r, ms))
@@ -51,6 +54,7 @@ async function destinoSimulado() {
     create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text); alter table storage.objects enable row level security;
     create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;`)
   for (const m of readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort()) await db.exec(readFileSync('supabase/migrations/' + m, 'utf8'))
+  await db.exec('insert into public.lk_reputacion_encendido default values')   // como app.lockumi.com desde el 25/10/2026 (paso 19): REP-01 y correo verificado
   let cola = Promise.resolve()   // PGlite: una consulta a la vez, cada una con su auth.uid()
   const q = (uid, sql, p = []) => { const r = cola.then(async () => { await db.query(`select set_config('test.uid', $1, false)`, [uid ?? '']); return (await db.query(sql, p)).rows }); cola = r.catch(() => {}); return r }
   const tokens = new Map()
@@ -83,7 +87,8 @@ async function destinoSimulado() {
   }
   return { nombre: 'simulado (PGlite, todas las migraciones)', cuenta, rest, tokens, q,
     // Paso 21 (20261025230000): lo que hace /api/verificar-correo con la clave de servicio después de comprobar el inicio de sesión.
-    verificarCorreo: async (uid, correo) => { await q(null, `insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); await q(null, `insert into public.lk_correos_verificados(usuario, correo, metodo) values ($1, lower(btrim($2)), 'email') on conflict do nothing`, [uid, correo]) },
+    verificarCorreo: async (uid, correo) => { await q(null, `insert into auth.users(id) values ($1) on conflict do nothing`, [uid]); await q(null, `select public.lk_registrar_correo_verificado($1, $2, 'email', $3)`, [uid, correo, createHash('sha256').update(randomUUID()).digest('hex')]) },
+    reputacionEncendida: async () => (await q(null, 'select count(*)::int n from public.lk_reputacion_encendido'))[0].n > 0,
     hacerMediador: async uid => { await q(null, `insert into public.lk_mediadores values ($1, $2)`, [uid, MARCA]) },
     leer: (t, id) => q(null, `select * from public.${t} where ${t === 'lk_contratos' ? 'id' : 'contrato_id'} = $1`, [id]),
     migraciones: async () => ({ m030: true, m040: true, m050: true, m060: true, m260: true }), limpiar: async () => 0 }
@@ -106,6 +111,7 @@ async function destinoReal() {
   return { nombre: url.includes('sddgjnuvxzkrhhuczuly') ? 'Supabase de PRODUCCIÓN (datos de prueba marcados)' : 'Supabase ' + new URL(url).host, cuenta, rest: fetch,
     // Paso 21: la misma función que usa /api/verificar-correo (20261025140000, ya aplicada en producción). Huella al azar de un solo uso.
     verificarCorreo: async (uid, correo) => { const r = await rest('rpc/lk_registrar_correo_verificado', { method: 'POST', body: JSON.stringify({ p_usuario: uid, p_correo: correo, p_metodo: 'email', p_huella: createHash('sha256').update(randomUUID()).digest('hex') }) }); if (!r.ok) throw new Error('correo verificado: ' + r.status) },
+    reputacionEncendida: async () => { const r = await rest('lk_reputacion_encendido?select=id'); return r.ok && (await r.json()).length > 0 },
     hacerMediador: async uid => { const r = await rest('lk_mediadores', { method: 'POST', body: JSON.stringify({ usuario: uid, nombre: MARCA }) }); if (!r.ok) throw new Error('mediador: ' + r.status) },
     leer: async (t, id) => { const r = await rest(`${t}?${t === 'lk_contratos' ? 'id' : 'contrato_id'}=eq.${id}&select=*`); if (!r.ok) throw new Error(t + ' ' + r.status); return r.json() },
     migraciones: async () => ({ m030: await existe('lk_reglas_651?select=contrato_id&limit=0'), m040: await existe('lk_reclamos?select=entregado_en&limit=0'), m050: await existe('lk_aceptaciones_terminos?select=contrato_id&limit=0'), m260: await existe('lk_contratos?select=pago_bloqueo_hasta&limit=0'), m060: await existe('lk_contratos?select=entregado_en&limit=0') }),
@@ -114,6 +120,10 @@ async function destinoReal() {
       for (const id of ids) await rest(`lk_contratos?id=eq.${id}`, { method: 'DELETE' })
       await rest(`lk_mediadores?nombre=like.${encodeURIComponent('E2E-C %')}`, { method: 'DELETE' })
       await rest(`lk_correos_enviados?para=like.${encodeURIComponent('lockumi+e2ec-%')}`, { method: 'DELETE' })   // correos de cuenta de prueba (sin alquiler)
+      // Reputación (paso 19 encendido): correo verificado, REP-01 y perfil de las cuentas de prueba (solo los correos de prueba de E2E-C)
+      const deE2e = `or=(correo.like.${encodeURIComponent('lockumi+e2ec-*')},correo.like.${encodeURIComponent('e2e-c+*@lockumi.test')})`
+      for (const t of ['lk_reputacion_eventos', 'lk_reputacion_revisiones', 'lk_reputacion_consentimientos', 'lk_reputacion_perfiles', 'lk_reputacion_aceptaciones', 'lk_solicitudes_borrado', 'lk_codigos_correo', 'lk_correos_por_confirmar', 'lk_correos_verificados'])
+        await rest(`${t}?${deE2e}`, { method: 'DELETE' })
       return ids.length } }
 }
 
@@ -237,6 +247,15 @@ if (!mig.m050) { log('✘ falta la migración 20261025050000 (Términos por alqu
 const [dueno, inquilino, mediador] = [await D.cuenta(), await D.cuenta(), await D.cuenta()]
 await D.hacerMediador(mediador.uid)
 const correo = (r, k) => CORREOS ? correoPrueba(k, r) : `e2e-c+${CORRIDA.toLowerCase()}-${k}-${r}@lockumi.test`
+// Paso 22 · con la reputación encendida (app.lockumi.com desde el 25/10/2026; también en --simulado): antes de crear o unirse, la sesión
+// verifica su correo (lo que hace /api/verificar-correo) y acepta REP-01 (lk_aceptar_reputacion, como la pantalla previa de la app).
+// En fila: REP-01 se acepta con el correo ACTIVO de la sesión (el último verificado) y una sesión de prueba sirve a varios alquileres.
+const REPUTACION = await D.reputacionEncendida()
+let filaRep = Promise.resolve()
+const prepararPersona = (cta, c) => { const p = filaRep.then(async () => {
+  await D.verificarCorreo(cta.uid, c)
+  if (REPUTACION) exigir(await cta.rpc('lk_aceptar_reputacion', { p_correo: c, p_version: '1.10-demo · 25 de octubre de 2026', p_texto: ['REP-01 · prueba E2E-C (cuenta de prueba que se borra al final)'] }), 'REP-01 no quedó aceptada')
+}); filaRep = p.catch(() => {}); return p }
 log('Preparando cuentas de testnet (dueño e inquilino desechables)…')
 const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 7 + 1)])   // 7 alquileres con depósito (aprobada, silencio-dueno, mediacion, recordatorios y los tres de la corrida diaria del paso 22)
 const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una foto de prueba
@@ -268,13 +287,15 @@ async function fotos(cta, id, etapa) {
 }
 /** Invitar → unirse → firmar → (pagar en la red) → fotos de entrada → salida → plazo del dueño. */
 async function hastaPlazo(k, conPago, ventana = VENTANA) {
+  await prepararPersona(dueno, correo('dueno', k))
   const r = await dueno.rpc('lk_crear_contrato_con_terminos', { p_direccion: `${MARCA} · ${k}`, p_monto: MONTO, p_inicio: hoy, p_fin: fin, p_reglas: ['No fumar dentro de la casa'], p_email_inquilino: correo('inquilino', k),
     p_email_cavos: correo('dueno', k), p_declaracion: DECL, p_terminos_version: TERMINOS, p_direccion_stellar: kpD.publicKey(), p_ventana_segundos: ventana })
   const id = r.id; exigir((await estado(id)).terminos_version === TERMINOS, 'el alquiler no quedó en la ' + TERMINOS)
   paso(k, `el dueño crea el alquiler e invita (link de 7 días, con la declaración y los Términos ${TERMINOS})`)
   if (CORREOS) await invitarPorCorreo(k, id)
   await inquilino.rpc('lk_ver_invitacion', { p_contrato: id, p_token: r.token })
-  await D.verificarCorreo(inquilino.uid, correo('inquilino', k))   // paso 21: la sesión del inquilino entró con el correo invitado
+  await prepararPersona(inquilino, correo('inquilino', k))   // paso 21: la sesión del inquilino entró con el correo invitado (y REP-01)
+  if (REPUTACION) paso(k, 'reputación encendida: las dos sesiones verificaron su correo y aceptaron REP-01')
   await inquilino.rpc('lk_aceptar_invitacion_con_terminos', { p_contrato: id, p_token: r.token, p_email_cavos: correo('inquilino', k), p_terminos_version: TERMINOS, p_direccion_stellar: kpI.publicKey() })
   const acept = await inquilino.filas('lk_aceptaciones_terminos', id); exigir(['dueno', 'inquilino'].every(x => acept.some(a => a.rol === x && a.version === TERMINOS && a.aceptado_en)), 'faltan las aceptaciones de los Términos')
   paso(k, `el inquilino se une con su propia cuenta, aceptando los Términos ${TERMINOS} y el Aviso de privacidad`)
@@ -499,7 +520,59 @@ if (mig.m260 && !APP) {
       paso(k, 'Horizon (testnet): la transacción del pago salió bien', h)
     }
   } catch (e) { fallas.push('paso 22 · corrida diaria: ' + limpio(e.message)); log('✘ [paso 22] ' + limpio(e.message)) }
-} else omitidos.push(`paso 22 · corrida diaria: ${APP ? 'con --app no se puede inyectar la falla' : 'falta la migración 20261026000000 en el destino'}`)
+} else if (mig.m260 && APP && env.CRON_SECRET) {
+  // ── Paso 22 en producción (--app): la corrida de verdad de la app publicada (GET <app>/api/borrados con CRON_SECRET, como Vercel Cron)
+  // paga sola. cron-liberar necesita una falla inyectada en la red y no se corre aquí (queda en --simulado y --red). La corrida programada
+  // de Vercel (cada hora) puede pagar antes que esta: vale igual, lo que se exige es que se pague UNA sola vez y con el hash guardado.
+  const { DEVUELTO_AUTO, leerEscrowTw, configuracion } = await vite.ssrLoadModule('/api/_lib/tw.ts')
+  omitidos.push('paso 22 · cron-liberar: con --app no se puede inyectar la falla de la liberación (cubierto en --simulado y --red)')
+  const corridaApp = async () => {
+    const r = await fetch(APP + '/api/borrados', { headers: { authorization: 'Bearer ' + env.CRON_SECRET } }); const j = await r.json().catch(() => ({}))
+    exigir(r.ok, `${APP}/api/borrados respondió ${r.status}`); exigir(!('error' in (j.devoluciones ?? {})), 'la corrida no pudo pagar: ' + limpio(JSON.stringify(j.devoluciones))); return j }
+  const pagoEn = (r, id) => (r.devoluciones?.pagados ?? []).find(x => x.contrato === id)
+  const eventos = async (id, texto) => (await D.leer('lk_eventos', id)).filter(e => e.texto === texto)
+  const cor07 = async id => { for (let i = 0; i < 15; i++) { const f = (await D.leer('lk_correos_enviados', id)).filter(x => x.estado === 'enviado' && x.correo === 'COR-C-07'); if (f.length >= 2) return f; await espera(2000) } return [] }
+  try {
+    const [a, c] = await Promise.all([hastaPlazo('cron-auto', true), hastaPlazo('cron-doble', true)])
+    Object.assign(ids, { cronAuto: a, cronDoble: c })
+    await esperarPlazo('cron-auto'); paso('cron-auto', 'vence el plazo del dueño y nadie abre el alquiler (ni lk_cerrar_sin_reclamo ni /api/tw)')
+    exigir(await dueno.rpc('lk_cerrar_sin_reclamo', { p_contrato: c }), 'cron-doble no cerró')
+    // La corrida de producción y la app (POST <app>/api/tw) piden pagar cron-doble a la vez
+    const [r1, app] = await Promise.all([corridaApp(),
+      espera(800).then(() => twDirecto(inquilino, { accion: 'devolver-automatico', contrato: c })).catch(x => ({ error: limpio(x.message) }))])
+    log('  corrida de producción 1 · devoluciones: ' + limpio(JSON.stringify(r1.devoluciones)) + ' · app (cron-doble): ' + limpio(JSON.stringify(app)))
+    const [ea, ec] = [await estado(a), await estado(c)], hex = /^[0-9a-f]{64}$/
+    exigir(ea.estado === 'cerrado' && ea.resultado?.via === 'automatico' && Number(ea.resultado.inquilino) === MONTO && hex.test(ea.liquidacion_tx ?? ''), 'cron-auto: la corrida no cerró y pagó')
+    const evA = await eventos(a, DEVUELTO_AUTO); exigir(evA.length === 1 && evA[0].tx_hash === ea.liquidacion_tx, 'cron-auto: falta el evento con el hash (o hay más de uno)')
+    const pa = pagoEn(r1, a); exigir(!pa || pa.tx === ea.liquidacion_tx, 'cron-auto: la corrida informó otro hash')
+    paso('cron-auto', `la corrida de ${APP} cierra el caso y devuelve el 100 % al inquilino en la red (disputa + resolución)${pa ? '' : ' · lo pagó la corrida programada de Vercel'}`, ea.liquidacion_tx)
+    exigir(hex.test(ec.liquidacion_tx ?? ''), 'cron-doble: no quedó pagado')
+    const evC = await eventos(c, DEVUELTO_AUTO); exigir(evC.length === 1 && evC[0].tx_hash === ec.liquidacion_tx, `cron-doble: ${evC.length} eventos de devolución (se esperaba 1, con el hash guardado)`)
+    const pc = pagoEn(r1, c); exigir(!pc || pc.tx === ec.liquidacion_tx, 'cron-doble: la corrida informó otro hash')
+    exigir(!app.tx || app.tx === ec.liquidacion_tx, 'cron-doble: la app y la corrida pagaron con hashes distintos')
+    exigir(!(pc && app.tx && !app.yaExistia), 'cron-doble: la app y la corrida dicen haber pagado las dos')
+    paso('cron-doble', `la app y la corrida de producción piden pagar a la vez: se paga UNA sola vez (${pc ? 'pagó la corrida' : app.tx && !app.yaExistia ? 'pagó la app' : 'lo pagó la corrida programada'}; la app vio ${app.enCurso ? 'el pago en curso' : app.yaExistia ? 'el pago hecho' : app.tx ? 'su propio pago' : 'un error sin pagar'})`, ec.liquidacion_tx)
+    for (const [k, id] of [['cron-auto', a], ['cron-doble', c]]) {
+      const f7 = await cor07(id); exigir(f7.length === 2, `${k}: el servidor no mandó COR-C-07 a las dos partes (${f7.length})`)
+      paso(k, `el servidor de producción manda COR-C-07 a las dos partes (${f7.map(f => f.para).sort().join(', ')})`)
+    }
+    const r2 = await corridaApp()
+    exigir(!pagoEn(r2, a) && !pagoEn(r2, c) && ((await estado(a)).liquidacion_tx === ea.liquidacion_tx) && ((await estado(c)).liquidacion_tx === ec.liquidacion_tx), 'otra corrida volvió a pagar: ' + limpio(JSON.stringify(r2.devoluciones)))
+    paso('cron-auto', `otra corrida de producción no paga nada de nuevo (pendientes: ${r2.devoluciones?.pendientes ?? '—'})`)
+    const otra = await twDirecto(inquilino, { accion: 'devolver-automatico', contrato: a })
+    exigir(otra.yaExistia && otra.tx === ea.liquidacion_tx, 'la app volvió a pagar un caso ya pagado por la corrida: ' + limpio(JSON.stringify(otra)))
+    paso('cron-auto', 'la app abre el alquiler después: ve el pago ya hecho (mismo hash), sin pagar otra vez', otra.tx)
+    if (env.TRUSTLESS_WORK_API_KEY) { const ct = configuracion(env)
+      for (const [k, cid] of [['cron-auto', ea.escrow_contract_id], ['cron-doble', ec.escrow_contract_id]]) {
+        const e = await leerEscrowTw(ct, cid, fetch); exigir(e.flags?.resolved === true && Number(e.balance ?? 0) === 0, `${k}: el escrow no quedó pagado en TW: ` + JSON.stringify(e.flags))
+        paso(k, 'Trustless Work: el escrow quedó resuelto y con saldo 0')
+      } } else omitidos.push('paso 22 · estado del escrow en TW: falta TRUSTLESS_WORK_API_KEY para leerlo')
+    for (const [k, h] of [['cron-auto', ea.liquidacion_tx], ['cron-doble', ec.liquidacion_tx]]) {
+      const j = await (await fetch('https://horizon-testnet.stellar.org/transactions/' + h)).json(); exigir(j.successful === true, `${k}: Horizon no muestra la transacción como exitosa`)
+      paso(k, 'Horizon (testnet): la transacción del pago salió bien', h)
+    }
+  } catch (e) { fallas.push('paso 22 · corrida de producción: ' + limpio(e.message)); log('✘ [paso 22] ' + limpio(e.message)) }
+} else omitidos.push(`paso 22 · corrida: ${!mig.m260 ? 'falta la migración 20261026000000 en el destino' : 'con --app hace falta CRON_SECRET en el entorno para llamar a <app>/api/borrados'}`)
 // COR-C-08 y COR-C-09: correos de servicio de la cuenta (sin casilla). Una sola vez por pedido.
 try {
   const pedido = Date.now(), para = correoPrueba('cuenta', 'dueno'), paraB = correoPrueba('cuenta', 'inquilino')
