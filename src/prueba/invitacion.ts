@@ -19,6 +19,8 @@ const claveCorreo = (alquiler: string) => 'lk:invitacion-correo:' + alquiler
 export const EVENTO_CORREO_INVITACION = 'lk-invitacion-correo'
 /** paso21: correo al que SÍ salió la invitación desde este aparato (o null). La tarjeta del dueño lo usa para su mensaje. */
 export const correoInvitacionEnviado = (alquiler: string): string | null => { try { return localStorage.getItem(claveCorreo(alquiler)) } catch { return null } }
+/** Eliminar un alquiler: borra la marca de envío y el correo al que salió la invitación desde este aparato. */
+export const olvidarInvitacionEnviada = (alquiler: string) => { try { localStorage.removeItem(clave(alquiler)); localStorage.removeItem(claveCorreo(alquiler)) } catch { /* sin almacenamiento */ } }
 /** Token del link de invitación (…/#/invitacion/<id>/<token>), o undefined. */
 export const tokenDeLink = (link?: string) => link?.match(/\/#\/invitacion\/[0-9a-f-]{36}\/([0-9a-f]{64})$/)?.[1]
 /** Envía el correo de invitación una sola vez por alquiler (solo con VITE_CORREOS=1). El servidor también lo exige.

@@ -1,4 +1,4 @@
-// PROTOTIPO · LEGAL: pendiente. Todos estos textos son una PROPUESTA (26/10/2026) y no se publican sin el OK de Legal y de Katherine.
+// PROTOTIPO · LEGAL: revisado (26/10/2026, revisión de c97585b: reglas OK y estos textos). No se publica sin el OK de Katherine a la imagen.
 export const T = {
   mas: 'Más opciones',
   puedeEliminar: 'Todavía no hay depósito, así que puedes eliminar este alquiler.',
@@ -11,7 +11,7 @@ export const T = {
 
   tituloEliminar: '¿Eliminar este alquiler?',
   eliminarPuntos: (dos: boolean) => [
-    'Se borra de tu lista, con su contrato sin firmar y sus datos.',
+    'Se borra de tu lista, con su contrato y sus datos.',
     dos ? 'La invitación deja de funcionar. Si la otra persona abre el enlace, verá que ya no es válido.' : 'Todavía no hay depósito, así que no se mueve dinero.',
     'No se puede deshacer.',
   ],

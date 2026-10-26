@@ -1,5 +1,5 @@
 // PROTOTIPO (rama local eliminar-alquiler-propuesta): «Más opciones» del alquiler, confirmaciones de eliminar y ocultar,
-// «Reiniciar mi demo» y el aviso del resultado en «Tus alquileres». Un paso por pantalla. LEGAL: pendiente (textos en eliminar-textos.ts).
+// «Reiniciar mi demo» y el aviso del resultado en «Tus alquileres». Un paso por pantalla. LEGAL: revisado (26/10, revisión de c97585b; textos en eliminar-textos.ts).
 import { useState } from 'react'
 import { obtener, useAlquileres } from '../store'
 import { usd, fecha } from '../ui'

@@ -2,9 +2,10 @@
 // Reglas: se elimina SOLO antes de que haya depósito (y, con otra persona, antes de que acepte la invitación); después, solo se
 // oculta de MI lista (el historial y el contrato quedan); con un depósito guardado no se elimina ni se oculta: se explica.
 // Nunca se mueve dinero ni se toca una cuenta de garantía en la red. Nunca se toca un alquiler de otra persona.
-// LEGAL: pendiente · todos los textos visibles de este archivo y de Eliminar.tsx son una propuesta.
-import { store, ahoraReal } from '../store'
-import { servidor } from '../servidor/repositorio'
+// LEGAL: revisado (26/10, revisión de c97585b) · reglas y textos visibles de este archivo y de Eliminar.tsx (salvo lo marcado en eliminar-textos.ts).
+import { store, ahoraReal, olvidarVista } from '../store'
+import { servidor, olvidarInvitacion } from '../servidor/repositorio'
+import { olvidarInvitacionEnviada } from './invitacion'
 import type { Alquiler } from '../types'
 
 const igual = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -12,8 +13,12 @@ const igual = (a?: string, b?: string) => !!a && !!b && a.trim().toLowerCase() =
 export const esMio = (a: Alquiler, email: string) => (a.dosPersonas && !!a.miRol) || igual(a.duenoEmail, email) || igual(a.inquilinoEmail, email)   // servidor: RLS ya da solo los míos
 /** ¿Ya hay un depósito guardado (o se está pagando)? Cualquier rastro de pago cuenta: ante la duda, NO se elimina. */
 export const tieneDeposito = (a: Alquiler) => !!a.pago || !!a.red?.txs?.deposito || !['firmas', 'pendiente_pago'].includes(a.estado)
-/** ¿Se creó una cuenta de garantía en la red? (aunque no tenga depósito todavía). Entonces no se elimina: solo se oculta. */
-export const tieneGarantia = (a: Alquiler) => !!a.red?.escrow || (!!a.escrowId && !a.escrowId.startsWith('sim-'))
+/** ¿Dejó algo en la red de prueba? Cuenta de garantía (aunque no tenga depósito) o cualquier paso ya registrado (trustline, compra…).
+ *  Entonces no se elimina: solo se oculta. Así un alquiler eliminado nunca deja nada en la red (Legal, revisión de c97585b, punto 3). */
+export const tieneGarantia = (a: Alquiler) => !!a.red?.escrow || Object.values(a.red?.txs ?? {}).some(Boolean) || (!!a.escrowId && !a.escrowId.startsWith('sim-'))
+/** Borra lo que este aparato guarda de un alquiler eliminado: el papel elegido («Ver como»), el link de la invitación y el correo al que
+ *  salió (Legal: «se borra» es un borrado real, incluido el correo de la persona invitada). */
+export function olvidarEnEsteAparato(id: string) { olvidarVista(id); olvidarInvitacion(id); olvidarInvitacionEnviada(id) }
 /** ¿Queda dinero guardado? Cerrado y ya devuelto, no. Ante la duda, sí. */
 export const conDinero = (a: Alquiler) => a.estado === 'cerrado' ? (a.dosPersonas ? tieneGarantia(a) && !a.liquidacionTx : false) : tieneDeposito(a)
 export const oculto = (a: Alquiler, email: string) => !!a.ocultoParaMi || !!a.ocultoPor?.[email.trim().toLowerCase()]
@@ -33,11 +38,11 @@ export function opcionDe(a: Alquiler, email: string): Opcion | null {
 export class NoSePuede extends Error {}
 /** Elimina un alquiler de este aparato (sin depósito). Vuelve a leer lo guardado justo antes, por si cambió en otra pestaña. */
 export async function eliminarAlquiler(id: string, email: string, a0?: Alquiler) {
-  if (a0?.dosPersonas) { if (opcionDe(a0, email) !== 'eliminar') throw new NoSePuede('deposito'); await servidor.eliminarAlquiler(id); return a0.direccion }
+  if (a0?.dosPersonas) { if (opcionDe(a0, email) !== 'eliminar') throw new NoSePuede('deposito'); await servidor.eliminarAlquiler(id); olvidarEnEsteAparato(id); return a0.direccion }
   const a = store.fresco(id)
   if (!a) throw new NoSePuede('ya-no-esta')
   if (opcionDe(a, email) !== 'eliminar') throw new NoSePuede(tieneDeposito(a) ? 'deposito' : 'no-es-tuyo')
-  store.quitar(id)
+  store.quitar(id); olvidarEnEsteAparato(id)
   return a.direccion
 }
 export async function ocultarAlquiler(id: string, email: string, ocultar = true, a0?: Alquiler) {
@@ -63,7 +68,7 @@ export async function reiniciarMiDemo(email: string, todos: readonly Alquiler[])
   for (const a of p.eliminar) { try { await eliminarAlquiler(a.id, email); e++ } catch { q++ } }      // si cambió en otra pestaña, se queda
   for (const a of p.ocultar) { try { await ocultarAlquiler(a.id, email); o++ } catch { q++ } }
   // Los de otra persona (servidor): una sola llamada que solo ve los alquileres de esta sesión.
-  if (todos.some(a => a.dosPersonas && esMio(a, email))) { const r = await servidor.reiniciarMiDemo(); e += r.eliminados; o += r.ocultos; q += r.quedan }
+  if (todos.some(a => a.dosPersonas && esMio(a, email))) { const r = await servidor.reiniciarMiDemo(); (r.ids ?? []).forEach(olvidarEnEsteAparato); e += r.eliminados; o += r.ocultos; q += r.quedan }
   return { eliminados: e, ocultos: o, quedan: q }
 }
 

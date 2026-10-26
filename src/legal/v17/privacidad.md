@@ -54,7 +54,8 @@ Esto aplica cuando simulas un alquiler con otra persona y cada una tiene su cuen
 <!-- si no: correos -->
 - Lockumi no le envía ningún correo: tú le compartes el enlace para unirse.
 <!-- fin -->
-- **El enlace de invitación vence a los 7 días.** Si la persona invitada no se une en 7 días, borramos su correo. Si se une, su correo se guarda mientras exista el alquiler simulado de la demo. La persona invitada puede pedir que lo borremos en cualquier momento escribiendo a business.applockumi@gmail.com.
+<!-- LEGAL: revisado (26/10, revisión de c97585b) · texto exacto de Legal: eliminar y ocultar un alquiler (1.12-demo) -->
+- **El enlace de invitación vence a los 7 días.** Si la persona invitada no se une en 7 días, borramos su correo. Si se une, su correo se guarda mientras exista el alquiler simulado de la demo. La persona invitada puede pedir que lo borremos en cualquier momento escribiendo a business.applockumi@gmail.com. Si el dueño elimina el alquiler antes de que te unas, borramos tu correo en ese momento.
 <!-- si: correos -->
 - Resend guarda un registro de cada correo enviado (destinatario, asunto, contenido y estado de entrega). Según Resend, en sus planes estándar conserva esos datos durante 30 días (https://resend.com/security/gdpr).
 <!-- fin -->
@@ -152,7 +153,8 @@ Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotul
 
 ## Cuánto tiempo los guardamos
 <!-- LEGAL: revisado (24/10) · conservación, dos-personas-textos.md C · LEGAL: revisado (25/10, lista de Legal): la frase del correo invitado (7 días) solo con dos personas -->
-Mientras la demo esté activa y hasta 6 meses después de que termine, o antes si pides que los eliminemos.{{dos-personas: El correo de una persona invitada se borra si no se une en 7 días; si se une, se guarda mientras exista el alquiler simulado, salvo que pida antes que lo borremos.}} Luego los eliminamos o los anonimizamos. Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app. Los datos que quedan solo en tu navegador los puedes borrar cuando limpies los datos del sitio. Lo registrado en la red pública no se puede borrar.
+<!-- LEGAL: revisado (26/10, revisión de c97585b) · texto exacto de Legal: eliminar y ocultar un alquiler (1.12-demo) -->
+Mientras la demo esté activa y hasta 6 meses después de que termine, o antes si pides que los eliminemos.{{dos-personas: El correo de una persona invitada se borra si no se une en 7 días; si se une, se guarda mientras exista el alquiler simulado, salvo que pida antes que lo borremos.}} Si eliminas un alquiler antes de que tenga depósito, borramos en ese momento ese alquiler y sus datos, incluido el correo de la persona invitada. Ocultar un alquiler solo lo quita de tu lista: no borra nada y sus datos siguen esta misma regla. Luego los eliminamos o los anonimizamos. Lo que se usa para una mediación lo borramos o lo anonimizamos 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlo para un reclamo fuera de la app. Los datos que quedan solo en tu navegador los puedes borrar cuando limpies los datos del sitio. Lo registrado en la red pública no se puede borrar.
 
 ## Tus derechos
 Puedes pedir en cualquier momento y sin costo el **acceso**, la **rectificación** o la **supresión** de tus datos, y **revocar tu consentimiento**, escribiendo a business.applockumi@gmail.com desde tu correo registrado. Respondemos en un plazo de cinco días hábiles (Ley 8968, art. 7). Si no estás de acuerdo con nuestra respuesta, puedes presentar una denuncia ante la Agencia de Protección de Datos de los Habitantes (PRODHAB): www.prodhab.go.cr, info@prodhab.go.cr, (506) 2234-0189, San Pedro de Montes de Oca, Mall San Pedro, Ofimall Centro Ejecutivo, 6.º piso.

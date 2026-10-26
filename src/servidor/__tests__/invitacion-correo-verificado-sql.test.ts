@@ -68,10 +68,10 @@ describe('aceptar la invitación: solo con el correo invitado verificado para ES
     const r = await crear(); await verificar(DUENO, INVITADO)
     await expect(aceptar(DUENO, r.id, r.token, INVITADO)).rejects.toThrow(/Eres el dueño/)
     await verificar(A, INVITADO)
-    await expect(aceptar(A, r.id, 'ef'.repeat(32), INVITADO)).rejects.toThrow(/no es válido/)
+    await expect(aceptar(A, r.id, 'ef'.repeat(32), INVITADO)).rejects.toThrow(/ya no está disponible/)
     await aceptar(A, r.id, r.token, INVITADO)
     await verificar(B, INVITADO)
-    await expect(aceptar(B, r.id, r.token, INVITADO)).rejects.toThrow(/no es válido o ya se usó/)
+    await expect(aceptar(B, r.id, r.token, INVITADO)).rejects.toThrow('Esta invitación ya no está disponible. Si todavía la necesitas, pídele al dueño que te envíe una nueva.')
     expect((await uno<{ h: string | null }>(`select invitacion_hash h from public.lk_contratos where id = $1`, [r.id]))!.h).toBeNull()
   })
   it('se mantiene: vence a los 7 días', async () => {
@@ -80,7 +80,7 @@ describe('aceptar la invitación: solo con el correo invitado verificado para ES
     await db.query(`alter table public.lk_contratos disable trigger lk_invitacion_7_dias`)
     await db.query(`update public.lk_contratos set invitacion_expira = now() - interval '1 minute' where id = $1`, [r.id])
     await db.query(`alter table public.lk_contratos enable trigger lk_invitacion_7_dias`)
-    await expect(aceptar(A, r.id, r.token, INVITADO)).rejects.toThrow(/venci|no es válido/)
+    await expect(aceptar(A, r.id, r.token, INVITADO)).rejects.toThrow(/venci|ya no está disponible/)
   })
   it('la app no puede escribir ni leer lk_correos_verificados (solo el servidor con la clave de servicio)', async () => {
     await como(B); await db.exec('set role authenticated')

@@ -40,6 +40,8 @@ const urls = new Map<string, string>()
 const INV = 'lockumi.invitaciones'
 const invitaciones = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(INV) || '{}') } catch { return {} } }
 const guardarInvitacion = (id: string, t: string) => localStorage.setItem(INV, JSON.stringify({ ...invitaciones(), [id]: t }))
+/** Eliminar un alquiler: borra su link de invitación guardado en este aparato y lo quita de la caché. */
+export function olvidarInvitacion(id: string) { try { const m = invitaciones(); if (id in m) { delete m[id]; localStorage.setItem(INV, JSON.stringify(m)) } } catch { /* sin almacenamiento */ } datos = datos.filter(a => a.id !== id); avisar() }
 export { linkInvitacion }
 
 export async function recargar() {
@@ -201,7 +203,7 @@ export const servidor = {
   // PROTOTIPO eliminar-alquiler: el servidor revisa las reglas (dueño, sin la otra persona, sin depósito) y solo toca filas propias.
   eliminarAlquiler: (id: string) => tras(rpc('lk_eliminar_alquiler', { p_contrato: id })),
   ocultarAlquiler: (id: string, ocultar: boolean) => tras(rpc('lk_ocultar_alquiler', { p_contrato: id, p_ocultar: ocultar })),
-  reiniciarMiDemo: () => tras(rpc<{ eliminados: number; ocultos: number; quedan: number }>('lk_reiniciar_mi_demo', {})),
+  reiniciarMiDemo: () => tras(rpc<{ eliminados: number; ocultos: number; quedan: number; ids?: string[] }>('lk_reiniciar_mi_demo', {})),
   registrarLiquidacion: (id: string, tx: string) => yAvisar(id, rpc('lk_registrar_liquidacion', { p_contrato: id, p_tx: tx })),
 }
 export type Servidor = typeof servidor

@@ -4,7 +4,7 @@
 // una cuenta nueva acepta la versión vigente en «Entrar» y cada función nueva tiene su casilla (casillaDeFuncion). Un alquiler
 // firmado conserva su versión salvo que los dos acepten.
 import type { Interruptor, Interruptores } from './condicional'
-import { V17, FECHA_V17, V110, FECHA_ENCENDIDO_REPUTACION, V_REPUTACION, FECHA_V111 } from './version17'
+import { V17, FECHA_V17, V110, FECHA_ENCENDIDO_REPUTACION, V111, FECHA_V111, V_REPUTACION, FECHA_V112 } from './version17'
 
 export interface VersionLegal { version: string; fecha: string; escenario: 'A' | 'B' | 'C'; interruptores: Interruptores }
 // LEGAL: revisado (25/10, lista de Legal) · fechas de la 1.8-demo y la 1.9-demo: poner la del día en que se encienda cada escenario.
@@ -24,9 +24,11 @@ export const VERSIONES: VersionLegal[] = [
 // escenario (versionVigente sigue igual: un alquiler de dos personas nace en la 1.9-demo), pero cada una tiene su fecha y su ruta:
 // la 1.10-demo, archivada tal como se publicó (/terminos-1-10), y la 1.11-demo, la vigente con la reputación (/terminos).
 // Van después de la 1.9-demo: un alquiler en la 1.10-demo o la 1.11-demo nunca ve «pasar a la versión …» (puedeCambiarA).
+// Legal (revisión de c97585b, 26/10/2026): la 1.11-demo queda archivada (/terminos-1-11) y la vigente pasa a la 1.12-demo, sin volver a aceptar.
 export const EDICIONES_CUENTA: VersionLegal[] = [
   { version: V110, fecha: FECHA_ENCENDIDO_REPUTACION, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
-  { version: V_REPUTACION, fecha: FECHA_V111, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
+  { version: V111, fecha: FECHA_V111, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
+  { version: V_REPUTACION, fecha: FECHA_V112, escenario: 'C', interruptores: { 'dos-personas': true, correos: true, reputacion: true } },
 ]
 const TODAS = [...VERSIONES, ...EDICIONES_CUENTA]
 const ORDEN = ['1.6-demo', ...TODAS.map(v => v.version)]
