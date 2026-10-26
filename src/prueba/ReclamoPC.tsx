@@ -21,6 +21,9 @@ import { abrirReclamo, silencio, nombreRubro, textoSeAplico } from './reclamos'
 import { textoContador, simularDias } from './dueno'
 import { plazoInquilino } from './avisos'
 import { AvisosApp } from './AvisosApp'
+// Legal (PR #33): «Ver las condiciones» abre los Términos que guardó ESTE alquiler (su versión, en su ruta).
+import { rutaTerminos } from '../legal/documentos'
+import { versionAlquiler } from './version'
 
 const u = (n: number) => `${n.toLocaleString('es-CR', { maximumFractionDigits: 2 })} USDC de prueba`
 const cr = (t: number) => `${fechaHoraCR(t)}, hora de Costa Rica`
@@ -159,6 +162,6 @@ export function SeAplico({ a }: { a: Alquiler }) {
   const t = textoSeAplico(a, a.resultado!)
   // LEGAL: revisado (24/10, v4) · B.10
   return <div className="pila se-aplico"><h3>Se aplicó la propuesta automática</h3><Simulado texto="Ejemplo" />
-    <p>{t[0]}</p><p>{t[1]} <a href="#/terminos">Ver las condiciones (cláusula 6.5.1)</a></p><p>{t[2]}</p>
+    <p>{t[0]}</p><p>{t[1]} <a href={'#' + rutaTerminos(versionAlquiler(a))}>Ver las condiciones (cláusula 6.5.1)</a></p><p>{t[2]}</p>
     <p className="nota">En la demo, no tiene efecto legal.</p></div>
 }

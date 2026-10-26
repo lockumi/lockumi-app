@@ -1,15 +1,23 @@
 import { FECHA_ENCENDIDO_REPUTACION } from './fecha-reputacion'
+import { FECHA_V111 } from './fecha-v111'
 // paso16-unido · Una sola fecha para la 1.7-demo (Legal, 25/10, arreglo 4): los Términos, el Aviso de privacidad, el registro de
 // cada aceptación y el contrato dicen «1.7-demo · 25 de octubre de 2026» y lo sacan de aquí. Los .md usan {{edicion}}.
 export const V17 = '1.7-demo'
 export const FECHA_V17 = '25 de octubre de 2026'
 export const EDICION_V17 = `${V17} · ${FECHA_V17}`
-// Paso 19 · Reputación (Legal, revisión del PR #26): los textos de la reputación son la 1.10-demo, con la fecha REAL de encendido.
-// La fecha es esta sola constante: se fija el día en que se encienda VITE_REPUTACION (no reusar la etiqueta 1.7-demo ya publicada).
-export const V_REPUTACION = '1.10-demo'
+// Paso 19 · Reputación (Legal, revisión del PR #26): los textos de la reputación fueron la 1.10-demo, con la fecha REAL de encendido
+// (FECHA_ENCENDIDO_REPUTACION, 25/10/2026). La 1.10-demo ya está publicada: queda archivada tal cual en /terminos-1-10 y /privacidad-1-10
+// (documentos.ts, textos de src/legal/archivo/8790b52/).
+export const V110 = '1.10-demo'
 export { FECHA_ENCENDIDO_REPUTACION }   // la fecha vive en fecha-reputacion.ts (la lee la guarda de vite.config.ts)
-export const EDICION_REPUTACION = `${V_REPUTACION} · ${FECHA_ENCENDIDO_REPUTACION}`
-/** La edición que dicen los Términos y el Aviso: 1.10-demo con la reputación encendida. */
+export const EDICION_V110 = `${V110} · ${FECHA_ENCENDIDO_REPUTACION}`
+// Legal (PR #33, 25/10/2026, 11:33 p. m.): la edición de la cuenta pasa a la 1.11-demo (ronda 1.10: nombre visible, código de 6 números,
+// «cierre del alquiler»), con la fecha del día de la publicación (fecha-v111.ts). Sin volver a aceptar: quien tiene la 1.10-demo sigue
+// igual (no hay tarjetas de cambio de versión) y los registros nuevos se guardan con la 1.11-demo.
+export const V_REPUTACION = '1.11-demo'
+export { FECHA_V111 }
+export const EDICION_REPUTACION = `${V_REPUTACION} · ${FECHA_V111}`
+/** La edición que dicen los Términos y el Aviso: la 1.11-demo con la reputación encendida. */
 export const edicionVigente = () => import.meta.env.VITE_REPUTACION === '1' ? EDICION_REPUTACION : EDICION_V17
 
 // Legal (revisión de 6e9210a, bloqueo 2): en los REGISTROS, la 1.10-demo solo la guardan las cuentas nuevas, creadas desde la pantalla
@@ -20,7 +28,7 @@ export const claveReputacion = (email: string) => 'lockumi.reputacion.v1.' + ema
 export const CLAVE_PREVIA_REPUTACION = 'lockumi.reputacion.previa.v2'
 const leerJson = (s: () => Storage, k: string) => { try { const x = s().getItem(k); return x ? JSON.parse(x) : null } catch { return null } }
 const reputacionEncendida = () => import.meta.env.VITE_REPUTACION === '1'
-/** Al aceptar en el login (base: la edición de la versión aceptada; desde C, la 1.9-demo): 1.10-demo solo si en esta sesión se aceptó la pantalla previa (cuenta nueva). */
+/** Al aceptar en el login (base: la edición de la versión aceptada; desde C, la 1.9-demo): la edición de la cuenta (1.11-demo) solo si en esta sesión se aceptó la pantalla previa (cuenta nueva). */
 export const edicionAlAceptar = (base = EDICION_V17) => reputacionEncendida() && leerJson(() => sessionStorage, CLAVE_PREVIA_REPUTACION) ? EDICION_REPUTACION : base
-/** Para los registros de una cuenta (p. ej. la Regla, 6.5.1): 1.10-demo solo si esa cuenta aceptó su perfil (REP-01). */
+/** Para los registros de una cuenta (p. ej. la Regla, 6.5.1): la edición de la cuenta (1.11-demo) solo si esa cuenta aceptó su perfil (REP-01). */
 export const edicionDeCuenta = (email?: string, base = EDICION_V17) => reputacionEncendida() && email && leerJson(() => localStorage, claveReputacion(email))?.rep01 ? EDICION_REPUTACION : base

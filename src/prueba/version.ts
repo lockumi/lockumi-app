@@ -8,7 +8,7 @@ import { interruptoresLegales } from '../legal/documentos'
 export { V17 }
 export const V16 = '1.6-demo'
 /** paso16-unido: la edición (versión con su fecha) que se guarda en los registros de aceptación; la 1.7-demo y posteriores la llevan. */
-/** Paso 19 (Legal, bloqueo 2): con la reputación encendida, la versión vigente lleva la 1.10-demo solo si esa cuenta aceptó REP-01. */
+/** Paso 19 (Legal, bloqueo 2): con la reputación encendida, la versión vigente lleva la edición de la cuenta (1.11-demo desde el PR #33) solo si esa cuenta aceptó REP-01. */
 export const edicionDe = (version: string, cuenta?: string) => { const e = edicionTexto(version); return e ? { edicion: version === versionActual() ? edicionDeCuenta(cuenta, e) : e } : {} }
 /** Escenario C (preparación): la versión de los Términos según lo encendido (1.7-demo con A, 1.8-demo con B, 1.9-demo con C). */
 export const versionActual = () => versionVigente(interruptoresLegales())

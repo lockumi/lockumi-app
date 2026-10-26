@@ -9,6 +9,9 @@ import { fechaHoraCR } from '../../api/_lib/plazos'
 import { FotoLista } from '../screens/Acta'
 import { diasHastaAvisoSalida } from './avisos'
 import { abrirAviso, simularDias } from './dueno'
+// Legal (PR #33): «ver las reglas» abre los Términos que guardó ESTE alquiler (su versión, en su ruta), no los vigentes.
+import { rutaTerminos } from '../legal/documentos'
+import { versionAlquiler } from './version'
 
 const cr = (iso?: string) => iso ? `${fechaHoraCR(+new Date(iso))}, hora de Costa Rica` : '—'
 
@@ -22,7 +25,7 @@ export function AvisoSalida({ a, rol }: { a: Alquiler; rol: Rol }) {
       <h3 id="t-aviso-salida">Aviso en la app: 5 días antes de la salida</h3>
       <details className="aviso-app" onToggle={e => { if ((e.target as HTMLDetailsElement).open) abrir() }}>
         <summary><strong>5 días antes de la salida</strong> · {v.asunto}{!v.abierto && <span className="chip chip--coral">Nuevo</span>}</summary>
-        <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <Fragment key={i}><a href="#/terminos">ver las reglas</a>{t}</Fragment>)}</p>
+        <p>{v.texto.split('ver las reglas').map((t, i) => i === 0 ? t : <Fragment key={i}><a href={'#' + rutaTerminos(versionAlquiler(a))}>ver las reglas</a>{t}</Fragment>)}</p>
         <h4>Tus fotos de entrada</h4>
         {a.entrada.cuartos.map((c, i) => <div key={i} className="pila"><strong>{c.nombre}</strong><FotoLista fotos={c.fotos} vacio="Sin fotos de entrada de este espacio." /></div>)}
         {/* LEGAL: revisado (25/10, lista de Legal) · registro visible en el detalle del caso */}

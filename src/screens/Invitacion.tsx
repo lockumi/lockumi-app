@@ -20,10 +20,12 @@ export async function cuentaPropia(): Promise<string | undefined> {
 }
 
 /** Aceptar la invitación. En el modo de dos personas (escenario C), solo con la casilla de los Términos vigentes y el Aviso de privacidad. */
-export function ZonaAceptar({ marcada, onMarcar, ocupado, onAceptar, casilla = true }: { marcada: boolean; onMarcar: (v: boolean) => void; ocupado: boolean; onAceptar: () => void; casilla?: boolean }) {
+/** Legal (ronda 1.10, 25/10, 11:16 p. m.): `bloqueado` = el servidor respondió «Esta invitación es para otro correo»; mientras ese
+ *  error está a la vista, «Aceptar invitación» queda desactivado (se sale de ahí volviendo a entrar con el correo invitado). */
+export function ZonaAceptar({ marcada, onMarcar, ocupado, onAceptar, casilla = true, bloqueado = false }: { marcada: boolean; onMarcar: (v: boolean) => void; ocupado: boolean; onAceptar: () => void; casilla?: boolean; bloqueado?: boolean }) {
   return <><p>Si aceptas, entras como inquilino. Lo siguiente es firmar el contrato.</p>
     {casilla && <CasillaVersion id="inv-terminos" marcada={marcada} onCambio={onMarcar} />}
-    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || (casilla && !marcada)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado || bloqueado || (casilla && !marcada)} onClick={onAceptar}>{ocupado ? 'Aceptando…' : 'Aceptar invitación'}</button></>
 }
 
 /** Paso 21 (orden de publicación, docs/invitacion-enlace.md): antes de aceptar, el correo de la sesión se verifica en el servidor
@@ -55,7 +57,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
     <h1 className="inv-titulo">{TITULO_INVITACION}</h1>
     <div className="glass glass--fuerte tarjeta pila">
       {!d && !err && <p className="nota">Cargando la invitación…</p>}
-      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} />}
+      {d && <CuerpoInvitacion d={d} u={u} acepta={acepta} setAcepta={setAcepta} ocupado={ocupado} aceptar={aceptar} bloqueado={err.includes(TEXTO_OTRO_CORREO)} />}
       {err && <p className="error" role="alert">{err}</p>}
       <a href="#/" className="enlace">Ir a tus alquileres</a>
     </div>
@@ -64,7 +66,7 @@ export function Invitacion({ id, token, u }: { id: string; token: string; u: Usu
 
 /** paso21: lo que se ve con la invitación cargada. Resumen (lugar, depósito, fechas, dueño) a la vista; las reglas, plegadas y
  *  cerradas; la casilla de los Términos y el Aviso de privacidad (con sus enlaces) y «Aceptar invitación», siempre a la vista. */
-export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void }) {
+export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar, bloqueado = false }: { d: NonNullable<Datos>; u: Usuario; acepta: boolean; setAcepta: (v: boolean) => void; ocupado: boolean; aceptar: () => void; bloqueado?: boolean }) {
   return <>
     <ul className="lista resumen">
       <li><span>Lugar</span><strong>{d.direccion}</strong></li><li><span>Depósito</span><strong>{usd(Number(d.monto))}</strong></li>
@@ -74,6 +76,6 @@ export function CuerpoInvitacion({ d, u, acepta, setAcepta, ocupado, aceptar }: 
     {d.reglas?.length > 0 && <Plegable titulo={TITULO_PLEGABLE_REGLAS}><ul className="reglas">{d.reglas.map((r, i) => <li key={i}>{r}</li>)}</ul></Plegable>}
     {u.email.trim().toLowerCase() !== d.email_inquilino?.trim().toLowerCase()
       ? <p className="error" role="alert">{TEXTO_OTRO_CORREO}</p>
-      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} />}
+      : <ZonaAceptar marcada={acepta} onMarcar={setAcepta} ocupado={ocupado} onAceptar={aceptar} casilla={dosPersonas} bloqueado={bloqueado} />}
   </>
 }

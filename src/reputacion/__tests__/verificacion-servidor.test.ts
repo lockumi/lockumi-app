@@ -153,7 +153,7 @@ describe('textos de Legal (25/10, 4:23 p. m.)', () => {
   it('Privacidad: la línea de la persona por correo, con «solicitudes», se publica y queda «LEGAL: revisado (25/10)»', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const md = fs.readFileSync('src/legal/v17/privacidad.md', 'utf8'), l = md.split('\n')
-    const T = 'Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus solicitudes por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos.'
+    const T = 'Si usas Lockumi en más de un aparato, unimos tu perfil de reputación, tus aceptaciones y tus solicitudes por el correo con el que entras con Cavos. Cuando descargas tus datos o eliminas tu cuenta, incluimos todo lo de ese correo, en todos tus aparatos. Para descargar tus datos o eliminar tu cuenta, te pedimos un código de 6 números que te enviamos por correo.'   // ronda 1.10 (Legal, 25/10, 11:16 p. m.)
     const i = l.indexOf(T); expect(i).toBeGreaterThan(0)
     expect(l[i - 1]).toMatch(/^<!-- LEGAL: revisado \(25\/10\)/)
     expect(md).not.toMatch(/PROPUESTA NO PUBLICADA/); expect(md).not.toMatch(/tus pedidos por el correo/)
