@@ -299,3 +299,14 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 - [x] Link de invitación ya usado (Katherine, 26/10 11:17 a. m., dos cuentas): al aceptar, el link sirve una vez; volver a abrirlo
   (otra vez desde el correo, otra pestaña o después de entrar) daba «Esta invitación ya no está disponible». Ahora, si la sesión ya es
   parte del alquiler, va directo al alquiler (`abrirSiYaEsMio`, sin textos nuevos). Test `invitacion-ya-aceptada.test.ts`.
+- [ ] Llave de acceso para pagar desde otro dispositivo (Katherine aprobó el arreglo 26/10 12:24 p. m.; **falta su OK de las capturas
+  antes de publicar**). El registro de billeteras de `@cavos/kit` 0.4.2 es solo de alta (el primer dispositivo gana) y la recuperación
+  social queda apagada en el panel, así que la salida es la passkey del kit con vault: `crearLlave` → `VaultClient.enrollPasskey` (como
+  `enrollPasskeyDefault`), `aprobarConLlave` → `Cavos.connect` con `passkeyPrf` (vault con recovery «passkey», como
+  `approveDeviceWithPasskey`); `consultarLlave` lee `passkeyRestore`. Pantallas en `src/screens/Llave.tsx` (componentes y estilos de
+  siempre): oferta de un paso al entrar (este dispositivo ya firma y no hay llave; «Ahora no» → una sola vez más, 3 días después;
+  creada → nunca más), botón «Aprobar con mi llave de acceso» en todo error de firma (`ErrorPago`) y en la tarjeta de la cuenta si el
+  estado es `needs-device-approval`, y la frase para quien nunca la creó. Navegador sin WebAuthn/PRF → mensaje en español. Las
+  conexiones automáticas nunca piden la llave. Textos en `src/services/llave.ts` (`TEXTOS_LLAVE`). Pruebas `llave.test.ts`,
+  `llave-conexion.test.ts`. Límites del kit: la ventana de confirmación del vault es de Cavos y está en inglés («Add a passkey»,
+  «Verify it's you») y la passkey queda guardada a nombre de «Cavos» (vault.cavos.xyz), no de Lockumi.

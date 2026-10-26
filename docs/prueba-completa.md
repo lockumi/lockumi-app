@@ -337,3 +337,27 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 - **Requisito:** Cavos → App → recuperación social activa (production). Sin eso el código no cambia nada.
 - **Prueba en producción:** `node scripts/e2e-dispositivo.mjs` (sin correos ni login real; revisa el build, la configuración de Cavos y
   la waitlist). Volver atrás: `git revert -m 1 <merge>`.
+
+## Llave de acceso: pagar desde otro dispositivo (26/10/2026)
+
+- **Por qué:** el registro de billeteras de Cavos es solo de alta (gana el primer dispositivo) y la recuperación social está apagada
+  (y seguirá así). En un dispositivo nuevo el kit queda en `needs-device-approval` y no puede firmar. La salida es la passkey del kit
+  (README de `@cavos/kit` 0.4.2 «Passkeys»; docs.cavos.xyz passkeys y multi-dispositivo), con Google, Apple o código por correo.
+- **Código:** `src/services/llave.ts` (reglas y textos), `src/services/billetera.ts` (`crearLlave`, `aprobarConLlave`,
+  `consultarLlave`, `conectarBilletera({ llave: true })`), `src/screens/Llave.tsx` (`OfertaLlave`, `AprobarDispositivo`, `ErrorPago`).
+- **Textos:** oferta «Paga desde cualquier dispositivo» / «Crea una llave de acceso para usar tu cuenta en otro celular o computadora.
+  Se abre con la huella, la cara o el PIN de este dispositivo.» / «Crear llave de acceso» / «Ahora no». Error de firma «Este
+  dispositivo todavía no puede firmar con tu billetera. Apruébalo con tu llave de acceso y vuelve a intentarlo.» + «Aprobar con mi
+  llave de acceso». Sin llave: «Todavía no tienes una llave de acceso: abre Lockumi una vez en el dispositivo donde creaste tu cuenta,
+  crea la llave ahí y luego vuelve a intentarlo aquí.» Navegador sin soporte: «Este navegador no permite usar llaves de acceso. Abre
+  Lockumi en Chrome, Safari o Edge actualizados y vuelve a intentarlo.»
+- **Cuándo se pregunta:** al entrar, si este dispositivo ya firma y la cuenta no tiene llave. «Ahora no» → una sola vez más, 3 días
+  después. Creada → nunca más (`localStorage` `lockumi.llave.<correo>`).
+- **Prueba a mano (dos dispositivos, cuenta de prueba):** 1) dispositivo A: entrar → «Crear llave de acceso» → ventana de Cavos «Add a
+  passkey» → huella/PIN → «Listo…». 2) dispositivo B (otro navegador): entrar con la misma cuenta → la tarjeta de la cuenta muestra el
+  error y el botón → «Aprobar con mi llave de acceso» → ventana de Cavos «Verify it's you» → elegir la llave «Cavos» → «Listo: este
+  dispositivo ya puede pagar». 3) pagar el depósito en B. 4) cuenta sin llave en B → la frase de «Todavía no tienes una llave…».
+- **Capturas locales:** `npm run dev` y en la consola `localStorage` `lockumi.billetera.prueba` = una dirección G de prueba,
+  `lockumi.billetera.prueba.estado` = `needs-device-approval` (dispositivo nuevo) y `lockumi.llave.prueba` = `si`/`no` (solo en dev).
+- **Límites del kit:** la ventana del vault es de Cavos y está en inglés; la passkey se guarda con el nombre «Cavos».
+- **Volver atrás:** `git revert -m 1 <merge>` (no hay migraciones).

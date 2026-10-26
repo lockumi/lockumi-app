@@ -7,6 +7,7 @@ import type { Alquiler, PasoRed, Rol } from '../types'
 import { usd, fechaHora, Simulado } from '../ui'
 import { enlaceTx, enlaceCuenta, enlaceContrato, TOPE_USDC, MAX_XLM_COMPRA } from '../../api/_lib/red'
 import { consultarUsdc, conectarBilletera, abreviar } from '../services/billetera'
+import { ErrorPago } from './Llave'
 import { obtenerUsdc, depositar, reintentarDeposito, aprobar, liberar, huellaActa, usarPrueba, fijarUsarPrueba, cuentaInquilino, cotizar, maximoAGastar, type Txs } from '../services/solo'
 
 export const DUENO_PRUEBA = 'Dueño de prueba (cuenta de Lockumi para la demo)'
@@ -15,7 +16,7 @@ export { NOMBRE_PASO }
 /** Solo la primera letra en minúscula (para usar el rótulo dentro de una frase sin tocar «Lockumi»). */
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 export const VerTx = ({ h }: { h: string }) => <a className="enlace" href={enlaceTx(h)} target="_blank" rel="noopener noreferrer">Ver comprobante en la red de prueba</a>
-const Error = ({ m }: { m: string }) => m ? <p className="error" role="alert">{m}</p> : null
+const Error = ({ m }: { m: string }) => <ErrorPago m={m} />
 const textoError = (e: unknown) => e instanceof globalThis.Error ? e.message : 'Algo salió mal. Vuelve a intentarlo en un minuto.'
 const anotar = (id: string, txs: Partial<Record<PasoRed, string>>, extra: (a: Alquiler) => void = () => {}) => store.cambiar(id, x => {
   x.red ??= { txs: {} }

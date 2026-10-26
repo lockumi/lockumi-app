@@ -38,6 +38,7 @@ import { etapaDeAvance, type EtapaPago } from '../espera'
 import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 import { MasOpciones } from '../prueba/Eliminar'
 import { modoPrueba as redDePrueba } from '../servidor/config'
+import { ErrorPago } from './Llave'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -118,7 +119,7 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
     {i < n ? <>
       <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
       <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
-      {err && <p className="error" role="alert">{err}</p>}
+      <ErrorPago m={err} />
       <div className="pie-paso">
         {i > 0 && <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(i - 1) }}>Atrás</button>}
         <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={siguiente}>{i + 1 < n ? 'Siguiente espacio' : 'Revisar y confirmar'}</button>
@@ -295,7 +296,7 @@ export function Invitacion({ a }: { a: Alquiler }) {
       <a className="boton boton--secundario boton--ancho" href={enlaceWhatsApp(link)} target="_blank" rel="noopener noreferrer">{BOTON_WHATSAPP}</a></>
       : <p className="nota">Este aparato no tiene el link guardado.</p>}
     <button type="button" className="enlace" onClick={nuevo}>Crear un link nuevo (el anterior deja de servir)</button>
-    {err && <p className="error" role="alert">{err}</p>}
+    <ErrorPago m={err} />
   </section>
 }
 
@@ -308,7 +309,7 @@ function EscrowReal({ a, rol }: P) {
   if (!modoTrustless || !a.escrowId) return null
   const aprobado = a.historial.some(e => e.texto === APROBADO)
   const correr = async (f: () => Promise<unknown>) => { setOcupado(true); setError(''); try { await f() } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setOcupado(false) } }
-  const err = error && <p className="error" role="alert">{error}</p>
+  const err = error && <ErrorPago m={error} />
   if (a.estado === 'ventana_reclamo') return rol === 'dueno' && !aprobado ? <div className="pila">
     {/* LEGAL: revisado (24/10) · ronda 8 (modo de dos personas, sin uso hoy: la billetera firma la aprobación, trustless.ts:28-30; la liberación la firma el servidor). BLOQUEO: antes de activarlo, Legal reescribe Términos 5.3 */}<p className="nota">Si todo está bien, aprueba ahora la devolución. Tu billetera te pedirá confirmar esta aprobación. La liberación del depósito la firma la cuenta de Lockumi.</p>
     <button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>
