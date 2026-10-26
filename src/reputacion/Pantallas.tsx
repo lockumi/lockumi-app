@@ -17,7 +17,8 @@ import { EJEMPLOS, type Ejemplo } from './ejemplos'
 import type { Registro } from './consentimiento'
 import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
-import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, type EstadoServidor } from './verificacion'
+import { asegurarCorreo, eliminarCuenta, necesitaRep01EnServidor, decidirPrevia, correoPorConfirmar, oirPorConfirmar, confirmarCorreoConCodigo, reenviarCodigoCorreo,
+  type EstadoServidor, type PorConfirmar } from './verificacion'
 import { pedirCodigo, confirmarCodigo, ErrorCodigo, type AccionCodigo } from './segundo-factor'
 import { REP01, REP01_EXISTENTE, REP02, BLOQUEO_BORRADO, NOTA_EN_REVISION, PROTECCION, PERFIL_FIJO_BOTONES, AVISO_CAMBIO, TEXTO_DESTACADOS, TEXTO_NUEVOS, TEXTO_PUNTAJE_NUEVO, PERFIL_FIJO, SE_PUBLICA, NO_SE_PUBLICA, COMO_SE_CALCULA,
   AVISO_PERFIL, AVISO_LISTA, MIS_DATOS, SEGUNDO_FACTOR, CORREGIR, INSIGNIAS, LLAVE_DESCRIPCION, NUEVO_DESCRIPCION, VITRINA, UI, ELIMINAR, ELIMINAR_UI, NOMBRE_LLAVE, conVars, type Bloque } from './textos'
@@ -376,7 +377,7 @@ type Codigo = { accion: AccionCodigo; correo: string }
 /** Texto de un error del segundo factor. 'accion' (el servidor no hizo la acción) = el error de siempre de esa acción. */
 const textoCodigo = (e: unknown, accion: AccionCodigo) => {
   const m = e instanceof ErrorCodigo ? e.motivo : 'accion'
-  return m === 'accion' ? (accion === 'eliminar' ? UI.errBorrado : UI.errDescarga) : SEGUNDO_FACTOR.errores[m]
+  return m === 'accion' ? (accion === 'eliminar' ? UI.errBorrado : accion === 'descargar' ? UI.errDescarga : SEGUNDO_FACTOR.errores.correo) : SEGUNDO_FACTOR.errores[m]
 }
 function useSegundoFactor(email: string) {
   const [codigo, setCodigo] = useState<Codigo | null>(null), [err, setErr] = useState<{ t: string; codigo: boolean } | null>(null), [enviando, setEnviando] = useState(false)
@@ -411,8 +412,26 @@ export function CodigoCorreo({ c, err, enviando, confirmar, reenviar, cancelar }
         <p className="nota">{SEGUNDO_FACTOR.nota}</p>
         <div className="rp-acciones"><button type="submit" className={c.accion === 'eliminar' ? 'boton rp-peligro' : 'rp-boton rp-boton--ancho'} disabled={enviando}>{SEGUNDO_FACTOR.boton[c.accion]}</button>
           <button type="button" className="boton boton--secundario" onClick={reenviar} disabled={enviando}>{SEGUNDO_FACTOR.reenviar}</button>
-          <a className="boton boton--secundario" href="#/perfil" onClick={cancelar}>{SEGUNDO_FACTOR.cancelar}</a></div>
+          <a className="boton boton--secundario" href={c.accion === 'verificar_correo' ? '#/' : '#/perfil'} onClick={cancelar}>{SEGUNDO_FACTOR.cancelar}</a></div>
       </form></section></main>
+}
+// ——— «Revisa tu correo» al entrar con el código por correo de Cavos (Legal 25/10/2026, 9:00 p. m.) ———
+// El token de correo de Cavos trae aud «cavos-email» (la misma para todas las apps de Cavos): el servidor exige además el código de 6
+// números que manda Lockumi. Misma pantalla y mismas clases que el segundo factor (CodigoCorreo); el login no cambia.
+/** El correo por confirmar de ESTA cuenta (null si no hay). Al montar, verifica el correo con el servidor (una vez por carga). */
+function usePorConfirmar(email: string): PorConfirmar | null {
+  const [p, setP] = useState(correoPorConfirmar)
+  useEffect(() => oirPorConfirmar(() => setP(correoPorConfirmar())), [])
+  useEffect(() => { if (conServidor) asegurarCorreo(email).catch(() => { /* nunca lanza */ }) }, [email])
+  return p && p.c === email.trim().toLowerCase() ? p : null
+}
+export function ConfirmarCorreo({ p, cancelar }: { p: PorConfirmar; cancelar: () => void }) {
+  const [err, setErr] = useState<{ t: string; codigo: boolean } | null>(() => p.motivo && p.motivo !== 'accion' ? { t: SEGUNDO_FACTOR.errores[p.motivo], codigo: false } : null)
+  const [enviando, setEnviando] = useState(false)
+  const fallo = (e: unknown) => setErr({ t: textoCodigo(e, 'verificar_correo'), codigo: e instanceof ErrorCodigo && e.motivo === 'codigo' })
+  return <CodigoCorreo c={{ accion: 'verificar_correo', correo: p.correo }} err={err} enviando={enviando} cancelar={cancelar}
+    confirmar={v => { if (enviando) return; setEnviando(true); setErr(null); confirmarCorreoConCodigo(v).catch(fallo).finally(() => setEnviando(false)) }}
+    reenviar={() => { if (enviando) return; setEnviando(true); setErr(null); reenviarCodigoCorreo().catch(fallo).finally(() => setEnviando(false)) }} />
 }
 function MisDatos({ u, rol }: { u: Usuario; rol: Rol }) {
   const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), xs = mios(todos, u, rol), cerrados = xs.filter(cuentaParaPuntaje)
@@ -591,6 +610,10 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
   const localPrevia = !e.rep01 && esNuevo(r) && sinPerfilNiAlquileres(u.email, todos)
   const previaServidor = useRep01Servidor(u.email, localPrevia && !pendiente), previa = decidirPrevia(localPrevia, previaServidor)
+  // Legal 9:00 p. m.: entró con el código por correo de Cavos → primero «Revisa tu correo» (el código de Lockumi). «Cancelar» la oculta
+  // en esta carga; sin el código el servidor no da el correo por verificado (las acciones de la reputación dicen cómo seguir).
+  const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
+  if (porConfirmar && !omitido) return <ConfirmarCorreo key={porConfirmar.correo} p={porConfirmar} cancelar={() => setOmitido(true)} />
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
   // Pedido de borrado en curso (definitivo): el perfil no se muestra y el puntaje no se recalcula ni se avisa; la app sigue para cerrar el alquiler.
   if (pendiente) return esNuevo(r) ? <BloqueoBorrado /> : perfil ? <BorradoEnCurso s={borrado} /> : <>{children}</>

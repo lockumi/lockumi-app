@@ -5,7 +5,9 @@ import { servidor } from '../servidor/repositorio'
 import { asegurarCorreo } from './verificacion'
 import { SEGUNDO_FACTOR } from './textos'
 
-export type AccionCodigo = 'eliminar' | 'descargar'
+// 'verificar_correo' (Legal 25/10/2026, 9:00 p. m.): confirmar el correo de un token de correo de Cavos con aud «cavos-email»
+// (verificacion.ts). El código va al correo POR CONFIRMAR de la sesión, no al verificado.
+export type AccionCodigo = 'eliminar' | 'descargar' | 'verificar_correo'
 export type MotivoCodigo = keyof typeof SEGUNDO_FACTOR.errores | 'accion'
 const MOTIVOS = new Set<string>(Object.keys(SEGUNDO_FACTOR.errores))
 /** Error del segundo factor. `motivo` elige el texto (SEGUNDO_FACTOR.errores, o el error de siempre de la acción si es 'accion'). */
@@ -18,7 +20,8 @@ const motivoDe = (c: Record<string, unknown>): MotivoCodigo => typeof c.motivo =
 /** Pide un código para la acción. Devuelve el correo al que se mandó. Si ya se mandó uno hace menos de un minuto, lanza ErrorCodigo
  *  'minuto' con el correo (la pantalla del código se muestra igual, con ese aviso). */
 export async function pedirCodigo(email: string, accion: AccionCodigo): Promise<{ correo: string }> {
-  await asegurarCorreo(email)   // límite 1: el servidor solo manda el código al correo verificado contra el token de Cavos
+  // límite 1: el servidor solo manda el código al correo verificado contra el token de Cavos ('verificar_correo': al correo por confirmar)
+  if (accion !== 'verificar_correo') await asegurarCorreo(email)
   const r = await servidor.codigoCorreo({ paso: 'pedir', accion }).catch(() => null)
   if (!r) throw new ErrorCodigo('envio')
   const correo = typeof r.cuerpo.correo === 'string' ? r.cuerpo.correo : undefined

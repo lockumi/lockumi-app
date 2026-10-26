@@ -173,6 +173,56 @@ responde 503; sin la de un emisor, ese emisor no se verifica; sin `CAVOS_APP_ID`
 verifican (503).
 Además `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` (ya usadas por `/api/tw`).
 
+### Correo por código con el token de correo de Cavos (Legal, 25/10/2026, 9:00 p. m.; migración NUEVA `20261025210000_verificar_correo_codigo.sql`)
+
+**El hueco:** la sonda en producción (25/10, 8:37 p. m. CR) mostró que el token de correo del enclave (`iss https://enclave.cavos.xyz`, ES256)
+trae `aud` = `cavos-email`, la MISMA para todas las apps de Cavos, y el camino del correo no exigía el App ID en el `nonce`. Un token de
+correo válido de OTRA app de Cavos habría verificado ese correo en Lockumi.
+
+**Lo que se buscó primero (paso 1, ¿el token de correo está ligado a la app?):**
+- Código del kit `@cavos/kit` 0.4.2 (paquete oficial de Cavos en npm; fuente original en el sourcemap):
+  - `node_modules/@cavos/kit/dist/chunk-GD4BWPID.mjs:129-133` (`src/auth/CavosAuth.ts:195`): `sendOtp` → `/api/oauth/email/code` con `app_id` y `email`.
+  - `chunk-GD4BWPID.mjs:143` (`CavosAuth.ts:210`): `/api/oauth/email/session` con `app_id`.
+  - `chunk-GD4BWPID.mjs:155-162` (`CavosAuth.ts:227`): trabajo del enclave `{ action: "verify_email", email, code, client_nonce: loginNonce(secret) }` por `/api/oauth/email/verify`.
+  - `chunk-GD4BWPID.mjs:170` (`CavosAuth.ts:237`) y `:247` (`CavosAuth.ts:336`): `identityFromAuthData(result.id_token, "email", …)` y `assertLoginBinding(claims.nonce, secreto)`.
+  - `chunk-7PFB7IVG.mjs:423-436` (`src/auth/loginBinding.ts`): `requiresLoginBinding` incluye `ENCLAVE_EMAIL_ISSUER`; `assertLoginBinding` exige
+    `nonce.endsWith('.' + loginNonce(secreto))`. Comentario de `loginBinding.ts:7-17`: «Google, Apple and the enclave's email token sign one value
+    the client chooses: the `nonce`. The kit sends the hash of a secret it keeps; the Cavos backend prefixes the app, so the token carries
+    `<app_id>.<base64url(SHA-256(secret))>`» (y `:30`: «Google, Apple and enclave email tokens all carry a nonce this login chose»).
+- Documentación oficial (docs.cavos.xyz): «What the enclave verifies» (`/docs/hardware-isolated-recovery`) documenta el `nonce`
+  `<app>.<BASE64URL(SHA-256(login secret))>` SOLO para Google y Apple; del correo dice que es «the enclave's own signed token … bound to the same
+  login secret», y `/docs/auth`: «bound to a login secret the SDK keeps, the same binding Google and Apple tokens have». **No dice de forma
+  explícita que el `nonce` del correo lleve el prefijo de la app**, ni si es el UUID interno o la clave `cav_…`.
+- Conclusión: hay una fuente del propio Cavos (el código y el comentario del kit) que dice que el `nonce` del correo SÍ lleva el App ID. Queda
+  como **alternativa para Legal** (exigir `nonce` con el prefijo de `CAVOS_APP_ID` también para el correo); **NO se implementó** (decisión de
+  Legal, 9:00 p. m.), y falta confirmarla con un token real (UUID o `cav_…`).
+
+**Lo que se implementó (decisión de Legal):** con `iss https://enclave.cavos.xyz` y `aud` «cavos-email» (`AUD_EMAIL_COMPARTIDA` en
+`api/_lib/cavos-token.ts`), `/api/verificar-correo` ya NO registra el correo en `lk_correos_verificados`:
+1. valida el token como siempre (firma, emisor, audiencia, `iat` de 5 minutos, correo) y lo gasta (un solo uso, `lk_tokens_usados`) dejando
+   el correo «por confirmar» para ESA sesión (`lk_correo_por_confirmar` → tabla `lk_correos_por_confirmar`, 1 por sesión, vale 1 hora);
+2. manda el código de 6 números de Lockumi a ESE correo (`mandarCodigo`, acción `'verificar_correo'`: el mismo código del segundo factor,
+   solo HMAC-SHA256 con `LOCKUMI_CODIGO_PEPPER` y sal, 10 minutos, 5 intentos, un solo uso, reenvío 1 por minuto y 5 por hora por correo) y
+   responde **403** con `{ codigo: true, correo }`;
+3. la app muestra «Revisa tu correo» (`ConfirmarCorreo` en `src/reputacion/Pantallas.tsx`, el mismo estilo y la misma pantalla del segundo
+   factor) y manda el código a `POST /api/codigo-correo` `{ paso: 'confirmar', accion: 'verificar_correo' }`; con el código correcto,
+   `lk_confirmar_correo_pendiente` usa el código (`lk_usar_codigo(usuario, correo, 'verificar_correo')`) y SOLO entonces registra el correo
+   (método `email`). «Reenviar código» = `{ paso: 'pedir', accion: 'verificar_correo' }`. Al recargar (token ya usado, misma sesión y mismo
+   correo) responde otra vez 403 `codigo: true` sin mandar otro código.
+Un token de otra app de Cavos ya no basta: el código llega al buzón de la persona dueña del correo. Google y Apple no cambian (siguen con su
+`aud` y el `nonce` con `CAVOS_APP_ID`). Si algún día `CAVOS_AUD_EMAIL` es un `aud` propio de Lockumi, el correo se registra como antes.
+Textos literales de Legal: título «Revisa tu correo»; «Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu
+correo.»; asunto «Tu código de Lockumi: {código}»; correo con la variante «para confirmar tu correo». El campo, la nota de 10 minutos y los
+errores son los ya aprobados; el botón es «Continuar» (el ya aprobado de la app). Capturas: `prueba-completa/capturas/paso19-reputacion/revisa-tu-correo/`.
+Pruebas: `src/servidor/__tests__/verificar-correo-codigo.test.ts` (token «cavos-email» válido sin código → 403 y sin verificar; con el
+código correcto → verificado; un solo uso, 5 intentos, 10 minutos, 1/min y 5/hora, otra sesión, permisos) y
+`src/reputacion/__tests__/confirmar-correo.test.tsx` (pantalla y flujo en la app).
+La migración `20261025210000_verificar_correo_codigo.sql` es NUEVA (la `20261025140000` ya está aplicada en producción): agrega
+`'verificar_correo'` al `check` de `lk_codigos_correo`, la tabla `lk_correos_por_confirmar` (RLS, sin permisos para la app) y las funciones
+`lk_correo_pendiente`, `lk_correo_por_confirmar`, `lk_correo_para_codigo`, `lk_confirmar_correo_pendiente` (solo `service_role`), y
+redefine `lk_codigo_nuevo` y `lk_codigo_intento` (iguales salvo la acción nueva y el correo de cada acción). Idempotente. La aplica
+`encender-reputacion.sh` (paso 1) con su fila en `supabase_migrations.schema_migrations`.
+
 **Dos correos en un aparato (Legal, 4:23 p. m.):** cada fila de reputación lleva su `correo`; borrar y descargar filtran por CORREO
 (`lk_de_la_persona`), nunca por la sesión compartida. La cuenta (`auth.users`) solo se borra si la sesión no tiene otro correo. El pedido
 pendiente de A no bloquea a B, no oculta su perfil y un alquiler abierto de B no frena el borrado de A.
@@ -281,7 +331,8 @@ en la demo local sin servidor nada cambia.
 **Límites que quedan** (la (g) quedó cerrada a las 4:41 p. m.)**:** (a) el token vive en `sessionStorage`: en una pestaña nueva no hay token y, si esa sesión de Supabase no se verificó
 antes, el servidor rechaza hasta volver a entrar. (b) El código por correo: si el JWT del enclave no trae `email`, no se verifica (cierre por
 defecto); confirmarlo con un token real. (c) El `aud` no está documentado por Cavos: cada `CAVOS_AUD_*` sale de un token real, y no es
-propio de Lockumi (segundo factor, arriba). (d) El servidor no puede comprobar la parte secreta del `nonce`: un token robado en sus primeros
+propio de Lockumi (segundo factor, arriba); el de correo («cavos-email») es el mismo para todas las apps de Cavos, por eso con él hace falta
+además el código de Lockumi (Legal 9:00 p. m., arriba). (d) El servidor no puede comprobar la parte secreta del `nonce`: un token robado en sus primeros
 5 minutos, antes de que la app lo use, serviría UNA vez. (e) El login simulado (`modoReal` apagado) no tiene token: en modo servidor sin Cavos real todo se rechaza. (f) Filas
 sin correo (anteriores a esta ronda) en una sesión con dos correos no se borran con ninguno de los dos. (g) Cerrada (lecturas por el correo
 activo). (h) Con un token ya usado (p. ej. al recargar), la app no vuelve a verificar: el servidor usa lo que esa sesión ya verificó. (2) Una sesión sin
@@ -330,8 +381,9 @@ Son identificadores públicos (van en URLs del navegador), no secretos. Puestos 
 
 Encendida: **25 de octubre de 2026, 8:54 p. m. CR** (1.10-demo · 25 de octubre de 2026). `CAVOS_AUD_EMAIL` = `cavos-email` (del token real de un login con código por correo).
 
-**Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica la migración y registra la fila de encendido, comprueba la
-waitlist; (2) pone `CAVOS_AUD_EMAIL` y `VITE_REPUTACION=1` en Production; (3) escribe la fecha real aquí y en `src/legal/fecha-reputacion.ts`,
+**Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica las migraciones `20261025140000` (si falta) y
+`20261025210000_verificar_correo_codigo.sql` (si falta), cada una con su fila en `schema_migrations`, registra la fila de encendido y
+comprueba la waitlist; (2) pone `CAVOS_AUD_EMAIL` y `VITE_REPUTACION=1` en Production; (3) escribe la fecha real aquí y en `src/legal/fecha-reputacion.ts`,
 commit y push; (4) espera el CI, une el PR #26 con merge commit y espera el deploy de producción en READY; (5) comprueba app.lockumi.com (200)
 y que /terminos y /privacidad dicen 1.10-demo y «Pendiente de revisión por abogado».
 **Volver atrás:** promover el deploy anterior en Vercel (o borrar `VITE_REPUTACION` y volver a publicar) y `git revert -m 1 <merge>`. La

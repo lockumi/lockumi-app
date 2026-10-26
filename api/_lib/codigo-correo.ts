@@ -11,18 +11,21 @@
 //   · La acción la hace ESTE servidor, con la sesión de la persona, justo después de confirmar el código; lk_pedir_borrado_cuenta y
 //     lk_mis_datos_reputacion además rechazan sin un código confirmado (lk_usar_codigo), aunque la app las llame directo.
 // Correo: aviso del servicio (sin casilla ni contenido comercial), con el pie de siempre (PIE, el mismo de REP-12), por Resend.
-import { servicio, rpc } from './supabase.js'
+import { servicio, rpc, type ServicioSupabase } from './supabase.js'
 import { PIE, REMITENTE, origenPermitido } from './correo.js'
 
 type Env = Record<string, string | undefined>
-export type Accion = 'eliminar' | 'descargar'
-export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar']
+// 'verificar_correo' (Legal 25/10/2026, 9:00 p. m.): confirmar el correo de un token de correo de Cavos con aud «cavos-email»
+// (api/_lib/cavos-token.ts). Va al correo POR CONFIRMAR de la sesión (lk_correo_pendiente), no al verificado activo.
+export type Accion = 'eliminar' | 'descargar' | 'verificar_correo'
+export const ACCIONES: readonly Accion[] = ['eliminar', 'descargar', 'verificar_correo']
 export const MINUTOS_VALIDO = 10
 export const INTENTOS = 5
 
 // LEGAL: revisado (25/10, 5:04 p. m.) · textos literales de Legal (correo del código)
 export const asuntoCodigo = (codigo: string) => `Tu código de Lockumi: ${codigo}`
-export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos' }
+// LEGAL: revisado (25/10, 9:00 p. m.) · variante literal de Legal para el correo del código: «para confirmar tu correo»
+export const PARA_QUE: Record<Accion, string> = { eliminar: 'eliminar tu cuenta', descargar: 'descargar tus datos', verificar_correo: 'confirmar tu correo' }
 export const cuerpoCodigo = (accion: Accion) =>
   `Escribe este código en Lockumi para ${PARA_QUE[accion]}. Vale 10 minutos. No lo compartas con nadie: Lockumi nunca te lo va a pedir por otro medio. Si no lo pediste, ignora este correo; sin el código no se hace nada.`
 
@@ -80,6 +83,37 @@ export function armarCodigo(codigo: string, accion: Accion, origen: string) {
 }
 
 type Respuesta = { estado: number; cuerpo: Record<string, unknown> }
+type Base = ServicioSupabase
+
+/** Arma un código nuevo para (sesión, correo, acción), guarda SOLO su huella (lk_codigo_nuevo: límites de 1 por minuto y 5 por hora) y
+ *  manda el correo por Resend. motivo: null = salió; 'minuto' | 'hora' = límite; 'correo' = ese correo no es el de la acción; 'envio' =
+ *  falta configuración (base: true si falló la base) o Resend no lo mandó (el código se borra). Lo usan /api/codigo-correo ('pedir') y
+ *  /api/verificar-correo (token de correo con aud «cavos-email»). */
+export async function mandarCodigo(env: Env, s: Base, uid: string, correo: string, accion: Accion, origen: string | null, f: typeof fetch = fetch):
+  Promise<{ motivo: null | 'minuto' | 'hora' | 'correo' | 'envio'; base?: boolean }> {
+  const pepper = pepperDe(env), llave = env.RESEND_API_KEY?.trim()
+  if (!pepper || !llave) return { motivo: 'envio', base: true }
+  const codigo = codigoAlAzar(), sal = salAlAzar()
+  let g: { id?: number; error?: 'correo' | 'minuto' | 'hora' }
+  try { g = await rpc(s, 'lk_codigo_nuevo', { p_usuario: uid, p_correo: correo, p_accion: accion, p_huella: await huellaCodigo(pepper, sal, uid, correo, accion, codigo), p_sal: sal }, f) }
+  catch { return { motivo: 'envio', base: true } }
+  if (g.error === 'minuto' || g.error === 'hora') return { motivo: g.error }
+  if (g.error || typeof g.id !== 'number') return { motivo: 'correo' }
+  const o = origen && origenPermitido(origen) ? origen : 'https://app.lockumi.com'
+  const c = armarCodigo(codigo, accion, o)
+  const e = await f('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': `codigo:${g.id}:${sal}` },
+    body: JSON.stringify({ from: REMITENTE, to: [correo], subject: c.asunto, html: c.html, text: c.texto }),
+  }).catch(() => null)
+  const j = e ? await e.json().catch(() => ({})) as { id?: string } : {}
+  if (!e?.ok || !j.id) {
+    console.warn('codigo-correo', 'no salió el correo')   // nunca el código ni la llave
+    await rpc(s, 'lk_codigo_borrar', { p_id: g.id }, f).catch(() => null)
+    return { motivo: 'envio' }
+  }
+  return { motivo: null }
+}
 // 'accion' (pedido mal armado o la acción falló): sin texto propio; la app muestra el error de siempre de esa acción (UI.errBorrado o UI.errDescarga).
 const error = (estado: number, motivo: Motivo): Respuesta => ({ estado, cuerpo: motivo === 'accion' ? { motivo } : { error: ERRORES[motivo], motivo } })
 
@@ -99,27 +133,14 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
 
   if (b.paso === 'pedir') {
     let correo: string | null
-    try { correo = await rpc<string | null>(s, 'lk_codigo_para', { p_usuario: uid }, f) } catch { return error(503, 'envio') }
-    if (!correo) return error(403, 'correo')
-    const codigo = codigoAlAzar(), sal = salAlAzar()
-    let g: { id?: number; error?: 'correo' | 'minuto' | 'hora' }
-    try { g = await rpc(s, 'lk_codigo_nuevo', { p_usuario: uid, p_correo: correo, p_accion: accion, p_huella: await huellaCodigo(pepper, sal, uid, correo, accion, codigo), p_sal: sal }, f) }
+    // 'verificar_correo': el correo por confirmar (lk_correo_pendiente); las otras: el verificado activo (lk_codigo_para).
+    try { correo = accion === 'verificar_correo' ? await rpc<string | null>(s, 'lk_correo_pendiente', { p_usuario: uid }, f) : await rpc<string | null>(s, 'lk_codigo_para', { p_usuario: uid }, f) }
     catch { return error(503, 'envio') }
-    if (g.error === 'minuto' || g.error === 'hora') { const r = error(429, g.error); return { ...r, cuerpo: { ...r.cuerpo, correo } } }
-    if (g.error || typeof g.id !== 'number') return error(403, 'correo')
-    const o = origen && origenPermitido(origen) ? origen : 'https://app.lockumi.com'
-    const c = armarCodigo(codigo, accion, o)
-    const e = await f('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${llave}`, 'content-type': 'application/json', 'idempotency-key': `codigo:${g.id}:${sal}` },
-      body: JSON.stringify({ from: REMITENTE, to: [correo], subject: c.asunto, html: c.html, text: c.texto }),
-    }).catch(() => null)
-    const j = e ? await e.json().catch(() => ({})) as { id?: string } : {}
-    if (!e?.ok || !j.id) {
-      console.warn('codigo-correo', 'no salió el correo')   // nunca el código ni la llave
-      await rpc(s, 'lk_codigo_borrar', { p_id: g.id }, f).catch(() => null)
-      return error(502, 'envio')
-    }
+    if (!correo) return error(403, 'correo')
+    const m = await mandarCodigo(env, s, uid, correo, accion, origen, f)
+    if (m.motivo === 'minuto' || m.motivo === 'hora') { const r = error(429, m.motivo); return { ...r, cuerpo: { ...r.cuerpo, correo } } }
+    if (m.motivo === 'correo') return error(403, 'correo')
+    if (m.motivo) return error(m.motivo === 'envio' && m.base ? 503 : 502, 'envio')
     return { estado: 200, cuerpo: { enviado: true, correo } }
   }
 
@@ -133,6 +154,13 @@ export async function atenderCodigo(env: Env, bearer: string | null, body: unkno
   let ok: boolean
   try { ok = await rpc<boolean>(s, 'lk_codigo_confirmar', { p_id: t.id }, f) === true } catch { return error(503, 'envio') }
   if (!ok) return error(403, 'codigo')
+  // 'verificar_correo' (Legal 9:00 p. m.): con el código confirmado, lk_confirmar_correo_pendiente usa el código (lk_usar_codigo, un solo
+  // uso) y SOLO entonces registra el correo en lk_correos_verificados (clave de servicio: la app no puede llamarla).
+  if (accion === 'verificar_correo') {
+    let c: string | null
+    try { c = await rpc<string>(s, 'lk_confirmar_correo_pendiente', { p_usuario: uid }, f) } catch { return error(403, 'codigo') }
+    return c ? { estado: 200, cuerpo: { hecho: true, correo: c } } : error(403, 'codigo')
+  }
   // La acción, con la sesión de la persona (auth.uid()): la función usa el código confirmado (un solo uso).
   const rol = b.rol === 'dueno' || b.rol === 'inquilino' ? b.rol : null
   const [fn, args] = accion === 'eliminar' ? ['lk_pedir_borrado_cuenta', { p_correo: t.correo }] : ['lk_mis_datos_reputacion', { p_correo: t.correo, p_rol: rol }]

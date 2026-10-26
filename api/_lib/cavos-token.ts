@@ -5,6 +5,7 @@
 // Aquí se valida como lo hace el enclave de Cavos (docs.cavos.xyz/docs/hardware-isolated-recovery): firma con las llaves públicas
 // del emisor (JWKS), emisor, audiencia, vencimiento y el correo. Solo WebCrypto (sin dependencias nuevas). Cierre por defecto.
 import { servicio, rpc } from './supabase.js'
+import { mandarCodigo, ERRORES as ERRORES_CODIGO } from './codigo-correo.js'
 
 // Legal, revisión de 96e931b (4:45 p. m.): audiencias POR EMISOR (CAVOS_AUD_GOOGLE, CAVOS_AUD_APPLE, CAVOS_AUD_EMAIL), iat de 5 minutos
 // como máximo, token de un solo uso (huella en lk_tokens_usados), email_verified false rechazado con cualquier emisor, llave del JWKS
@@ -12,6 +13,10 @@ import { servicio, rpc } from './supabase.js'
 // Google y Apple (login de Cavos): nonce «<app id>.<BASE64URL(SHA-256(secreto))>» (docs.cavos.xyz/llms-full.txt, «What the enclave
 // verifies»): se exige el prefijo con el App ID de Lockumi (CAVOS_APP_ID). El hash del secreto NO se puede comprobar (el secreto queda en
 // el cliente). El enclave (código por correo) no documenta el formato de su nonce: no se exige.
+// Legal, 25/10/2026, 9:00 p. m.: el token de correo del enclave trae aud «cavos-email», la MISMA para todas las apps de Cavos (sonda en
+// producción, docs/reputacion.md). Con ese token el correo NO se registra directo: queda «por confirmar» y se manda el código de 6
+// números de Lockumi a ese correo (acción 'verificar_correo'); solo con el código correcto queda verificado (/api/codigo-correo).
+export const AUD_EMAIL_COMPARTIDA = 'cavos-email'
 export const EMISORES = {
   google: { iss: ['https://accounts.google.com', 'accounts.google.com'], alg: 'RS256', jwks: 'https://www.googleapis.com/oauth2/v3/certs', aud: 'CAVOS_AUD_GOOGLE' },
   apple: { iss: ['https://appleid.apple.com'], alg: 'RS256', jwks: 'https://appleid.apple.com/auth/keys', aud: 'CAVOS_AUD_APPLE' },
@@ -68,7 +73,7 @@ export async function verificarTokenCavos(token: string, env: Env, f: typeof fet
   return { correo, metodo }
 }
 /** Igual que verificarTokenCavos, y además la huella de un solo uso (huellaDeUso) de los claims ya verificados. */
-export async function verificarConHuella(token: string, env: Env, f: typeof fetch = fetch, ahora = Date.now()): Promise<{ correo: string; metodo: Metodo; huella: string }> {
+export async function verificarConHuella(token: string, env: Env, f: typeof fetch = fetch, ahora = Date.now()): Promise<{ correo: string; metodo: Metodo; huella: string; conCodigo: boolean }> {
   const partes = String(token ?? '').split('.')
   if (partes.length !== 3 || !partes[0] || !partes[1]) throw new ErrorVerificacion(403, 'El token no tiene el formato de un JWT.')
   let cab: Record<string, unknown>, c: Record<string, unknown>
@@ -110,7 +115,9 @@ export async function verificarConHuella(token: string, env: Env, f: typeof fetc
   if (c.email_verified === false || c.email_verified === 'false') throw new ErrorVerificacion(403, 'El emisor dice que no confirmó el correo.')
   if (metodo !== 'email' && !(c.email_verified === true || c.email_verified === 'true')) throw new ErrorVerificacion(403, 'El proveedor no confirmó el correo.')
   if (typeof c.sub !== 'string' || !c.sub || c.sub.length > 256) throw new ErrorVerificacion(403, 'El token no dice de quién es (sub).')
-  return { correo, metodo, huella: await huellaDeUso({ iss: String(c.iss), sub: c.sub, iat: c.iat, nonce: c.nonce }) }
+  // conCodigo: token del enclave con la audiencia compartida «cavos-email» → además hace falta el código de Lockumi (Legal 9:00 p. m.).
+  const conCodigo = metodo === 'email' && aud.includes(AUD_EMAIL_COMPARTIDA)
+  return { correo, metodo, huella: await huellaDeUso({ iss: String(c.iss), sub: c.sub, iat: c.iat, nonce: c.nonce }), conCodigo }
 }
 
 // LEGAL: revisado (25/10) · ronda 4:41 · texto propio (respuesta de /api/verificar-correo; la app no lo muestra: el servidor decide después)
@@ -118,13 +125,15 @@ export const NO_SE_PUDO_VERIFICAR = 'No pudimos confirmar el correo de tu cuenta
 
 // LEGAL: revisado (25/10, 5:04 p. m.) · ronda 4:45 · texto propio aprobado por Legal (respuesta 429 de /api/verificar-correo; la app no lo muestra)
 export const DEMASIADOS_INTENTOS = 'Hiciste muchos intentos seguidos. Espera 10 minutos y vuelve a entrar con tu correo.'
+// Respuesta 403 de /api/verificar-correo cuando falta el código del correo (la app no la muestra: muestra «Revisa tu correo»).
+export const FALTA_CODIGO = 'Falta el código que te enviamos por correo.'
 /** Límites de intentos (ventana de 10 minutos): por sesión de Supabase y por IP (la IP se guarda como huella, nunca en claro). */
 export const LIMITES = { sesion: 5, ip: 30, ventana: '10 minutes' } as const
 
 /** POST /api/verificar-correo: sesión de Supabase (Bearer) + { token } de Cavos → registra (sesión, correo, huella del token) con la
  *  clave de servicio. ip: la del pedido (x-forwarded-for / x-real-ip), para el límite de intentos. */
-export async function atenderVerificacion(env: Env, bearer: string | null, body: unknown, f: typeof fetch = fetch, ahora = Date.now(), ip: string | null = null):
-  Promise<{ estado: number; cuerpo: { correo: string } | { error: string } }> {
+export async function atenderVerificacion(env: Env, bearer: string | null, body: unknown, f: typeof fetch = fetch, ahora = Date.now(), ip: string | null = null, origen: string | null = null):
+  Promise<{ estado: number; cuerpo: { correo: string; codigo?: true; motivo?: string; error?: string } | { error: string } }> {
   const s = servicio(env), anon = (env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY)?.trim()
   if (!s || !anon || !configurado(env)) return { estado: 503, cuerpo: { error: 'La verificación del correo no está configurada.' } }
   if (!bearer || !/^Bearer \S+$/.test(bearer)) return { estado: 401, cuerpo: { error: 'Falta la sesión.' } }
@@ -145,11 +154,28 @@ export async function atenderVerificacion(env: Env, bearer: string | null, body:
   const ok = await intento(`sesion:${uid}`, LIMITES.sesion)
   if (ok === null) return { estado: 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
   if (!ok) return { estado: 429, cuerpo: { error: DEMASIADOS_INTENTOS } }
-  let v: { correo: string; metodo: Metodo; huella: string }
+  let v: { correo: string; metodo: Metodo; huella: string; conCodigo: boolean }
   try { v = await verificarConHuella(token, env, f, ahora) } catch (e) {
     const estado = e instanceof ErrorVerificacion ? e.estado : 403
     console.warn('verificar-correo', e instanceof Error ? e.message : 'error')   // el motivo, nunca el token
     return { estado, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
+  }
+  // Legal 9:00 p. m.: token de correo con aud «cavos-email» → el correo queda POR CONFIRMAR (lk_correo_por_confirmar, que también gasta
+  // el token: un solo uso) y se manda el código de Lockumi a ESE correo. NO se registra en lk_correos_verificados: eso lo hace
+  // /api/codigo-correo (acción 'verificar_correo') con el código correcto. Sin el código: 403 con codigo: true (la app muestra
+  // «Revisa tu correo»); motivo/error solo si no salió un código nuevo (límite de reenvíos o Resend).
+  if (v.conCodigo) {
+    let estado: string
+    try { estado = await rpc<string>(s, 'lk_correo_por_confirmar', { p_usuario: uid, p_correo: v.correo, p_huella: v.huella }, f) } catch (e) {
+      const usado = e instanceof Error && /409/.test(e.message)
+      console.warn('verificar-correo', usado ? 'token ya usado' : 'no se pudo dejar por confirmar')
+      return { estado: usado ? 403 : 503, cuerpo: { error: NO_SE_PUDO_VERIFICAR } }
+    }
+    const falta = { correo: v.correo, codigo: true as const, error: FALTA_CODIGO }
+    if (estado === 'pendiente') return { estado: 403, cuerpo: falta }   // ya se mandó; «Reenviar código» va por /api/codigo-correo
+    const m = await mandarCodigo(env, s, uid, v.correo, 'verificar_correo', origen, f)
+    if (m.motivo && m.motivo !== 'correo') return { estado: 403, cuerpo: { ...falta, motivo: m.motivo, error: ERRORES_CODIGO[m.motivo] } }
+    return { estado: 403, cuerpo: falta }
   }
   // Un solo uso: la base guarda la huella de los claims (iss|sub|iat|nonce, huellaDeUso; nunca la firma ni el token) y rechaza la segunda
   // vez, aunque sea otra sesión o la firma venga reescrita (Legal 6:04 p. m.).

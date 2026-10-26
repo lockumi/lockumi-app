@@ -7,6 +7,6 @@ export async function POST(req: Request): Promise<Response> {
   const body = await req.json().catch(() => null)
   // IP para el límite de intentos (Vercel pone x-forwarded-for; si no, x-real-ip). Solo se guarda su huella.
   const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip')
-  const r = await atenderVerificacion(process.env, req.headers.get('authorization'), body, fetch, Date.now(), ip)
+  const r = await atenderVerificacion(process.env, req.headers.get('authorization'), body, fetch, Date.now(), ip, req.headers.get('origin'))
   return Response.json(r.cuerpo, { status: r.estado, headers: { 'cache-control': 'no-store' } })
 }

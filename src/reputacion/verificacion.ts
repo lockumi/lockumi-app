@@ -10,7 +10,7 @@ import { conServidor } from '../servidor/config'
 import { servidor } from '../servidor/repositorio'
 import { authCavos } from '../services/auth'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
-import { confirmarCodigo, ErrorCodigo } from './segundo-factor'
+import { confirmarCodigo, pedirCodigo, ErrorCodigo, type MotivoCodigo } from './segundo-factor'
 
 const normalizar = (c: string) => c.trim().toLowerCase()
 /** El último correo verificado en esta carga de la app. El servidor lee solo por el correo verificado ACTIVO de la sesión (el último
@@ -19,6 +19,16 @@ let activo: { c: string; p: Promise<boolean> } | null = null
 /** Tokens ya enviados en esta carga: el servidor usa cada token UNA sola vez (Legal, 4:45 p. m.), así que no se reenvían (no gastan el
  *  límite de intentos). Con un token ya usado, el servidor decide con lo que ya verificó; cambiar de persona = volver a entrar = token nuevo. */
 const enviados = new Set<string>()
+/** Legal 25/10/2026, 9:00 p. m.: con el token de correo de Cavos (aud «cavos-email», la misma para todas las apps de Cavos) el servidor
+ *  NO verifica el correo solo con el token: lo deja por confirmar y manda el código de 6 números de Lockumi a ese correo. Mientras
+ *  tanto, la app muestra «Revisa tu correo» (Pantallas.tsx, ConfirmarCorreo). motivo: el aviso si no salió un código nuevo. */
+export type PorConfirmar = { c: string; correo: string; motivo?: MotivoCodigo }
+let porConfirmar: PorConfirmar | null = null
+const oyentes = new Set<() => void>()
+const avisar = () => { for (const f of oyentes) f() }
+export const correoPorConfirmar = () => porConfirmar
+export function oirPorConfirmar(f: () => void) { oyentes.add(f); return () => { oyentes.delete(f) } }
+const MOTIVOS_AVISO = new Set(['minuto', 'hora', 'envio'])
 /** Verifica una vez por correo activo (y por carga de la app). Nunca lanza: si no se pudo, el servidor rechaza después con un texto que
  *  dice cómo seguir («Sal de Lockumi, vuelve a entrar con tu correo…»). */
 export function asegurarCorreo(email: string): Promise<boolean> {
@@ -30,12 +40,32 @@ export function asegurarCorreo(email: string): Promise<boolean> {
     if (!token || enviados.has(token)) return false
     enviados.add(token)
     const r = await servidor.verificarCorreo(token)
+    if (r.codigo) {   // falta el código del correo: no está verificado todavía
+      if (normalizar(r.correo) === c) { porConfirmar = { c, correo: r.correo, ...(r.motivo && MOTIVOS_AVISO.has(r.motivo) && { motivo: r.motivo as MotivoCodigo }) }; avisar() }
+      return false
+    }
     return normalizar(r.correo) === c
   })().catch(() => false)
   const yo = { c, p }
   activo = yo
   p.then(ok => { if (!ok && activo === yo) activo = null })   // se reintenta la próxima vez (p. ej. después de volver a entrar)
   return p
+}
+
+/** «Revisa tu correo» (verificar_correo): con el código correcto el servidor registra el correo como verificado. Lanza ErrorCodigo. */
+export async function confirmarCorreoConCodigo(codigo: string) {
+  const p = porConfirmar
+  if (!p) throw new ErrorCodigo('correo')
+  const r = await confirmarCodigo('verificar_correo', codigo)
+  if (normalizar(String(r.correo ?? '')) !== p.c) throw new ErrorCodigo('correo')
+  activo = { c: p.c, p: Promise.resolve(true) }; porConfirmar = null; avisar()
+}
+/** «Reenviar código» de «Revisa tu correo»: otro código al correo por confirmar (mismos límites: 1 por minuto y 5 por hora). */
+export async function reenviarCodigoCorreo() {
+  const p = porConfirmar
+  if (!p) throw new ErrorCodigo('correo')
+  const r = await pedirCodigo(p.c, 'verificar_correo')
+  porConfirmar = { c: p.c, correo: r.correo }; avisar()
 }
 
 /** Límite 5: en modo servidor, primero el pedido en el servidor; si falla, no se borra nada en este aparato (se puede reintentar).
