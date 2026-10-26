@@ -54,7 +54,7 @@ export default function App() {
   const salir = () => { auth.salir(); olvidarBilletera(); setU(null) }
   const pantalla = r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} /> : m ? <Detalle id={m[1]} u={u} /> : <Inicio u={u} />
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
-  return <Fondo>{skip}
+  return <Fondo comision={!!(inv || m)}>{skip}
     <Alertas />
     <Barra u={u} onSalir={salir} />
     {/* Paso 19: con VITE_REPUTACION=1 todas las pantallas pasan por la puerta obligatoria de la reputación. Apagado, este código no existe en el build. */}

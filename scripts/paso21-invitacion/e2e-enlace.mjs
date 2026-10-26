@@ -100,11 +100,19 @@ try {
     await p.locator('input.codigo').fill('123456'); await p.getByRole('dialog').getByRole('button', { name: 'Entrar', exact: true }).click()
     await p.waitForTimeout(4000)
   }
+  // Legal 25/10, 10:30 p. m.: la comisión va justo debajo de «Red de prueba de Stellar: sin dinero real.», solo en la invitación y el alquiler.
+  const COMISION = 'Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.'
+  const comision = p => p.evaluate(t => { const e = document.querySelector('.aviso-red__extra'); if (!e) return { hay: false }
+    const r = e.getBoundingClientRect(); return { hay: true, texto: e.textContent === t, junto: e.previousElementSibling?.classList.contains('aviso-red') && e.previousElementSibling.textContent === 'Red de prueba de Stellar: sin dinero real.',
+      visible: r.height > 0 && getComputedStyle(e).visibility !== 'hidden', fueraDePlegable: !e.closest('.cp-completo') } }, COMISION)
+  const exigirComision = async (p, donde) => { const c = await comision(p); log(`comisión de Trustless Work en ${donde}:`, JSON.stringify(c)); if (!ANTES && Object.values(c).some(v => !v)) falla(`Falta la línea de la comisión en ${donde}: ` + JSON.stringify(c)) }
+  const sinComision = async (p, donde) => { if (!ANTES && (await comision(p)).hay) falla(`La línea de la comisión no va en ${donde}`) }
   await o.goto(abrir); await o.waitForTimeout(2000)
   const sinSesion = ANTES ? await o.getByText('Te invitaron a un alquiler en Lockumi').count()
     : await o.locator('h2.entrada-app__titulo', { hasText: /^Te invitaron a un alquiler$/ }).count() && await o.locator('.entrada-app__sub', { hasText: /^Inicia sesión para verlo$/ }).count()
   log('pantalla sin sesión, corta (título y subtítulo de Legal):', !!sinSesion); if (!ANTES && !sinSesion) falla('Falta el título o el subtítulo de la invitación sin sesión')
   if (!ANTES && (await o.locator('.beneficios').count() || await o.getByText(/firm/i).count())) falla('La pantalla sin sesión no es corta (beneficios o «firmar»)')
+  await sinComision(o, 'la pantalla sin sesión')
   await captura(o, '3-invitada-sin-sesion')
   await entrarCon(o, OTRO); await entendido(o)
   const uiOtro = await o.getByText(OTRO_CORREO).count()
@@ -131,6 +139,7 @@ try {
     await b.click(); if (await b.getAttribute('aria-expanded') !== 'true' || !(await g.getByText('No fumar dentro de la casa').isVisible())) falla('Un toque no abre «Reglas del alquiler»'); await b.click()
     const t = await g.evaluate(() => { const h = document.querySelector('h1.inv-titulo'), c = h?.nextElementSibling; return h && c ? Math.round(c.getBoundingClientRect().top - h.getBoundingClientRect().bottom) : -1 })
     log('aire entre el título y la tarjeta:', t, 'px'); if (t < 16) falla('El título de la invitación sigue pegado a la tarjeta')
+    await exigirComision(g, 'la invitación (plegable cerrado)')
   }
   await captura(g, '4-invitada-tras-entrar')
   const uid = sb.uids(ci).at(-1); if (!uid) falla('La invitada no tiene sesión en el servidor')   // la sesión vigente (la última de este navegador)
@@ -156,12 +165,15 @@ try {
     const todo = { cerrado: await b.getAttribute('aria-expanded') === 'false', titulo: /^Contrato de alquiler \(Ejemplo\)/.test((await b.innerText()).trim()),
       reglasOcultas: !(await g.locator('.ct__reglas').first().isVisible()), casilla: await g.getByText('Leí el contrato y estoy de acuerdo.').isVisible() }
     log('alquiler (firmas) con el contrato plegado:', JSON.stringify(todo)); if (Object.values(todo).some(v => !v)) falla('Plegable del contrato: ' + JSON.stringify(todo))
+    await exigirComision(g, 'el alquiler (contrato cerrado)')
   }
+  await captura(g, '9-alquiler-arriba', () => g.evaluate(() => scrollTo(0, 0)))
   const alContrato = () => g.evaluate(() => { const b = document.querySelector('.ct .cp-abrir, .ct__reglas'); const t = b?.closest('.ct') ?? b; if (t) { t.scrollIntoView({ block: 'start' }); scrollBy(0, -70) } })
   await captura(g, '6-inquilino-contrato', alContrato)
   await g.goto(B + '#/'); await g.waitForTimeout(3000); await entendido(g); await g.waitForTimeout(800); await entendido(g)
   const tiene = await g.getByText('Ejemplo · Casa Las Flores').count()
   log('«Tus alquileres» del inquilino muestra el alquiler:', !!tiene); if (!ANTES && !tiene) falla('El alquiler no aparece en «Tus alquileres»')
+  await sinComision(g, '«Tus alquileres»')
   await captura(g, '5-inquilino-tus-alquileres')
   ok = true
 } catch (e) { console.error('FALLÓ:', e.message) }

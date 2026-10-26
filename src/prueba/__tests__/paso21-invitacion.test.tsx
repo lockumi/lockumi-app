@@ -162,6 +162,27 @@ describe('plegables (Katherine/Legal 25/10, 10:15 p. m.): cerrados al entrar, t�
   })
 })
 
+describe('comisión de Trustless Work junto al aviso de la red (Legal 25/10, 10:30 p. m.)', () => {
+  const L = 'Trustless Work cobra una comisión del 0,3 % de cada monto que se libera.'
+  it('texto literal, justo debajo de «Red de prueba de Stellar: sin dinero real.» y fuera de cualquier plegable', async () => {
+    const { Fondo, TEXTO_COMISION_TW, AVISO_RED } = await import('../../ui')
+    expect(TEXTO_COMISION_TW).toBe(L)
+    const h = renderToStaticMarkup(<Fondo comision><p>x</p></Fondo>)
+    expect(h).toContain(`<div class="aviso-red" role="note">${AVISO_RED}</div><p class="aviso-red__extra" role="note">${L}</p><p>x</p>`)
+    expect(aLaVista(h)).toContain(L)
+    expect(renderToStaticMarkup(<Fondo><p>x</p></Fondo>)).not.toContain(L)   // las demás pantallas no cambian
+  })
+  it('solo en la invitación y en la vista del alquiler (App.tsx); la pantalla sin sesión sigue corta', async () => {
+    const app = (await import('../../App.tsx?raw')).default
+    expect(app).toContain('return <Fondo comision={!!(inv || m)}>{skip}')
+    expect(app.match(/<Fondo comision/g)).toHaveLength(1)
+  })
+  it('la línea del plazo de 7 días NO se agregó (el código no coincide: el plazo empieza con «Recibí la casa» o 2 días después de la entrega)', async () => {
+    const ui = (await import('../../ui.tsx?raw')).default, inv = (await import('../../screens/Invitacion.tsx?raw')).default
+    for (const f of [ui, inv]) expect(f).not.toContain('Cuando el inquilino entrega el inmueble')
+  })
+})
+
 describe('la invitación es para otro correo (Legal 25/10, 10:10 p. m.)', () => {
   it('el texto es el literal de Legal, igual en la pantalla y en el servidor (migración 20261025230000)', async () => {
     const L = 'Esta invitación es para otro correo. Sal de Lockumi y vuelve a entrar con el correo al que te llegaron el enlace.'

@@ -434,6 +434,8 @@ input[type=range]{width:100%;accent-color:var(--accion);min-height:32px}
 .saldo-usdc{margin:0}
 .interruptor-prueba{display:flex;gap:10px;padding:10px 12px;border:1.5px dashed rgba(61,42,34,.25);border-radius:14px}.interruptor-prueba input{margin-top:3px;width:20px;height:20px;flex:none}
 .aviso-red{position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:13px;font-weight:700;background:#FFF1B8;color:#5C4A00;border-bottom:1px dashed #9A7B00}
+/* paso21 v3: línea de la comisión de Trustless Work debajo del aviso (invitación y alquiler); mismos colores, sin fijar. */
+.aviso-red__extra{margin:0;padding:4px 12px 6px;text-align:center;font-size:13px;font-weight:600;background:#FFF1B8;color:#5C4A00;border-bottom:1px dashed #9A7B00}
 .pasos-solo{display:flex;gap:6px;margin:6px 0 2px}.pasos-solo span{flex:1;height:6px;border-radius:4px;background:rgba(61,42,34,.12)}.pasos-solo .hecho{background:var(--exito)}.pasos-solo .actual{background:var(--accion,#FF6B35)}
 .simulado-caja{padding:10px 12px;border-radius:14px;border:1.5px dashed rgba(61,42,34,.25)}.simulado-caja p{margin:0}
 .cuentas-prueba{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.6)}

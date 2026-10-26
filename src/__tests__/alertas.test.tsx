@@ -290,9 +290,9 @@ describe('error del ingreso escrito en Entrar', () => {
 describe('aviso al inicio del orden de Tab', () => {
   const app = leer('../App.tsx')
   it('<Alertas /> va justo después de «Saltar al contenido» en las tres vistas (sin sesión, entrando y con sesión)', () => {
-    const fondos = app.match(/<Fondo>\{skip\}[\s\S]*?<\/Fondo>/g)!.filter(f => f.includes('<Alertas />'))
+    const fondos = app.match(/<Fondo[^>]*>\{skip\}[\s\S]*?<\/Fondo>/g)!.filter(f => f.includes('<Alertas />'))
     expect(fondos).toHaveLength(3)
-    for (const f of fondos) expect(f).toMatch(/^<Fondo>\{skip\}\s*<Alertas \/>/)
+    for (const f of fondos) expect(f).toMatch(/^<Fondo[^>]*>\{skip\}\s*<Alertas \/>/)
     expect(app).not.toMatch(/<Pie \/>\s*<Alertas \/>/)
   })
   it('sigue sin robar el foco: el aviso no se enfoca solo al aparecer', () => {
