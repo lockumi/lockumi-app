@@ -317,7 +317,7 @@ Son identificadores públicos (van en URLs del navegador), no secretos. Puestos 
 **Estado para el encendido (25/10/2026, 8:15 p. m. CR; Katherine: «haz lo que tengas que hacer para que funcione todo al 100», Legal: OK final al PR #26):**
 - [x] En Vercel **Production** (solo nombres; valores de «Valores reales de CAVOS_*»): `CAVOS_APP_ID`, `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE` y
   `LOCKUMI_CODIGO_PEPPER` (al azar, 32 bytes, sensible; copia fuera del repo). `RESEND_API_KEY` ya estaba (Production y Preview).
-- [ ] `CAVOS_AUD_EMAIL`: **se llena al encender**. Katherine lo lee de un login real con código por correo (el `aud` de su propio token, en su
+- [x] `CAVOS_AUD_EMAIL`: `cavos-email`, puesto al encender (25 de octubre de 2026). Katherine lo lee de un login real con código por correo (el `aud` de su propio token, en su
   navegador; nadie copia el token). Es el único dato que falta; con él el encendido es un solo comando: `encender-reputacion.sh <AUD>`.
 - [x] Rama al día con master (escenario C): la 1.10-demo se superpone a la edición vigente (desde C, la 1.9-demo); la guarda «LEGAL: revisar»
   de master y la de la fecha de encendido conviven en `vite.config.ts`.
@@ -328,7 +328,7 @@ Son identificadores públicos (van en URLs del navegador), no secretos. Puestos 
   «25 de octubre de 2026»). El encendido la escribe y la sube en el mismo commit; la guarda del build impide publicar con «[fecha de encendido]».
 - [ ] `VITE_REPUTACION=1` en Production: lo pone el encendido (es de build; sin un deploy nuevo no cambia nada).
 
-Encendida: **todavía no** (fecha de encendido y `CAVOS_AUD_EMAIL`: se escriben al encender).
+Encendida: **25 de octubre de 2026, 8:54 p. m. CR** (1.10-demo · 25 de octubre de 2026). `CAVOS_AUD_EMAIL` = `cavos-email` (del token real de un login con código por correo).
 
 **Encendido (un solo comando, `encender-reputacion.sh <AUD>`):** (1) aplica la migración y registra la fila de encendido, comprueba la
 waitlist; (2) pone `CAVOS_AUD_EMAIL` y `VITE_REPUTACION=1` en Production; (3) escribe la fecha real aquí y en `src/legal/fecha-reputacion.ts`,
