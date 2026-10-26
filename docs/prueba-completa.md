@@ -319,6 +319,8 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
   del correo de invitación deja de servir («Esta invitación ya no está disponible…») y, como hay un solo correo por alquiler, la tarjeta
   deja de decir «Te enviamos el enlace a…» (`linkNuevoSinCorreo`): se comparte el link nuevo con «Copiar link» o WhatsApp. E2E sin
   correos: `node scripts/e2e-reinicio-invitacion.mjs`.
+- **Link ya usado (26/10/2026):** si quien abre un link de invitación ya es parte del alquiler (lo aceptó o es el dueño), la
+  pantalla lo lleva al alquiler en vez de «Esta invitación ya no está disponible…» (`abrirSiYaEsMio`).
 - **Volver atrás:** `supabase/revert/20261026060000_vincular_alquileres_revert.sql` (usa `lk_vinculaciones`) y `git revert -m 1 <merge>`.
 - **Prueba en producción:** `prueba-completa/scripts/vincular-alquileres-produccion.mjs` (dos cuentas de prueba, sin correos reales).
 

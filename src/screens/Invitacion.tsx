@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { servidor } from '../servidor/repositorio'
+import { servidor, recargar, repositorio } from '../servidor/repositorio'
 import { conServidor as modoServidor, dosPersonas } from '../servidor/config'
 import { CasillaVersion } from '../prueba/CasillaVersion'
 import { versionActual } from '../prueba/version'
@@ -52,11 +52,17 @@ export async function aceptarConCorreo(id: string, token: string, email: string)
   await servidor.aceptarInvitacion(id, token, email, await cuentaPropia(), dosPersonas ? versionActual() : undefined)
 }
 
+/** 26/10/2026: el link de la invitación sirve una vez. Si esta sesión ya es parte del alquiler (aceptó, o es el dueño) y vuelve a abrir
+ *  el link (desde el correo, otra pestaña o después de entrar), va directo al alquiler en vez de «Esta invitación ya no está disponible». */
+export async function abrirSiYaEsMio(id: string) {
+  try { await recargar(); if (!repositorio.obtener(id)) return false; activarServidor(); ir('/alquiler/' + id); return true } catch { return false }
+}
+
 export function Invitacion({ id, token, u }: { id: string; token: string; u: Usuario }) {
   const [d, setD] = useState<Datos | null>(null); const [err, setErr] = useState(''); const [ocupado, setOcupado] = useState(false)
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
   const [codigo, setCodigo] = useState<Abierto | null>(null)   // la pantalla del código (otra cuenta)
-  useEffect(() => { if (modoServidor) servidor.verInvitacion(id, token).then(setD).catch(e => setErr(e.message)) }, [id, token])
+  useEffect(() => { if (modoServidor) servidor.verInvitacion(id, token).then(setD).catch(e => abrirSiYaEsMio(id).then(mio => { if (!mio) setErr(e.message) })) }, [id, token])
   if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')

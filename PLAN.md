@@ -296,3 +296,6 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   Arreglo sin textos nuevos: con el link nuevo, la tarjeta queda como sin correo (solo el link con «Copiar link» y WhatsApp,
   `linkNuevoSinCorreo`); sigue un solo correo por alquiler. E2E `scripts/e2e-reinicio-invitacion.mjs` (reinicio → alquiler nuevo →
   abrir el link → link nuevo). Doc: `docs/prueba-completa.md`.
+- [x] Link de invitación ya usado (Katherine, 26/10 11:17 a. m., dos cuentas): al aceptar, el link sirve una vez; volver a abrirlo
+  (otra vez desde el correo, otra pestaña o después de entrar) daba «Esta invitación ya no está disponible». Ahora, si la sesión ya es
+  parte del alquiler, va directo al alquiler (`abrirSiYaEsMio`, sin textos nuevos). Test `invitacion-ya-aceptada.test.ts`.
