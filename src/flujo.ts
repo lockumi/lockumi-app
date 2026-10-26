@@ -86,8 +86,9 @@ export function turno(a: Alquiler, yo: Rol): { tu: string; otra: string; sigue: 
       return yo === 'dueno'
       ? { tu: 'Si encontraste un daño, puedes reclamar. Si todo está bien, no hagas nada.', otra: 'El inquilino espera.', sigue: `Si no reclamas, después de ${textoPlazo(a)} el depósito se devuelve al inquilino.` }   // LEGAL: revisado (24/10)
       : { tu: 'No tienes que hacer nada.', otra: 'El dueño puede reclamar si encontró un daño.', sigue: `Si no hay reclamo, después de ${textoPlazo(a)} se te devuelve el depósito.` }   // LEGAL: revisado (24/10)
+    // C: el inquilino responde el reclamo entero, sin «rubro por rubro» (Legal 25/10, 6:10 p. m.)
     case 'reclamo': if (esDosPersonas(a)) return yo === 'inquilino'
-      ? { tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: SIGUE_RECLAMO_DOS.inquilino }
+      ? { tu: 'Responde el reclamo.', otra: 'El dueño espera tu respuesta.', sigue: SIGUE_RECLAMO_DOS.inquilino }
       : { tu: 'No tienes que hacer nada por ahora.', otra: 'El inquilino tiene que responder tu reclamo.', sigue: SIGUE_RECLAMO_DOS.dueno }
       if (reglas17(a)) return yo === 'inquilino'   // LEGAL: revisado (25/10, lista de Legal) · prueba completa (6.4.4, 6.7)
       ? { tu: 'Responde el reclamo rubro por rubro.', otra: 'El dueño espera tu respuesta.', sigue: 'Si no aceptas todo, verás una propuesta automática (simulación). Si no hay acuerdo, pasa a la Mediación Lockumi (demo).' }

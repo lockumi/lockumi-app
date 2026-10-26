@@ -1,5 +1,5 @@
 import { reglas17 } from './prueba/version'
-import { esDosPersonas, montoPrueba, recibeInquilino } from './prueba/dosPersonas'
+import { esDosPersonas, llegaPrueba, recibeInquilino } from './prueba/dosPersonas'
 // Avisos emergentes después de cada paso del flujo: confirman qué pasó y dicen qué sigue.
 // Aviso v2 (toast): pila de hasta 3, el más nuevo al frente. Las pantallas llaman a `avisar`; <Alertas /> (en App) los muestra con <Tostada />.
 // Los textos con sentido legal están marcados con `// LEGAL: revisar` (pendientes de revisión de Legal).
@@ -186,11 +186,11 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       // LEGAL: revisado (25/10, lista de Legal)
       if (r.via === 'automatico') return {
         paso: 'devolucion', titulo: 'Depósito devuelto',
-        hecho: esDosPersonas(ahora) ? `No hubo reclamos en el plazo. Se devolvió automáticamente al inquilino el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work: llegaron ${montoPrueba(recibeInquilino(r.inquilino))}. El dueño y Lockumi no reciben nada.`
+        hecho: esDosPersonas(ahora) ? `No hubo reclamos en el plazo. Se devolvió automáticamente al inquilino el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work: llegaron ${llegaPrueba(recibeInquilino(r.inquilino))}. El dueño y Lockumi no reciben nada.`
           : c.red ? `No hubo reclamos en ${textoPlazo(ahora)}. El dueño de prueba aprobó y Lockumi devolvió ${usd(r.inquilino)} al inquilino en la red de prueba.`
           : `No hubo reclamos en ${textoPlazo(ahora)}. El depósito volvió completo al inquilino: ${usd(r.inquilino)}.`,
         sigue: TERMINO,
-        linea: { texto: esDosPersonas(ahora) ? `${montoPrueba(recibeInquilino(r.inquilino))} volvieron al inquilino` : `${usd(r.inquilino)} volvieron al inquilino` },   // LEGAL: revisado el 23/10 (monto del reparto real)
+        linea: { texto: esDosPersonas(ahora) ? `${llegaPrueba(recibeInquilino(r.inquilino))} volvieron al inquilino` : `${usd(r.inquilino)} volvieron al inquilino` },   // LEGAL: revisado el 23/10 (monto del reparto real)
         accion: { texto: 'Ver detalle', etiqueta: 'Ver el detalle del depósito devuelto', ir: 'detalles' },
       }
       // LEGAL: revisado (25/10, lista de Legal)

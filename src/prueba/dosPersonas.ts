@@ -4,7 +4,7 @@
 // mediadora (api/_lib/tw.ts, acción «devolver-automatico»).
 import type { Alquiler } from '../types'
 import { pruebaCompleta } from './interruptor'
-import { repartoCentimos } from '../../api/_lib/centimos'
+import { repartoCentimos, cuatroDecimales } from '../../api/_lib/centimos'
 
 /** Mismo texto que api/_lib/tw.ts APROBADO (sin importar el SDK de Stellar en el navegador). */
 export const APROBADO_DUENO = 'El dueño aprobó en la cadena devolver el depósito completo'
@@ -26,11 +26,13 @@ const COMISION_TW = 0.003
 const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** «800 USDC de prueba» (Legal 24/10: los montos dicen «de prueba»). */
 export const montoPrueba = (n: number) => `${fmt(n)} USDC de prueba`
+/** Solo para las líneas del reparto (lo que llega a cada parte y la comisión): 4 decimales exactos (Legal 25/10, 6:10 p. m.). */
+export const llegaPrueba = (n: number) => `${cuatroDecimales(n)} USDC de prueba`
 /** Lo que llega de verdad al inquilino en la devolución automática (100 % menos la comisión de la red de prueba). */
 export const recibeInquilino = (monto: number) => Math.round(monto * (1 - COMISION_TW) * 1e7) / 1e7
 // LEGAL: revisado (25/10, lista de Legal) · nota bajo los montos al terminar (devolución automática)
 export const notaComisionAuto = (monto: number) =>
-  `Llegaron ${montoPrueba(repartoCentimos(0, monto).llegaInquilino)}: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(repartoCentimos(0, monto).comision)}). El dueño y Lockumi no reciben nada.`
+  `Llegaron ${llegaPrueba(repartoCentimos(0, monto).llegaInquilino)}: la red de prueba de Trustless Work descuenta el 0,3 % (${llegaPrueba(repartoCentimos(0, monto).comision)}). El dueño y Lockumi no reciben nada.`
 // LEGAL: revisado (25/10, lista de Legal) · Términos 1.7-demo, 4.2 e) (texto de Legal del 24/10, 11:29 p. m.; se publica en el paso 16)
 export const TERMINOS_42E = 'En la devolución automática de la cláusula 5.3 d), la cuenta de Lockumi que resuelve disputas entrega al inquilino el 100 % del saldo del depósito, menos solo la comisión de la red de prueba de Trustless Work. No puede entregar nada al dueño ni a Lockumi.'
 
@@ -48,7 +50,7 @@ export const TEXTO_APROBADO_DOS = 'Ya aprobaste la devolución completa y ya no 
 // Legal: aprobado (25/10, 3:16 a. m.) · título del cierre y nota de la comisión (misma redacción que notaComisionAuto, para los dos montos)
 export const TEXTO_ACEPTARON_DOS = 'Lo aceptaron las dos partes.'
 export const notaComisionReparto = (inquilino: number, dueno: number) => { const r = repartoCentimos(dueno, inquilino)
-  return `Llegaron ${montoPrueba(r.llegaInquilino)} al inquilino y ${montoPrueba(r.llegaDueno)} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${montoPrueba(r.comision)}). Lockumi no recibe nada.` }
+  return `Llegaron ${llegaPrueba(r.llegaInquilino)} al inquilino y ${llegaPrueba(r.llegaDueno)} al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (${llegaPrueba(r.comision)}). Lockumi no recibe nada.` }
 
 // Legal, 25/10, 2:53 a. m.: en C la Regla 6.5.1 no se ofrece al firmar (Términos 1.9-demo, 6.5.1 d). Nota sin casilla. Aprobado el 25/10, 3:16 a. m.
 export const TITULO_RECLAMO_DOS = 'Si hay un reclamo'

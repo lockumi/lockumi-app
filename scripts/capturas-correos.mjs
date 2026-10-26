@@ -24,7 +24,7 @@ L=json.loads(sys.argv[1]); out=sys.argv[2]
 W,H,C=360,700,6; filas=(len(L)+C-1)//C
 F=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',18); T=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',26)
 hoja=Image.new('RGB',(C*(W+20)+20,filas*(H+50)+80),'#FFF5EE'); d=ImageDraw.Draw(hoja)
-d.text((20,22),'Correos del escenario C (COR-C-01 a COR-C-09) · borrador «LEGAL: revisar», solo al buzón de prueba',fill='#3D2A22',font=T)
+d.text((20,22),'Correos del escenario C (COR-C-01 a COR-C-09) · textos revisados por Legal (25/10), solo al buzón de prueba',fill='#3D2A22',font=T)
 for i,(f,t) in enumerate(L):
   im=Image.open(f).convert('RGB'); im=im.resize((W,int(im.height*W/im.width))).crop((0,0,W,H))
   x=20+(i%C)*(W+20); y=70+(i//C)*(H+50); hoja.paste(im,(x,y)); d.rectangle((x-1,y-1,x+W,y+H),outline='#FFB08A',width=2); d.text((x,y+H+10),t,fill='#3D2A22',font=F)
