@@ -56,6 +56,32 @@ export function detalleError(e: unknown): { codigo: string; mensaje: string } {
   return { codigo, mensaje: m.slice(0, 400) }
 }
 
+// ── Pagar desde cualquier dispositivo (recuperación social de Cavos, README de @cavos/kit 0.4.2 «Hardware-isolated social
+// recovery») ── Sin esto, la billetera solo vive en el navegador donde se creó: en otro dispositivo el kit queda en
+// `needs-device-approval` y al firmar lanza «kit/stellar: this device is not an authorized signer of the wallet».
+// Con la recuperación activa en el panel de Cavos, pasamos lo mismo que pasa el CavosProvider oficial: un
+// SocialRecoveryClient (enclave Nitro con las medidas fijadas en el kit) y la credencial fresca del login (≤ 5 min, un solo
+// uso). Así el dispositivo de origen sella la billetera en el enclave y un dispositivo nuevo la recupera al entrar.
+// Si la recuperación no está activa en el panel, no se pasa nada y todo queda como antes.
+export const URL_CONFIG_RECUPERACION = `https://cavos.xyz/api/recovery/social/config?app_id=${encodeURIComponent(APP_ID)}&environment=${CAVOS_BILLETERA.environment}`
+export async function recuperacionActiva(f: Fetch = fetch): Promise<boolean> {
+  try { const r = await f(URL_CONFIG_RECUPERACION); return r.ok && (await r.json() as { enabled?: unknown }).enabled === true } catch { return false }
+}
+interface AuthRecuperacion { hasSocialRecoveryCredential(): boolean; consumeSocialRecoveryCredential(): unknown }
+type KitRecuperacion = { SocialRecoveryClient: new (o: { baseUrl: string; appId: string; environment?: 'development' | 'production'; attestation: unknown }) => unknown; DEFAULT_SOCIAL_RECOVERY_ATTESTATION: unknown }
+export async function opcionesRecuperacion(auth: AuthRecuperacion, activa: () => Promise<boolean> = recuperacionActiva,
+  kit: () => Promise<KitRecuperacion> = () => import('@cavos/kit') as unknown as Promise<KitRecuperacion>) {
+  if (!await activa()) return {}
+  const { SocialRecoveryClient, DEFAULT_SOCIAL_RECOVERY_ATTESTATION } = await kit()
+  const socialRecovery = new SocialRecoveryClient({ baseUrl: 'https://cavos.xyz', appId: APP_ID, environment: CAVOS_BILLETERA.environment, attestation: DEFAULT_SOCIAL_RECOVERY_ATTESTATION })
+  const cred = auth.hasSocialRecoveryCredential() ? auth.consumeSocialRecoveryCredential() : undefined
+  return { socialRecovery, ...cred ? { socialRecoveryCredential: cred } : {} } as unknown as Pick<import('@cavos/kit').ConnectOptions, 'socialRecovery' | 'socialRecoveryCredential'>
+}
+
+/** Texto para cuando este dispositivo no puede firmar con la billetera (creada en otro navegador o equipo). */
+export const NO_FIRMANTE = 'Este dispositivo todavía no puede firmar con tu billetera. Sal y vuelve a entrar con la misma cuenta, y paga enseguida. Si sigue igual, entra una vez desde el navegador donde creaste tu cuenta y luego vuelve a intentarlo aquí.'
+export const esNoFirmante = (m: string) => /not an authorized signer|needs-device-approval|restore by connecting with the enclave|protected by recovery|complete a fresh social login/i.test(m)
+
 let conexion: Promise<Billetera> | null = null
 /** Conecta la billetera con la identidad del login de Cavos. Solo en modo real. */
 export function conectarBilletera(): Promise<Billetera> {
@@ -70,7 +96,8 @@ export function conectarBilletera(): Promise<Billetera> {
     if (!auth.getAuthToken()) throw new ErrorBilletera('sin-token', 'La sesión de Cavos no tiene token en esta pestaña (se abrió en otra pestaña o se cerró).')
     const { Cavos } = await import('@cavos/kit')
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
-    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, vault: true })
+    const rec = await opcionesRecuperacion(auth)
+    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
     return { direccion: w.address, estado: w.status as EstadoBilletera }
@@ -103,6 +130,7 @@ export async function saldoUsdc(): Promise<string> { return (await miCartera()).
 /** Mensaje claro para los rechazos del vault (https://docs.cavos.xyz/docs/vault). */
 export function mensajeFirma(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)
+  if (esNoFirmante(m)) return NO_FIRMANTE
   if (/user rejected/i.test(m)) return 'Rechazaste la firma en la billetera.'
   if (/policy does not allow/i.test(m)) return 'La configuración de la billetera no permite esta firma (regla de aprobaciones en el panel de Cavos).'
   if (/deployed account|execute\(\)/i.test(m)) return 'Tu cuenta Stellar todavía no existe en testnet. Cárgale XLM de prueba primero.'
