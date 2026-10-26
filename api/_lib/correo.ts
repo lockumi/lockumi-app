@@ -56,6 +56,15 @@ async function registrarInvitacion(env: Record<string, string | undefined>, p: P
   exigir(!invitacionesEnviadas.has(p.alquiler), 409, YA_INVITADO)
   invitacionesEnviadas.add(p.alquiler)
 }
+/** Si Resend no aceptó el correo (p. ej. cuota diaria agotada), la invitación NO cuenta como enviada: se borra el registro para que
+ *  un nuevo intento pueda salir (26/10: el registro quedaba y la invitación se perdía para siempre). Sin cambios visibles. */
+async function anularInvitacion(env: Record<string, string | undefined>, p: PedidoCorreo, f: typeof fetch) {
+  invitacionesEnviadas.delete(p.alquiler)
+  const s = servicio(env); if (!s) return
+  try {
+    await f(`${s.url}/rest/v1/lk_correos_invitacion?contrato_id=eq.${encodeURIComponent(p.alquiler)}`, { method: 'DELETE', headers: { apikey: s.llave, authorization: `Bearer ${s.llave}` } })
+  } catch { /* sin conexión: queda registrado, como antes */ }
+}
 
 // Paso 19 · REP-12 por correo (decisión del 25/10, 2:57 p. m.; solo con VITE_CORREOS=1 en la app). Mismos textos que en la app
 // (src/reputacion/textos.ts, AVISO_CAMBIO y AVISO_VENCIDO; una prueba revisa que sean iguales). Sin dirección del lugar: el alquiler va
@@ -177,6 +186,11 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
     body: JSON.stringify({ from: REMITENTE, to: [p.para], subject: c.asunto, html: c.html, text: c.texto }),
   })
   const j = await r.json().catch(() => ({})) as { id?: string; message?: string }
+  if (!(r.ok && j.id)) {
+    // Solo el estado y el nombre del error de Resend (p. ej. 429 daily_quota_exceeded): nunca la llave ni el correo de la persona.
+    console.error('correo resend', p.tipo, r.status, (j as { name?: string }).name ?? '')
+    if (p.tipo === 'invitacion') await anularInvitacion(env, p, f)
+  }
   exigir(r.ok && j.id, 502, 'No pudimos enviar el correo ahora. El aviso está en la app; puedes volver a intentarlo en unos minutos.')
   return { enviado: true, id: j.id }
 }

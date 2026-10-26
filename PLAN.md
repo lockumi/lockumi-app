@@ -2,6 +2,14 @@
 
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
+## Arreglo: invitación por correo que no salió (26 oct 2026), sin cambios visibles
+
+- **Síntoma:** 26/10, 7:41 a. m. (CR, UTC-6), Katherine invitó por correo al crear un alquiler y el correo nunca llegó. `POST /api/correo` respondió 502 y en Resend no se creó ningún correo.
+- **Causa (cuenta de Resend):** la cuota diaria se agotó a las 2:53 a. m. CR (08:53 UTC) con la corrida E2E (201 correos entregados el 26/10 UTC). Después, todo envío falla (`last_event: failed`, sin `message_id`) o Resend lo rechaza. La cuota diaria se reinicia a las 00:00 UTC (6:00 p. m. CR).
+- **Error del código:** `lk_correos_invitacion` se registraba ANTES de enviar y no se borraba si Resend fallaba, así que la invitación de ese alquiler quedaba como «ya enviada» (409) para siempre.
+- **Arreglo:** si Resend no acepta la invitación, `atenderCorreo` borra el registro (`DELETE lk_correos_invitacion?contrato_id=eq.<id>`, o lo quita de la memoria) y anota en el log solo el estado y el nombre del error de Resend (sin llave ni correo). Los textos y la pantalla no cambian. Prueba: `src/servidor/__tests__/borrados-api.test.ts`.
+- **Pendiente (con cambio visible, sin hacer):** la app envía la invitación sin esperar la respuesta (`void enviarInvitacionUnaVez` en `Crear.tsx`) y no muestra el error ni ofrece reenviar el correo.
+
 ## Arreglo: «Confirmar el reparto» con depósitos de antes de C (26 oct 2026), sin cambios visibles
 - **Síntoma (7:17–7:20 a. m. CR):** en un alquiler de una persona creado el 22/10 (escrow `CANJOOE5…VDFU`, 1,00 USDC de prueba, reparto 0,50 / 0,50), «Confirmar el reparto» daba siempre el error de la red de prueba (A12). Vercel: 4 POST `/api/solo` con 502 (13:17:43–13:20:02 UTC). Horizon y Trustless Work funcionaban (la disputa del mismo escrow entró a las 7:17:02 a. m. CR).
 - **Causa:** desde que se encendió `LOCKUMI_DOS_PERSONAS=1` (25/10, 7:03 p. m. CR), «resolver» firmaba con la persona mediadora, pero los escrows creados antes nombran a la plataforma como `disputeResolver`. El contrato respondía `Error(Contract, #12)` (OnlyDisputeResolverCanExecuteThisFunction), Trustless Work devolvía error y la app lo mostraba como red lenta. Reintentar no lo arreglaba.
