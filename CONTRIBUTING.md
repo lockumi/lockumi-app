@@ -122,6 +122,12 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Pruebas SQL con PGlite que escriben en `lk_correos_verificados`: el preludio crea `auth.users` y la prueba inserta antes la sesión (la tabla la referencia desde `20261025140000`). Código nuevo que llama a la reputación desde fuera de `src/reputacion/` (p. ej. `asegurarCorreo` en `Invitacion.tsx`): import diferido detrás de `import.meta.env.VITE_REPUTACION === '1'`.
 - Segundo factor (`src/reputacion/segundo-factor.ts`, `api/_lib/codigo-correo.ts`, sección 7 de la migración): el código NUNCA se guarda ni se registra en la consola; solo su HMAC con `LOCKUMI_CODIGO_PEPPER` y sal. Comparar huellas solo con `mismaHuella` (tiempo constante), nunca con `===`. Una acción nueva que borre o entregue datos de la persona debe llamar a `lk_usar_codigo` en la base, no solo pedir el código en la pantalla. Correos de prueba reales: solo a lockumi@mail.grokbot.com.
 
+## Firma del servidor en testnet (`api/_lib/tw.ts`, `docs/firma-servidor.md`)
+
+- Solo red de prueba: no quites la negativa de `firmaServidorActiva` fuera de testnet. En la red principal cada persona firma con su billetera de Cavos.
+- La llave derivada nunca sale del servidor; el cliente solo recibe la dirección pública (`mi-cuenta`). Cada firma exige la sesión y que la persona sea participante con ese rol.
+- Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
+
 ## Proponer cambios
 
 1. Abre un *issue* con el problema o la idea, o comenta en uno existente.

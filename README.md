@@ -64,6 +64,8 @@ Pasos en https://app.lockumi.com:
    - **"Hacer un reclamo como dueño de prueba"**: escribes el monto, el motivo y una foto del daño en nombre del dueño de prueba. El reclamo queda registrado en el escrow (disputa).
 8. **Reclamo y mediador.** Como inquilino, toca "Aceptar reclamo" (se reparte según el reclamo) o "No estoy de acuerdo". En ese caso toca "Resolver el reclamo (simulación)", elige el reparto y toca "Confirmar el reparto": el escrow reparte el saldo en la cadena.
 
+**Dos personas en testnet (26 oct 2026):** en alquileres nuevos de dos personas el servidor firma por cada persona con una cuenta de testnet propia de su cuenta (Cavos solo sirve para entrar), así que «Pagar» y «Todo bien, devolver» no piden firmas en el aparato. El dueño puede eliminar el alquiler mientras el depósito no esté pagado. Solo red de prueba; en la red principal cada persona firmaría con su billetera de Cavos. Ver [docs/firma-servidor.md](docs/firma-servidor.md).
+
 Abre cada "Ver comprobante en la red de prueba" para ver la transacción en `stellar.expert/explorer/testnet`: creación del escrow, depósito, aprobación, devolución, reclamo y reparto.
 
 ¿Prefieres ver primero cómo funciona? La primera vez que entras en un navegador se abre solo un **recorrido guiado de 6 pasos** sobre las pantallas reales (tiene «Saltar»). Para verlo otra vez, toca «¿Cómo funciona?» en el encabezado o «Ver el recorrido» en la tarjeta «¿Primera vez?» de Inicio. Los pasos 4 a 6 usan un alquiler de ejemplo de solo lectura: no crea nada ni mueve USDC. Ver [`docs/recorrido.md`](docs/recorrido.md).
@@ -175,7 +177,7 @@ Escrow *single-release* de Trustless Work (API REST v1). Asignación según `api
 | `disputeResolver` | Plataforma Lockumi (mediación) | Reparte el saldo en un reclamo (acuerdo o reparto elegido en la mediación simulada). |
 | `receiver` | Inquilino | El depósito vuelve a su cuenta. |
 
-El depósito (`fund-escrow`) lo firma el inquilino. El servidor exige que las cuentas del dueño, del inquilino y de la plataforma sean distintas.
+El depósito (`fund-escrow`) lo firma el inquilino. En alquileres nuevos de dos personas en testnet, el servidor firma por el inquilino (depósito) y por el dueño (aprobación) con la cuenta de testnet derivada de cada cuenta; apagable con `FIRMA_SERVIDOR_TESTNET=0` y bloqueado fuera de testnet ([docs/firma-servidor.md](docs/firma-servidor.md)). El servidor exige que las cuentas del dueño, del inquilino y de la plataforma sean distintas.
 
 ## Contratos e IDs en testnet
 
@@ -276,6 +278,10 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 ## Cambios publicados
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
+
+**26 de octubre de 2026 (PR #54, merge `a1dfc6d`: firma del servidor en testnet y eliminar antes del pago; con el OK de Katherine de las 2:02 p. m.)**
+- Solo testnet: en alquileres nuevos de dos personas el servidor firma el depósito del inquilino y la aprobación del dueño con una cuenta de testnet derivada de cada cuenta (la llave nunca sale del servidor; Friendbot la fondea). Fuera de testnet se niega. En la red principal cada persona firma con su billetera de Cavos. Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Los alquileres de antes siguen con Cavos.
+- El dueño puede eliminar un alquiler de dos personas mientras el depósito no esté pagado: el servidor lee el saldo de la cuenta segura en la red y con depósito lo sigue bloqueando. Migración `20261026090000_eliminar_sin_deposito.sql`, aplicada en producción el 26/10. Sin textos nuevos. Límites conocidos y vuelta atrás: [docs/firma-servidor.md](docs/firma-servidor.md).
 
 **25 de octubre de 2026 (paso 18, A2: la mediación solo cierra con las dos aceptaciones, en la base de producción; sin cambios visibles, con el OK de Legal de la 1:24 a. m.)**
 - Migración `20261025020000_mediacion_solo_dos_aceptan.sql`: reemplaza la `lk_decidir_mediacion` vieja (la persona mediadora cerraba sola) por la que solo cierra si las dos partes aceptaron el mismo reparto (`lk_aceptaciones_mediacion` y `lk_aceptar_acuerdo_mediacion`). No depende del escenario C (la Regla 6.5.1 queda en el PR #22).
