@@ -259,4 +259,4 @@ Legal revisó C en master f9489a6 y pidió dos correcciones antes de encender `C
 
 ## Invitación v3 sobre la reputación (paso 21, 25/10/2026)
 - Local: suite completa, `tsc -b`, `oxlint`, build (también con `VITE_REPUTACION=1`) y `CHROME=/usr/bin/google-chrome npm run e2e:invitacion` en verde (capturas en `prueba-completa/capturas/paso21-invitacion/sobre-reputacion/`).
-- Producción: ver docs/invitacion-enlace.md («Publicado»). La prueba con dos cuentas reales queda **PENDIENTE** (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).
+- Producción: merge `76d2680` (PR #30), deploy `dpl_Gn2cYXamihaW9nY4re2T3NVrcwEF` (11:03 p. m. CR), migración `20261025230000` (11:03 p. m.); `prueba-completa/scripts/paso21-produccion.mjs` **todo OK** (11:09–11:10 p. m.), hoja `prueba-completa/capturas/paso21-invitacion/produccion/hoja-paso21-produccion.jpg`. E2E-C de producción no se corrió: el script no es compatible con la reputación encendida (ver docs/invitacion-enlace.md, «Publicado»). La prueba con dos cuentas reales queda **PENDIENTE** (no hay una segunda cuenta real; Cavos rechaza mail.grokbot.com).
