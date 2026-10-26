@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { type Transaction, Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, firmarComoPlataforma, configuracion, ErrorTw, APROBADO, type Entorno } from '../../../api/_lib/tw'
+import { pagoFalso } from './pago-falso'
 
 const P = Keypair.random(), M = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
 const LLAVE = 'llave-secreta-de-prueba'
@@ -17,6 +18,7 @@ function simular(contrato: Record<string, unknown>, uid = 'u-inq') {
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([contrato])
+    { const pg = pagoFalso({ cid: CID, monto: 20, receiver: INQ, releaseSigner: P.publicKey(), disputeResolver: P.publicKey() })(url); if (pg) return pg }   // paso 22: bloqueo y estado del escrow
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS', contractId: CID })
     if (url.endsWith('/deployer/single-release') || url.includes('change-milestone-status') || url.endsWith('release-funds')) return ok({ status: 'SUCCESS', unsignedTransaction: xdrDe(P.publicKey()) })

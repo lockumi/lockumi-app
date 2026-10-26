@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, configuracion, repartoAutomatico, firmarComoMediador, APROBADO, type Entorno } from '../../../api/_lib/tw'
+import { pagoFalso } from './pago-falso'
 
 const P = Keypair.random(), M = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'llave', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(),
@@ -25,6 +26,7 @@ function simular(contrato: Record<string, unknown>, eventos: { texto: string }[]
     if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([contrato])
     if (url.includes('/rest/v1/lk_eventos?') && !init?.method) return ok(eventos)
+    { const pg = pagoFalso({ cid: CID, monto: Number(contrato.monto), receiver: INQ, releaseSigner: P.publicKey(), disputeResolver: M.publicKey() })(url); if (pg) return pg }   // paso 22: bloqueo y estado del escrow
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS' })
     if (url.endsWith('/dispute-escrow')) return ok({ unsignedTransaction: xdrDe(P.publicKey()) })

@@ -179,3 +179,22 @@ Capturas: `/workspace/lockumi/capturas/tus-alquileres-preview-{movil,escritorio}
 - «Tus alquileres» en app.lockumi.com a 390 px y 1280 px, con sesión simulada por correo y los 4 alquileres reales de arriba copiados al localStorage del navegador: los 4 colores se ven bien, sin desborde. «Tu cuenta para el depósito» **no aparece**: en producción solo se muestra con login real de Cavos, y la sesión simulada no tiene identidad de Cavos (`sin-identidad`, igual que antes de este cambio).
 - Pago de 2 USDC con «USDC de prueba de Lockumi» (cuenta de prueba `GBJVMMRH…GB23J7AX6`): cuenta-prueba → dueno → desplegar → fondear-prueba, todas 200, y la app muestra «Depósito bloqueado en la cuenta segura». Escrow `CCRBME3D5VAIIPGXPVZSJNMBJ643L467SXYC75EJEWLRCMSGKFHUQAB2`. Tx: USDC `3699a599b33175628b3960b75f6482840fb871f608eca9d7c632e940b88896ce`, dueño `e98f8c719109f09b7e62946f6544ec7d94b8da319a5e809544efcbbbcf71de39`, escrow `8ddab47c684c57d36ed3af0dd84372434c224777befbd3d10a442650b11b4fc9`, depósito `3fd9fc93a4f71ef89d2622626ceeef0ca3d86b7f34ffd13d4163f52fdb7cb972`.
 - Capturas: `/workspace/lockumi/capturas/prod-tus-alquileres-{movil,escritorio,pago-movil,movil-con-pago}.png`; JPEG en `/workspace/lockumi/diseno/envio/tus-alquileres-prod/`.
+
+## 10. Paso 22: la corrida diaria paga sola (`e2e-c.mjs --red`, 25/10/2026, rama `paso22-devolucion-automatica`)
+
+Modo nuevo de `scripts/e2e-c.mjs`: **`--red`** = base en memoria (PGlite con todas las migraciones, también `20261026000000`, que NO está en producción) + **Trustless Work testnet de verdad**. Solo pide `TRUSTLESS_WORK_API_KEY` (testnet); la plataforma y la cuenta que resuelve disputas son cuentas desechables (Friendbot + trustline USDC), el dueño y el inquilino también, y el USDC sale del DEX de testnet (7 depósitos de 2 USDC). No toca Supabase de producción, no usa las llaves de la plataforma de producción y no manda correos reales (Resend simulado, solo al buzón de prueba).
+
+```
+TRUSTLESS_WORK_API_KEY=… node scripts/e2e-c.mjs --red --salida /tmp/e2e22-red    # ~4 min
+node scripts/e2e-c.mjs --simulado                                                # sin red, ~30 s (lo corre e2e-c-simulado.test.ts)
+```
+
+Casos del paso 22 (después de los de siempre): `cron-auto`, `cron-liberar` y `cron-doble` (ver [`docs/correos-c.md`](correos-c.md), «Paso 22»). La corrida diaria es la de verdad (`ejecutarBorrados` de `api/_lib/borrados.ts`), con la base y Trustless Work de arriba. Resultado del 25/10/2026, 11:07 p. m. CR:
+
+| Caso | Qué pasó | Pago (stellar.expert, testnet) |
+|---|---|---|
+| cron-auto | Vence el plazo del dueño y nadie abre el alquiler: la corrida cierra (`lk_vencimientos`), abre la disputa (plataforma) y la resuelve (mediadora) con el 100 % al inquilino | https://stellar.expert/explorer/testnet/tx/adef36fc6ccbd23823d2468ab6a3228cf45771b53d35911730da80142f7f8fdd |
+| cron-liberar | El dueño aprueba ([tx](https://stellar.expert/explorer/testnet/tx/b6e20ff0cae5cac326a7daf102cf24dab7f149289fdbc941cee8d89f5ccdd70f)), la liberación falla (falla inyectada), queda «devuelto» sin pagar; la corrida libera con `release-funds` | https://stellar.expert/explorer/testnet/tx/90e46cba064cbdafcbc611e53b381ccb39b63782f8631be8aae2bbb74ee7e757 |
+| cron-doble | La app pide «devolver-automatico» mientras la corrida tiene el caso tomado: la app ve «en curso» y se paga una sola vez (1 disputa, 1 resolución) | https://stellar.expert/explorer/testnet/tx/dde2efdfb18b28503b1183283cac10f6e59061b15eca2d8d2c56a45730b0e323 |
+
+Después: otra corrida no pide nada a Trustless Work (`pendientes: 0`); la app ve el pago hecho (mismo hash); `get-escrow-by-contract-ids` (validateOnChain) muestra los tres escrows resueltos/liberados y con saldo 0; Horizon, las tres transacciones `successful`; COR-C-07 a las dos partes de cada caso, enviado por la misma corrida (Resend simulado, solo al buzón de prueba). 160 pasos, 0 fallas, 227 s. Ninguna llave en el registro ni en el informe (revisado).

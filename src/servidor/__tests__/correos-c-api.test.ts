@@ -2,7 +2,7 @@
 // (api/_lib/borrados.ts) solo envía con CORREOS_C=1, y P-05 (texto literal de la espera de la mediación).
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { TEXTOS } from '../../../api/_lib/textos-correos'
-import { atenderAvisos } from '../../../api/_lib/correos-c'
+import { atenderAvisos, esRecordatorio } from '../../../api/_lib/correos-c'
 import { ejecutarBorrados } from '../../../api/_lib/borrados'
 import { ESPERA_MEDIACION_C } from '../../screens/Detalle'
 
@@ -59,9 +59,37 @@ describe('corrida diaria (/api/borrados)', () => {
     expect(r.vencidas).toMatchObject({ error: expect.any(String) }); expect(r.invitaciones).toBe(0)
   })
   it('con CORREOS_C=1 vence la mediación y envía; un error de correos no rompe los borrados', async () => {
-    const ok = await ejecutarBorrados(ENV, (async (u: string) => sb(u)) as never); expect(ok.correos).toEqual({ enviados: 0, omitidos: 0, vencidas: 0 })
+    const ok = await ejecutarBorrados(ENV, (async (u: string) => sb(u)) as never, { ahora: Date.parse('2026-10-26T09:00:00Z') }); expect(ok.correos).toEqual({ enviados: 0, omitidos: 0, vencidas: 0, recordatorios: true })
     const mal = await ejecutarBorrados({ ...ENV, LOCKUMI_CORREOS_BORRADOR: undefined }, (async (u: string) => sb(u)) as never)
     expect(mal.correos).toMatchObject({ error: expect.stringContaining('LEGAL: revisar') }); expect(mal.invitaciones).toBe(0)
+  })
+})
+
+describe('paso 22 · corrida cada hora: los recordatorios salen solo a las 09:00 UTC (3:00 a. m. CR)', () => {
+  const C = 'c0ffee00-0000-4000-8000-0000000000aa'
+  const pend = [
+    { clave: `COR-C-02:${C}:dueno:d6`, correo: 'COR-C-02' }, { clave: `COR-C-04:${C}:inquilino:d4`, correo: 'COR-C-04' },
+    { clave: `COR-C-05:${C}:inquilino:recordatorio`, correo: 'COR-C-05' }, { clave: `COR-C-07:${C}:inquilino`, correo: 'COR-C-07' },
+  ].map(p => ({ ...p, contrato_id: C, rol: 'inquilino', para: 'lockumi+p22@mail.grokbot.com', datos: { variante: 'recordatorio', dia: p.clave.endsWith('d4') ? 4 : 6, via: 'automatico', deposito: 100, dueno: 0, inquilino: 100, vence: '2026-10-27T12:00:00Z' } }))
+  const correr = async (ahora: string) => {
+    const reservadas: string[] = []
+    const f = (async (u: string, i?: RequestInit) => {
+      if (u.includes('lk_correos_pendientes')) return Response.json(pend)
+      if (u.includes('lk_correo_reservar')) { reservadas.push(JSON.parse(String(i?.body)).p_clave); return Response.json(false) }
+      return u.includes('lk_mediacion_por_borrar') ? Response.json([]) : Response.json(0)
+    }) as never
+    const r = await ejecutarBorrados({ ...ENV, DEVOLUCION_CRON: '0' }, f, { ahora: Date.parse(ahora) })
+    return { r, reservadas }
+  }
+  it('esRecordatorio reconoce d6/d4 y «recordatorio», no los avisos de un hecho', () => {
+    expect(pend.map(p => esRecordatorio(p.clave))).toEqual([true, true, true, false])
+    expect(esRecordatorio(`COR-C-06:${C}:mediacion:vencida`)).toBe(false)
+  })
+  it('a las 10:00 UTC solo intenta el aviso (COR-C-07); a las 09:00 UTC también los recordatorios', async () => {
+    const otra = await correr('2026-10-26T10:00:00Z')
+    expect(otra.reservadas).toEqual([`COR-C-07:${C}:inquilino`]); expect(otra.r.correos).toMatchObject({ recordatorios: false })
+    const tres = await correr('2026-10-26T09:00:00Z')
+    expect(tres.reservadas).toEqual(pend.map(p => p.clave)); expect(tres.r.correos).toMatchObject({ recordatorios: true })
   })
 })
 

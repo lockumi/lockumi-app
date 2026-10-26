@@ -1,5 +1,5 @@
 // GET /api/borrados · paso16-unido: borrados de la Privacidad 1.7-demo en Supabase (correos de invitación a los 7 días y datos de
-// la mediación a los 30). Solo con CRON_SECRET. Ver api/_lib/borrados.ts. Escenario C: programado una vez al día en vercel.json (crons).
+// la mediación a los 30). Solo con CRON_SECRET. Ver api/_lib/borrados.ts. Escenario C: programado cada hora en vercel.json (crons; paso 22).
 import { ejecutarBorrados, autorizado } from './_lib/borrados.js'
 
 export async function GET(req: Request): Promise<Response> {

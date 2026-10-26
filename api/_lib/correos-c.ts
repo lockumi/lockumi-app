@@ -2,7 +2,7 @@
 // * Qué toca a quién sale de Supabase (lk_correos_pendientes: estado del alquiler + casilla guardada − lo ya enviado).
 // * Cada correo se reserva (lk_correo_reservar, clave única) antes de llamar a Resend con esa misma clave de idempotencia, y se
 //   marca enviado o fallido (lk_correo_marcar): sale una sola vez por evento y queda registrado.
-// * Corre desde el cron diario (/api/borrados), /api/correo (tipo 'avisos', después de cada paso en la app) y /api/tw (al pagar).
+// * Corre desde el cron (/api/borrados, cada hora; recordatorios solo a las 09:00 UTC), /api/correo (tipo 'avisos', después de cada paso en la app) y /api/tw (al pagar).
 // * Encendido con CORREOS_C=1 (servidor). REGLA DURA: con cualquier texto «LEGAL: revisar», no sale nada, salvo la excepción local
 //   LOCKUMI_CORREOS_BORRADOR=1 fuera de Vercel, y entonces solo al buzón de prueba lockumi@mail.grokbot.com.
 // RESEND_API_KEY y SUPABASE_SERVICE_ROLE_KEY solo viven en el servidor y nunca se devuelven.
@@ -100,7 +100,7 @@ const destinoPermitido = (env: Env, borrador: boolean, para: string) => EMAIL.te
 export interface Resultado { apagado?: true; enviados: { clave: string; correo: string; plantilla: string; para: string; id: string }[]; omitidos: { clave: string; motivo: string }[]; vencidas: number }
 
 /** Vence el plazo de 3 días hábiles de la mediación (P-06): guarda el plazo, marca los vencidos y deja el evento en el historial.
- *  Corre SIEMPRE, con o sin CORREOS_C (Legal 25/10, 5:09 p. m., punto 3): en la corrida diaria (api/_lib/borrados.ts), después de
+ *  Corre SIEMPRE, con o sin CORREOS_C (Legal 25/10, 5:09 p. m., punto 3): en la corrida programada (api/_lib/borrados.ts, cada hora), después de
  *  cada paso con un alquiler en /api/tw y en cada aviso de la app (/api/correo { tipo: 'avisos' }). No envía correos. */
 export async function vencerMediaciones(env: Env, op: { contrato?: string; ahora?: string } = {}, f: typeof fetch = fetch): Promise<number> {
   if (op.contrato !== undefined && !UUID.test(op.contrato)) throw new ErrorCorreo(400, 'Alquiler inválido.')
@@ -108,8 +108,12 @@ export async function vencerMediaciones(env: Env, op: { contrato?: string; ahora
   return Number(await rpc<number>(s, 'lk_mediacion_vencimientos', { p_contrato: op.contrato ?? null, ...(op.ahora ? { p_ahora: op.ahora } : {}) }, f)) || 0
 }
 
+/** Recordatorios por día de Costa Rica (COR-C-02 y COR-C-04 «d6»/«d4», COR-C-05 «recordatorio»): con la corrida cada hora (paso 22)
+ *  siguen saliendo solo en la corrida de las 3:00 a. m. CR, como antes; los avisos de un hecho salen en la primera corrida. */
+export const esRecordatorio = (clave: string) => /:d\d+$|:recordatorio$/.test(clave)
+
 /** Envía lo que toca (de un alquiler o de todos). `ahora`: reloj de prueba para los recordatorios (solo lo usa el servidor). */
-export async function procesarCorreos(env: Env, op: { contrato?: string; ahora?: string; origen?: string; pausaMs?: number } = {}, f: typeof fetch = fetch): Promise<Resultado> {
+export async function procesarCorreos(env: Env, op: { contrato?: string; ahora?: string; origen?: string; pausaMs?: number; sinRecordatorios?: boolean } = {}, f: typeof fetch = fetch): Promise<Resultado> {
   if (env.CORREOS_C !== '1') return { apagado: true, enviados: [], omitidos: [], vencidas: 0 }
   const { borrador } = revisarTextos(env)
   const { s, llave, origen } = preparar(env, op.origen)
@@ -119,6 +123,7 @@ export async function procesarCorreos(env: Env, op: { contrato?: string; ahora?:
   const pendientes = await rpc<Pendiente[]>(s, 'lk_correos_pendientes', args, f)
   const r: Resultado = { enviados: [], omitidos: [], vencidas: Number(vencidas) || 0 }
   for (const p of pendientes) {
+    if (op.sinRecordatorios && esRecordatorio(p.clave)) continue   // paso 22: los recordatorios salen solo en la corrida de las 3:00 a. m. CR
     const para = (p.rol === 'mediacion' ? env.CORREO_MEDIACION ?? '' : p.para ?? '').trim().toLowerCase()
     if (!para) { r.omitidos.push({ clave: p.clave, motivo: 'sin-correo-de-mediacion' }); continue }
     if (!destinoPermitido(env, borrador, para)) { r.omitidos.push({ clave: p.clave, motivo: 'solo-buzon-de-prueba' }); continue }

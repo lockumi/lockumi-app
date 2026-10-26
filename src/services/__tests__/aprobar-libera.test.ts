@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, APROBADO, type Entorno } from '../../../api/_lib/tw'
+import { pagoFalso } from './pago-falso'
 
 const P = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'k', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'servicio' }
@@ -15,12 +16,14 @@ const k = { id: ID, monto: 20, direccion: 'Calle 1', estado: 'ventana_reclamo', 
 
 function simular(o: { cierra: boolean; liberaFalla?: boolean }) {
   const llamadas: { url: string; metodo?: string; cuerpo?: Record<string, unknown> }[] = []
+  let cerrado = false   // paso 22: después de lk_cerrar_aprobado, el contrato se vuelve a leer cerrado («devuelto»)
   const f = (async (url: string, init?: RequestInit) => {
     const cuerpo = init?.body ? JSON.parse(String(init.body)) : undefined; llamadas.push({ url, metodo: init?.method, cuerpo })
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) return ok({ id: 'u-dueno' })
-    if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([k])
-    if (url.endsWith('/rest/v1/rpc/lk_cerrar_aprobado')) return ok(o.cierra)
+    if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([cerrado ? { ...k, estado: 'cerrado', resultado: { via: 'devuelto', dueno: 0, inquilino: 20 } } : k])
+    if (url.endsWith('/rest/v1/rpc/lk_cerrar_aprobado')) { cerrado = o.cierra; return ok(o.cierra) }
+    { const pg = pagoFalso({ cid: CID, monto: 20, receiver: INQ, releaseSigner: P.publicKey(), disputeResolver: P.publicKey() })(url); if (pg) return pg }   // paso 22: bloqueo y estado del escrow
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS' })
     if (url.endsWith('release-funds')) return o.liberaFalla ? new Response('TW caído', { status: 502 }) : ok({ unsignedTransaction: xdrDe(P.publicKey()) })
