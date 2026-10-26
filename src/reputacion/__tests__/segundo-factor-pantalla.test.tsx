@@ -44,11 +44,16 @@ describe('pantalla «Revisa tu correo»', () => {
     expect(s).toMatch(/if \(conServidor\) \{ sf\.pedir\('eliminar', setErrBorrado\); return \}/)
     expect(s).not.toMatch(/servidor\.(pedirBorradoCuenta|datosReputacion)/)
   })
-  it('textos marcados «LEGAL: revisado (25/10, 5:04 p. m.)»; solo los 2 errores propios nuevos siguen «LEGAL: revisar»', async () => {
+  it('textos marcados «LEGAL: revisado (25/10, 5:04 p. m.)»; los 2 errores propios, revisados por Legal a las 6:01 p. m.; ninguno sigue «LEGAL: revisar»', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     const t = fs.readFileSync('src/reputacion/textos.ts', 'utf8'), b = t.slice(t.indexOf('export const SEGUNDO_FACTOR'), t.indexOf('// LEGAL: revisado (25/10) · REP-10'))
     expect(t).toMatch(/LEGAL: revisado \(25\/10, 5:04 p\. m\.\) · textos literales de Legal \(pantalla del código\)\nexport const SEGUNDO_FACTOR/)
-    expect(b.split('\n').filter(l => l.includes('LEGAL: revisar')).map(l => /\((.+)\)$/.exec(l)![1])).toEqual(['más de 5 códigos en una hora', 'el correo no salió'])
+    expect(b).not.toMatch(/LEGAL: revisar/)
+    for (const f of ['src/reputacion/textos.ts', 'api/_lib/codigo-correo.ts']) {
+      const s = fs.readFileSync(f, 'utf8')
+      expect(s, f).toMatch(/LEGAL: revisado \(25\/10, 6:01 p\. m\.\) · texto propio aprobado por Legal tal como está \(más de 5 códigos en una hora\)\n\s*hora: 'Ya te enviamos 5 códigos en la última hora\. Espera una hora y vuelve a tocar «Reenviar código»\.'/)
+      expect(s, f).toMatch(/LEGAL: revisado \(25\/10, 6:01 p\. m\.\) · texto literal de Legal \(el correo no salió\)\n\s*envio: 'No pudimos enviarte el código\. Vuelve a intentarlo en un minuto\.'/)
+      expect(s, f).not.toMatch(/segundo factor 25\/10 5:29|enviarte el código\. Revisa tu conexión/) }
     expect(fs.readFileSync('api/_lib/cavos-token.ts', 'utf8')).toMatch(/LEGAL: revisado \(25\/10, 5:04 p\. m\.\)[^\n]*\n[^\n]*DEMASIADOS_INTENTOS = 'Hiciste muchos intentos seguidos\. Espera 10 minutos y vuelve a entrar con tu correo\.'/)
   })
 })

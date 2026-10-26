@@ -183,8 +183,8 @@ describe('Legal: textos literales', () => {
   it('se quitan las marcas «LEGAL: revisar» que Legal aprobó', async () => {
     for (const f of ['src/reputacion/textos.ts', 'src/reputacion/entrada-textos.ts', 'src/reputacion/puntaje.ts', 'supabase/migrations/20261025140000_reputacion.sql']) {
       // Siguen «LEGAL: revisar» solo los textos propios nuevos de las rondas de las 3:42/3:47 y 4:45 (las de las 4:23 quedaron revisadas a las 4:41)
-      // y los 2 errores propios del segundo factor (más de 5 códigos en una hora; el correo no salió), que Legal no vio todavía.
-      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !/ronda 25\/10 (3:4[27]|4:45)|segundo factor 25\/10 5:29 · texto propio/.test(l))
+      // (los 2 errores propios del segundo factor quedaron revisados por Legal a las 6:01 p. m.).
+      const nuevas = (await leerArchivo(f)).split('\n').filter(l => l.includes('LEGAL: revisar') && !/ronda 25\/10 (3:4[27]|4:45)/.test(l))
       expect(nuevas, f).toEqual([]) }
     // correo.ts: solo el bloque de REP-12 es del paso 19 (las demás marcas son de otros pasos).
     const rep12 = (await leerArchivo('api/_lib/correo.ts')).split('\n').filter(l => /n\.º|Legal exige|líneas públicas del puntaje/.test(l))

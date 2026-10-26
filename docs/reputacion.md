@@ -255,7 +255,8 @@ en la demo local sin servidor nada cambia.
 - **Correo:** aviso del servicio (sin casilla ni contenido comercial), asunto «Tu código de Lockumi: {código}», el texto de Legal y el pie de
   siempre (`PIE`, el de REP-12), por Resend (`idempotency-key` por código). Si Resend falla, se borra la fila y la app dice cómo seguir.
 - **Errores (sin palabras técnicas):** código incorrecto o vencido y reenvío antes de un minuto: textos literales de Legal (revisado 5:04).
-  Más de 5 códigos en una hora y «el correo no salió»: textos propios, **`LEGAL: revisar`**. Sin `LOCKUMI_CODIGO_PEPPER` (32+ caracteres),
+  Más de 5 códigos en una hora («Ya te enviamos 5 códigos en la última hora. Espera una hora y vuelve a tocar «Reenviar código».», OK tal
+  como está) y «el correo no salió» («No pudimos enviarte el código. Vuelve a intentarlo en un minuto.», literal): revisados por Legal (6:01 p. m.). Sin `LOCKUMI_CODIGO_PEPPER` (32+ caracteres),
   `RESEND_API_KEY` o `SUPABASE_*`, el servidor responde 503 (cierre por defecto).
 - **Pruebas:** `segundo-factor-sql.test.ts` (15, Postgres real: huella, vencimiento, 5 intentos, un solo uso, límites de reenvío, acción y
   persona, permisos/RLS), `codigo-correo-api.test.ts` (18, la API contra la migración real con Supabase y Resend falsos),
@@ -279,7 +280,7 @@ alquileres ni aceptación no tiene correo conocido hasta que se verifica.
 - Con tokens reales de Google y Apple: confirmar el formato del `nonce` (`<app id>.<hash>`) y el `aud` de cada emisor.
 - Poner `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL` y `CAVOS_APP_ID` (Katherine; no lo hacemos nosotros).
 - Segundo factor (programado): poner `LOCKUMI_CODIGO_PEPPER` (al azar, 32+ caracteres, solo servidor, NUNCA en el bundle) y `RESEND_API_KEY`
-  en Production; OK de Legal a los 2 textos `LEGAL: revisar · segundo factor 25/10 5:29` (más de 5 por hora, el correo no salió).
+  en Production. (Los 2 textos propios del segundo factor ya tienen el OK de Legal, 25/10 6:01 p. m.)
 - Aplicar la migración `20261025140000_reputacion.sql` (con OK de Katherine; incluye la sección 7 del segundo factor).
 - Modo servidor encendido (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DOS_PERSONAS=1`, con OK): sin eso el segundo factor no se usa.
 

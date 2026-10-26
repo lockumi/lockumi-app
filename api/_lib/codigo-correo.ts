@@ -32,10 +32,10 @@ export const ERRORES = {
   codigo: 'Ese código no es correcto o ya venció. Revisa el último correo de Lockumi y escríbelo de nuevo, o toca «Reenviar código».',
   // LEGAL: revisado (25/10, 5:04 p. m.) · texto literal de Legal (reenvío antes de un minuto)
   minuto: 'Ya te enviamos un código. Espera un minuto antes de pedir otro.',
-  // LEGAL: revisar · segundo factor 25/10 5:29 · texto propio (más de 5 códigos en una hora)
+  // LEGAL: revisado (25/10, 6:01 p. m.) · texto propio aprobado por Legal tal como está (más de 5 códigos en una hora)
   hora: 'Ya te enviamos 5 códigos en la última hora. Espera una hora y vuelve a tocar «Reenviar código».',
-  // LEGAL: revisar · segundo factor 25/10 5:29 · texto propio (el correo no salió)
-  envio: 'No pudimos enviarte el código. Revisa tu conexión y vuelve a intentarlo en un minuto.',
+  // LEGAL: revisado (25/10, 6:01 p. m.) · texto literal de Legal (el correo no salió)
+  envio: 'No pudimos enviarte el código. Vuelve a intentarlo en un minuto.',
   // LEGAL: revisado (25/10) · mismo texto del servidor que lk_correo_de_sesion (la sesión no tiene un correo verificado)
   correo: 'Ese correo no es el de tu cuenta en este aparato. Sal de Lockumi, vuelve a entrar con tu correo y vuelve a intentarlo.',
 } as const
