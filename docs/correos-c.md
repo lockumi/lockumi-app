@@ -24,8 +24,8 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 - **Sin disparadores en la base:** el servidor calcula lo pendiente con `lk_correos_pendientes(alquiler, ahora)` en tres momentos:
   1. después de cada paso en la app (`POST /api/correo { tipo: 'avisos', alquiler }`, solo una persona del alquiler);
   2. después de pagar en `/api/tw` (enviar, liberar, devolver-automatico, repartir);
-  3. en la corrida diaria `/api/borrados` (cron de `vercel.json`, 09:00 UTC = 3:00 a. m. de Costa Rica, con `CRON_SECRET`): recordatorios y vencimiento de la mediación. Desde el paso 22 (rama `paso22-devolucion-automatica`, sin publicar), la corrida **paga primero** las devoluciones sin reclamo y después manda los correos, así que COR-C-07 sale en la misma corrida (ver abajo).
-- **Vencimiento de la mediación, con o sin `CORREOS_C`** (Legal 25/10, 5:09 p. m., punto 3): `vencerMediaciones` (`api/_lib/correos-c.ts`) corre aparte de los correos: en la corrida diaria (siempre), después de cada acción con un alquiler en `/api/tw` y en cada aviso de la app (`tipo: 'avisos'`, después de revisar la sesión y que la persona participa). Legal pidió cada hora, pero **Vercel Hobby solo permite un cron diario** (una expresión por hora hace fallar el despliegue: https://vercel.com/docs/cron-jobs/usage-and-pricing), así que queda la corrida diaria más la revisión en cada paso.
+  3. en la corrida `/api/borrados` (cron de `vercel.json`, con `CRON_SECRET`; **cada hora** desde el paso 22, publicado el 25/10/2026; los recordatorios por día solo en la de las 09:00 UTC = 3:00 a. m. de Costa Rica): recordatorios y vencimiento de la mediación. Desde el paso 22, la corrida **paga primero** las devoluciones sin reclamo y después manda los correos, así que COR-C-07 sale en la misma corrida (ver abajo).
+- **Vencimiento de la mediación, con o sin `CORREOS_C`** (Legal 25/10, 5:09 p. m., punto 3): `vencerMediaciones` (`api/_lib/correos-c.ts`) corre aparte de los correos: en la corrida diaria (siempre), después de cada acción con un alquiler en `/api/tw` y en cada aviso de la app (`tipo: 'avisos'`, después de revisar la sesión y que la persona participa). Legal pidió cada hora: ~~Vercel Hobby solo permite un cron diario~~ resuelto con Vercel Pro (paso 22, 25/10/2026): la corrida es **cada hora** (`0 * * * *`), además de la revisión en cada paso.
 - **Reloj de prueba:** `ahora` solo lo pasa el E2E (no es un parámetro HTTP).
 
 ### Interruptores (encendidos en app.lockumi.com el 25/10/2026, 7:04 p. m. CR)
@@ -45,7 +45,7 @@ Para aprobar un texto: en `api/_lib/textos-correos.ts` se cambia `legal: 'revisa
 ## Botón de la invitación (COR-C-00), paso 21
 El botón lleva a `<origen>/#/invitacion/<alquiler>/<token>` (`enlaceInvitacion` en `api/_lib/correo.ts`); antes llevaba a la raíz de la app y la persona invitada no veía la invitación. El servidor solo envía si el token es el link vigente del alquiler. Ver [`invitacion-enlace.md`](invitacion-enlace.md).
 
-## Paso 22 · La corrida (cada hora) paga la devolución sin reclamo (rama `paso22-publicar`; publicación más abajo)
+## Paso 22 · La corrida (cada hora) paga la devolución sin reclamo (publicado el 25/10/2026, 11:31 p. m. CR; ver «Publicación del paso 22»)
 
 Términos 5.3 d): si el dueño no reclama en su plazo, el 100 % vuelve al inquilino **aunque nadie abra el alquiler**. Antes la corrida solo cerraba el caso (`lk_vencimientos`) y el pago lo disparaba la app al abrirlo (`src/acciones.ts:216-227`). Ahora `/api/borrados` (`api/_lib/borrados.ts`) llama a `pagarDevoluciones` (`api/_lib/devoluciones.ts`) **después** de `lk_vencimientos` y del vencimiento de la mediación y **antes** de los correos:
 
@@ -80,6 +80,36 @@ Términos 5.3 d): si el dueño no reclama en su plazo, el 100 % vuelve al inquil
 
 Después: otra corrida no pide nada a Trustless Work (`pendientes: 0`); la app ve el pago hecho (mismo hash); `get-escrow-by-contract-ids` (validateOnChain) muestra los tres escrows resueltos/liberados y con saldo 0; Horizon, las tres transacciones `successful`; COR-C-07 a las dos partes de cada caso, enviado por la misma corrida (Resend simulado, solo al buzón de prueba). 160 pasos, 0 fallas, 227 s. Ninguna llave en el registro ni en el informe (revisado).
 
+## Publicación del paso 22 (25/10/2026, hora de Costa Rica)
+
+Con el OK de Katherine (10:39 p. m.) y el de Legal a `TEXTO_REVISAR_PAGO` (11:15 p. m., sin cambios; la marca se quitó). Los Términos 6.5 a, 5.3 d y `ContratoDoc.tsx:49` no cambiaron.
+
+| Qué | Resultado |
+|---|---|
+| Migración `20261026000000_devolucion_automatica.sql` | Aplicada a las **11:28 p. m.** (Management API, una transacción con su fila en `supabase_migrations.schema_migrations`). Verificado: 6 columnas nuevas en `lk_contratos`, 4 funciones `security definer` solo para `service_role` |
+| Revisión antes de unir | `lk_devoluciones_pendientes(50)` → **0 casos** (los 7 alquileres reales están en «firmas», sin cuenta segura): `DEVOLUCION_CRON` sin definir (encendido) |
+| PR #32 | CI en verde; merge `1f5c6e500958ee37ab645c1213e60e6c1bd4f69d` (Lockumi) |
+| Deploy | `dpl_9jMgfF88ThA3uoB3PBwqHmntksnR`, READY **11:31 p. m.** en app.lockumi.com; Vercel muestra `/api/borrados` con `0 * * * *` |
+| Corrida manual (11:31 p. m.) | `GET /api/borrados` con `CRON_SECRET` → 200, `devoluciones: pendientes 0, pagados []`, sin fallas ni «revisar»; sin la clave → 401 |
+| E2E-C de producción (11:38–11:43 p. m.) | **151 pasos, 0 fallas, 1 omitido** (`cron-liberar`: con `--app` no se puede forzar la falla; cubierto en `--simulado` y `--red`) |
+| App | `/`, `/terminos`, `/privacidad`, `/reputacion`, `/unirse` → 200; `paso21-produccion.mjs` todo OK (invitación v3 y REP-01 intactos) |
+| Waitlist | Igual antes y después: 2 filas `3b7472599f6777f360aa2f9dd7832386`; `waitlist_intentos` 1 fila `8a0f91b5d81476b2f6ed8554b32449ac` |
+
+Pagos de la corrida publicada en el E2E-C (testnet, 2 USDC cada uno, 100 % al inquilino):
+
+| Caso | Qué pasó | Pago |
+|---|---|---|
+| cron-auto | Vence el plazo del dueño y nadie abre el alquiler: `GET https://app.lockumi.com/api/borrados` cierra y paga | https://stellar.expert/explorer/testnet/tx/c70ec52db2ac9c8bfcd1d27f25835695e127b0445894d022ddd84b3c093f8f4c |
+| cron-doble | La corrida y la app (`POST /api/tw devolver-automatico`, 800 ms después) a la vez: pagó la corrida, la app vio «en curso»; un solo evento con el hash | https://stellar.expert/explorer/testnet/tx/00c9d9b6834883b1692c9415810fcddb92f46cda86cfdadce8c601cd447dfcf8 |
+
+Después: otra corrida no paga nada (`pendientes: 0`); la app ve el pago hecho con el mismo hash; Trustless Work muestra las dos cuentas seguras resueltas y con saldo 0; Horizon, `successful`; COR-C-07 a las dos partes (solo al buzón `lockumi+e2ec-…@mail.grokbot.com`). Una primera corrida (11:33–11:37 p. m.) tuvo 4 fallas que no eran del código: dos «timeout» de Stellar al desplegar en testnet y dos del propio script (contaba otra vez los COR-C-07 ya revisados); arreglado en `scripts/e2e-c.mjs`. Sus dos pagos de la corrida publicada también salieron bien ([dd63f0c9…](https://stellar.expert/explorer/testnet/tx/dd63f0c91d77aa4197ad698913f1272d6f28b8ecaa9467956005819d7711c30a), [72d47f0a…](https://stellar.expert/explorer/testnet/tx/72d47f0a0cdbe377972a0b67a309b01ffe811bbf45fdbe5b3b83e535dc3f9e41)).
+
+**Cómo correrlo** (llaves como en `prueba-completa/correr-c.sh` más `CRON_SECRET`; con Node 20, `NODE_OPTIONS=--experimental-websocket`): `node scripts/e2e-c.mjs --real --correos --app https://app.lockumi.com`, después `node scripts/e2e-c.mjs --real --limpiar` (alquileres «E2E-C …», mediadora y correos de prueba). Las tablas de correo verificado y REP-01 no dan permisos a `service_role` por la API: `--limpiar` lo avisa y se borran con SQL junto con las cuentas anónimas de prueba (`delete from public.<tabla> where usuario in (…)` en las 17 tablas `lk_*` con `usuario` y `delete from auth.users where id in (…)`, solo los ids creados por la corrida). El 25/10 se borraron 14 alquileres y 9 cuentas de prueba.
+
+**Volver atrás (en este orden):**
+1. Código: `git revert -m 1 1f5c6e500958ee37ab645c1213e60e6c1bd4f69d` en `master` y push (Vercel redespliega), o solo apagar el pago con `DEVOLUCION_CRON=0` en Vercel Production y redesplegar.
+2. Base, después del paso 1: `supabase/revert/20261026000000_devolucion_automatica_revert.sql` (una transacción: quita las 4 funciones, las 6 columnas y su fila de `schema_migrations`), por el SQL Editor o la Management API.
+
 ## Base de datos: `supabase/migrations/20261025090000_c_correos.sql`
 
 Solo agrega (3 tablas y 9 funciones nuevas, permisos y RLS de esas tablas). No cambia ni borra nada existente; el test `c-correos-sql.test.ts` lo comprueba (huella de las tablas `lk_*` y de `waitlist*` antes y después, nombres nuevos, sin `drop`/`alter`/`truncate` de tablas existentes, sin DML fuera de funciones).
@@ -96,7 +126,7 @@ Prioridad del Coordinador (5:29 p. m.): primero lo que cambia el funcionamiento.
 - **Textos de las 5:00 p. m.:** línea del plazo de la mediación (P-05), «solicitud» en la Privacidad, «el dueño» en COR-C-00.
 - **Segunda parte (ya hecha, se puede revisar aparte):** hora en 12 h y montos con 2 decimales; guarda de todas las marcas; Privacidad :51 y :52; `SIGUE_RECLAMO_DOS` literal; historial de `api/_lib/tw.ts` («de prueba» y 2 decimales); COR-C-03 registra la apertura solo con el botón (`POST`); comentario de la línea 1 de la migración 090000.
 - **Legal, 5:31 p. m.:** con las tres correcciones de funcionamiento (recordatorios hacia atrás con los textos aprobados de 02/d4, 02/d6 y 04/d6; vencimiento sin `CORREOS_C`; sin «propuesta automática», `SIGUE_RECLAMO_DOS` literal) aprueba las demás marcas de C tal como están. Con el OK de Katherine se quitaron las marcas, `FECHA_V19` quedó con la fecha real y PR #22 se unió a master (f9489a6). Las variables de Vercel Production siguen pendientes (ver `docs/prueba-completa.md`, «Publicación de C»).
-- **Para una ronda después de publicar:** ~~con un reparto pequeño la comisión redondeada puede mostrarse como 0,00~~ resuelto (4 decimales en las líneas del reparto, Legal 6:10 p. m., abajo); vencimiento de la mediación cada hora (Vercel Hobby solo permite un cron diario; hace falta Pro o un cron externo).
+- **Para una ronda después de publicar:** ~~con un reparto pequeño la comisión redondeada puede mostrarse como 0,00~~ resuelto (4 decimales en las líneas del reparto, Legal 6:10 p. m., abajo); ~~vencimiento de la mediación cada hora (Vercel Hobby solo permite un cron diario; hace falta Pro o un cron externo)~~ hecho: corrida cada hora con Vercel Pro (paso 22).
 - **Repartos en céntimos (Coordinador 5:39 p. m.):** `api/_lib/centimos.ts` (`repartoCentimos`): el dueño se redondea y el inquilino recibe el residuo; la comisión se queda con el residuo de lo que llega. Las partes mostradas suman exactamente el depósito. Desde la ronda de Legal de las 6:10 p. m., lo que llega y la comisión van con 4 decimales exactos (4,9850 + 14,9550 + 0,0600 = 20,00). Prueba: `src/__tests__/reparto-centimos.test.ts`.
 - **Marcas quitadas (Legal 5:31 p. m.):** con las tres correcciones, Legal aprobó todas las marcas de C tal como estaban; ya no queda ninguna «LEGAL: revisar» y el build de producción pasa. La guarda sigue: cualquier marca nueva lo vuelve a bloquear.
 - **Para una ronda después de publicar (antes «abierto para Legal»):** texto de la página del enlace de COR-C-03; «(red de prueba)» en el historial de la disputa (`api/_lib/tw.ts`); ~~descuadre de 0,01~~ resuelto con céntimos.
@@ -116,7 +146,7 @@ Reemplaza la regla de 20261025100000 (Legal 25/10, 6:10 p. m.). Solo `create or 
 
 - COR-C-02 «día 6» (vence mañana) cuando `lk_dia_cr(ahora) = lk_dia_cr(fin) − 1`; «día 4» (quedan 3 días) cuando `= lk_dia_cr(fin) − 3`. Nunca el mismo día del fin.
 - COR-C-04: igual con `fin_inq`. Recordatorio de COR-C-05: `lk_dia_cr(ahora) = lk_dia_cr(m.vence) − 1`.
-- Con el cron de las 3:00 a. m. (`0 9 * * *` UTC) cada aviso sale una vez, ese día. Si el cron no corre un día, ese aviso no se manda más tarde (no saldría con un texto equivocado).
+- Con el cron de las 3:00 a. m. (`0 9 * * *` UTC) cada aviso sale una vez, ese día. Desde el paso 22 la corrida es cada hora, pero los recordatorios por día solo salen en la de las 09:00 UTC (`HORA_RECORDATORIOS_UTC`): misma regla. Si el cron no corre un día, ese aviso no se manda más tarde (no saldría con un texto equivocado).
 - Prueba: `c-correos-sql.test.ts` («vencimiento a las 5:54 p. m. y cron a las 3:00 a. m.», también con el feriado del 25 de diciembre y un domingo); `scripts/e2e-c.mjs` usa el cron de las 3:00 a. m. del día que toca.
 - **Aplicada en producción el 25/10/2026 a las 6:19 p. m. (hora de Costa Rica)**, en una transacción (`begin; … commit;`): `lk_correos_por_estado` md5 245ed84f… → 9bdfa4b3…; `lk_dia_cr` sin cambios (3d6be287…); permisos iguales; `waitlist` 2 filas (3b7472…) y `waitlist_intentos` 1 fila (8a0f91…), iguales antes y después; `lk_contratos` y `lk_eventos` en 0. No se registró en `schema_migrations` (igual que 090000 y 100000).
 
