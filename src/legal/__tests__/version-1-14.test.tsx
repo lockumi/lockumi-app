@@ -13,7 +13,7 @@ beforeEach(() => { vi.resetModules(); vi.unstubAllEnvs(); mem.clear() })
 const fs = async () => await import(['node', 'fs'].join(':')) as { readFileSync: (u: URL, e?: string) => Uint8Array & string }
 const plano = (h: string) => h.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ')
 
-const T53 = 'Lockumi no tiene las llaves de tu billetera Cavos. Sí guarda en su servidor las llaves de las cuentas de prueba rotuladas (cláusula 4.1). Para entrar y para cada acción que mueve el depósito (pagar, «Todo bien, devolver», repartir, liberar o reclamar), tu billetera firma con tu llave de acceso un mensaje de prueba. Ese mensaje no mueve fondos: solo confirma que fuiste tú. Con esa prueba, Lockumi ejecuta la acción en la red de prueba con sus propias cuentas:'
+const T53 = 'Lockumi no tiene las llaves de tu billetera Cavos. Sí guarda en su servidor las llaves de las cuentas de prueba rotuladas (cláusula 4.1). Al entrar, tu billetera firma con tu llave de acceso un mensaje de prueba. En los alquileres con otra persona, también lo firma en cada acción que mueve el depósito (pagar, «Todo bien, devolver», repartir, liberar o reclamar). Ese mensaje no mueve fondos: solo confirma que fuiste tú. Con esa prueba, Lockumi ejecuta la acción en la red de prueba con sus propias cuentas:'
 const T53A = 'a) Activar tu cuenta: Lockumi paga la reserva de tu cuenta en la red de prueba, y tú firmas con Cavos la línea de USDC de prueba. Esto no mueve fondos.'
 const T53B = 'b) Depósito: en los alquileres con otra persona, Lockumi llena el contrato de garantía con USDC de prueba de su propia cuenta. Es una simulación del pago: no sale de tu billetera y no tiene valor. En un alquiler de una sola persona, si usas tu propio USDC de prueba lo firmas tú; si no, Lockumi lo firma con tu cuenta de inquilino de prueba (4.1 b).'
 const T53C = 'c) Aprobación y liberación: las firma una cuenta de Lockumi, solo después de la prueba de la persona que corresponde o cuando vence el plazo sin reclamo (6.5 a), y siempre según la cláusula 6. La liberación es solo a favor del inquilino, salvo el reparto de un reclamo.'
@@ -21,7 +21,8 @@ const T53_FIN = 'Los alquileres creados antes de la versión 1.14-demo siguen la
 const T54 = '5.4 Llave de acceso. Para usar Lockumi debes crear una llave de acceso (passkey). Con ella entras a tu cuenta desde otros aparatos. Según Cavos, tu llave se guarda cifrada y Cavos no puede abrirla. Lockumi solo recuerda que ya la creaste. La app no configura otro método de recuperación: si pierdes tu llave de acceso y todos tus aparatos, no podrás recuperar tu billetera, y Lockumi tampoco podrá hacerlo por ti (https://docs.cavos.xyz/docs/recovery). En la demo no pierdes dinero, pero sí el acceso a tus alquileres simulados.'
 const T41C = 'En la fase 2 no hay dueño de prueba: el dueño confirma cada paso con una firma de prueba de su billetera, Lockumi ejecuta la acción con sus cuentas y no guarda la llave del dueño.'
 const T41D = 'd) En los alquileres con otra persona, el depósito lo pone Lockumi desde su propia cuenta con USDC de prueba (5.3 b). Ni el inquilino ni el dueño custodian esos tokens antes de que se liberen.'
-const T55B = 'Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline). Firmas tú el depósito.'
+const T55B = 'b) Usar mi propio USDC de prueba: con tu billetera de Cavos, Lockumi te envía hasta 20 USDC de prueba de su propia cuenta, sin valor. Con Freighter, usas el que ya tengas, hasta 50 000 USDC de prueba (cláusula 5.5.1). Si tu cuenta de Cavos no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline). Firmas tú el depósito.'
+const T93 = 'Lockumi no responde por el funcionamiento ni por los reinicios de la red de prueba, ni por los servicios de terceros de la cláusula 5, salvo en la medida en que el daño se deba a su propia falta.'
 const T551B = '(el depósito y la habilitación del USDC de prueba)'
 const PRIV = 'Firmas de prueba: para confirmar cada acción guardamos un código de un solo uso de tu firma de prueba, nunca tu llave.'
 
@@ -35,7 +36,7 @@ describe('1.14-demo: los textos de Legal, literales y en su lugar', () => {
   })
   it('Términos 5.3, 5.4, 4.1 c) y d), 5.5 b) y 5.5.1 b) con el texto literal de Legal', async () => {
     C(); const t = plano((await import('../documentos')).docs().terminos.html)
-    for (const x of [T53, T53A, T53B, T53C, T53_FIN, T54, T41C, T41D, T55B, T551B]) expect(t).toContain(x)
+    for (const x of [T53, T53A, T53B, T53C, T53_FIN, T54, T41C, T41D, T55B, T551B, T93]) expect(t).toContain(x)
     expect(t).toContain('d) Reclamos: en la demo, el reclamo abre una disputa'); expect(t).toContain('e) Cavos permite que una app firme pagos pequeños')
     expect(t).toContain('Si el dueño no aprueba ni reclama dentro de su plazo (cláusula 6.5 a), la devolución es automática')
     expect(t).not.toMatch(/f\) Cavos permite|Compra de USDC de prueba:|Recuperación de la cuenta|la app te ayuda a recibir XLM/)
@@ -43,10 +44,11 @@ describe('1.14-demo: los textos de Legal, literales y en su lugar', () => {
   it('5.5: sin el exchange en la app, la oración final se borró y no se agrega la frase opcional de compra', async () => {
     C(); const t = plano((await import('../documentos')).docs().terminos.html)
     expect(t).toContain('En ambos casos, el USDC de prueba no es dinero real y no tiene valor.')
-    expect(t).not.toContain('es un servicio de terceros, que Lockumi no controla'); expect(t).not.toContain('También puedes comprar USDC de prueba')
+    expect(t).not.toContain('es un servicio de terceros, que Lockumi no controla'); expect(t).not.toMatch(/exchange/i); expect(t).not.toContain('También puedes comprar USDC de prueba')
   })
   it('Privacidad: la viñeta «Firmas de prueba» va después de «Billetera» y antes de «Freighter»', async () => {
     C(); const p = plano((await import('../documentos')).docs().privacidad.html)
+    expect(p).not.toMatch(/exchange|Servicios de la red de prueba/i)
     expect(p).toContain(PRIV); expect(p.indexOf('Billetera (tu cuenta digital')).toBeLessThan(p.indexOf(PRIV)); expect(p.indexOf(PRIV)).toBeLessThan(p.indexOf('Freighter (opcional)'))
   })
   it('sin «Friendbot» en la 1.14-demo (ni en Términos, ni en Privacidad, ni en los proveedores); la 1.13-demo archivada conserva su texto publicado', async () => {

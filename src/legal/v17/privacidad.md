@@ -147,7 +147,6 @@ Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotul
 <!-- si: correos -->
   - **Plus Five Five, Inc.**, que opera **Resend** (Estados Unidos). Envía los correos {{dos-personas:de invitación y }}de avisos desde invitaciones@lockumi.com, una dirección que solo envía y no recibe respuestas. Recibe {{dos-personas:el correo de la persona invitada, su papel, un resumen del alquiler simulado (sin el lugar ni fotos) y el enlace para unirse, y }}el correo de quien pide los avisos, con montos de prueba, fechas y un enlace a la app. Actúa como encargado del tratamiento. Política de privacidad: https://resend.com/legal/privacy-policy
 <!-- fin -->
-- **Servicios de la red de prueba:** el **exchange descentralizado** de la red de prueba (donde compras USDC de prueba) es un servicio público de la red. No le enviamos datos personales; solo recibe la dirección pública de tu billetera cuando la usas.
 - Al aceptar este aviso, **autorizas de forma expresa** que tus datos se transfieran a estos proveedores (Vercel, Supabase, Cavos{{!correos: y Trustless Work}}{{correos:, Trustless Work y Resend}}), fuera de Costa Rica, solo para los fines descritos (Ley 8968, art. 14).
 <!-- si: reputacion -->
 - Cualquier persona en internet con el enlace puede ver los datos indicados en «Perfil de reputación», mientras exista tu cuenta.

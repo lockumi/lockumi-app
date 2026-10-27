@@ -329,7 +329,7 @@ export function Crear({ u }: { u: Usuario }) {
           <p>El USDC de prueba no es dinero real y no tiene valor. Tienes dos opciones:</p>
           <ul>
             <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.</li>
-            <li><strong>Usar mi propio USDC de prueba:</strong> el de tu billetera de Lockumi (Cavos) o de Freighter, hasta tu saldo y como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).</> : '. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).'}</li>
+            <li><strong>Usar mi propio USDC de prueba:</strong> con tu billetera de Lockumi (Cavos), Lockumi te envía hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'} de su propia cuenta, sin valor. Con Freighter, usas el que ya tengas, hasta {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas && ' USDC de prueba'}. Si tu cuenta de Cavos no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline). Firmas tú el depósito.</li>
           </ul></>}
         {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal para la ⓘ de «Fechas», palabra por palabra. */}
         {info === 'fechas' && <p>En esta demo, la fecha de entrada es de hoy en adelante (hasta 1 año) y la duración va de 1 mes a 5 años. Son valores de prueba, no plazos legales.</p>}
