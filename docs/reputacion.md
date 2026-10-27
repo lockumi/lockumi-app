@@ -240,6 +240,12 @@ solo queda verificado con el código correcto. La marca se borra al confirmar, s
 salir (`borrarSesion`). Fuera de esa hora, o sin marca (sesión de Supabase nueva, otro aparato), sigue valiendo «Sal de Lockumi y vuelve a
 entrar con tu correo»: hace falta un token nuevo de Cavos (un código por correo). Si el correo ya estaba confirmado, volver con la llave de
 acceso no necesita el token: el servidor decide con lo que esa sesión ya verificó. Pruebas: `src/reputacion/__tests__/volver-por-confirmar.test.ts`.
+Recargar la página (27/10/2026, prueba real del inquilino): `enviados` (tokens ya mandados) era solo de memoria, así que cada carga con el mismo token
+(menos de 6 minutos) lo volvía a mandar a `/api/verificar-correo`: 403 «Sal de Lockumi…» (ignorado por la app; el correo seguía confirmado en
+`lk_correos_verificados` por la sesión de Supabase, y el pago no depende de esa llamada), pero con 1 de los 5 intentos por sesión y 10 minutos menos, y
+si faltaba el código no volvía «Revisa tu correo». Ahora `sesionCavos.ts` guarda en `localStorage` (`lockumi.cavos.token-enviado`) la huella SHA-256
+(24 caracteres) de cada token que el servidor ya recibió o rechazó (7 minutos; máximo 5; se borra en `borrarSesion`; un fallo de red no cuenta) y
+`asegurarCorreo` no lo manda otra vez (con marca de por confirmar, vuelve la pantalla). Mismo test.
 Un token de otra app de Cavos ya no basta: el código llega al buzón de la persona dueña del correo. Google y Apple no cambian (siguen con su
 `aud` y el `nonce` con `CAVOS_APP_ID`). Si algún día `CAVOS_AUD_EMAIL` es un `aud` propio de Lockumi, el correo se registra como antes.
 Textos literales de Legal: título «Revisa tu correo»; «Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu

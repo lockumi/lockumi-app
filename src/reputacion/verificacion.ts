@@ -7,9 +7,9 @@
 // · Límite 4: la pantalla previa de REP-01 en otro aparato se decide con lk_necesita_rep01 (por el correo verificado).
 import type { Alquiler } from '../types'
 import { conServidor } from '../servidor/config'
-import { servidor, usarCuenta, recargar } from '../servidor/repositorio'
+import { servidor, usarCuenta, recargar, ErrorServidor } from '../servidor/repositorio'
 import { authCavos } from '../services/auth'
-import { tokenYaNoSirve, guardarPorConfirmar, leerPorConfirmar, borrarPorConfirmar } from '../services/sesionCavos'
+import { tokenYaNoSirve, guardarPorConfirmar, leerPorConfirmar, borrarPorConfirmar, huellaToken, tokenYaEnviado, guardarTokenEnviado } from '../services/sesionCavos'
 import { pedirBorrado, ejecutarBorrados } from './borrado'
 import { confirmarCodigo, pedirCodigo, ErrorCodigo, type MotivoCodigo } from './segundo-factor'
 
@@ -47,9 +47,16 @@ export function asegurarCorreo(email: string): Promise<boolean> {
   const p = (async () => {
     await usarCuenta(c)   // la sesión de otra cuenta se termina antes de verificar (cuenta-sesion.ts)
     const token = (await authCavos())?.getAuthToken()
-    if (!token || enviados.has(token) || tokenYaNoSirve(token)) { volverAPorConfirmar(c); return false }
+    // «Ya enviado» también vale después de recargar la página (27/10/2026): si no, cada carga mandaba otra vez el token ya gastado (403 sobrante).
+    const huella = token ? await huellaToken(token) : null
+    if (!token || enviados.has(token) || tokenYaNoSirve(token) || (huella && tokenYaEnviado(huella))) { volverAPorConfirmar(c); return false }
     enviados.add(token)
-    const r = await servidor.verificarCorreo(token)
+    let r: Awaited<ReturnType<typeof servidor.verificarCorreo>>
+    try { r = await servidor.verificarCorreo(token) } catch (e) {
+      if (e instanceof ErrorServidor && huella) guardarTokenEnviado(huella)   // el servidor contestó (lo rechazó o ya lo había gastado): no se vuelve a mandar
+      throw e
+    }
+    if (huella) guardarTokenEnviado(huella)   // el servidor lo recibió (lo gasta aunque falte el código); un fallo de red no cuenta: ahí no llegó
     if (r.codigo) {   // falta el código del correo: no está verificado todavía
       if (normalizar(r.correo) === c) { porConfirmar = { c, correo: r.correo, ...(r.motivo && MOTIVOS_AVISO.has(r.motivo) && { motivo: r.motivo as MotivoCodigo }) }; guardarPorConfirmar(c, r.correo); avisar() }
       return false

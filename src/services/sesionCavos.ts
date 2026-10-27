@@ -5,6 +5,7 @@
 // El token nunca se muestra ni se manda a Lockumi: solo se mueve entre los dos almacenamientos de este navegador.
 type Almacen = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 const ESPEJO = 'lockumi.cavos.sesion'
+const ENVIADOS = 'lockumi.cavos.token-enviado'   // huellas (SHA-256 cortado) de tokens que ya fueron al servidor; nunca el token
 const MARGEN_S = 300   // tolerancia de reloj, como Meteorito
 const claves = (appId: string) => ({ token: `cavos-kit:token:${appId || 'default'}`, identidad: `cavos-kit:identity:${appId || 'default'}` })
 
@@ -31,7 +32,7 @@ export function reponerSesion(appId: string, sesion: Almacen = sessionStorage, l
   } catch { return false }
 }
 /** Al salir (o al cambiar de cuenta). También olvida el «Revisa tu correo» pendiente de este aparato. */
-export function borrarSesion(local: Almacen = localStorage) { try { local.removeItem(ESPEJO); local.removeItem(PENDIENTE) } catch { /* nada */ } }
+export function borrarSesion(local: Almacen = localStorage) { try { local.removeItem(ESPEJO); local.removeItem(PENDIENTE); local.removeItem(ENVIADOS) } catch { /* nada */ } }
 
 // Volver con el código del correo todavía por confirmar (27/10/2026, PR #60). El servidor exige un token de Cavos de 5 minutos como máximo
 // (api/_lib/cavos-token.ts: EDAD_MAXIMA, como el enclave) y lo gasta una sola vez; el kit no renueva el token en silencio. Quien deja la
@@ -63,3 +64,26 @@ export function leerPorConfirmar(c: string, ahora = Date.now(), local: Almacen =
   } catch { return null }
 }
 export function borrarPorConfirmar(local: Almacen = localStorage) { try { local.removeItem(PENDIENTE) } catch { /* nada */ } }
+
+// Recargar la página después de confirmar el correo (27/10/2026, PR #60, prueba real del inquilino): la app vuelve a cargar con el mismo token de Cavos
+// (el espejo de arriba, de menos de 6 minutos), y como la lista de «tokens ya enviados» vivía solo en memoria, lo mandaba OTRA vez a
+// /api/verificar-correo: el servidor ya lo gastó (un solo uso) y respondía 403 «Sal de Lockumi…» (la app lo ignora, pero gasta el límite de 5 intentos
+// por sesión y 10 minutos). Aquí se recuerda en este navegador una huella del token ya enviado (no el token) por lo que le queda de vida al servidor.
+export const VIDA_ENVIADO_MS = 7 * 60_000   // 6 minutos que acepta el servidor + 1 de margen
+/** Huella corta (SHA-256) de un token para recordar que ya se mandó. null si el navegador no tiene crypto.subtle (entonces no se recuerda nada). */
+export async function huellaToken(t: string): Promise<string | null> {
+  try {
+    const d = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(t))
+    return [...new Uint8Array(d)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('')
+  } catch { return null }
+}
+function leerEnviados(ahora: number, local: Almacen): { h: string; hasta: number }[] {
+  try {
+    const a = JSON.parse(local.getItem(ENVIADOS) ?? '[]') as unknown
+    return Array.isArray(a) ? a.filter((x): x is { h: string; hasta: number } => !!x && typeof (x as { h?: unknown }).h === 'string' && typeof (x as { hasta?: unknown }).hasta === 'number' && (x as { hasta: number }).hasta > ahora) : []
+  } catch { return [] }
+}
+export function tokenYaEnviado(h: string, ahora = Date.now(), local: Almacen = localStorage): boolean { return leerEnviados(ahora, local).some(x => x.h === h) }
+export function guardarTokenEnviado(h: string, ahora = Date.now(), local: Almacen = localStorage) {
+  try { local.setItem(ENVIADOS, JSON.stringify([...leerEnviados(ahora, local).filter(x => x.h !== h), { h, hasta: ahora + VIDA_ENVIADO_MS }].slice(-5))) } catch { /* sin almacenamiento */ }
+}

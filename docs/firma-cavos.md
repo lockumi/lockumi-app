@@ -120,3 +120,9 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
 - Arreglo (solo app, sin cambiar diseño ni flujo): no se manda un token vencido para el servidor y se recuerda en este navegador, 55 minutos, que la
   cuenta dejó el correo por confirmar; al volver se muestra de nuevo «Revisa tu correo». Detalle: `docs/reputacion.md` («Volver con la llave de acceso…»).
 - Al cambiar `CAVOS_APP_ID` / `CAVOS_AUD_EMAIL` en producción no cambia nada de esto: el `aud` del enclave es «cavos-email» para todas las apps.
+- Recargar la página después de confirmar el correo (prueba real del inquilino, 27/10, 2:00 a. m.): la app volvía a mandar a `/api/verificar-correo`
+  el mismo token de Cavos (el espejo, de menos de 6 minutos) porque la lista de «tokens ya enviados» vivía solo en memoria; el servidor ya lo había
+  gastado y respondía 403 «Sal de Lockumi…» (la app lo ignora, no bloquea el pago, el correo seguía confirmado en `lk_correos_verificados`), pero gastaba
+  1 de los 5 intentos por sesión cada 10 minutos. Ahora se recuerda una huella (SHA-256 cortado, nunca el token) 7 minutos en `localStorage`
+  (`lockumi.cavos.token-enviado`). Y si se recarga ANTES de escribir el código, vuelve «Revisa tu correo» (antes no volvía con un token de menos de 6 minutos).
+  Un fallo de red (la petición no llegó) no se recuerda: se reintenta.

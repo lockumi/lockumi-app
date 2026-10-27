@@ -106,6 +106,55 @@ describe('volver con la llave de acceso al «Revisa tu correo» pendiente', () =
     expect(await v.asegurarCorreo(CORREO)).toBe(true)
     expect(s.leerPorConfirmar(CORREO)).toBeNull()
   })
+  it('recargar la página (módulos nuevos, mismo token de menos de 6 minutos) NO vuelve a mandar el token ya gastado (prueba real del inquilino, 27/10)', async () => {
+    token = jwt(ahoraS() - 20)
+    const { v } = await cargar()
+    expect(await v.asegurarCorreo(CORREO)).toBe(false)   // llega el código por correo
+    await v.confirmarCorreoConCodigo('123456')
+    expect(srv.verificarCorreo).toHaveBeenCalledTimes(1)
+    const { v: v2, s } = await cargar()   // recarga: la memoria se pierde, el almacenamiento no
+    expect(await v2.asegurarCorreo(CORREO)).toBe(false)
+    expect(srv.verificarCorreo).not.toHaveBeenCalled()   // antes: otro POST → 403 «Sal de Lockumi…» y 1 intento menos de los 5
+    expect(v2.correoPorConfirmar()).toBeNull()           // ya estaba confirmado (se borró la marca): no inventa «Revisa tu correo»
+    expect(JSON.stringify([...mem.values()])).not.toContain(token)   // se guarda una huella, nunca el token
+    s.borrarSesion(); expect(mem.has('lockumi.cavos.token-enviado')).toBe(false)
+  })
+  it('recargar ANTES de escribir el código (token de menos de 6 minutos ya gastado): vuelve «Revisa tu correo» sin mandar nada', async () => {
+    token = jwt(ahoraS() - 20)
+    const { v } = await cargar()
+    await v.asegurarCorreo(CORREO)
+    const { v: v2 } = await cargar()
+    await v2.asegurarCorreo(CORREO)
+    expect(srv.verificarCorreo).not.toHaveBeenCalled()
+    expect(v2.correoPorConfirmar()).toEqual({ c: CORREO, correo: CORREO })
+  })
+  it('si el servidor lo rechaza (ErrorServidor) también se recuerda; si fue un fallo de red (no llegó) se reintenta al recargar', async () => {
+    token = jwt(ahoraS() - 20)
+    const { v } = await cargar(); const { ErrorServidor } = await import('../../servidor/repositorio')
+    srv.verificarCorreo.mockImplementationOnce(async () => { throw new TypeError('Failed to fetch') })
+    expect(await v.asegurarCorreo(CORREO)).toBe(false)
+    const { v: v2 } = await cargar()
+    await v2.asegurarCorreo(CORREO); expect(srv.verificarCorreo).toHaveBeenCalledTimes(1)   // la red falló: se reintenta
+    const { v: v3 } = await cargar(); const { ErrorServidor: E3 } = await import('../../servidor/repositorio')
+    srv.verificarCorreo.mockImplementationOnce(async () => { throw new E3('No pudimos confirmar el correo de tu cuenta.') })
+    token = jwt(ahoraS() - 15)   // otro token
+    await v3.asegurarCorreo(CORREO)
+    const { v: v4 } = await cargar()
+    await v4.asegurarCorreo(CORREO); expect(srv.verificarCorreo).not.toHaveBeenCalled()
+    expect(ErrorServidor).toBeTypeOf('function')
+  })
+  it('la huella vale 7 minutos y es por token: otro token (nuevo ingreso) sí se manda', async () => {
+    const { s } = await cargar(), t0 = 5_000_000
+    s.guardarTokenEnviado('aaaa', t0)
+    expect(s.tokenYaEnviado('aaaa', t0 + 6 * 60_000)).toBe(true)
+    expect(s.tokenYaEnviado('bbbb', t0 + 1000)).toBe(false)
+    expect(s.tokenYaEnviado('aaaa', t0 + 8 * 60_000)).toBe(false)
+    expect(await s.huellaToken('abc')).toMatch(/^[0-9a-f]{24}$/)
+    token = jwt(ahoraS() - 20); const { v } = await cargar()
+    await v.asegurarCorreo(CORREO); token = jwt(ahoraS() - 10) + 'x'
+    const { v: v2 } = await cargar(); await v2.asegurarCorreo(CORREO)
+    expect(srv.verificarCorreo).toHaveBeenCalledTimes(1)
+  })
   it('no toca el login: services/auth.ts no sabe nada de esto', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }
     expect(fs.readFileSync('src/services/auth.ts', 'utf8')).not.toMatch(/PorConfirmar|tokenYaNoSirve/)
