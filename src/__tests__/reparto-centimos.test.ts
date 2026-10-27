@@ -38,13 +38,13 @@ describe('repartos: partes con 2 decimales que suman el depósito; lo que llega 
   it('20 = 5 + 15: llegan 4,985 + 14,955 y la comisión es 0,06', () => {
     expect(repartoCentimos(5, 15)).toEqual({ dueno: 5, inquilino: 15, llegaDueno: 4.985, llegaInquilino: 14.955, comision: 0.06, total: 20 })
     const t = TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 20, dueno: 5, inquilino: 15 })
-    expect(t).toContain('Llegan 4,985 USDC de prueba al dueño y 14,955 USDC de prueba al inquilino; Trustless Work descuenta 0,06 USDC de prueba')
+    expect(t).toContain('Reparto acordado: 5,00 USDC de prueba al dueño y 15,00 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,06 USDC de prueba en total), así que llegan 4,985 USDC de prueba al dueño y 14,955 USDC de prueba al inquilino. Lockumi no recibe nada.')
   })
   it('la comisión nunca desaparece: 0,50 + 1,50 → 0,4985 + 1,4955 y 0,006; 0,33 + 0,67 → 0,32901 + 0,66799 y 0,003', () => {
     const a = repartoCentimos(0.5, 1.5), b = repartoCentimos(0.33, 0.67)
     expect([a.dueno, a.inquilino, a.llegaDueno, a.llegaInquilino, a.comision]).toEqual([0.5, 1.5, 0.4985, 1.4955, 0.006])
     expect([b.llegaDueno, b.llegaInquilino, b.comision]).toEqual([0.32901, 0.66799, 0.003])
-    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 2, dueno: 0.5, inquilino: 1.5 })).toContain('Llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino; Trustless Work descuenta 0,006 USDC de prueba')
+    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 2, dueno: 0.5, inquilino: 1.5 })).toContain('Reparto acordado: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,006 USDC de prueba en total), así que llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino. Lockumi no recibe nada.')
     expect(notaComisionReparto(1.5, 0.5)).toContain('Llegaron 1,4955 USDC de prueba al inquilino y 0,4985 USDC de prueba al dueño: la red de prueba de Trustless Work descuenta el 0,3 % (0,006 USDC de prueba)')
     expect(notaComisionAuto(1)).toContain('Llegaron 0,997 USDC de prueba: la red de prueba de Trustless Work descuenta el 0,3 % (0,003 USDC de prueba)')
     expect(TEXTOS['COR-C-07/devuelto'].cuerpo({ deposito: 1 })).toContain('llegan 0,997 USDC de prueba')
