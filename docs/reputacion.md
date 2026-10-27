@@ -495,3 +495,18 @@ Términos 15.1). No devuelve correos ni datos de la otra parte. Sin servidor (de
 no cuenta nada y se vuelve a preguntar en la próxima carga. Sin cambios de textos ni de diseño.
 Pruebas: `src/reputacion/__tests__/reputacion-servidor.test.ts`. Ensayo en producción dentro de una transacción que se deshizo (27/10).
 **Volver atrás:** `supabase/revert/20261027140000_reputacion_contraparte_revert.sql` y `git revert -m 1 <merge>` (primero el código).
+
+## «Solo tú ves esto»: frase corta (27/10/2026)
+
+Aprobado por Katherine el 27/10/2026, 4:52 p. m. CR («Usa la frase corta de la reputación», opción B de Legal). Solo textos:
+`UI.devolvioDe`, `UI.recibioDe` y `UI.notaReparto` en `src/reputacion/textos.ts` (los usa «Mi perfil» en `Pantallas.tsx`). Sin cambios de
+diseño, de la insignia «Devolvió el depósito completo», de `src/legal/**` ni de `ContratoDoc.tsx`.
+
+- **Dueño:** «De tus {t} alquileres cerrados: {c} con el depósito devuelto completo y {r} con un reparto del depósito (reclamo aceptado o mediación).»
+  Debajo, solo para el dueño: «Un reparto no baja tu puntaje, salvo que se haya devuelto al inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).»
+- **Inquilino:** «De tus {t} alquileres cerrados: en {c} recibiste tu depósito completo y en {r} hubo un reparto del depósito (reclamo aceptado o mediación).»
+- {t} = alquileres que cuentan para el puntaje; {c} = los de `fraccionDescontada === 0` (como antes); {r} = {t} − {c}.
+- Se omite la parte que vale 0 («De tus 5 alquileres cerrados: 5 con el depósito devuelto completo.»). Con 1: «De tu 1 alquiler cerrado: …».
+  Con 0 alquileres cerrados: «Todavía no tienes alquileres cerrados.» (forma nuestra; pendiente de confirmar con Legal).
+
+Pruebas: `src/reputacion/__tests__/frase-corta.test.tsx` (0, 1 y varios; partes omitidas; nota solo para el dueño; insignia igual).

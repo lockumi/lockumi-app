@@ -201,6 +201,13 @@ export const VITRINA = {
   vacio: 'Todavía no hay suficientes personas en esta zona para mostrar una lista.',
 }
 
+/** «De tus {t} alquileres cerrados: …»: se omite la parte que vale 0 y con 1 alquiler va en singular. */
+function fraseCerrados(t: number, ...partes: [number, string][]): string {
+  if (t <= 0) return 'Todavía no tienes alquileres cerrados.'
+  const texto = partes.filter(([n]) => n > 0).map(([, x]) => x).join(' y ')
+  return `${t === 1 ? 'De tu 1 alquiler cerrado' : `De tus ${t} alquileres cerrados`}: ${texto}.`
+}
+
 // LEGAL: revisado (25/10) · textos de pantalla nuevos, redactados para este paso (no salen de Legal).
 export const UI = {
   entradaTitulo: ENTRADA.titulo,
@@ -215,8 +222,10 @@ export const UI = {
   insignias: 'Insignias',
   sinInsignias: 'Las insignias aparecen cuando firmas un contrato, guardas un depósito o subes fotos en la app.',
   soloTu: 'Solo tú ves esto',
-  devolvioDe: (d: number, t: number) => `Devolvió ${d} de ${t} depósitos completos`,
-  recibioDe: (d: number, t: number) => `Recibió su depósito completo en ${d} de ${t} alquileres`,
+  // LEGAL: Katherine, 27/10/2026 4:52 p. m. CR · frase corta (opción B de Legal). c = depósito completo; el resto (t − c), reparto.
+  devolvioDe: (c: number, t: number) => fraseCerrados(t, [c, `${c} con el depósito devuelto completo`], [t - c, `${t - c} con un reparto del depósito (reclamo aceptado o mediación)`]),
+  recibioDe: (c: number, t: number) => fraseCerrados(t, [c, `en ${c} recibiste tu depósito completo`], [t - c, `en ${t - c} hubo un reparto del depósito (reclamo aceptado o mediación)`]),
+  notaReparto: 'Un reparto no baja tu puntaje, salvo que se haya devuelto al inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).',
   pasoDe: (i: number, n: number) => `Paso ${i} de ${n}`,
   datosTitulo: '¿Cómo te verán?',
   nombreVisible: 'Nombre visible',
