@@ -329,7 +329,7 @@ export function Crear({ u }: { u: Usuario }) {
           <p>El USDC de prueba no es dinero real y no tiene valor. Tienes dos opciones:</p>
           <ul>
             <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.</li>
-            <li><strong>Usar mi propio USDC de prueba:</strong> el de tu billetera de Lockumi (Cavos) o de Freighter, hasta tu saldo y como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Para obtenerlo, recibes XLM de prueba de Friendbot y compras USDC de prueba en el exchange descentralizado de la red de prueba.</> : '. Lo obtienes con Friendbot y el exchange de la red de prueba.'}</li>
+            <li><strong>Usar mi propio USDC de prueba:</strong> el de tu billetera de Lockumi (Cavos) o de Freighter, hasta tu saldo y como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).</> : '. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).'}</li>
           </ul></>}
         {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal para la ⓘ de «Fechas», palabra por palabra. */}
         {info === 'fechas' && <p>En esta demo, la fecha de entrada es de hoy en adelante (hasta 1 año) y la duración va de 1 mes a 5 años. Son valores de prueba, no plazos legales.</p>}

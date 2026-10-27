@@ -20,7 +20,7 @@ const PUBLICADO_112 = { terminos: '5db0e31ad4293d16b803bbe50257f44493933571f6e59
 const BLOBS_112 = { terminos: '395ed8f7db6c1936c96a34a211f619dc68385797', privacidad: '045ead3ddf7e4e402bce0645be4fe3f7d75ff858' }
 
 // Textos literales de Legal (26/10/2026, 1:15 a. m.).
-const CASILLA = 'Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.'
+const CASILLA = 'Acepto los Términos 1.14-demo, incluido mi perfil de reputación público.'
 const LINEA = 'Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver: tu nombre, la inicial de tu apellido y, desde tu 3.er alquiler cerrado, tu puntaje. Nunca muestra tu dirección, teléfono, correo ni montos. Solo deja de verse si eliminas tu cuenta.'
 const T151 = 'que se crea con tu cuenta cuando aceptas estos Términos'
 const T151_FIN = 'Las cuentas creadas antes de aceptar el perfil de reputación siguen usando Lockumi sin perfil público, y sus alquileres no se publican ni cuentan para la reputación. Si más adelante aceptan estos Términos en la pantalla de inicio, reciben su perfil desde ese momento, y sus alquileres cerrados antes de eso no cuentan.'
@@ -44,11 +44,12 @@ describe('archivo de la 1.12-demo', () => {
 })
 
 describe('1.13-demo: los textos de Legal, literales y en su lugar', () => {
-  it('/terminos y /privacidad son la 1.13-demo con su número de versión; la 1.12-demo en su ruta', async () => {
+  it('/terminos y /privacidad (ahora la 1.14-demo) conservan los textos de la 1.13-demo; la 1.13-demo queda en /terminos-1-13 y la 1.12-demo en su ruta', async () => {
     C(); const { docs, rutaTerminos, rutaPrivacidad } = await import('../documentos'), { EDICION_REPUTACION } = await import('../version17'), d = docs()
-    expect(EDICION_REPUTACION).toMatch(/^1\.13-demo · /)
-    for (const k of ['terminos', 'privacidad'] as const) { expect(d[k].version).toBe('1.13-demo'); expect(plano(d[k].html)).toContain(`Versión ${EDICION_REPUTACION}`) }
-    expect([rutaTerminos('1.13-demo'), rutaPrivacidad('1.13-demo')]).toEqual(['/terminos', '/privacidad'])
+    expect(EDICION_REPUTACION).toMatch(/^1\.14-demo · /)
+    for (const k of ['terminos', 'privacidad'] as const) { expect(d[k].version).toBe('1.14-demo'); expect(plano(d[k].html)).toContain(`Versión ${EDICION_REPUTACION}`) }
+    expect([rutaTerminos('1.13-demo'), rutaPrivacidad('1.13-demo')]).toEqual(['/terminos-1-13', '/privacidad-1-13'])
+    expect([rutaTerminos('1.14-demo'), rutaPrivacidad('1.14-demo')]).toEqual(['/terminos', '/privacidad'])
     expect([rutaTerminos('1.12-demo'), rutaPrivacidad('1.12-demo')]).toEqual(['/terminos-1-12', '/privacidad-1-12'])
   })
   it('Términos 15.1: «cuando aceptas estos Términos» y la última oración nueva; sin «pantalla aparte» para el perfil', async () => {
@@ -76,7 +77,7 @@ describe('1.13-demo: los textos de Legal, literales y en su lugar', () => {
 describe('la casilla de los Términos en la pantalla de inicio', () => {
   it('con la reputación: el texto literal de Legal y su línea; sin ella, la de siempre', async () => {
     C(); let m = await import('../documentos')
-    const c = m.casillaTerminos(); expect(c.antes + c.enlace + c.despues).toBe(CASILLA); expect(c.enlace).toBe('Términos 1.13-demo'); expect(c.linea).toBe(LINEA)
+    const c = m.casillaTerminos(); expect(c.antes + c.enlace + c.despues).toBe(CASILLA); expect(c.enlace).toBe('Términos 1.14-demo'); expect(c.linea).toBe(LINEA)
     expect(m.textoCasillaTerminos()).toEqual([CASILLA, LINEA])
     vi.resetModules(); vi.unstubAllEnvs(); C(false); m = await import('../documentos')
     const s = m.casillaTerminos(); expect(s.antes + s.enlace + s.despues).toBe('Acepto los Términos y condiciones'); expect(s.linea).toBeUndefined()
@@ -87,7 +88,7 @@ describe('1.13-demo sin volver a aceptar', () => {
   it('es edición de la cuenta (no de escenario), va después de la 1.12-demo y nadie ve «pasar a la versión …»', async () => {
     C(); const { VERSIONES, EDICIONES_CUENTA, ordenVersion, versionVigente } = await import('../versiones'), { puedeCambiarVersion, puedeCambiarA } = await import('../../prueba/version')
     expect(VERSIONES.map(v => v.version)).toEqual(['1.7-demo', '1.8-demo', '1.9-demo'])
-    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo'])
+    expect(EDICIONES_CUENTA.map(v => v.version)).toEqual(['1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo', '1.14-demo'])
     expect(ordenVersion('1.12-demo')).toBeLessThan(ordenVersion('1.13-demo'))
     expect(versionVigente({ 'dos-personas': true, correos: true, reputacion: true })).toBe('1.9-demo')
     for (const version of ['1.9-demo', '1.10-demo', '1.11-demo', '1.12-demo', '1.13-demo']) {

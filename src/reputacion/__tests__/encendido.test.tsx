@@ -30,18 +30,18 @@ describe('reputación encendida', () => {
   it('sin pantalla aparte (Legal, 26/10/2026): la pantalla de inicio de siempre, con la casilla de los Términos 1.13-demo y la línea de Legal', async () => {
     expect((await import('../Pantallas') as Record<string, unknown>).Previa).toBeUndefined()
     const { Login } = await import('../../screens/Login'), h = renderToStaticMarkup(<Login onOk={() => {}} />), t = texto(h)
-    expect(h).toMatch(/<a href="\/terminos"[^>]*>Términos 1\.13-demo<\/a>, incluido mi perfil de reputación público\./)
+    expect(h).toMatch(/<a href="\/terminos"[^>]*>Términos 1\.14-demo<\/a>, incluido mi perfil de reputación público\./)
     expect(t).toContain('Tu cuenta incluye un perfil público y fijo que cualquiera con el enlace puede ver')
     expect(h).toContain('id="acepto-privacidad"'); expect(h).not.toMatch(/type="checkbox"[^>]*checked/)
     expect(t).not.toMatch(/Antes de crear tu cuenta|No crear mi cuenta|Ya tengo cuenta: entrar|Confirmo que soy mayor/)
   })
-  it('al entrar con los Términos 1.13-demo se registra el perfil (versión, fecha, hora y texto) y se llega a Inicio; nombre y cantón, al crear', async () => {
+  it('al entrar con los Términos 1.14-demo se registra el perfil (versión, fecha, hora y texto) y se llega a Inicio; nombre y cantón, al crear', async () => {
     const { leer } = await import('../consentimiento'), { V_REPUTACION } = await import('../../legal/version17'), { default: R } = await import('../Pantallas')
     const F = '2026-11-16T16:00:00.000Z', u = { ...U, terminos: { version: V_REPUTACION, fecha: F } }
     const t = texto(renderToStaticMarkup(<R u={u} r="/" salir={() => {}}><p>PANTALLA-DE-SIEMPRE</p></R>))
     expect(t).toContain('PANTALLA-DE-SIEMPRE')
-    expect(leer(U.email).rep01).toMatchObject({ fecha: F, hora: '10:00\u00a0a.\u00a0m.', texto: ['Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.', expect.stringContaining('Tu cuenta incluye un perfil público')] })
-    expect(leer(U.email).rep01?.version).toMatch(/^1\.13-demo · /)
+    expect(leer(U.email).rep01).toMatchObject({ fecha: F, hora: '10:00\u00a0a.\u00a0m.', texto: ['Acepto los Términos 1.14-demo, incluido mi perfil de reputación público.', expect.stringContaining('Tu cuenta incluye un perfil público')] })
+    expect(leer(U.email).rep01?.version).toMatch(/^1\.14-demo · /)
     const c = texto(await pantalla('/crear')); expect(c).toContain('Nombre visible'); expect(c).not.toContain('PANTALLA-DE-SIEMPRE')
   })
   it('con los Términos 1.12-demo (sesión anterior) no se crea ningún perfil: sin volver a aceptar', async () => {
