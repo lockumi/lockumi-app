@@ -176,6 +176,8 @@ export const servidor = {
   /** Apple con correo oculto: ¿esta cuenta ya guardó su correo real para avisos? (20261026080000; no devuelve correos) */
   tengoCorreoReal: () => rpc<boolean>('lk_tengo_correo_real', {}),
   necesitaRep01: (email: string) => rpc<boolean>('lk_necesita_rep01', { p_correo: email }),
+  /** Reputación con servidor (20261027140000): por cada alquiler propio, si cuenta (las dos partes con perfil) y desde cuándo. Sin correos. */
+  reputacionDeMisAlquileres: () => rpc<{ contrato_id: string; cuenta: boolean; desde: string | null }[]>('lk_reputacion_de_mis_alquileres', {}),
   /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase.
    *  codigo: true (403, Legal 25/10 9:00 p. m.) = token de correo con aud «cavos-email»: el correo queda por confirmar con el código de
    *  6 números que Lockumi mandó (motivo: 'minuto' | 'hora' | 'envio' si no salió uno nuevo). */

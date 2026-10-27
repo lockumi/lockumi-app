@@ -11,17 +11,29 @@ vi.mock('../servidor/repositorio', () => ({ servidor: {
 } }))
 vi.mock('../services/trustless', () => ({ trustless: {
   liberar: async () => { llamadas.push('liberar'); return 'tx' }, devolverAutomatico: async () => { llamadas.push('devolver-automatico'); return 'tx' },
-  repartir: async () => { llamadas.push('repartir'); return 'tx' } } }))
+  repartir: async (_c: string, p?: unknown) => { llamadas.push(p ? 'repartir+prueba' : 'repartir'); return 'tx' },
+  pruebaReparto: async () => { llamadas.push('firmar'); if (sinSesion.v) throw new Error(sinSesion.v); return sinSesion.legado ? undefined : { firma: 'x' } } } }))
+const sinSesion: { v: string; legado: boolean } = vi.hoisted(() => ({ v: '', legado: false }))
 vi.stubEnv('VITE_PRUEBA_COMPLETA', '1')
 const { acciones } = await import('../acciones')
 const alq = (estado: string, via?: string, liquidacionTx?: string) => ({ id: '11111111-2222-3333-4444-555555555555', estado, escrowId: 'CABC', liquidacionTx,
   resultado: via ? { via, dueno: 30, inquilino: 70 } : undefined, historial: [], monto: 100, reclamo: { monto: 30 } }) as never
 
 describe('PR #22 · la app pide el reparto en la red solo con un cierre aceptado', () => {
-  beforeEach(() => { llamadas.length = 0 })
-  it('el inquilino acepta el reclamo → el servidor cierra por acuerdo → repartir', async () => {
+  beforeEach(() => { llamadas.length = 0; sinSesion.v = ''; sinSesion.legado = false })
+  it('el inquilino acepta el reclamo → firma la prueba ANTES de cerrar → el servidor cierra por acuerdo → repartir con esa prueba', async () => {
     await acciones.responder(alq('reclamo'), true)
-    expect(llamadas).toEqual(['lk_responder_reclamo', 'repartir'])
+    expect(llamadas).toEqual(['firmar', 'lk_responder_reclamo', 'repartir+prueba'])
+  })
+  it('b10557f9 · la pestaña sin sesión de Cavos: no cierra el caso (el reclamo sigue abierto y se puede volver a tocar)', async () => {
+    sinSesion.v = 'sin sesión'
+    await expect(acciones.responder(alq('reclamo'), true)).rejects.toThrow('sin sesión')
+    expect(llamadas).toEqual(['firmar'])
+  })
+  it('un alquiler de antes (cuenta del servidor, PR #54) sin prueba: cierra y el servidor decide, como antes', async () => {
+    sinSesion.legado = true
+    await acciones.responder(alq('reclamo'), true)
+    expect(llamadas).toEqual(['firmar', 'lk_responder_reclamo', 'repartir'])
   })
   it('el inquilino no acepta → mediación, sin pago', async () => {
     await acciones.responder(alq('reclamo'), false)

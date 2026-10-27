@@ -19,20 +19,26 @@ const partes = [{ rol: 'dueno', usuario: 'u-dueno', direccion_stellar: DUENO }, 
 const mediado = { id: ID, monto: 100, direccion: 'Calle 1', escrow_contract_id: CID, liquidacion_tx: null, estado: 'cerrado',
   resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 30, inquilino: 70 }, lk_participantes: partes }
 const acordado = { ...mediado, resultado: { via: 'acuerdo', dueno: 40, inquilino: 60 } }
+const MED = '99999999-8888-4777-8666-555555555555', OTRO = '99999999-8888-4777-8666-444444444444'
 const acciones = (llamadas: { url: string }[]) => llamadas.map(l => l.url).filter(u => /dispute-escrow|resolve-dispute|send-transaction/.test(u)).map(u => u.split('/').pop())
 
-function simular(contrato: Record<string, unknown>, o: { eventos?: { texto: string }[]; bloqueo?: boolean; fallaResolver?: boolean } = {}) {
-  const { eventos = [], bloqueo = true, fallaResolver = false } = o
+// 27/10/2026: el bloqueo es el del paso 22 (lk_tomar_pago con vencimiento, migración 20261027120000) y antes de pagar se lee el
+// escrow en Trustless Work: si la disputa ya está abierta en la cadena, el reintento solo resuelve.
+function simular(contrato: Record<string, unknown>, o: { eventos?: { texto: string }[]; bloqueo?: boolean; fallaResolver?: boolean; disputado?: boolean; mediadores?: string[]; uid?: string } = {}) {
+  const { eventos = [], bloqueo = true, fallaResolver = false, disputado = false, mediadores = [], uid = 'u-inq' } = o
   const llamadas: { url: string; metodo?: string; cuerpo?: Record<string, unknown> }[] = []
   const f = (async (url: string, init?: RequestInit) => {
     const cuerpo = init?.body ? JSON.parse(String(init.body)) : undefined; llamadas.push({ url, metodo: init?.method, cuerpo })
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
-    if (url.endsWith('/auth/v1/user')) return ok({ id: 'u-inq' })
+    if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
+    if (url.includes('/rest/v1/lk_mediadores?')) return ok(mediadores.filter(m => url.includes('usuario=eq.' + m)).map(usuario => ({ usuario })))
+    if (url.includes('/rest/v1/lk_contratos?id=eq.') && url.includes('select=liquidacion_tx,pago_tx_pendiente')) return ok([{ liquidacion_tx: null, pago_tx_pendiente: null, pago_revisar: false }])
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([contrato])
-    // Bloqueo: PATCH condicionado a liquidacion_tx vacío; devuelve la fila si lo tomó, [] si otro ya lo tiene.
-    if (url.includes('/rest/v1/lk_contratos?id=eq.') && url.includes('liquidacion_tx=is.null') && init?.method === 'PATCH') return ok(bloqueo ? [{ id: ID }] : [])
+    if (url.endsWith('/rpc/lk_tomar_pago')) return ok(bloqueo)
+    if (url.endsWith('/rpc/lk_anotar_pago_pendiente')) return ok(true)
     if (url.includes('/rest/v1/lk_eventos?') && !init?.method) { const t = new URL(url).searchParams.get('texto'); return ok(t ? eventos.filter(e => 'eq.' + e.texto === t) : eventos) }
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
+    if (url.includes('/helper/get-escrow-by-contract-ids')) return ok([{ contractId: CID, balance: contrato.monto, roles: { receiver: INQ, releaseSigner: P.publicKey(), disputeResolver: M.publicKey() }, flags: { disputed: disputado, released: false, resolved: false } }])
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS' })
     if (url.endsWith('/dispute-escrow')) return ok({ unsignedTransaction: xdrDe(P.publicKey()) })
     if (url.endsWith('/resolve-dispute')) return fallaResolver ? new Response('{"message":"x"}', { status: 500 }) : ok({ unsignedTransaction: xdrDe(M.publicKey()) })
@@ -80,7 +86,7 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
   ])('no paga si no lo cerró el servidor por acuerdo o con las dos aceptaciones: %s', async (_n, k) => {
     const { r, llamadas } = repartir(k)
     await expect(r).rejects.toMatchObject({ estado: 409 })
-    expect(llamadas.some(l => l.url.includes('dispute') || l.metodo === 'PATCH')).toBe(false)
+    expect(llamadas.some(l => l.url.includes('dispute') || l.metodo === 'PATCH' || l.url.includes('lk_tomar_pago'))).toBe(false)
   })
   it('idempotente: con el hash guardado no repite; si otro pedido tiene el bloqueo, no abre otra disputa', async () => {
     const a = repartir({ ...mediado, liquidacion_tx: 'a'.repeat(64) })
@@ -91,16 +97,45 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
     const c = repartir(mediado, { bloqueo: false })
     await expect(c.r).rejects.toMatchObject({ estado: 409 }); expect(c.llamadas.some(l => l.url.includes('dispute'))).toBe(false)
   })
-  it('si falla al resolver, suelta el bloqueo y el reintento no abre otra disputa (ya consta la abierta)', async () => {
+  it('si falla al resolver, suelta el bloqueo y el reintento no abre otra disputa (la cadena dice que ya está abierta)', async () => {
     const a = repartir(mediado, { fallaResolver: true })
     await expect(a.r).rejects.toMatchObject({ estado: 502 })
-    expect(a.llamadas.some(l => l.metodo === 'PATCH' && l.cuerpo && 'liquidacion_tx' in l.cuerpo && l.cuerpo.liquidacion_tx === null)).toBe(true)
-    const b = repartir(mediado, { eventos: [{ texto: REPARTO_DISPUTA }] }); await b.r
+    const soltar = a.llamadas.find(l => l.url.endsWith('/rpc/lk_soltar_pago'))!.cuerpo!
+    expect(soltar).toMatchObject({ p_contrato: ID, p_revisar: false, p_esperar: true })   // ya se envió la disputa: espera que venza el bloqueo
+    expect(a.llamadas.some(l => l.metodo === 'PATCH' && l.cuerpo && 'liquidacion_tx' in l.cuerpo)).toBe(false)   // sigue «por pagar»
+    const b = repartir(mediado, { disputado: true, eventos: [{ texto: REPARTO_DISPUTA }] }); await b.r
     expect(acciones(b.llamadas)).toEqual(['resolve-dispute', 'send-transaction'])
   })
-  it('un caso con la disputa abierta con el texto de antes (sin «red de prueba») tampoco abre otra al reintentar', async () => {
-    const b = repartir(mediado, { eventos: [{ texto: 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado' }] }); await b.r
+  it('guarda el hash firmado ANTES de enviar la resolución (si la respuesta se pierde, el reintento lo confirma en Horizon)', async () => {
+    const { r, llamadas } = repartir(acordado); const x = await r
+    const i = llamadas.findIndex(l => l.url.endsWith('/rpc/lk_anotar_pago_pendiente')), envio = llamadas.map((l, n) => [l, n] as const).filter(([l]) => l.url.endsWith('/send-transaction'))[1][1]
+    expect(llamadas[i].cuerpo!.p_tx).toBe(x.tx); expect(i).toBeLessThan(envio)
+  })
+  it('un caso con la disputa abierta con el texto de antes (sin «red de prueba») no duplica el evento al reintentar', async () => {
+    const b = repartir(mediado, { disputado: true, eventos: [{ texto: 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado' }] }); await b.r
     expect(acciones(b.llamadas)).toEqual(['resolve-dispute', 'send-transaction'])
+  })
+  it('27/10 · la persona mediadora (lk_mediadores, no es parte) paga el reparto de la mediación con la llave mediadora, sin prueba de billetera', async () => {
+    const s = simular(mediado, { uid: MED, mediadores: [MED] })
+    const x = await atender(ENV, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f)
+    expect(x.tx).toMatch(/^[0-9a-f]{64}$/); expect(acciones(s.llamadas)).toEqual(['dispute-escrow', 'send-transaction', 'resolve-dispute', 'send-transaction'])
+    expect(s.llamadas.some(l => l.url.includes('lk_pruebas_cavos'))).toBe(false)
+  })
+  it('27/10 · la persona mediadora no paga un acuerdo ni un caso abierto; alguien que no es parte ni mediadora recibe 403', async () => {
+    for (const k of [acordado, { ...mediado, estado: 'mediacion', resultado: null }]) {
+      const s = simular(k, { uid: MED, mediadores: [MED] })
+      await expect(atender(ENV, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f)).rejects.toMatchObject({ estado: 409 })
+      expect(s.llamadas.some(l => l.url.includes('dispute') || l.url.includes('lk_tomar_pago'))).toBe(false)
+    }
+    const s = simular(mediado, { uid: OTRO, mediadores: [MED] })
+    await expect(atender(ENV, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f)).rejects.toMatchObject({ estado: 403, message: 'No participas en este contrato.' })
+    const t = simular(mediado, { uid: MED, mediadores: [MED] })   // y la mediadora no puede pedir otras acciones
+    await expect(atender(ENV, { accion: 'liberar', contrato: ID } as never, 'Bearer t', t.f)).rejects.toMatchObject({ estado: 403 })
+  })
+  it('b10557f9 · sin la prueba de billetera (la pestaña sin sesión de Cavos) el inquilino recibe 401 y no se pide nada a Trustless Work', async () => {
+    const s = simular(acordado)
+    await expect(atender(ENV, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f)).rejects.toMatchObject({ estado: 401 })
+    expect(s.llamadas.some(l => l.url.includes('dispute') || l.url.includes('lk_tomar_pago'))).toBe(false)
   })
   it('sin la cuenta mediadora no abre ninguna disputa', async () => {
     const s = simular(mediado)

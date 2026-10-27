@@ -9,13 +9,13 @@
 // no hace nada. Antes de publicar: aplicar 20261025030000 y 20261025040000 (si no, lk_vencimientos falla y solo corren los borrados).
 import { servicio, rpc, borrarObjetos } from './supabase.js'
 import { procesarCorreos, vencerMediaciones, type Resultado } from './correos-c.js'
-import { pagarDevoluciones, type SalidaDevoluciones } from './devoluciones.js'
+import { pagarDevoluciones, pagarRepartos, type SalidaDevoluciones, type SalidaRepartos } from './devoluciones.js'
 import { sinSecretos } from './tw.js'
 
 export const DIAS_MEDIACION = 30
 export const HORA_RECORDATORIOS_UTC = 9
 export interface Vencimientos { automatico: number; mediacion: number }
-export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; devoluciones?: SalidaDevoluciones; vencidas?: number | { error: string }; correos?: { enviados: number; omitidos: number; vencidas: number; recordatorios: boolean } | { error: string } }
+export interface ResultadoBorrados { invitaciones: number; mediaciones: number; fallidos: string[]; vencimientos: Vencimientos | null; devoluciones?: SalidaDevoluciones; repartos?: SalidaRepartos | { pendientes: string[] }; vencidas?: number | { error: string }; correos?: { enviados: number; omitidos: number; vencidas: number; recordatorios: boolean } | { error: string } }
 
 export async function ejecutarBorrados(env: Record<string, string | undefined>, f: typeof fetch = fetch, o: { ahora?: number } = {}): Promise<ResultadoBorrados> {
   const inicio = Date.now()
@@ -41,6 +41,8 @@ export async function ejecutarBorrados(env: Record<string, string | undefined>, 
   // Paso 22 (api/_lib/devoluciones.ts): paga en la red de prueba las devoluciones sin reclamo que siguen sin pagar (las que
   // lk_vencimientos acaba de cerrar y las de corridas anteriores), ANTES de los correos: así el COR-C-07 sale en la misma corrida.
   r.devoluciones = await pagarDevoluciones(env, { inicio }, f).catch((e: unknown) => ({ error: sinSecretos(e instanceof Error ? e.message : 'error', env) }))
+  // 27/10 (api/_lib/devoluciones.ts): repartos aceptados (acuerdo o mediación) que quedaron sin pagar. Apagado: REPARTOS_CRON=0.
+  r.repartos = await pagarRepartos(env, { inicio }, f).catch((e: unknown) => ({ error: sinSecretos(e instanceof Error ? e.message : 'error', env) }))
   if (env.CORREOS_C === '1') r.correos = await procesarCorreos(env, { sinRecordatorios: !recordatorios }, f).then((x: Resultado) => ({ enviados: x.enviados.length, omitidos: x.omitidos.length, vencidas: x.vencidas, recordatorios }), (e: unknown) => ({ error: e instanceof Error ? e.message : 'error' }))
   return r
 }

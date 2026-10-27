@@ -479,3 +479,19 @@ No se implementan (por ahora): perfil solo para registrados, apagar Destacados/N
   existir; los registros ya guardados con la 1.11-demo (aceptaciones del login, REP-01, alquileres locales de una persona) se quedan con
   esa etiqueta, pero ninguna ruta mostraría su texto (su link abriría la 1.6-demo, `rutaDe`), así que habría que volver a publicarla o
   guardarla como archivo.
+
+## Reputación con servidor: el perfil de la otra parte (27/10/2026)
+
+**Bug (matriz en producción, 27/10):** el dueño y el inquilino de `0070af80` y `b10557f9` (2 cerrados por papel, los dos con perfil en
+`lk_reputacion_aceptaciones`) veían «Nuevo en Lockumi · 0 alquileres cerrados». **Causa:** `alquileresDeReputacion` exige que las dos partes
+tengan perfil (regla de Legal, 25/10) y lo miraba con `tienePerfilReputacion(email)` / `perfilDesde(email)`, que leen el localStorage de ESTE
+navegador. En dos aparatos el perfil de la otra parte nunca está ahí, así que ningún alquiler contaba. No era la función SQL, la dirección,
+el rol ni la pestaña.
+
+**Arreglo:** con servidor (`conServidor`), `Pantallas.tsx` usa `alquileresDeReputacionServidor` con la respuesta de
+`lk_reputacion_de_mis_alquileres()` (migración `20261027140000_reputacion_contraparte.sql`): por cada alquiler donde participa quien llama,
+`cuenta` (= `lk_cuenta_para_reputacion`) y `desde` (la primera aceptación de perfil más tardía de las dos partes; lo cerrado antes no cuenta,
+Términos 15.1). No devuelve correos ni datos de la otra parte. Sin servidor (demo de una persona) no cambia nada. Sin respuesta del servidor
+no cuenta nada y se vuelve a preguntar en la próxima carga. Sin cambios de textos ni de diseño.
+Pruebas: `src/reputacion/__tests__/reputacion-servidor.test.ts`. Ensayo en producción dentro de una transacción que se deshizo (27/10).
+**Volver atrás:** `supabase/revert/20261027140000_reputacion_contraparte_revert.sql` y `git revert -m 1 <merge>` (primero el código).

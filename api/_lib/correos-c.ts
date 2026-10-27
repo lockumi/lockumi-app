@@ -194,6 +194,17 @@ export async function abrirCorreo(env: Env, token: string, f: typeof fetch = fet
   return await rpc<string | null>(s, 'lk_correo_abierto', { p_token_hash: await sha256(token) }, f)
 }
 
+/** ¿El uid está en lk_mediadores y el alquiler pasó por la mediación (estado «mediacion» o cerrado con resultado.via «mediacion»)? */
+async function mediadorDelCaso(s: { url: string; llave: string }, alquiler: string, uid: string, f: typeof fetch) {
+  const h = { headers: { apikey: s.llave, authorization: `Bearer ${s.llave}` } }
+  const m = await f(`${s.url}/rest/v1/lk_mediadores?select=usuario&usuario=eq.${uid}`, h)
+  if (!m.ok || !((await m.json().catch(() => [])) as unknown[]).length) return false
+  const k = await f(`${s.url}/rest/v1/lk_contratos?select=estado,resultado&id=eq.${alquiler}`, h)
+  if (!k.ok) return false
+  const c = ((await k.json().catch(() => [])) as { estado?: string; resultado?: { via?: string } | null }[])[0]
+  return !!c && (c.estado === 'mediacion' || c.resultado?.via === 'mediacion')
+}
+
 /** POST /api/correo { tipo: 'avisos', alquiler } · la app avisa después de cada paso; el servidor envía lo que toque de ESE
  *  alquiler. Solo una persona del alquiler (la sesión de Supabase en Authorization). El navegador no elige textos ni destinatarios. */
 export async function atenderAvisos(env: Env, p: { alquiler?: unknown }, bearer: string | null, origen: string, f: typeof fetch = fetch) {
@@ -206,7 +217,11 @@ export async function atenderAvisos(env: Env, p: { alquiler?: unknown }, bearer:
   const uid = ((await u.json()) as { id?: string }).id ?? ''
   if (!UUID.test(uid)) throw new ErrorCorreo(401, 'La sesión no es válida.')
   const q = await f(`${s.url}/rest/v1/lk_participantes?select=rol&contrato_id=eq.${alquiler}&usuario=eq.${uid}`, { headers: { apikey: s.llave, authorization: `Bearer ${s.llave}` } })
-  if (!q.ok || !((await q.json()) as unknown[]).length) throw new ErrorCorreo(403, 'No participas en este alquiler.')
+  if (!q.ok || !((await q.json()) as unknown[]).length) {
+    // 27/10/2026 (como el PR #66 en /api/tw): la persona mediadora registrada en lk_mediadores no es parte del alquiler, pero tras
+    // «Registrar el acuerdo» la app pide los avisos de ESE alquiler. Se acepta solo si el alquiler está o estuvo en mediación.
+    if (!(await mediadorDelCaso(s, alquiler, uid, f))) throw new ErrorCorreo(403, 'No participas en este alquiler.')
+  }
   // El plazo de la mediación vence aunque los correos estén apagados (punto 3); después, solo con CORREOS_C=1, los correos.
   const vencidas = await vencerMediaciones(env, { contrato: alquiler }, f)
   if (env.CORREOS_C !== '1') return { apagado: true, enviados: 0, vencidas }
