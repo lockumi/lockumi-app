@@ -15,6 +15,10 @@ describe('comisión real de Trustless Work (contrato: 30 bps sobre 10000, en str
     expect(netoTrustless(26.32, 3.68)).toEqual({ llegan: [26.24104, 3.66896], comision: 0.09 })
     expect(netoTrustless(16.32, 3.68)).toEqual({ llegan: [16.27104, 3.66896], comision: 0.06 })
   })
+  it('reparto real de b10557f9 (tx 54b8a02d…9385, 27/10/2026 13:20 CR): 4 + 6 → 3,988 + 5,982 y 0,03 a la cuenta de Trustless Work (GA6KH5VW…)', () => {
+    expect(netoTrustless(4, 6)).toEqual({ llegan: [3.988, 5.982], comision: 0.03 })
+    expect(repartoCentimos(4, 6)).toMatchObject({ llegaDueno: 3.988, llegaInquilino: 5.982, comision: 0.03 })
+  })
   it('redondea como el contrato (piso en stroops), nunca hacia arriba; 0 → 0', () => {
     expect(netoTW(0.0000333)).toBe(0.0000333)            // 333 stroops × 30 / 10000 = 0,999 → 0 de comisión
     expect(netoTW(0.0001)).toBe(0.0000997)
