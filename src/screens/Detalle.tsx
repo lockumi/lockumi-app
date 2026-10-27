@@ -38,6 +38,9 @@ import { etapaDeAvance, type EtapaPago } from '../espera'
 import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 import { MasOpciones } from '../prueba/Eliminar'
 import { modoPrueba as redDePrueba } from '../servidor/config'
+import { ConSesion, ErrorPago } from './Firmante'
+import { esTextoNoFirmante } from '../services/billetera'
+import { esTextoSinSesion } from '../services/firmante'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
@@ -56,8 +59,10 @@ export function Contrato({ a, rol }: P) {
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
+    {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera) */}
+    <ConSesion activo={esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && modoDe(a).trustless}>
     <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
-      texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." />
+      texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." /></ConSesion>
   </div>
 }
 
@@ -91,8 +96,10 @@ function PagoSimulado({ a, rol }: P) {
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
-      {p.error}
-      <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} />
+      {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
+      {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
+      <ConSesion activo={modoDe(a).trustless && etapa === 0}>
+      <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} /></ConSesion>
     </> : <Espera texto="Esperando que el inquilino pague el depósito." />}
   </section>
 }

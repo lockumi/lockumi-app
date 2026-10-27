@@ -70,7 +70,7 @@ export async function obtenerUsdc(objetivo: number, avance: (t: string) => void 
 /** La cuenta de la billetera Cavos existe en testnet (Friendbot) y tiene la trustline de USDC (la firma la persona). Si ya está, solo lee. */
 export async function asegurarTrustline(avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; trustline?: string }> {
   const g = (await conectarBilletera()).direccion
-  if (esperada && g !== esperada) throw new ErrorSolo('No pudimos preparar el depósito. Intenta de nuevo en un momento.')   // otra billetera: no tocamos nada
+  if (esperada && g !== esperada) throw Object.assign(new ErrorSolo('No pudimos preparar el depósito. Intenta de nuevo en un momento.'), { otraCuenta: true })   // otra billetera: no tocamos nada
   if (await consultarSaldo(g) === null) { avance('Activando tu cuenta con XLM de prueba gratis…'); await fondear(g); olvidarBilletera() }
   if (await consultarUsdc(g) !== null) return { g }
   avance('Habilitando USDC en tu cuenta…')

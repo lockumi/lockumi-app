@@ -124,9 +124,11 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 
 ## Firma del servidor en testnet (`api/_lib/tw.ts`, `docs/firma-servidor.md`)
 
-- Solo red de prueba: no quites la negativa de `firmaServidorActiva` fuera de testnet. En la red principal cada persona firma con su billetera de Cavos.
-- La llave derivada nunca sale del servidor; el cliente solo recibe la dirección pública (`mi-cuenta`). Cada firma exige la sesión y que la persona sea participante con ese rol.
-- Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
+- Opción A (`docs/firma-cavos.md`): toda acción que mueve la cuenta segura exige `exigirPrueba` (prueba de Cavos revisada en el servidor, nonce de un solo uso). No agregues acciones nuevas sin ella.
+- La llave derivada (PR #54) queda solo para alquileres de antes (`llaveLegado`); nunca sale del servidor. No la uses para alquileres nuevos.
+- El ramp es una SIMULACIÓN TESTNET: se cambia solo en `rampActivo` (`api/_lib/rampSimulado.ts`) y no quites `exigirRampTestnet`.
+- Un solo `signMessage`, en `src/services/billetera.ts` (lo vigila `cavos-sin-firma-silenciosa.test.ts`).
+- Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
 
 ## Proponer cambios
 

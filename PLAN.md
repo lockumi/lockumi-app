@@ -302,5 +302,6 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
 
 - 26/10/2026 · Firma del servidor en testnet (solo red de prueba): en alquileres nuevos de dos personas, el servidor firma por el dueño y el inquilino con una cuenta de testnet propia de cada cuenta (api/_lib/tw.ts). Cavos queda solo para entrar. Apagar: FIRMA_SERVIDOR_TESTNET=0. En mainnet cada persona firma con su billetera Cavos.
 - 26/10/2026 · El dueño puede eliminar un alquiler de dos personas mientras el depósito no esté pagado (el servidor lee el saldo de la cuenta segura en la red; migración 20261026090000).
-  Detalle, interruptor (`FIRMA_SERVIDOR_TESTNET=0`), solo testnet (en mainnet firma cada persona con Cavos) y límites: `docs/firma-servidor.md`.
+  Detalle, solo testnet (en mainnet firma cada persona con Cavos) y límites: `docs/firma-servidor.md`.
+- 26/10/2026 · Opción A (rama `cavos-firma`, pendiente OK de Katherine y Legal): prueba de Cavos en cada acción con la cuenta segura, Lockumi ejecuta con llaves de rol, depósito por ramp simulado de testnet; la firma del servidor queda solo para alquileres de antes. Migración 20261026110000 (no aplicada). `docs/firma-cavos.md`.
 - 26/10/2026 · El dueño no puede aceptar su propia invitación (misma cuenta o mismo correo, también Apple): aviso «Este link es para la otra persona…» con «Cerrar sesión», y la base lo rechaza (migración 20261026100000). Ver `docs/invitacion-enlace.md`.

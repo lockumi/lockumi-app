@@ -3,6 +3,8 @@
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
 //          https://developers.stellar.org/docs/learn/fundamentals/networks#friendbot (fondeo de testnet)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
+import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
+import { mensajePrueba, type AccionPrueba, type Prueba } from '../../api/_lib/prueba-mensaje'
 
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const FRIENDBOT = 'https://friendbot.stellar.org'
@@ -80,6 +82,7 @@ export async function opcionesRecuperacion(auth: AuthRecuperacion, activa: () =>
 
 /** Texto para cuando este dispositivo no puede firmar con la billetera (creada en otro navegador o equipo). */
 export const NO_FIRMANTE = 'Este dispositivo todavía no puede firmar con tu billetera. Sal y vuelve a entrar con la misma cuenta, y paga enseguida. Si sigue igual, entra una vez desde el navegador donde creaste tu cuenta y luego vuelve a intentarlo aquí.'
+export const esTextoNoFirmante = (t: string | null | undefined) => !!t && t.includes(NO_FIRMANTE)
 export const esNoFirmante = (m: string) => /not an authorized signer|needs-device-approval|restore by connecting with the enclave|protected by recovery|complete a fresh social login/i.test(m)
 
 let conexion: Promise<Billetera> | null = null
@@ -114,6 +117,7 @@ interface CarteraStellar {
   signXdr(unsignedXdr: string): Promise<string>
   addTrustline(asset: { code: string; issuer: string }, opts?: { sponsored?: boolean }): Promise<string>
   tokenBalance(asset: { code: string; issuer: string }): Promise<string>
+  signMessage?(message: string): Promise<{ signature?: Uint8Array | number[] | string; publicKey?: string } | unknown>
 }
 let cartera: CarteraStellar | null = null
 export const USDC_TESTNET = { code: 'USDC', issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' }
@@ -131,8 +135,60 @@ export async function saldoUsdc(): Promise<string> { return (await miCartera()).
 export function mensajeFirma(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)
   if (esNoFirmante(m)) return NO_FIRMANTE
+  // Sesión perdida o vencida (pestaña nueva, token de ~1 h): antes salía el texto técnico «La sesión de Cavos no tiene token…».
+  if (esSinSesion((e as { codigo?: string })?.codigo + ' ' + m)) return SIN_SESION
   if (/user rejected/i.test(m)) return 'Rechazaste la firma en la billetera.'
   if (/policy does not allow/i.test(m)) return 'La configuración de la billetera no permite esta firma (regla de aprobaciones en el panel de Cavos).'
   if (/deployed account|execute\(\)/i.test(m)) return 'Tu cuenta Stellar todavía no existe en testnet. Cárgale XLM de prueba primero.'
   return m
+}
+
+/** Gancho de prueba local (nunca en el build): una dirección fija en lugar de la billetera de Cavos. */
+const prueba = () => import.meta.env.DEV && typeof localStorage !== 'undefined' ? localStorage.getItem('lockumi.billetera.prueba') : null
+
+// LEGAL: pendiente (26/10/2026, opción A) · Términos 5.3: signMessage firma un TEXTO (no una transacción, no mueve fondos):
+// el texto fijo «lockumi-login» al entrar y la prueba de billetera de cada acción del depósito. Es el único lugar que lo llama.
+function firmarMensaje(w: CarteraStellar, m: string) {
+  if (!w.signMessage) throw new ErrorBilletera('sin-firma-mensaje', 'La billetera no firma mensajes.')
+  return w.signMessage(m)
+}
+const aBase64 = (b: Uint8Array) => btoa(String.fromCharCode(...b))
+function firmaBase64(s: unknown): string {
+  if (s instanceof Uint8Array || Array.isArray(s)) return aBase64(Uint8Array.from(s as ArrayLike<number>))
+  if (typeof s === 'string') return /^[0-9a-f]{128}$/i.test(s) ? aBase64(Uint8Array.from(s.match(/../g)!.map(h => parseInt(h, 16)))) : s
+  throw new ErrorBilletera('firma-mal-formada', 'La billetera no devolvió la firma.')
+}
+/** Opción A (26/10/2026): prueba firmada con Cavos de que la billetera es de esta persona, para UNA acción de UN alquiler
+ *  (api/_lib/prueba-mensaje.ts). Nonce nuevo cada vez; el servidor la verifica y la gasta. Nunca se guarda. */
+export async function firmarPrueba(accion: AccionPrueba, contrato: string): Promise<Prueba> {
+  if (prueba()) throw new ErrorBilletera('sin-cartera', 'Billetera de prueba local: no firma.')
+  const w = await miCartera()
+  if (w.status === 'needs-device-approval') throw new ErrorBilletera('no-firmante', 'needs-device-approval')
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('')
+  const ts = Math.floor(Date.now() / 1000)
+  const r = await firmarMensaje(w, mensajePrueba(accion, contrato, w.address, nonce, ts)) as { signature?: unknown; publicKey?: unknown }
+  return { direccion: w.address, clave: typeof r?.publicKey === 'string' ? r.publicKey : w.address, firma: firmaBase64(r?.signature), nonce, ts }
+}
+
+/** Prueba real de firma al entrar: conecta una vez y firma 'lockumi-login' (gratis). La firma se descarta: nunca se guarda.
+ *  Sin reintentos ni conexiones con llave automáticas: un fallo aquí no dispara nada más (el vault solo borra su copia local
+ *  dentro de connect, V:413-427; no volvemos a conectar por nuestra cuenta). Sin Cavos (demo simulada) no hay billetera: 'puede'. */
+export async function probarFirma(): Promise<EstadoFirmante> {
+  const g = prueba()
+  if (!modoReal && !g) return 'puede'
+  try {
+    const b = await conectarBilletera()
+    if (b.estado === 'needs-device-approval') return 'no-firmante'
+    if (g) { const f = localStorage.getItem('lockumi.billetera.prueba.firma'); return f === 'no' ? 'no-firmante' : f === 'sin-sesion' || f === 'error' ? f : 'puede' }
+    if (!cartera) return 'error'
+    await firmarMensaje(cartera, MENSAJE_PRUEBA)
+    return 'puede'
+  } catch (e) { return clasificarFirma(e) }
+}
+/** ¿Hay sesión de Cavos con token en esta pestaña? Sin Cavos (demo) siempre true. No lee ni muestra el token: solo si existe. */
+export async function haySesionFirma(): Promise<boolean> {
+  const g = prueba()
+  if (g) return localStorage.getItem('lockumi.billetera.prueba.sesion') !== 'no'
+  if (!modoReal) return true
+  try { const a = await authCavos(); return !!a && !!a.getAuthToken() } catch { return false }
 }

@@ -7,8 +7,9 @@ import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, revisarLlaves, responderLlaves, hashTx, DEVUELTO_AUTO, type Entorno } from '../../../api/_lib/tw'
 import { pagoFalso } from './pago-falso'
+import { firmado } from './prueba-falsa'
 
-const P = Keypair.random(), M = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), M = Keypair.random(), KD = Keypair.random(), KI = Keypair.random(), DUENO = KD.publicKey(), INQ = KI.publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'llave', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(),
   LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'servicio' }
 const sinSecretos = (x: unknown) => { const t = JSON.stringify(x); for (const s of [P.secret(), M.secret(), P.publicKey(), M.publicKey()]) expect(t).not.toContain(s) }
@@ -89,23 +90,23 @@ const firmadaPorM = (ll: Llamada[]) => ll.filter(l => l.url.endsWith('/helper/se
 describe('(b) cada firma de la llave mediadora queda en el historial con el hash de la transacción', () => {
   it.each([['repartir', mediado, /^Se pagó el reparto aceptado desde Trustless Work: 30,00 USDC de prueba al dueño y 70,00 USDC de prueba al inquilino \(cada monto menos el 0,3 % de comisión de Trustless Work\)\.$/], ['devolver-automatico', automatico, new RegExp('^' + DEVUELTO_AUTO)]] as const)(
     '%s: un evento con el hash de la transacción que firmó la mediadora', async (accion, k, texto) => {
-      const s = simular(k); const x = await atender(ENV, { accion, contrato: ID }, 'Bearer t', s.f)
+      const s = simular(k); const x = await atender(ENV, firmado({ accion, contrato: ID }, KI), 'Bearer t', s.f)
       const tx = hashTx(firmadaPorM(s.llamadas)); expect(x.tx).toBe(tx)
       const ev = eventos(s.llamadas).filter(e => e.tx_hash === tx)
       expect(ev).toHaveLength(1); expect(String(ev[0].texto)).toMatch(texto)
     })
   it.each([['repartir', mediado], ['devolver-automatico', automatico]] as const)('%s: si no se pudo guardar el evento, responde error y deja el hash guardado', async (accion, k) => {
     const s = simular(k, { fallaEvento: true })
-    await expect(atender(ENV, { accion, contrato: ID }, 'Bearer t', s.f)).rejects.toMatchObject({ estado: 500, message: expect.stringMatching(/historial/) })
+    await expect(atender(ENV, firmado({ accion, contrato: ID }, KI), 'Bearer t', s.f)).rejects.toMatchObject({ estado: 500, message: expect.stringMatching(/historial/) })
     const tx = hashTx(firmadaPorM(s.llamadas))
     expect(s.llamadas.some(l => l.metodo === 'PATCH' && l.cuerpo?.liquidacion_tx === tx)).toBe(true)
   })
   it.each([['repartir', mediado], ['devolver-automatico', automatico]] as const)('%s: en el reintento, si falta el evento de ese hash, lo agrega (sin volver a firmar)', async (accion, k) => {
     const h = 'b'.repeat(64)
     const a = simular({ ...k, liquidacion_tx: h })
-    expect(await atender(ENV, { accion, contrato: ID }, 'Bearer t', a.f)).toEqual({ tx: h, yaExistia: true })
+    expect(await atender(ENV, firmado({ accion, contrato: ID }, KI), 'Bearer t', a.f)).toEqual({ tx: h, yaExistia: true })
     expect(eventos(a.llamadas).map(e => e.tx_hash)).toEqual([h]); expect(a.llamadas.some(l => l.url.includes('dispute'))).toBe(false)
     const b = simular({ ...k, liquidacion_tx: h }, { conHash: [{ texto: 'ya' }] })
-    await atender(ENV, { accion, contrato: ID }, 'Bearer t', b.f); expect(eventos(b.llamadas)).toHaveLength(0)
+    await atender(ENV, firmado({ accion, contrato: ID }, KI), 'Bearer t', b.f); expect(eventos(b.llamadas)).toHaveLength(0)
   })
 })

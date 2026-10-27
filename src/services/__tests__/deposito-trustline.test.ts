@@ -1,12 +1,13 @@
 // 26/10/2026 · Dos personas: Trustless Work respondía 400 «The trustline for address G… (role: receiver) could not be validated»
 // porque la cuenta Cavos del inquilino no existía en testnet. Ahora (1) la app del inquilino prepara su cuenta antes de crear la
-// cuenta segura, (2) el servidor revisa la trustline del receiver antes de llamar a TW y (3) nunca se ve el error técnico.
+// cuenta segura (opción A: solo Friendbot y trustline; el depósito lo pone el ramp simulado), (2) el servidor revisa la trustline del receiver antes de llamar a TW y (3) nunca se ve el error técnico.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, mensajeParaPersona, ErrorTw, type Entorno } from '../../../api/_lib/tw'
 import { NO_PREPARAR_DEPOSITO, esTecnico } from '../../../api/_lib/red'
+import { firmado } from './prueba-falsa'
 
-const P = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), KI = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = KI.publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'llave', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'a', SUPABASE_SERVICE_ROLE_KEY: 's' }
 const ID = '11111111-2222-3333-4444-555555555555', CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
 const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'
@@ -23,8 +24,8 @@ function servidor(horizon: (g: string) => Response) {
     if (url.endsWith('/auth/v1/user')) return ok({ id: 'u-i' })
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([k])
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
-    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return horizon(url.split('/').pop()!)
-    if (url.endsWith('/deployer/single-release')) return ok({ unsignedTransaction: xdrDe(P.publicKey()) })
+    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) { const g = url.split('/').pop()!; return g === P.publicKey() ? ok({ id: g, sequence: '1', balances: [{ asset_code: 'USDC', asset_issuer: ISSUER, balance: '100' }] }) : horizon(g) }
+    if (url.endsWith('/deployer/single-release') || url.endsWith('fund-escrow')) return ok({ unsignedTransaction: xdrDe(P.publicKey()) })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS', contractId: CID })
     return new Response('no', { status: 404 })
   }) as typeof fetch
@@ -35,14 +36,14 @@ describe('servidor: el receiver necesita la trustline de USDC antes del deploy',
   it('cuenta del inquilino inexistente o sin USDC → 409 con el texto neutral, sin llamar a Trustless Work', async () => {
     for (const h of [() => new Response('{}', { status: 404 }), () => new Response(JSON.stringify({ balances: [{ asset_type: 'native', balance: '10000' }] }))]) {
       const { f, urls } = servidor(h)
-      const e = await atender(ENV, { accion: 'desplegar', contrato: ID }, 'Bearer t', f).catch(x => x)
+      const e = await atender(ENV, firmado({ accion: 'pagar', contrato: ID }, KI), 'Bearer t', f).catch(x => x)
       expect(e).toBeInstanceOf(ErrorTw); expect(e.estado).toBe(409); expect(e.message).toBe(NO_PREPARAR_DEPOSITO)
       expect(urls.some(u => u.endsWith('/deployer/single-release'))).toBe(false)
     }
   })
   it('con la trustline del inquilino (aunque el dueño no la tenga) despliega', async () => {
     const { f } = servidor(g => g === INQ ? new Response(JSON.stringify({ balances: [{ asset_code: 'USDC', asset_issuer: ISSUER, balance: '0' }] })) : new Response('{}', { status: 404 }))
-    expect((await atender(ENV, { accion: 'desplegar', contrato: ID }, 'Bearer t', f)).contractId).toBe(CID)
+    expect((await atender(ENV, firmado({ accion: 'pagar', contrato: ID }, KI), 'Bearer t', f)).contractId).toBe(CID)
   })
 })
 
@@ -50,14 +51,14 @@ describe('nunca el error técnico de Trustless Work en pantalla', () => {
   it('el 400 de la trustline → «No pudimos preparar el depósito…»; otros pasos → el aviso de la red de siempre', () => {
     expect(NO_PREPARAR_DEPOSITO).toBe('No pudimos preparar el depósito. Intenta de nuevo en un momento.')
     expect(esTecnico(CRUDO)).toBe(true)
-    for (const a of ['desplegar', 'fondear', 'enviar-fondear']) expect(mensajeParaPersona(a, CRUDO)).toBe(NO_PREPARAR_DEPOSITO)
+    expect(mensajeParaPersona('pagar', CRUDO)).toBe(NO_PREPARAR_DEPOSITO)
     expect(mensajeParaPersona('liberar', 'Trustless Work /escrow/single-release/release-funds respondió 500: boom')).toBe('La red de prueba está lenta o no respondió. Espera un minuto y vuelve a tocar el botón.')
-    expect(mensajeParaPersona('desplegar', 'El contrato no está esperando el depósito.')).toBe('El contrato no está esperando el depósito.')
+    expect(mensajeParaPersona('pagar', 'El contrato no está esperando el depósito.')).toBe('El contrato no está esperando el depósito.')
   })
 })
 
 // ── Cliente (la app del inquilino) ──
-const b = vi.hoisted(() => ({ llamadas: [] as string[], existe: false, trust: false }))
+const b = vi.hoisted(() => ({ llamadas: [] as string[], existe: false, trust: false, sinLlave: false }))
 vi.mock('../billetera', () => ({
   conectarBilletera: async () => ({ direccion: INQ_CLIENTE, estado: 'ready' }),
   consultarSaldo: async () => (b.existe ? '10000' : null),
@@ -66,13 +67,15 @@ vi.mock('../billetera', () => ({
   olvidarBilletera: () => {},
   abrirTrustlineUsdc: async () => { b.llamadas.push('trustline'); b.trust = true; return 'tx-trust' },
   firmarXdr: async (x: string) => { b.llamadas.push('firma'); return x },
-  mensajeFirma: (e: unknown) => String(e),
+  firmarPrueba: async (accion: string) => { b.llamadas.push('prueba:' + accion); if (b.sinLlave) throw new Error('not an authorized signer'); return { direccion: INQ_CLIENTE } },
+  mensajeFirma: (e: unknown) => String(e).includes('authorized signer') ? 'NO_FIRMANTE' : String(e),
+  esTextoNoFirmante: (t: string) => t === 'NO_FIRMANTE',
 }))
 vi.mock('../../servidor/repositorio', () => ({ tokenSesion: async () => 't', recargar: async () => {} }))
 const INQ_CLIENTE = vi.hoisted(() => 'GDJU2MWJWMC37S3PWUVUABI2NPDMGGTMCMY2O3PFNTWMPFDL7QL3VRBX')   // cuenta Cavos de prueba (al azar)
 
 describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segura', () => {
-  beforeEach(() => { b.llamadas.length = 0; b.existe = false; b.trust = false })
+  beforeEach(() => { b.llamadas.length = 0; b.existe = false; b.trust = false; b.sinLlave = false })
   const fetchFalso = (tw: (cuerpo: Record<string, unknown>) => Response) => vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/tw') { const c = JSON.parse(String(init!.body)); b.llamadas.push('tw:' + c.accion); return tw(c) }
     if (url.includes('/paths/strict-receive')) return new Response(JSON.stringify({ _embedded: { records: [{ source_amount: '5' }] } }))
@@ -80,28 +83,28 @@ describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segur
     if (url.endsWith('/transactions')) { b.llamadas.push('compra'); return new Response(JSON.stringify({ hash: 'h' })) }
     return new Response('no', { status: 404 })
   })
-  it('Friendbot → trustline → compra de USDC → deploy → depósito', async () => {
-    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'fondear' ? { unsignedXdr: 'x' } : c.accion === 'enviar' ? { tx: 'tx-dep' } : { contractId: CID }))))
+  it('Friendbot → trustline → prueba de Cavos → pagar (sin comprar USDC ni firmar transacciones del depósito)', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' && c.prueba ? { contractId: CID, tx: 'tx-dep' } : {}))))
     const { trustless } = await import('../trustless')
     expect(await trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).toBe('tx-dep')
-    expect(b.llamadas).toEqual(['tw:mi-cuenta', 'friendbot', 'trustline', 'firma', 'compra', 'tw:desplegar', 'tw:fondear', 'firma', 'tw:enviar'])
+    expect(b.llamadas).toEqual(['friendbot', 'trustline', 'prueba:pagar', 'tw:pagar'])
   })
   it('un error técnico que llegue del servidor no se muestra: «No pudimos preparar el depósito…»', async () => {
-    b.existe = true; b.trust = true; b.llamadas.push('compra')
+    b.existe = true; b.trust = true
     vi.stubGlobal('fetch', fetchFalso(() => new Response(JSON.stringify({ error: CRUDO }), { status: 502 })))
     const { trustless } = await import('../trustless')
     await expect(trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).rejects.toThrow(NO_PREPARAR_DEPOSITO)
   })
-  it('otra billetera conectada que la del alquiler: no toca nada', async () => {
-    vi.stubGlobal('fetch', fetchFalso(() => new Response('{}')))
+  it('sin la llave en este dispositivo: el servidor pide la prueba y se ve el mensaje corto de usar el dispositivo original', async () => {
+    b.existe = true; b.trust = true; b.sinLlave = true
+    vi.stubGlobal('fetch', fetchFalso(() => new Response(JSON.stringify({ error: 'No pudimos confirmar tu firma. Vuelve a tocar el botón.' }), { status: 401 })))
     const { trustless } = await import('../trustless')
-    await expect(trustless.depositar(ID, 1, () => {}, INQ)).rejects.toThrow(NO_PREPARAR_DEPOSITO)
-    expect(b.llamadas).toEqual(['tw:mi-cuenta'])
+    await expect(trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).rejects.toThrow('NO_FIRMANTE')
   })
-  it('firma del servidor (testnet): sin billetera en el dispositivo, el servidor prepara la cuenta y firma el depósito', async () => {
-    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'mi-cuenta' ? { cuenta: INQ } : c.accion === 'fondear' ? { tx: 'tx-srv' } : { contractId: CID }))))
+  it('alquiler de antes con cuenta del servidor (otra cuenta que la billetera): no toca la billetera y lo resuelve el servidor', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' ? { contractId: CID, tx: 'tx-srv' } : {}))))
     const { trustless } = await import('../trustless')
     expect(await trustless.depositar(ID, 1, () => {}, INQ)).toBe('tx-srv')
-    expect(b.llamadas).toEqual(['tw:mi-cuenta', 'tw:preparar-cuenta', 'tw:desplegar', 'tw:fondear'])
+    expect(b.llamadas).toEqual(['prueba:pagar', 'tw:pagar'])
   })
 })

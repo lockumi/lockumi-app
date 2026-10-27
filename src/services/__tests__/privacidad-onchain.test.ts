@@ -1,9 +1,10 @@
 // Ley 8968: nada del alquiler ni de las personas puede ir a la cadena (es público y permanente).
 import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address } from '@stellar/stellar-sdk'
+import { firmado } from './prueba-falsa'
 import { atender, datosOnChain, sinDatosPersonales, TEXTO_ONCHAIN, ErrorTw, type Entorno } from '../../../api/_lib/tw'
 
-const P = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), KD = Keypair.random(), KI = Keypair.random(), DUENO = KD.publicKey(), INQ = KI.publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'k', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'a', SUPABASE_SERVICE_ROLE_KEY: 's' }
 const CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', ID = '0f8e2c1a-7b3d-4e5f-9a6b-1c2d3e4f5a6b'
 // Datos ficticios del alquiler y de las personas (lo que hay en la base y NO debe salir).
@@ -20,7 +21,8 @@ function simular(k: Record<string, unknown>, uid: string) {
     a.push({ url, cuerpo: init?.body ? JSON.parse(String(init.body)) : undefined })
     const ok = (j: unknown) => new Response(JSON.stringify(j), { status: 200 })
     if (url.endsWith('/auth/v1/user')) return ok({ id: uid })
-    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return ok({ balances: [{ asset_code: 'USDC', asset_issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', balance: '100' }] })
+    if (url.startsWith('https://horizon-testnet.stellar.org/accounts/')) return ok({ id: url.split('/').pop(), sequence: '1', balances: [{ asset_code: 'USDC', asset_issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', balance: '1000' }] })
+    if (url.includes('/helper/get-escrow-by-contract-ids')) return ok([{ contractId: CID, balance: 300, roles: { approver: P.publicKey() } }])
     if (url.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method) return ok([k])
     if (url.includes('/rest/v1/')) return new Response(null, { status: 204 })
     if (url.endsWith('/helper/send-transaction')) return ok({ status: 'SUCCESS', contractId: CID })
@@ -32,8 +34,8 @@ const aTrustless = (a: { url: string; cuerpo?: unknown }[]) => a.filter(l => l.u
 
 describe('privacidad on-chain', () => {
   it('el deploy solo lleva textos genéricos y un id opaco; ningún dato del alquiler', async () => {
-    const { f, a } = simular(contrato('pendiente_pago'), 'u-d')
-    await atender(ENV, { accion: 'desplegar', contrato: ID }, 'Bearer t', f)
+    const { f, a } = simular(contrato('pendiente_pago'), 'u-i')
+    await atender(ENV, firmado({ accion: 'pagar', contrato: ID }, KI), 'Bearer t', f)
     const dep = a.find(l => l.url.endsWith('/deployer/single-release'))!.cuerpo!
     expect(dep.title).toBe(TEXTO_ONCHAIN); expect(dep.description).toBe(TEXTO_ONCHAIN)
     expect(dep.engagementId).toBe(ID)
@@ -43,8 +45,9 @@ describe('privacidad on-chain', () => {
   })
   it('la evidencia del hito tampoco lleva datos', async () => {
     const { f, a } = simular(contrato('ventana_reclamo', { escrow_contract_id: CID }), 'u-d')
-    await atender(ENV, { accion: 'aprobar', contrato: ID }, 'Bearer t', f)
+    await atender(ENV, firmado({ accion: 'aprobar', contrato: ID }, KD), 'Bearer t', f)
     const json = JSON.stringify(aTrustless(a).map(l => l.cuerpo)).toLowerCase()
+    expect(a.some(l => l.url.endsWith('approve-milestone'))).toBe(true)
     for (const d of PERSONALES) expect(json).not.toContain(d.toLowerCase())
   })
   it('el id on-chain es el uuid aleatorio, no algo derivado de datos', () => {

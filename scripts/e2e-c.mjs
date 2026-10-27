@@ -75,6 +75,9 @@ async function destinoSimulado() {
     if (t === 'lk_eventos' && m === 'POST') { await q(null, `insert into public.lk_eventos(contrato_id, texto, tx_hash) values ($1, $2, $3)`, [b.contrato_id, b.texto, b.tx_hash]); return new Response(null, { status: 201 }) }
     if (t === 'lk_eventos' && m === 'GET' && p.tx_hash) return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and tx_hash = $2`, [id, p.tx_hash.slice(3)]))
     if (t === 'lk_eventos' && m === 'GET') return ok(await q(null, `select texto from public.lk_eventos where contrato_id = $1 and texto = $2`, [id, p.texto.slice(3)]))
+    // Opción A (20261026110000): cada nonce de prueba de billetera se usa una sola vez (409 si se repite)
+    if (t === 'lk_pruebas_cavos' && m === 'POST') { try { await q(null, `insert into public.lk_pruebas_cavos(nonce, usuario, accion, contrato_id) values ($1, $2, $3, $4)`, [b.nonce, b.usuario, b.accion, b.contrato_id]); return new Response(null, { status: 201 }) }
+      catch (x) { if (/duplicate|unique/i.test(x.message)) return new Response('{"code":"23505"}', { status: 409 }); throw x } }
     if (t === 'lk_registrar_correo_invitacion' && m === 'POST') { const [r] = await q(null, `select public.lk_registrar_correo_invitacion($1, $2) r`, [b.p_contrato, b.p_para]); return ok(r.r) }
     // 20261025060000: «Todo bien, devolver» cierra al instante (solo la clave de servicio puede llamarla)
     if (t === 'lk_cerrar_aprobado' && m === 'POST') { const [r] = await q(null, `select public.lk_cerrar_aprobado($1) r`, [b.p_contrato]); return ok(r.r) }
@@ -240,10 +243,21 @@ const { vencimiento } = await vite.ssrLoadModule('/api/_lib/plazos.ts')
 const finPlazo = (t, seg) => new Date(vencimiento(+new Date(t), seg * 1000).fin).toISOString()
 // En --simulado los hashes salen de XDR falsos: no existen en la red y no se muestran como enlaces.
 const paso = (alq, nombre, tx) => { pasos.push({ alquiler: alq, paso: nombre, tx: tx ?? null, enlace: tx && RED ? enlace(tx) : null }); log(`✔ [${alq}] ${nombre}${tx ? '  ' + (RED ? enlace(tx) : 'tx simulada ' + tx.slice(0, 12) + '…') : ''}`) }
+// Opción A (26/10/2026): las acciones que mueven la cuenta segura llevan la prueba de billetera (como Cavos signMessage) firmada con
+// la llave de prueba de quien las pide (api/_lib/prueba-mensaje.ts). Nonce nuevo cada vez.
+const { mensajePrueba, ACCIONES_CON_PRUEBA } = await vite.ssrLoadModule('/api/_lib/prueba-mensaje.ts')
+const conPrueba = (cta, pedido) => {
+  if (!cta.kp || !ACCIONES_CON_PRUEBA.includes(pedido.accion)) return pedido
+  const nonce = randomBytes(16).toString('hex'), ts = Math.floor(Date.now() / 1000), direccion = cta.kp.publicKey()
+  const m = Buffer.from(mensajePrueba(pedido.accion, pedido.contrato, direccion, nonce, ts))
+  const firma = cta.kp.sign(Buffer.concat([Buffer.from(`Cavos Signed Message:\n${m.length}\n`), m])).toString('base64')
+  return { ...pedido, prueba: { direccion, clave: direccion, firma, nonce, ts } }
+}
 const twDirecto = APP ? async (cta, pedido) => {
+  pedido = conPrueba(cta, pedido)
   const r = await fetch(APP + '/api/tw', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + cta.token, origin: APP }, body: JSON.stringify(pedido) })
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(`${APP}/api/tw ${pedido.accion}: ${r.status} ${j.error ?? ''}`); return j
-} : (cta, pedido) => atender(env, pedido, 'Bearer ' + cta.token, fTw)
+} : (cta, pedido) => atender(env, conPrueba(cta, pedido), 'Bearer ' + cta.token, fTw)
 const tw = (cta, pedido) => enFila(() => twDirecto(cta, pedido))
 const mig = await D.migraciones()
 log(`Destino: ${D.nombre} · corrida ${MARCA} · migración 030000 ${mig.m030 ? 'aplicada' : 'FALTA'} · 040000 ${mig.m040 ? 'aplicada' : 'FALTA'} · 050000 ${mig.m050 ? 'aplicada' : 'FALTA'} · 060000 ${mig.m060 ? 'aplicada' : 'FALTA'} · 26000000 (paso 22) ${mig.m260 ? 'aplicada' : 'FALTA'}`)
@@ -264,6 +278,7 @@ const prepararPersona = (cta, c) => { const p = filaRep.then(async () => {
 }); filaRep = p.catch(() => {}); return p }
 log('Preparando cuentas de testnet (dueño e inquilino desechables)…')
 const [kpD, kpI] = await Promise.all([cuentaStellar(0), cuentaStellar(MONTO * 7 + 1)])   // 7 alquileres con depósito (aprobada, silencio-dueno, mediacion, recordatorios y los tres de la corrida diaria del paso 22)
+dueno.kp = kpD; inquilino.kp = kpI
 const FOTO = readFileSync('public/icon-192.png')   // cualquier imagen: es una foto de prueba
 const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 92 * 864e5).toISOString().slice(0, 10)
 // Igual que declaracionInvitacion() de la app: con VITE_CORREOS=1 la declaración incluye el correo de invitación.
@@ -311,10 +326,9 @@ async function hastaPlazo(k, conPago, ventana = VENTANA) {
   await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'contrato' }); paso(k, 'los dos firman el contrato')
   let pago = null
   if (conPago) {
-    const d = await tw(dueno, { accion: 'desplegar', contrato: id }); paso(k, 'Trustless Work: se crea la cuenta segura (deploy)', d.tx)
-    // La cuenta del inquilino es la misma en los cuatro casos: pedir y enviar el depósito en el mismo turno de la fila (si no, tx_bad_seq)
-    pago = (await enFila(async () => { const { unsignedXdr } = await twDirecto(inquilino, { accion: 'fondear', contrato: id }); return twDirecto(inquilino, { accion: 'enviar', contrato: id, paso: 'fondear', signedXdr: firmar(kpI, unsignedXdr) }) })).tx
-    paso(k, `el inquilino deposita ${MONTO} USDC`, pago)
+    // Opción A: el inquilino prueba su billetera; Lockumi crea la cuenta segura y la fondea desde la tesorería (ramp simulado, testnet)
+    pago = (await tw(inquilino, { accion: 'pagar', contrato: id })).tx
+    paso(k, `el inquilino paga: Lockumi crea la cuenta segura y pone ${MONTO} USDC de prueba (ramp simulado)`, pago)
   }
   await inquilino.rpc('lk_registrar_pago', { p_contrato: id, p_tx: pago })
   await fotos(inquilino, id, 'entrada'); await dueno.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' }); await inquilino.rpc('lk_firmar', { p_contrato: id, p_etapa: 'entrada' })
@@ -342,8 +356,8 @@ async function capturar(pantalla, id) {
 const flujos = {
   async aprobada() {   // «Todo bien, devolver» (Términos 6.5 a): el dueño aprueba en la cadena y el servidor libera el 100 % en ese momento
     const id = ids.aprobada = await hastaPlazo('aprobada', true)
-    const { unsignedXdr, evidenciaTx } = await tw(dueno, { accion: 'aprobar', contrato: id }); paso('aprobada', 'evidencia de la plataforma', evidenciaTx)
-    const ap = await tw(dueno, { accion: 'enviar', contrato: id, paso: 'aprobar', signedXdr: firmar(kpD, unsignedXdr) }); paso('aprobada', 'el dueño aprueba la devolución', ap.tx)
+    const ap = await tw(dueno, { accion: 'aprobar', contrato: id }); paso('aprobada', 'evidencia de la plataforma', ap.evidenciaTx)
+    paso('aprobada', 'el dueño aprueba la devolución', ap.tx)
     exigir(ap.liberacion, 'no se liberó al aprobar: ' + (ap.errorLiberacion ?? 'sin respuesta')); paso('aprobada', 'devolución del 100 % al inquilino al aprobar (liberación)', ap.liberacion)
     const e = await estado(id); exigir(e.estado === 'cerrado' && e.resultado.via === 'devuelto' && Number(e.resultado.inquilino) === MONTO, 'no quedó cerrado como «devuelto» con el 100 % al inquilino')
     let rechazo = ''; try { await dueno.rpc('lk_reclamar', { p_contrato: id, p_monto: 1, p_motivo: 'después de aprobar' }) } catch (x) { rechazo = x.message }
@@ -460,7 +474,7 @@ if (mig.m260 && !APP) {
       if (m[1] === 'release-funds' && cid === fallarLiberacion) { fallarLiberacion = null; return new Response('{"message":"falla inyectada por la prueba"}', { status: 503 }) } }
     return fC(url, init)
   }
-  const twCron = (cta, pedido) => enFila(() => atender(env, pedido, 'Bearer ' + cta.token, fCron))
+  const twCron = (cta, pedido) => enFila(() => atender(env, conPrueba(cta, pedido), 'Bearer ' + cta.token, fCron))
   const envCron = { ...envC, DEVOLUCIONES_POR_CORRIDA: '5', DEVOLUCIONES_SEGUNDOS: '900' }
   const corrida = () => enFila(() => ejecutarBorrados(envCron, fCron))
   const vencer = async (k, id) => { if (!REAL) await D.q(null, `update public.lk_contratos set ventana_inicio = now() - interval '2 minutes' where id = $1`, [id]); else await esperarPlazo(k) }
@@ -469,9 +483,8 @@ if (mig.m260 && !APP) {
     const [a, b, c] = await Promise.all([hastaPlazo('cron-auto', true), hastaPlazo('cron-liberar', true), hastaPlazo('cron-doble', true)])
     Object.assign(ids, { cronAuto: a, cronLiberar: b, cronDoble: c })
     // cron-liberar: «Todo bien, devolver» con la red caída en la liberación
-    const { unsignedXdr } = await twCron(dueno, { accion: 'aprobar', contrato: b })
     fallarLiberacion = (await estado(b)).escrow_contract_id
-    const ap = await twCron(dueno, { accion: 'enviar', contrato: b, paso: 'aprobar', signedXdr: firmar(kpD, unsignedXdr) })
+    const ap = await twCron(dueno, { accion: 'aprobar', contrato: b })
     exigir(!ap.liberacion && ap.errorLiberacion, 'la falla inyectada no dejó el caso sin pagar')
     const eb = await estado(b); exigir(eb.estado === 'cerrado' && eb.resultado.via === 'devuelto' && !eb.liquidacion_tx, 'cron-liberar no quedó «devuelto» sin pagar')
     paso('cron-liberar', 'el dueño aprueba; la liberación falla en la red (inyectada): queda cerrado «devuelto» y sin pagar', ap.tx)

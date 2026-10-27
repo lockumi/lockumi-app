@@ -9,7 +9,11 @@
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
 import { repartoCentimos } from './centimos.js'
-import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, RED_ACTIVA, FRIENDBOT, USDC, TOPE_USDC } from './red.js'
+import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, FRIENDBOT, USDC } from './red.js'
+import { revisarPrueba } from './prueba-cavos.js'
+import { SIN_PRUEBA, type AccionPrueba, type Prueba } from './prueba-mensaje.js'
+export { SIN_PRUEBA }
+import { exigirRampTestnet, rampActivo, type DepsRamp } from './rampSimulado.js'
 
 export type Entorno = Record<string, string | undefined>
 export class ErrorTw extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
@@ -109,7 +113,7 @@ export async function tieneUsdc(g: string, f = fetch): Promise<boolean> {
  *  servidor; en pantalla, el depósito dice NO_PREPARAR_DEPOSITO y los demás pasos el aviso de la red de prueba de siempre (A12). */
 export function mensajeParaPersona(accion: unknown, m: string): string {
   if (!esTecnico(m)) return m
-  return accion === 'desplegar' || accion === 'fondear' || accion === 'enviar-fondear' ? NO_PREPARAR_DEPOSITO
+  return accion === 'pagar' ? NO_PREPARAR_DEPOSITO
     : 'La red de prueba está lenta o no respondió. Espera un minuto y vuelve a tocar el botón.' // LEGAL: revisado A12 (24/10)
 }
 
@@ -364,19 +368,15 @@ async function cerrarAprobado(c: Config, id: string, f = fetch) {
   return r.ok && (await r.json().catch(() => false)) === true
 }
 
-// ── Firma del servidor en testnet (26/10/2026, aprobado por Katherine: «Sí, el servidor firma en testnet») ──
-// Para alquileres NUEVOS de dos personas, cada cuenta (dueño o inquilino) firma con una llave de testnet propia de esa cuenta,
-// derivada en el servidor: HMAC-SHA256(llave de la plataforma, etiqueta + id de la cuenta). Es distinta de las llaves del modo
-// de una persona (api/_lib/solo.ts, que usa LOCKUMI_DEMO_SEED y otra etiqueta). La llave nunca sale del servidor. Cavos queda
-// solo para entrar. Interruptor: FIRMA_SERVIDOR_TESTNET=0 vuelve a la firma con Cavos. Fuera de testnet, se rechaza.
-// En la red principal cada persona firmaría con su propia billetera Cavos: esto NO existe ahí.
+// ── Cuentas de la firma del servidor (PR #54) · SOLO LEGADO ──
+// Opción A (26/10/2026): el servidor ya NO firma por ninguna persona en alquileres nuevos (cada acción lleva una prueba firmada
+// con Cavos y la ejecutan las llaves de rol de Lockumi). Esto queda solo para que terminen los alquileres que ya usaban una
+// cuenta del servidor (derivada: HMAC-SHA256 de la llave de la plataforma con la etiqueta + el id de la cuenta): la aprobación
+// del dueño si esa cuenta es el approver del escrow y la trustline para recibir un reparto. No crea cuentas para alquileres
+// nuevos ni firma depósitos. Fuera de testnet, se rechaza.
 export const ETIQUETA_FIRMA_SERVIDOR = 'lockumi-firma-servidor-testnet-v1|usuario|'
-export function firmaServidorActiva(e: Entorno): boolean {
-  if (e.FIRMA_SERVIDOR_TESTNET?.trim() === '0') return false
-  const pass = e.STELLAR_NETWORK_PASSPHRASE?.trim() || PASSPHRASE_TESTNET
-  const horizon = (e.HORIZON_URL?.trim() || HORIZON_TESTNET).replace(/\/$/, '')
-  if (pass !== PASSPHRASE_TESTNET || RED_ACTIVA !== PASSPHRASE_TESTNET || horizon !== HORIZON_TESTNET) throw new ErrorTw(500, 'La firma del servidor solo existe en la red de prueba.')
-  return true
+export function soloTestnet(e: Entorno) {
+  try { exigirRampTestnet(e) } catch { throw new ErrorTw(500, 'La firma del servidor solo existe en la red de prueba.') }
 }
 /** Llave de testnet de una cuenta (id estable de la sesión). Determinística; solo en memoria del servidor. */
 export function cuentaServidorDe(c: Pick<Config, 'plataforma'>, uid: string): Keypair {
@@ -389,13 +389,11 @@ function hmac(clave: Uint8Array, mensaje: Uint8Array): Uint8Array {
   const interno = new Uint8Array(hash(new Uint8Array([...k.map(b => b ^ 0x36), ...mensaje]) as never))
   return new Uint8Array(hash(new Uint8Array([...k.map(b => b ^ 0x5c), ...interno]) as never))
 }
-/** La llave del servidor para ESTA cuenta en ESTE alquiler, solo si la cuenta guardada del participante es la suya. Si no
- *  (alquileres de antes, billeteras Cavos), null: se firma como antes. */
-function llaveServidor(e: Entorno, c: Config, uid: string, g: string): Keypair | null {
-  if (!firmaServidorActiva(e)) return null
+/** La llave de legado de ESTA cuenta en ESTE alquiler, solo si la cuenta guardada del participante es la del servidor. */
+export function llaveLegado(c: Pick<Config, 'plataforma'>, uid: string, g: string): Keypair | null {
   const k = cuentaServidorDe(c, uid); return k.publicKey() === g ? k : null
 }
-/** La cuenta del servidor solo firma una llamada a contrato que sale de ella. */
+/** La cuenta de legado solo firma una llamada a contrato que sale de ella. */
 export function firmarComoCuenta(k: Keypair, xdr: string) {
   const t = leerTx(xdr)
   if (t.source !== k.publicKey()) throw new ErrorTw(502, 'La transacción no sale de la cuenta esperada.')
@@ -415,37 +413,94 @@ async function enviarHorizon(t: Transaction, f = fetch) {
   return j.hash
 }
 const tbH = (a: CuentaH) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
-/** Friendbot si falta la cuenta, trustline de USDC si falta y, con `objetivo`, USDC de prueba hasta el monto del depósito:
- *  desde la tesorería (plataforma) si falta poco (≤ TOPE_USDC), si no, compra en el DEX de testnet con su XLM de Friendbot. */
-export async function prepararCuentaServidor(c: Config, k: Keypair, objetivo: number | null, f = fetch) {
+/** LEGADO: la cuenta del servidor existe (Friendbot) y tiene la trustline de USDC para recibir. Nunca le pone USDC. */
+export async function prepararCuentaLegado(k: Keypair, f = fetch) {
   const g = k.publicKey(); let a = await leerCuenta(g, f)
   if (!a) {
     const r = await f(`${FRIENDBOT}/?addr=${g}`)
     if (!r.ok && !(r.status === 400 && /already|exist/i.test(await r.text().catch(() => '')))) throw new ErrorTw(502, 'Friendbot respondió ' + r.status)
     a = await leerCuenta(g, f); exigir(!!a, 502, 'Friendbot no creó la cuenta.')
   }
-  let trustline: string | null = null
-  if (usdcDe(a) === null) { const t = tbH(a!).addOperation(Operation.changeTrust({ asset: new Asset(USDC.code, USDC.issuer) })).setTimeout(60).build(); t.sign(k); trustline = await enviarHorizon(t, f); a = await leerCuenta(g, f) }
-  let compra: string | null = null
-  const falta = objetivo === null ? 0 : Math.round((objetivo - Number(usdcDe(a) ?? 0)) * 1e7) / 1e7
-  if (falta > 0) {
-    const tes = await leerCuenta(c.plataforma.publicKey(), f)
-    if (falta <= TOPE_USDC && Number(usdcDe(tes) ?? 0) >= falta) {
-      const t = tbH(tes!).addOperation(Operation.payment({ destination: g, asset: new Asset(USDC.code, USDC.issuer), amount: falta.toFixed(7) })).setTimeout(60).build(); t.sign(c.plataforma); compra = await enviarHorizon(t, f)
-    } else {
-      const max = Math.min(9000, Math.ceil(falta * 3) + 5)
-      const t = tbH(a!).addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: String(max), destination: g, destAsset: new Asset(USDC.code, USDC.issuer), destAmount: falta.toFixed(7), path: [] })).setTimeout(60).build(); t.sign(k); compra = await enviarHorizon(t, f)
-    }
-  }
-  return { trustline, compra }
+  if (usdcDe(a) !== null) return { trustline: null }
+  const t = tbH(a!).addOperation(Operation.changeTrust({ asset: new Asset(USDC.code, USDC.issuer) })).setTimeout(60).build(); t.sign(k)
+  return { trustline: await enviarHorizon(t, f) }
 }
-// Límite por cuenta de «preparar-cuenta» (Friendbot, trustline y USDC de prueba): 12 por hora, en memoria (como limitar en solo.ts).
+// Límite por cuenta de «preparar-cuenta» (legado): 12 por hora, en memoria (como limitar en solo.ts).
 const preparaciones = new Map<string, number[]>()
 export function limitarPreparar(uid: string, ahora = Date.now()) {
   const v = (preparaciones.get(uid) ?? []).filter(t => ahora - t < 3_600_000)
   if (v.length >= 12) throw new ErrorTw(429, 'Hiciste muchas solicitudes seguidas. Espera 60 minutos y vuelve a intentarlo.')
   v.push(ahora); preparaciones.set(uid, v); if (preparaciones.size > 5000) preparaciones.clear()
 }
+
+// ── Opción A (26/10/2026): prueba de billetera con Cavos + llaves de rol de Lockumi ──
+// Pagar, aprobar la devolución, pagar un reparto aceptado y pedir la devolución exigen una prueba NUEVA firmada con Cavos por la
+// persona (api/_lib/prueba-cavos.ts): su dirección Cavos guardada en el alquiler, esta acción, este alquiler y un nonce de un
+// solo uso (lk_pruebas_cavos, migración 20261026110000). Después el servidor ejecuta con las llaves de rol de Lockumi.
+/** Devuelve la llave de legado (PR #54) si la cuenta de la persona en el alquiler es la del servidor: esos alquileres siguen
+ *  sin prueba hasta cerrarse. Si no, exige la prueba y gasta su nonce. */
+async function exigirPrueba(c: Config, k: Contrato, uid: string, rol: Part['rol'], accion: AccionPrueba, prueba: Prueba | undefined, f = fetch): Promise<Keypair | null> {
+  const g = cuenta(k, rol), legado = llaveLegado(c, uid, g)
+  if (legado) return legado
+  const motivo = await revisarPrueba(prueba, accion, k.id, g, f)
+  if (motivo) { console.error('tw prueba', accion, motivo); throw new ErrorTw(401, SIN_PRUEBA) }
+  const r = await rest(c, 'lk_pruebas_cavos', { method: 'POST', headers: { prefer: 'return=minimal' }, body: JSON.stringify({ nonce: prueba!.nonce, usuario: uid, accion, contrato_id: k.id }) }, f)
+  if (r.status === 404) throw new ErrorTw(503, 'Falta configurar en el servidor: lk_pruebas_cavos (migración 20261026110000).')
+  if (r.status === 409) { console.error('tw prueba', accion, 'nonce ya usado'); throw new ErrorTw(401, SIN_PRUEBA) }
+  if (!r.ok) throw new ErrorTw(500, 'No se pudo guardar en el servidor: ' + (await r.text()).slice(0, 200))
+  return null
+}
+/** Crea la cuenta segura (la plataforma despliega; los roles salen de la base). Opción A: el approver es la llave de rol de
+ *  Lockumi (como en Meteorito, escrow.ts:69-74), no la billetera del dueño. */
+async function desplegar(c: Config, k: Contrato, f = fetch): Promise<{ contractId: string; tx: string }> {
+  const P = c.plataforma.publicKey(), inquilino = cuenta(k, 'inquilino'), dueno = cuenta(k, 'dueno')
+  exigir(new Set([inquilino, dueno, P]).size === 3, 409, 'Las cuentas del dueño, el inquilino y la plataforma tienen que ser distintas.')
+  // TW exige que el receiver (el inquilino) exista y tenga la trustline de USDC (probado en testnet el 26/10/2026).
+  if (!(await tieneUsdc(inquilino, f))) { console.error('tw pagar: la cuenta del inquilino no existe o no tiene la trustline de USDC', k.id); throw new ErrorTw(409, NO_PREPARAR_DEPOSITO) }
+  const pub = datosOnChain(k)
+  sinDatosPersonales([pub.title, pub.description, ...pub.milestones.map(m => m.description)], k)
+  const j = await tw(c, '/deployer/single-release', {
+    signer: P, ...pub,
+    roles: { approver: P, serviceProvider: P, platformAddress: P, releaseSigner: P, disputeResolver: c.mediador, receiver: inquilino },
+    amount: Number(k.monto), platformFee: 0,
+    trustline: { address: c.trustline, symbol: 'USDC' },
+  }, f)
+  const firmada = firmarComoPlataforma(c, sinFirmar(j))
+  const r = await enviar(c, firmada, f)
+  const id = String(r.contractId ?? (r.escrow as { contractId?: string } | undefined)?.contractId ?? '')
+  exigir(C.test(id), 502, 'Trustless Work no devolvió el contractId del escrow.')
+  const tx = hashTx(firmada)
+  await anotar(c, k.id, { escrow_contract_id: id }, 'Se creó la cuenta segura del depósito en Trustless Work', tx, f)
+  return { contractId: id, tx }
+}
+// LEGAL: pendiente (texto nuevo del historial)
+export const FONDEO_SIMULADO = 'Lockumi guardó el depósito de prueba en la cuenta segura (pago simulado en la red de prueba)'
+async function fondeoAnterior(c: Config, id: string, f = fetch): Promise<string | null> {
+  const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(FONDEO_SIMULADO)}&select=tx_hash`, {}, f)
+  const [x] = r.ok ? await r.json().catch(() => []) as { tx_hash: string | null }[] : []
+  return x?.tx_hash ?? null
+}
+/** Lo que el ramp (api/_lib/rampSimulado.ts) usa de este proxy: la tesorería es la cuenta de la plataforma. */
+function depsRamp(e: Entorno, c: Config, f = fetch): DepsRamp {
+  const P = c.plataforma
+  return {
+    entorno: e,
+    async asegurarUsdcTesoreria(monto) {
+      const tes = await leerCuenta(P.publicKey(), f); exigir(!!tes, 502, 'Horizon no encontró la cuenta de la tesorería.')
+      const falta = Math.round((monto - Number(usdcDe(tes) ?? 0)) * 1e7) / 1e7
+      if (falta <= 0) return
+      const max = Math.min(9000, Math.ceil(falta * 3) + 5)   // compra con su XLM de prueba en el DEX de testnet
+      const t = tbH(tes!).addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: String(max), destination: P.publicKey(), destAsset: new Asset(USDC.code, USDC.issuer), destAmount: falta.toFixed(7), path: [] })).setTimeout(60).build()
+      t.sign(P); await enviarHorizon(t, f)
+    },
+    async fondearDesdeTesoreria(escrow, monto) {
+      const j = await tw(c, '/escrow/single-release/fund-escrow', { contractId: escrow, signer: P.publicKey(), amount: monto }, f)
+      const firmada = firmarComoPlataforma(c, sinFirmar(j)); await enviar(c, firmada, f); return hashTx(firmada)
+    },
+  }
+}
+const fondeando = new Set<string>()
+
 /** Después de la aprobación del dueño en la cadena: se anota, se cierra el caso y la plataforma libera (como «enviar» paso aprobar). */
 async function trasAprobar(c: Config, k: Contrato, tx: string, estado: unknown, f = fetch): Promise<Record<string, unknown>> {
   await anotar(c, k.id, {}, APROBADO, tx, f)
@@ -457,80 +512,71 @@ async function trasAprobar(c: Config, k: Contrato, tx: string, estado: unknown, 
 
 // ── Acciones (permitidas y nada más) ──
 export type Pedido =
-  | { accion: 'desplegar'; contrato: string }
-  | { accion: 'fondear'; contrato: string }
-  | { accion: 'aprobar'; contrato: string }
-  | { accion: 'enviar'; contrato: string; paso: 'fondear' | 'aprobar'; signedXdr: string }
-  | { accion: 'liberar'; contrato: string }
-  | { accion: 'devolver-automatico'; contrato: string }
-  | { accion: 'repartir'; contrato: string }
-  | { accion: 'mi-cuenta' }
+  | { accion: 'pagar'; contrato: string; prueba?: Prueba }
+  | { accion: 'aprobar'; contrato: string; prueba?: Prueba }
+  | { accion: 'enviar'; contrato: string; paso: 'aprobar'; signedXdr: string }
+  | { accion: 'liberar'; contrato: string; prueba?: Prueba }
+  | { accion: 'devolver-automatico'; contrato: string; prueba?: Prueba }
+  | { accion: 'repartir'; contrato: string; prueba?: Prueba }
   | { accion: 'preparar-cuenta'; contrato: string }
   | { accion: 'eliminar'; contrato: string }
 
 export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const c = configuracion(e)
   const uid = await usuario(c, bearer, f)
-  // Firma del servidor en testnet: la cuenta de testnet de esta sesión (solo la pública), o null con el interruptor apagado.
-  if (p.accion === 'mi-cuenta') return { cuenta: firmaServidorActiva(e) ? cuentaServidorDe(c, uid).publicKey() : null }
   const k = await contrato(c, p.contrato, f)
   const rol = rolDe(k, uid); exigir(rol !== null, 403, 'No participas en este contrato.')
   const P = c.plataforma.publicKey()
   switch (p.accion) {
-    case 'desplegar': {   // la plataforma despliega; los roles salen de la base, no del navegador
-      exigir(k.estado === 'pendiente_pago', 409, 'El contrato no está esperando el depósito.')
-      if (k.escrow_contract_id) return { contractId: k.escrow_contract_id, yaExistia: true }
-      const inquilino = cuenta(k, 'inquilino'), dueno = cuenta(k, 'dueno')
-      exigir(new Set([inquilino, dueno, P]).size === 3, 409, 'Las cuentas del dueño, el inquilino y la plataforma tienen que ser distintas.')
-      // TW exige que el receiver (el inquilino) exista y tenga la trustline de USDC (probado en testnet el 26/10/2026: el approver
-      // no). La app del inquilino la prepara antes de pedir esto (services/trustless.ts); si aún falta, no se llama a TW.
-      if (!(await tieneUsdc(inquilino, f))) { console.error('tw desplegar: la cuenta del inquilino no existe o no tiene la trustline de USDC', k.id); throw new ErrorTw(409, NO_PREPARAR_DEPOSITO) }
-      const pub = datosOnChain(k)
-      sinDatosPersonales([pub.title, pub.description, ...pub.milestones.map(m => m.description)], k)
-      const j = await tw(c, '/deployer/single-release', {
-        signer: P, ...pub,
-        roles: { approver: dueno, serviceProvider: P, platformAddress: P, releaseSigner: P, disputeResolver: c.mediador, receiver: inquilino },
-        amount: Number(k.monto), platformFee: 0,
-        trustline: { address: c.trustline, symbol: 'USDC' },
-      }, f)
-      const firmada = firmarComoPlataforma(c, sinFirmar(j))
-      const r = await enviar(c, firmada, f)
-      const id = String(r.contractId ?? (r.escrow as { contractId?: string } | undefined)?.contractId ?? '')
-      exigir(C.test(id), 502, 'Trustless Work no devolvió el contractId del escrow.')
-      const tx = hashTx(firmada)
-      await anotar(c, k.id, { escrow_contract_id: id }, 'Se creó la cuenta segura del depósito en Trustless Work', tx, f)
-      return { contractId: id, tx }
-    }
-    case 'fondear': {     // XDR para que el inquilino la firme con su billetera de Cavos
+    case 'pagar': {   // opción A: prueba del inquilino → Lockumi crea la cuenta segura y la fondea (ramp simulado, SOLO testnet)
       exigir(rol === 'inquilino', 403, 'Solo el inquilino paga el depósito.')
-      exigir(k.estado === 'pendiente_pago' && !!k.escrow_contract_id, 409, 'Primero hay que crear la cuenta segura del depósito.')
-      const j = await tw(c, '/escrow/single-release/fund-escrow', { contractId: k.escrow_contract_id, signer: cuenta(k, 'inquilino'), amount: Number(k.monto) }, f)
-      const llave = llaveServidor(e, c, uid, cuenta(k, 'inquilino'))
-      if (!llave) return { unsignedXdr: sinFirmar(j) }
-      const firmada = firmarComoCuenta(llave, sinFirmar(j)), r = await enviar(c, firmada, f)
-      return { tx: hashTx(firmada), estado: r.status ?? null, firmaServidor: true }
+      exigir(k.estado === 'pendiente_pago', 409, 'El contrato no está esperando el depósito.')
+      const legado = await exigirPrueba(c, k, uid, 'inquilino', 'pagar', p.prueba, f)
+      exigirRampTestnet(e)
+      if (legado) await prepararCuentaLegado(legado, f)   // PR #54: la cuenta del servidor recibe la devolución (trustline)
+      const ya = await fondeoAnterior(c, k.id, f)
+      if (ya && k.escrow_contract_id) return { contractId: k.escrow_contract_id, tx: ya, yaExistia: true }
+      exigir(!fondeando.has(k.id), 409, 'El depósito ya se está guardando. Vuelve a abrir el alquiler en un momento.')
+      fondeando.add(k.id)
+      try {
+        let escrow = k.escrow_contract_id
+        if (escrow) {   // cuenta segura de antes: solo se fondea si está vacía (nunca dos veces)
+          const x = await leerEscrowTw(c, escrow, f)
+          const saldo = x.balance === undefined || x.balance === null || x.balance === '' ? NaN : Number(x.balance)
+          if (saldo !== 0) { console.error('tw pagar: la cuenta segura no está vacía', k.id); throw new ErrorTw(409, TEXTO_REVISAR_PAGO) }
+        } else escrow = (await desplegar(c, k, f)).contractId
+        const { tx } = await rampActivo.fondear({ contrato: k.id, escrow, monto: Number(k.monto) }, depsRamp(e, c, f))
+        await anotar(c, k.id, {}, FONDEO_SIMULADO, tx, f)
+        return { contractId: escrow, tx, ramp: rampActivo.nombre }
+      } finally { fondeando.delete(k.id) }
     }
-    case 'aprobar': {     // la plataforma deja la evidencia (serviceProvider) y el dueño aprueba la devolución
+    case 'aprobar': {     // «Todo bien, devolver»: la plataforma deja la evidencia y el approver aprueba
       exigir(rol === 'dueno', 403, 'Solo el dueño aprueba la devolución.')
       exigir(k.estado === 'ventana_reclamo' && !!k.escrow_contract_id, 409, 'La devolución se aprueba durante el plazo de reclamo, después del acta de salida.')
-      const llave = llaveServidor(e, c, uid, cuenta(k, 'dueno'))
-      if (llave) await prepararCuentaServidor(c, llave, null, f)   // la cuenta del dueño tiene que existir para firmar
+      const g = cuenta(k, 'dueno'), legado = await exigirPrueba(c, k, uid, 'dueno', 'aprobar', p.prueba, f)
+      // Opción A: approver = Lockumi. Escrows de antes: la billetera Cavos del dueño (firma él) o su cuenta del servidor (legado).
+      const aprobador = (await leerEscrowTw(c, k.escrow_contract_id!, f)).roles?.approver
+      exigir(aprobador === P || aprobador === g, 409, TEXTO_REVISAR_PAGO)
+      if (aprobador === g && legado) { soloTestnet(e); await prepararCuentaLegado(legado, f) }   // tiene que existir para firmar
       const cambio = await tw(c, '/escrow/single-release/change-milestone-status', { contractId: k.escrow_contract_id, milestoneIndex: '0',
         newStatus: 'Completed', newEvidence: EVIDENCIA_ONCHAIN, serviceProvider: P }, f)
       const tx = firmarComoPlataforma(c, sinFirmar(cambio)); await enviar(c, tx, f)
-      const j = await tw(c, '/escrow/single-release/approve-milestone', { contractId: k.escrow_contract_id, milestoneIndex: '0', approver: cuenta(k, 'dueno') }, f)
-      if (!llave) return { unsignedXdr: sinFirmar(j), evidenciaTx: hashTx(tx) }
-      const firmada = firmarComoCuenta(llave, sinFirmar(j)), r = await enviar(c, firmada, f)
-      return { ...(await trasAprobar(c, k, hashTx(firmada), r.status ?? null, f)), evidenciaTx: hashTx(tx), firmaServidor: true }
+      const j = await tw(c, '/escrow/single-release/approve-milestone', { contractId: k.escrow_contract_id, milestoneIndex: '0', approver: aprobador }, f)
+      if (aprobador === P) {
+        const firmada = firmarComoPlataforma(c, sinFirmar(j)), r = await enviar(c, firmada, f)
+        return { ...(await trasAprobar(c, k, hashTx(firmada), r.status ?? null, f)), evidenciaTx: hashTx(tx) }
+      }
+      if (!legado) return { unsignedXdr: sinFirmar(j), evidenciaTx: hashTx(tx) }   // escrow de antes: el dueño firma con Cavos
+      const firmada = firmarComoCuenta(legado, sinFirmar(j)), r = await enviar(c, firmada, f)
+      return { ...(await trasAprobar(c, k, hashTx(firmada), r.status ?? null, f)), evidenciaTx: hashTx(tx), legado: true }
     }
-    case 'enviar': {      // solo reenvía transacciones del propio participante, del paso que le toca
-      const quien = p.paso === 'fondear' ? 'inquilino' : 'dueno'
-      exigir(rol === quien, 403, 'Esta firma no te corresponde.')
+    case 'enviar': {      // escrows de antes: reenvía la aprobación que el dueño firmó con Cavos (approver = su billetera)
+      exigir(p.paso === 'aprobar', 400, 'Acción no permitida.')
+      exigir(rol === 'dueno', 403, 'Esta firma no te corresponde.')
       const t = leerTx(p.signedXdr)
-      exigir(t.source === cuenta(k, quien), 400, 'La transacción no sale de tu cuenta.')
+      exigir(t.source === cuenta(k, 'dueno'), 400, 'La transacción no sale de tu cuenta.')
       exigir(t.operations.length === 1 && t.operations[0].type === 'invokeHostFunction', 400, 'Transacción inesperada.')
       const r = await enviar(c, p.signedXdr, f), tx = hashTx(p.signedXdr)
-      if (p.paso !== 'aprobar') return { tx, estado: r.status ?? null }
       // PR #22 (lista de Legal, punto 5; Términos 6.5 a): «Todo bien, devolver» libera todo al inquilino ahora (trasAprobar).
       // LEGAL: revisado (25/10, 4:56 a. m., Legal) · error 8 (no se ve en la app: muestra «Volver a intentar la devolución»)
       return await trasAprobar(c, k, tx, r.status ?? null, f)
@@ -547,23 +593,26 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(r.ok && (await r.json().catch(() => false)) === true, 409, 'Este alquiler tiene un depósito guardado.')
       return { eliminado: true }
     }
-    case 'preparar-cuenta': {   // firma del servidor: deja lista la cuenta de testnet de ESTA sesión en ESTE alquiler
-      const g = cuenta(k, rol!), llave = llaveServidor(e, c, uid, g)
-      exigir(!!llave, 409, 'Esta cuenta no la prepara el servidor.')
-      limitarPreparar(uid)
-      const objetivo = rol === 'inquilino' && k.estado === 'pendiente_pago' ? Number(k.monto) : null
-      return { cuenta: g, ...(await prepararCuentaServidor(c, llave!, objetivo, f)) }
+    case 'preparar-cuenta': {   // LEGADO PR #54: solo la trustline de la cuenta del servidor de un alquiler que ya la usaba
+      const legado = llaveLegado(c, uid, cuenta(k, rol!))
+      exigir(!!legado, 409, 'Esta cuenta no la prepara el servidor.')
+      soloTestnet(e); limitarPreparar(uid)
+      return { cuenta: legado!.publicKey(), ...(await prepararCuentaLegado(legado!, f)) }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
       // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.
       // Paso 22: mismo camino idempotente que la corrida programada (bloqueo + estado del escrow); si la corrida lo está pagando, { enCurso }.
+      // Opción A: quien lo pide prueba su billetera (la corrida diaria paga por devoluciones.ts, sin pasar por aquí).
+      await exigirPrueba(c, k, uid, rol!, 'liberar', p.prueba, f)
       return await devolverAlInquilino(c, k, 'liberar', f)
     }
     case 'devolver-automatico': // paso 7, opción 1: venció el plazo sin reclamo y sin aprobación del dueño (paso 22: idempotente)
+      await exigirPrueba(c, k, uid, rol!, 'devolver-automatico', p.prueba, f)
       return await devolverAlInquilino(c, k, 'devolver-automatico', f)
     case 'repartir': {    // PR #22: acuerdo o mediación con las dos aceptaciones → disputa (plataforma) + resolución (cuenta mediadora)
       if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) {
         await asegurarEventoMediador(c, k.id, textoReparto(k), k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }
+      await exigirPrueba(c, k, uid, rol!, 'repartir', p.prueba, f)   // opción A: quien confirma el reparto prueba su billetera
       exigir(cierreAceptado(k) && !!k.escrow_contract_id, 409, 'Solo se reparte así un caso cerrado por el servidor con acuerdo o con las dos aceptaciones.')
       exigir(k.liquidacion_tx !== EN_CURSO, 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
       exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')

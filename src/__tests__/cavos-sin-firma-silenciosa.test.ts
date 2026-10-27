@@ -16,9 +16,15 @@ const codigo = archivos.map(f => ({ f, t: sinComentarios(fs.readFileSync(new URL
 const donde = (re: RegExp) => codigo.filter(x => re.test(x.t)).map(x => x.f).sort()
 
 describe('Cavos: sin firmas silenciosas (Términos 5.3)', () => {
-  it('no usa execute ni signMessage de la billetera', () => {
+  // LEGAL: pendiente (26/10/2026, opción A) · OK de Legal para la prueba de billetera: signMessage firma un texto, nunca una
+  // transacción ni un pago, y solo desde services/billetera.ts (un único lugar: firmarMensaje).
+  it('no usa execute; signMessage solo en billetera.ts: «lockumi-login» al entrar y la prueba de billetera (textos, no fondos)', async () => {
     expect(donde(/\.execute\s*\(/)).toEqual([])
-    expect(donde(/\bsignMessage\s*\(/)).toEqual([])
+    expect(donde(/\bsignMessage\s*\(/)).toEqual(['services/billetera.ts'])
+    const t = codigo.find(x => x.f === 'services/billetera.ts')!.t
+    expect(t.match(/\bsignMessage\s*\([^)]*\)/g)).toEqual(['signMessage(m)'])
+    expect(t.match(/\bfirmarMensaje\s*\([^)]*\)/g)).toEqual(['firmarMensaje(w: CarteraStellar, m: string)', 'firmarMensaje(w, mensajePrueba(accion, contrato, w.address, nonce, ts)', 'firmarMensaje(cartera, MENSAJE_PRUEBA)'])
+    expect((await import('../services/firmante')).MENSAJE_PRUEBA).toBe('lockumi-login')
   })
   it('signTransaction solo aparece con Freighter (que siempre pide confirmar), nunca con monto y destino de Cavos', () => {
     expect(donde(/\bsignTransaction\s*\(/)).toEqual(['services/cuentaPropia.ts'])

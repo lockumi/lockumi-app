@@ -3,7 +3,7 @@ import { atender, responderLlaves, ErrorTw, mensajeParaPersona, type Pedido } fr
 import { procesarCorreos, vencerMediaciones } from './_lib/correos-c.js'
 
 /** Escenario C: después de pagar en la red de prueba, salen los correos de cierre (COR-C-07) de ese alquiler, si CORREOS_C=1. */
-const PAGOS = new Set(['enviar', 'liberar', 'devolver-automatico', 'repartir'])
+const PAGOS = new Set(['enviar', 'aprobar', 'liberar', 'devolver-automatico', 'repartir'])
 
 /** GET /api/tw?revisar=llaves · PR #22, condición (a) para encender C: solo lectura. Dice si la llave mediadora es distinta de la de
  *  la plataforma y los últimos 4 caracteres de cada llave PÚBLICA. Nunca devuelve un secreto. 409 si no está lista. */
@@ -23,7 +23,7 @@ export async function POST(req: Request): Promise<Response> {
     const estado = e instanceof ErrorTw ? e.estado : 500
     if (!(e instanceof ErrorTw)) console.error('tw', e)
     if (!(e instanceof ErrorTw)) return Response.json({ error: 'Error inesperado del servidor.' }, { status: estado })
-    const accion = p.accion === 'enviar' && (p as { paso?: string }).paso === 'fondear' ? 'enviar-fondear' : p.accion
+    const accion = p.accion
     const visible = mensajeParaPersona(accion, e.message)
     if (visible !== e.message) console.error('tw', String(p.accion), estado, e.message)   // el detalle técnico, solo en el servidor
     return Response.json({ error: visible }, { status: estado })

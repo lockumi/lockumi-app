@@ -7,8 +7,9 @@ import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, configuracion, repartoAutomatico, firmarComoMediador, APROBADO, type Entorno } from '../../../api/_lib/tw'
 import { pagoFalso } from './pago-falso'
+import { firmado } from './prueba-falsa'
 
-const P = Keypair.random(), M = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), M = Keypair.random(), KD = Keypair.random(), KI = Keypair.random(), DUENO = KD.publicKey(), INQ = KI.publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'llave', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(),
   LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'servicio' }
 const CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', ID = '11111111-2222-3333-4444-555555555555'
@@ -47,7 +48,7 @@ describe('paso 7 · devolución automática (dos personas, opción 1)', () => {
   })
   it('la plataforma abre la disputa y la cuenta mediadora (distinta) la resuelve con el 100 % al inquilino', async () => {
     const { f, llamadas } = simular(base)
-    const r = await atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', f)
+    const r = await atender(ENV, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', f)
     expect(r.tx).toMatch(/^[0-9a-f]{64}$/)
     const disp = llamadas.find(l => l.url.endsWith('/escrow/single-release/dispute-escrow'))!
     expect(disp.cuerpo).toEqual({ contractId: CID, signer: P.publicKey() })
@@ -60,15 +61,15 @@ describe('paso 7 · devolución automática (dos personas, opción 1)', () => {
   })
   it('solo si venció el plazo sin reclamo (cerrado automático) y sin la aprobación del dueño', async () => {
     for (const k of [{ ...base, estado: 'ventana_reclamo', resultado: null }, { ...base, resultado: { via: 'mediacion', dueno: 5, inquilino: 795 } }, { ...base, estado: 'reclamo' }, { ...base, estado: 'mediacion', resultado: null }, { ...base, estado: 'reclamo', resultado: { via: 'automatico' } }])
-      await expect(atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', simular(k).f)).rejects.toMatchObject({ estado: 409 })
-    await expect(atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', simular(base, [{ texto: APROBADO }]).f)).rejects.toMatchObject({ estado: 409 })
+      await expect(atender(ENV, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', simular(k).f)).rejects.toMatchObject({ estado: 409 })
+    await expect(atender(ENV, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', simular(base, [{ texto: APROBADO }]).f)).rejects.toMatchObject({ estado: 409 })
   })
   it('si la cuenta mediadora falta o es la misma de la plataforma, no se abre ninguna disputa', async () => {
     const sin = { ...ENV, LOCKUMI_TW_MEDIADOR_SECRET: undefined, LOCKUMI_TW_MEDIADOR_PUBLICA: undefined }
-    const a = simular(base); await expect(atender(sin, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', a.f)).rejects.toMatchObject({ estado: 503 })
+    const a = simular(base); await expect(atender(sin, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', a.f)).rejects.toMatchObject({ estado: 503 })
     expect(a.llamadas.some(l => l.url.includes('dispute'))).toBe(false)
     const igual = { ...ENV, LOCKUMI_TW_MEDIADOR_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: P.publicKey() }
-    const b = simular(base); await expect(atender(igual, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', b.f)).rejects.toMatchObject({ estado: 409 })
+    const b = simular(base); await expect(atender(igual, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', b.f)).rejects.toMatchObject({ estado: 409 })
     expect(b.llamadas.some(l => l.url.includes('dispute'))).toBe(false)
     expect(() => configuracion({ ...ENV, LOCKUMI_TW_MEDIADOR_PUBLICA: Keypair.random().publicKey() })).toThrow(/no coincide/)
   })
@@ -79,7 +80,7 @@ describe('paso 7 · devolución automática (dos personas, opción 1)', () => {
   })
   it('si ya se devolvió, no repite', async () => {
     const { f, llamadas } = simular({ ...base, liquidacion_tx: 'a'.repeat(64) })
-    expect(await atender(ENV, { accion: 'devolver-automatico', contrato: ID }, 'Bearer t', f)).toEqual({ tx: 'a'.repeat(64), yaExistia: true })
+    expect(await atender(ENV, firmado({ accion: 'devolver-automatico', contrato: ID }, KI), 'Bearer t', f)).toEqual({ tx: 'a'.repeat(64), yaExistia: true })
     expect(llamadas.some(l => l.url.includes('dispute'))).toBe(false)
   })
 })

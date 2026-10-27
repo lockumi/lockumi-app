@@ -4,8 +4,9 @@ import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, APROBADO, type Entorno } from '../../../api/_lib/tw'
 import { pagoFalso } from './pago-falso'
+import { firmado } from './prueba-falsa'
 
-const P = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), KD = Keypair.random(), DUENO = KD.publicKey(), INQ = Keypair.random().publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'k', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'servicio' }
 const CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', ID = '11111111-2222-3333-4444-555555555555'
 const xdrDe = (origen: string) => new TransactionBuilder(new Account(origen, '1'), { fee: '100', networkPassphrase: Networks.TESTNET })
@@ -55,7 +56,7 @@ describe('«Todo bien, devolver» en C: se libera todo al inquilino al aprobar',
     expect(r.tx).toMatch(/^[0-9a-f]{64}$/); expect(r.liberacion).toBeUndefined(); expect(String(r.errorLiberacion)).toMatch(/Vuelve a abrir el alquiler/)
     const cerrado = { ...k, estado: 'cerrado', resultado: { via: 'devuelto', dueno: 0, inquilino: 20 } }
     const { f, llamadas } = simular({ cierra: false }); const f2 = (async (u: string, init?: RequestInit) => u.includes('/rest/v1/lk_contratos?id=eq.') && !init?.method ? new Response(JSON.stringify([cerrado]), { status: 200 }) : f(u, init)) as typeof fetch
-    const l = await atender(ENV, { accion: 'liberar', contrato: ID }, 'Bearer t', f2)
+    const l = await atender(ENV, firmado({ accion: 'liberar', contrato: ID }, KD), 'Bearer t', f2)
     expect(l.tx).toMatch(/^[0-9a-f]{64}$/); expect(llamadas.some(x => x.url.endsWith('release-funds'))).toBe(true)
   })
 })

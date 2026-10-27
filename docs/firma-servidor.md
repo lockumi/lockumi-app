@@ -1,5 +1,9 @@
 # Firma del servidor en testnet y eliminar antes del pago (PR #54 · 26 de octubre de 2026)
 
+> **Reemplazado (opción A, 26/10):** el servidor ya no firma por las personas en alquileres nuevos; ver [firma-cavos.md](firma-cavos.md).
+> Lo de abajo solo vale para los alquileres creados con la cuenta derivada, hasta que cierren (`llaveLegado` en `api/_lib/tw.ts`).
+> `mi-cuenta`, `desplegar`, `fondear` y `FIRMA_SERVIDOR_TESTNET` ya no existen.
+
 Merge `a1dfc6d` en `master`. Aprobado por Katherine (26/10, 2:02 p. m. CR: «Sí, el servidor firma en testnet»).
 Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20261026090000_eliminar_sin_deposito_revert.sql`.
 
