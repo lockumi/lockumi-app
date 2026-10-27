@@ -73,3 +73,6 @@ Ver la lista al final de `docs/firma-cavos.md`.
 - **Pruebas:** `src/services/__tests__/cuenta-dueno-firma.test.ts` (guarda y luego firma; sin sesión firma igual; con cuenta no guarda; respaldo en `Pago`) y
   `src/servidor/__tests__/ciclo-dos-personas-sql.test.ts` («U4»: sin la cuenta del dueño, 409 «Falta la cuenta Stellar del dueño.»; con `lk_actualizar_direccion` del dueño, sigue).
 - Sin cambios de diseño, de textos visibles ni de base de datos.
+- **Propuesta para el límite (rama `firma-dueno-con-sesion`, PR en borrador «NO FUSIONAR: espera OK de Katherine»):** si al dueño le falta su cuenta Stellar, su firma del contrato pide antes
+  «Entrar de nuevo» con el mismo `ConSesion` y los mismos textos que ya ve el inquilino (`src/screens/sesionFirma.ts`, `pideSesionAntesDeFirmar`). Con la cuenta ya guardada el dueño firma como antes.
+  Es un cambio de flujo (un paso más solo para el dueño sin sesión): espera el OK de Katherine. Pruebas: `src/screens/__tests__/sesion-firma-dueno.test.ts`.
