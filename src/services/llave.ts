@@ -12,11 +12,19 @@
 import { ErrorBilletera, conectarBilletera, olvidarBilletera, probarFirma } from './billetera'
 import { APP_ID, CAVOS_BILLETERA, authCavos, modoReal } from './auth'
 import type { EstadoFirmante } from './firmante'
+import { decidirLlave, leerRegistro, llaveRegistrada, registrarLlave } from './llaveRegistro'
 
-/** Equivale a `secureStep` del modal de Cavos: la cuenta no se usa sin llave de acceso. */
-export const SECURE_STEP = 'required' as const
+export { ESPERA_SEGUNDA_VEZ_MS, guardarRegistro, leerRegistro, llaveRegistrada, marcarNueva, posponer, registrarLlave, decidirLlave } from './llaveRegistro'
+export type { RegistroLlave, DecisionLlave } from './llaveRegistro'
+
+/** Equivale a `secureStep` del modal de Cavos, según la cuenta: 'required' para cuentas NUEVAS; 'optional' (oferta con «Ahora no»)
+ *  para las que ya existían (ver llaveRegistro.ts: nueva = Cavos creó la billetera en esa conexión). */
+export const SECURE_STEP = { nueva: 'required', existente: 'optional' } as const
 
 export const TEXTOS_LLAVE = {
+  ofertaTitulo: 'Usa tu cuenta en otro dispositivo',
+  oferta: 'Crea una llave de acceso. Se abre con tu huella, cara o PIN.',
+  ahoraNo: 'Ahora no',
   crearTitulo: 'Crea tu llave de acceso',
   crear: 'Es un solo paso. Con ella entras a tu cuenta desde cualquier dispositivo.',
   crearBoton: 'Crear llave de acceso',
@@ -32,13 +40,6 @@ export const TEXTOS_LLAVE = {
   sinSesion: 'Tu sesión se cerró. Sal, vuelve a entrar y prueba de nuevo.',
   general: 'No pudimos completar la llave. Revisa tu conexión y vuelve a intentarlo.',
 } as const
-
-// Solo se recuerda «esta cuenta ya tiene llave» (por correo), para no preguntarle a Cavos en cada entrada. Nunca la llave.
-const clave = (email: string) => 'lockumi.llave.' + email.toLowerCase()
-export function llaveRegistrada(email: string, s: Pick<Storage, 'getItem'> = localStorage): boolean {
-  try { return s.getItem(clave(email)) === 'creada' } catch { return false }
-}
-export function registrarLlave(email: string, s: Pick<Storage, 'setItem'> = localStorage) { try { s.setItem(clave(email), 'creada') } catch { /* sin almacenamiento */ } }
 
 /** ¿El navegador puede usar llaves de acceso con PRF? false solo si sabemos que no (sin WebAuthn o PRF negado). */
 export async function navegadorPermite(w: { PublicKeyCredential?: unknown; isSecureContext?: boolean } = globalThis as never): Promise<boolean> {
@@ -110,13 +111,15 @@ export async function recuperarConLlave(email: string): Promise<ResultadoLlave> 
   } catch (e) { olvidarBilletera(); return { ok: false, mensaje: mensajeLlave(e) } }
 }
 
-/** Puerta al entrar: firma de prueba (probarFirma) y, si el dispositivo puede firmar, que la cuenta tenga llave de acceso.
- *  'sin-llave' = hay que crearla antes de entrar. Si no se puede saber (red), 'error': se reintenta, no se entra sin llave. */
-export async function probarCuenta(email: string): Promise<EstadoFirmante> {
+/** Puerta al entrar: firma de prueba (probarFirma) y, si el dispositivo puede firmar, la llave de acceso según `decidirLlave`:
+ *  'sin-llave' = cuenta NUEVA: hay que crearla antes de entrar; 'oferta-llave' = cuenta que ya existía: se ofrece (con «Ahora no»).
+ *  Cuenta nueva y no se puede saber (red): 'error', se reintenta; nunca se entra sin llave. */
+export async function probarCuenta(email: string, ahora = Date.now()): Promise<EstadoFirmante> {
   const e = await probarFirma()
   const local = import.meta.env.DEV && !!localStorage.getItem('lockumi.billetera.prueba') // gancho de prueba local, nunca en el build
   if (e !== 'puede' || !modoReal || local || llaveRegistrada(email)) return e // sin Cavos (demo) no hay llave
   const tiene = await consultarLlave()
-  if (tiene === true) { registrarLlave(email); return 'puede' }
-  return tiene === false ? 'sin-llave' : 'error'
+  const d = decidirLlave({ registro: leerRegistro(email), tieneLlave: tiene, ahora })
+  if (d === 'tiene') { registrarLlave(email); return 'puede' }
+  return d === 'obligatoria' ? 'sin-llave' : d === 'oferta' ? 'oferta-llave' : d === 'error' ? 'error' : 'puede'
 }

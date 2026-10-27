@@ -49,14 +49,15 @@ export default function App() {
   // si no termina, el error queda escrito en Entrar hasta que la persona vuelve a intentar o entra bien.
   const [regreso, setRegreso] = useState<'esperando' | 'fallo' | null>(() => !auth.actual() && hayRegreso() ? 'esperando' : null)
   // Al entrar, la aceptación de los Términos (guardada al marcar la casilla) se copia al usuario.
-  // Firmante (26/10): al entrar, la billetera firma 'lockumi-login' (gratis) y la cuenta tiene que tener llave de acceso. Si no, no se
-  // entra: PuertaFirmante pide crearla o entrar con ella (dispositivo nuevo). Solo se recuerda sí/no.
+  // Firmante (26/10): al entrar, la billetera firma 'lockumi-login' (gratis) y la cuenta NUEVA tiene que tener llave de acceso (a las que ya
+  // existían se les ofrece). Si no, no se entra: PuertaFirmante pide crearla o entrar con ella (dispositivo nuevo). Solo se recuerda sí/no.
   const [puerta, setPuerta] = useState<{ x: Usuario; e: EstadoFirmante | 'probando' } | null>(null)
   const pasar = (x: Usuario) => { setPuerta(null); setU(guardarUsuario(conAceptacion(x))); avisar(alertaIngreso(modoReal)); location.hash = volver() }
   const probar = async (x: Usuario) => {
     setPuerta({ x, e: 'probando' }); const e = await probarCuenta(x.email)
     if (e === 'puede' || e === 'no-firmante') recordarFirmante(x.email, e === 'puede')
     if (e === 'puede') return pasar(x)
+    if (e === 'oferta-llave') return setPuerta({ x, e })   // cuenta que ya existía: se ofrece la llave (se puede seguir con «Ahora no»)
     auth.olvidarUsuarioLocal(); setU(null); setPuerta({ x, e })   // sin entrar; la identidad de Cavos queda
   }
   const entro = (x: Usuario) => { setRegreso(null); void probar(x) }
@@ -73,7 +74,7 @@ export default function App() {
   const invitado = !u && esRutaInvitacion(r)
   if (invitado) guardarRegreso(r)
   if (!u && regreso === 'esperando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
-  if (puerta) return <Fondo>{skip}<Alertas /><PuertaFirmante x={puerta.x} estado={puerta.e} reintentar={() => void probar(puerta.x)} otraCuenta={() => { setPuerta(null); auth.salir(); olvidarBilletera() }} /></Fondo>
+  if (puerta) return <Fondo>{skip}<Alertas /><PuertaFirmante x={puerta.x} estado={puerta.e} reintentar={() => void probar(puerta.x)} otraCuenta={() => { setPuerta(null); auth.salir(); olvidarBilletera() }} seguir={() => pasar(puerta.x)} /></Fondo>
   const entrar = <Login onOk={entro} error={regreso === 'fallo'} onReintento={() => setRegreso(null)} invitacion={invitado ? { titulo: TITULO_INVITACION, subtitulo: SUBTITULO_INVITADO_SIN_SESION } : undefined} />
   if (!u) return <Fondo>{skip}<Alertas />{entrar}<Pie /></Fondo>
   const conf = modoPrueba ? r.match(/^\/alquiler\/(.+)\/(eliminar|ocultar)$/) : null   // PROTOTIPO eliminar-alquiler

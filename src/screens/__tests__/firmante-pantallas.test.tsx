@@ -6,7 +6,7 @@ const { TEXTOS_FIRMANTE: T, SIN_SESION } = await import('../../services/firmante
 const { TEXTOS_LLAVE: L } = await import('../../services/llave')
 const { NO_FIRMANTE } = await import('../../services/billetera')
 const x = { email: 'ana.prueba@ejemplo.cr', nombre: 'Ana', metodo: 'google' as const }
-const ver = (e: Parameters<typeof PuertaFirmante>[0]['estado']) => renderToStaticMarkup(<PuertaFirmante x={x} estado={e} reintentar={() => {}} otraCuenta={() => {}} />)
+const ver = (e: Parameters<typeof PuertaFirmante>[0]['estado']) => renderToStaticMarkup(<PuertaFirmante x={x} estado={e} reintentar={() => {}} otraCuenta={() => {}} seguir={() => {}} />)
 
 describe('pantalla al entrar cuando este dispositivo no puede firmar', () => {
   it('mientras se prueba: solo «Entrando a tu cuenta…», sin mensaje', () => {
@@ -16,12 +16,16 @@ describe('pantalla al entrar cuando este dispositivo no puede firmar', () => {
     const h = ver('no-firmante'); expect(h).toContain(T.titulo); expect(h).toContain(L.conLlave); expect(h).toContain(L.entrarBoton)
     expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.crearBoton)
   })
-  it('cuenta sin llave de acceso: paso obligatorio «Crear llave de acceso» antes de entrar', () => {
+  it('cuenta NUEVA sin llave de acceso: paso obligatorio «Crear llave de acceso» (sin «Ahora no»)', () => {
     const h = ver('sin-llave'); expect(h).toContain(L.crearTitulo); expect(h).toContain(L.crear); expect(h).toContain(L.crearBoton)
-    expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.entrarBoton)
+    expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.entrarBoton); expect(h).not.toContain(L.ahoraNo)
+  })
+  it('cuenta que ya existía sin llave: se ofrece, con «Ahora no»', () => {
+    const h = ver('oferta-llave'); expect(h).toContain(L.ofertaTitulo); expect(h).toContain(L.oferta); expect(h).toContain(L.crearBoton); expect(h).toContain(L.ahoraNo)
+    expect(h).not.toContain(T.titulo)
   })
   it('el mensaje del dispositivo solo aparece cuando hace falta', () => {
-    for (const e of ['error', 'sin-sesion', 'sin-llave', 'probando'] as const) expect(ver(e)).not.toContain(T.titulo)
+    for (const e of ['error', 'sin-sesion', 'sin-llave', 'oferta-llave', 'probando'] as const) expect(ver(e)).not.toContain(T.titulo)
     expect(ver('error')).toContain(T.reintentar); expect(ver('sin-sesion')).toContain(T.entrar)
   })
   it('textos cortos, sin voseo ni palabras técnicas', () => {
@@ -49,6 +53,7 @@ describe('App y pago usan la puerta', () => {
     const app = await leer('../../App.tsx')
     expect(app).toContain('const e = await probarCuenta(x.email)'); expect(app).toContain("if (e === 'puede') return pasar(x)")
     expect(app).toContain('auth.olvidarUsuarioLocal(); setU(null); setPuerta({ x, e })')
+    expect(app).toContain("if (e === 'oferta-llave') return setPuerta({ x, e })"); expect(app).toContain('seguir={() => pasar(puerta.x)}')
   })
   it('pagar y firmar el contrato (C) piden entrar de nuevo si se perdió la sesión', async () => {
     const d = await leer('../Detalle.tsx')
