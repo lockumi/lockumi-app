@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atenderSolo, conReintento, hmacSha256, configSolo, duenoDe, inquilinoPruebaDe, permisoDe, limitar, reiniciarLimites, type Entorno, type Escrow } from '../../../api/_lib/solo'
-import { PASSPHRASE_TESTNET, PASSPHRASE_MAINNET, TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, exigirTestnet, USDC } from '../../../api/_lib/red'
+import { PASSPHRASE_TESTNET, PASSPHRASE_MAINNET, TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio, exigirTestnet, USDC } from '../../../api/_lib/red'
 import { TEXTO_ONCHAIN } from '../../../api/_lib/tw'
 
 const P = Keypair.random(), SEED = 'semilla-de-prueba-'.padEnd(48, 'x')
@@ -53,7 +53,7 @@ describe('fase 1 · solo testnet (condición 2 de Legal)', () => {
   })
   it('todas las llamadas salientes van a servicios de testnet', async () => {
     const s = simular(); await ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 2 }, s)
-    for (const l of s.llamadas) expect(l.url).toMatch(/^https:\/\/(dev\.api\.trustlesswork\.com|horizon-testnet\.stellar\.org|friendbot\.stellar\.org)\//)
+    for (const l of s.llamadas) expect(l.url).toMatch(/^https:\/\/(dev\.api\.trustlesswork\.com|horizon-testnet\.stellar\.org)\//)
   })
   it('una transacción armada para la red principal se interpreta con el passphrase de testnet (su firma no vale)', async () => {
     const t = new TransactionBuilder(new Account(INQ.publicKey(), '1'), { fee: '100', networkPassphrase: Networks.PUBLIC })
@@ -99,10 +99,6 @@ describe('tope de 20 USDC solo para los USDC de Lockumi; con cuenta propia, el s
     const env = llam.filter(l => l.url.endsWith('/transactions'))
     expect(env).toHaveLength(1)
     await expect(ir({ accion: 'cuenta-prueba', token: 'c'.repeat(64), monto: 25 })).rejects.toThrow(/hasta 20/)
-  })
-  it('la compra de USDC del cliente tiene un máximo a gastar', async () => {
-    const { maximoAGastar } = await import('../solo')
-    expect(maximoAGastar(22.6)).toBeCloseTo(24.86, 2); expect(maximoAGastar(59)).toBe(MAX_XLM_COMPRA); expect(() => maximoAGastar(61)).toThrow(/no gastamos más/)
   })
   it('el cliente no deposita más del máximo y no pide más de 20 a Lockumi', async () => {
     const { depositar, obtenerUsdc } = await import('../solo')
@@ -176,7 +172,7 @@ describe('fase 1 · llaves solo en el servidor (condición 1)', () => {
   it('ninguna respuesta lleva llaves secretas ni la semilla', async () => {
     const respuestas = [
       await ir({ accion: 'dueno', contrato: ID }, simular(escrow(), null)),
-      await ir({ accion: 'cuenta-prueba', token: 'b'.repeat(64) }, simular(escrow(), '1')),
+      await ir({ accion: 'cuenta-prueba', token: 'b'.repeat(64) }, simular(escrow(), '500')),
       await ir({ accion: 'desplegar', contrato: ID, inquilino: INQ.publicKey(), monto: 2 }),
       await ir({ accion: 'fondear', escrow: ESC, inquilino: INQ.publicKey() }),
       await ir({ accion: 'aprobar', escrow: ESC }, simular(escrow({ balance: 2 }))),

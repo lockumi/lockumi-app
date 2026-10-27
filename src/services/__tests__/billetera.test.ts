@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { abreviar, consultarSaldo, enlaceExplorer, esDireccionStellar, fondear, formatoXlm, HORIZON_TESTNET, FRIENDBOT } from '../billetera'
+import { abreviar, consultarSaldo, enlaceExplorer, esDireccionStellar, fondear, formatoXlm, HORIZON_TESTNET } from '../billetera'
 
 const G = 'GCBLQMWHUDYTKPR5NY527VIILMQVDW7IKTF34MSIFLHZYP2DH2KFFJ4V'
 const resp = (status: number, body: unknown) => new Response(typeof body === 'string' ? body : JSON.stringify(body), { status })
@@ -30,16 +30,15 @@ describe('Horizon testnet', () => {
   })
 })
 
-describe('Friendbot', () => {
-  it('fondea con ?addr=', async () => {
-    const f = vi.fn(async () => resp(200, { hash: 'abc' }))
+describe('creación de la cuenta por la tesorería (sin Friendbot)', () => {
+  it('pide a /api/solo crear-cuenta con la dirección', async () => {
+    const f = vi.fn(async () => resp(200, { creada: true }))
     await fondear(G, f as typeof fetch)
-    expect(f).toHaveBeenCalledWith(FRIENDBOT + '/?addr=' + G)
+    expect(f).toHaveBeenCalledTimes(1)
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/solo'); expect(JSON.parse(String(init.body))).toEqual({ accion: 'crear-cuenta', cuenta: G })
   })
-  it('cuenta ya existente no es error', async () => {
-    await expect(fondear(G, (async () => resp(400, { detail: 'createAccountAlreadyExist' })) as typeof fetch)).resolves.toBeUndefined()
-  })
-  it('otro error se propaga', async () => {
-    await expect(fondear(G, (async () => resp(500, '')) as typeof fetch)).rejects.toThrow('friendbot 500')
+  it('un error del servidor se propaga', async () => {
+    await expect(fondear(G, (async () => resp(502, '')) as typeof fetch)).rejects.toThrow('crear-cuenta 502')
   })
 })

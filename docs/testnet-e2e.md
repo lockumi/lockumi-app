@@ -13,7 +13,7 @@ Rama `testnet-e2e` (sale de 76b66e8). No se publicó nada: sin push, sin deploy,
 - **Prueba real** (`scripts/probar-firma-cavos.mjs`). Usé el método real `CavosStellar.prototype.signXdr` con una cuenta desechable y una clave `WebCryptoControlKey`, la misma clase del kit. La XDR la armó otro: una invocación Soroban simulada con `prepareTransaction`.
   - **Origen = cuenta Cavos (el modelo de TW): OK**, tx `211b4c28f8f3715a2e68afbd9326b674df188676e74ba2bba3100c7063e8caaf`, estado SUCCESS.
   - Con otra cuenta como origen y Cavos autorizando solo su entrada, falla (`txBadAuthExtra`; sin la firma de sobre, falla por recursos). **No aplica a Trustless Work.** TW arma cada transacción con el `signer` del rol como origen y auth `sorobanCredentialsSourceAccount`; lo verifiqué con el deploy real de abajo.
-- `addTrustline` real del kit (`scripts/probar-trustline-cavos.mjs`), en una cuenta creada por Friendbot y con `{sponsored:false}`: **OK**, tx `4cd86193bde4c14f96166dd12dce744efbe20ae2dab45d21231b27d787bf3a16`.
+- `addTrustline` real del kit (`scripts/probar-trustline-cavos.mjs`), en una cuenta creada entonces por Friendbot (hoy la crea la tesorería, `scripts/crear-cuenta-testnet.mjs`) y con `{sponsored:false}`: **OK**, tx `4cd86193bde4c14f96166dd12dce744efbe20ae2dab45d21231b27d787bf3a16`.
 - **Lo que cambia en los aparatos reales (vault)**: en la web, la llave vive en el iframe `vault.cavos.xyz`. Llamar a contratos o abrir trustlines queda "fuera del límite" sin importar el monto. Con la regla por defecto, "Ask the user", el vault muestra su propio aviso y la persona aprueba. Si en el panel de Cavos la regla es "Block it", la firma falla con `kit/vault: this app's policy does not allow this transaction`. Fuente: https://docs.cavos.xyz/docs/vault
   - **Revisar antes del sábado:** panel de Cavos → app → Approvals → "Over the limit" = *Ask the user*. Además, el origen de la vista previa tiene que estar en las "allowed web origins".
 - Plan B, solo si el vault falla el sábado: Freighter (extensión) para la demo, firmando la misma XDR con `signTransaction`. El proxy no cambia, porque solo exige que la transacción salga de la cuenta registrada del participante.
@@ -90,7 +90,7 @@ Las claves de la plataforma solo viven en el servidor.
 
 ## 5. Preparar a cada persona (dueño e inquilino)
 
-1. Entrar en la app y abrir "Tu cuenta para el depósito" → "Activar cuenta de prueba" (Friendbot, 10 000 XLM de prueba).
+1. Entrar en la app y abrir "Tu cuenta para el depósito" → "Activar cuenta de prueba" (la tesorería de la plataforma crea la cuenta con 5 XLM de prueba; antes era Friendbot).
 2. "Habilitar USDC de prueba" (trustline; el vault de Cavos pide confirmar). **Los dos lo necesitan**, porque TW lo valida.
 3. Solo el inquilino: abrir https://faucet.circle.com → Stellar Testnet → pegar su dirección G… (20 USDC cada 2 h).
 
@@ -183,7 +183,7 @@ Capturas: `/workspace/lockumi/capturas/tus-alquileres-preview-{movil,escritorio}
 
 ## 10. Paso 22: la corrida paga sola (`e2e-c.mjs --red`, 25/10/2026; publicado el mismo día, corrida cada hora)
 
-Modo nuevo de `scripts/e2e-c.mjs`: **`--red`** = base en memoria (PGlite con todas las migraciones, también `20261026000000`, aplicada en producción el 25/10 a las 11:28 p. m. CR) + **Trustless Work testnet de verdad**. Solo pide `TRUSTLESS_WORK_API_KEY` (testnet); la plataforma y la cuenta que resuelve disputas son cuentas desechables (Friendbot + trustline USDC), el dueño y el inquilino también, y el USDC sale del DEX de testnet (7 depósitos de 2 USDC). No toca Supabase de producción, no usa las llaves de la plataforma de producción y no manda correos reales (Resend simulado, solo al buzón de prueba).
+Modo nuevo de `scripts/e2e-c.mjs`: **`--red`** = base en memoria (PGlite con todas las migraciones, también `20261026000000`, aplicada en producción el 25/10 a las 11:28 p. m. CR) + **Trustless Work testnet de verdad**. Solo pide `TRUSTLESS_WORK_API_KEY` (testnet); la plataforma y la cuenta que resuelve disputas son cuentas desechables (creadas entonces con Friendbot, hoy por la tesorería; + trustline USDC), el dueño y el inquilino también, y el USDC sale del DEX de testnet (7 depósitos de 2 USDC). No toca Supabase de producción, no usa las llaves de la plataforma de producción y no manda correos reales (Resend simulado, solo al buzón de prueba).
 
 ```
 TRUSTLESS_WORK_API_KEY=… node scripts/e2e-c.mjs --red --salida /tmp/e2e22-red    # ~4 min

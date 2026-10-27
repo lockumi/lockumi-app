@@ -9,11 +9,11 @@
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
 import { repartoCentimos } from './centimos.js'
-import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, FRIENDBOT, USDC } from './red.js'
+import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, USDC } from './red.js'
 import { revisarPrueba } from './prueba-cavos.js'
 import { SIN_PRUEBA, type AccionPrueba, type Prueba } from './prueba-mensaje.js'
 export { SIN_PRUEBA }
-import { estadoCuenta, construirActivacion, validarActivacion, firmarYEnviarActivacion, ErrorActivacion } from './activacion.js'
+import { estadoCuenta, construirActivacion, validarActivacion, firmarYEnviarActivacion, crearCuentaDesdeTesoreria, ErrorActivacion } from './activacion.js'
 import { exigirRampTestnet, rampActivo, type DepsRamp } from './rampSimulado.js'
 
 export type Entorno = Record<string, string | undefined>
@@ -414,14 +414,11 @@ async function enviarHorizon(t: Transaction, f = fetch) {
   return j.hash
 }
 const tbH = (a: CuentaH) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
-/** LEGADO: la cuenta del servidor existe (Friendbot) y tiene la trustline de USDC para recibir. Nunca le pone USDC. */
-export async function prepararCuentaLegado(k: Keypair, f = fetch) {
-  const g = k.publicKey(); let a = await leerCuenta(g, f)
-  if (!a) {
-    const r = await f(`${FRIENDBOT}/?addr=${g}`)
-    if (!r.ok && !(r.status === 400 && /already|exist/i.test(await r.text().catch(() => '')))) throw new ErrorTw(502, 'Friendbot respondió ' + r.status)
-    a = await leerCuenta(g, f); exigir(!!a, 502, 'Friendbot no creó la cuenta.')
-  }
+/** LEGADO: la cuenta del servidor existe (la crea la tesorería, sin Friendbot) y tiene la trustline de USDC para recibir. Nunca le pone USDC. */
+export async function prepararCuentaLegado(k: Keypair, plataforma: Keypair, f = fetch) {
+  const g = k.publicKey()
+  try { await crearCuentaDesdeTesoreria(plataforma, g, f) } catch (x) { if (x instanceof ErrorActivacion) throw new ErrorTw(x.estado, x.message); throw x }
+  const a = await leerCuenta(g, f); exigir(!!a, 502, 'La tesorería no creó la cuenta.')
   if (usdcDe(a) !== null) return { trustline: null }
   const t = tbH(a!).addOperation(Operation.changeTrust({ asset: new Asset(USDC.code, USDC.issuer) })).setTimeout(60).build(); t.sign(k)
   return { trustline: await enviarHorizon(t, f) }
@@ -535,7 +532,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       exigir(k.estado === 'pendiente_pago', 409, 'El contrato no está esperando el depósito.')
       const legado = await exigirPrueba(c, k, uid, 'inquilino', 'pagar', p.prueba, f)
       exigirRampTestnet(e)
-      if (legado) await prepararCuentaLegado(legado, f)   // PR #54: la cuenta del servidor recibe la devolución (trustline)
+      if (legado) await prepararCuentaLegado(legado, c.plataforma, f)   // PR #54: la cuenta del servidor recibe la devolución (trustline)
       const ya = await fondeoAnterior(c, k.id, f)
       if (ya && k.escrow_contract_id) return { contractId: k.escrow_contract_id, tx: ya, yaExistia: true }
       exigir(!fondeando.has(k.id), 409, 'El depósito ya se está guardando. Vuelve a abrir el alquiler en un momento.')
@@ -559,7 +556,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       // Opción A: approver = Lockumi. Escrows de antes: la billetera Cavos del dueño (firma él) o su cuenta del servidor (legado).
       const aprobador = (await leerEscrowTw(c, k.escrow_contract_id!, f)).roles?.approver
       exigir(aprobador === P || aprobador === g, 409, TEXTO_REVISAR_PAGO)
-      if (aprobador === g && legado) { soloTestnet(e); await prepararCuentaLegado(legado, f) }   // tiene que existir para firmar
+      if (aprobador === g && legado) { soloTestnet(e); await prepararCuentaLegado(legado, c.plataforma, f) }   // tiene que existir para firmar
       const cambio = await tw(c, '/escrow/single-release/change-milestone-status', { contractId: k.escrow_contract_id, milestoneIndex: '0',
         newStatus: 'Completed', newEvidence: EVIDENCIA_ONCHAIN, serviceProvider: P }, f)
       const tx = firmarComoPlataforma(c, sinFirmar(cambio)); await enviar(c, tx, f)
@@ -617,7 +614,7 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       const legado = llaveLegado(c, uid, cuenta(k, rol!))
       exigir(!!legado, 409, 'Esta cuenta no la prepara el servidor.')
       soloTestnet(e); limitarPreparar(uid)
-      return { cuenta: legado!.publicKey(), ...(await prepararCuentaLegado(legado!, f)) }
+      return { cuenta: legado!.publicKey(), ...(await prepararCuentaLegado(legado!, c.plataforma, f)) }
     }
     case 'liberar': {     // tras cerrar sin reclamo: la plataforma (releaseSigner) libera el 100 % al inquilino (receiver)
       // «devuelto»: el dueño aprobó en C y el servidor cerró al instante (lk_cerrar_aprobado); es el reintento si la red falló.

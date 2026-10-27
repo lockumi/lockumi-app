@@ -5,9 +5,9 @@ import { store } from '../store'
 import { NOMBRE_PASO, ORDEN, esHash } from '../services/comprobantes'
 import type { Alquiler, PasoRed, Rol } from '../types'
 import { usd, fechaHora, Simulado } from '../ui'
-import { enlaceTx, enlaceCuenta, enlaceContrato, TOPE_USDC, MAX_XLM_COMPRA } from '../../api/_lib/red'
+import { enlaceTx, enlaceCuenta, enlaceContrato, TOPE_USDC } from '../../api/_lib/red'
 import { consultarUsdc, conectarBilletera, abreviar } from '../services/billetera'
-import { obtenerUsdc, depositar, reintentarDeposito, aprobar, liberar, huellaActa, usarPrueba, fijarUsarPrueba, cuentaInquilino, cotizar, maximoAGastar, type Txs } from '../services/solo'
+import { obtenerUsdc, depositar, reintentarDeposito, aprobar, liberar, huellaActa, usarPrueba, fijarUsarPrueba, cuentaInquilino, type Txs } from '../services/solo'
 
 export const DUENO_PRUEBA = 'Dueño de prueba (cuenta de Lockumi para la demo)'
 export const INQUILINO_PRUEBA = 'Inquilino de prueba (cuenta de Lockumi para la demo)'
@@ -44,18 +44,17 @@ export function InterruptorPrueba({ bloqueado = false }: { bloqueado?: boolean }
   </label>
 }
 
-/** Botón "Obtener USDC de prueba": XLM de prueba gratis si hace falta, habilitar USDC y comprar con un máximo a gastar. */
+/** Botón "Obtener USDC de prueba": la tesorería crea la cuenta si hace falta, se habilita USDC y la tesorería envía los USDC de prueba. */
 export function ObtenerUsdc({ objetivo, onListo }: { objetivo: number; onListo?: (r: { g: string; txs: Txs; saldo: string }) => void }) {
   const [saldo, setSaldo] = useState<string | null | undefined>(undefined); const [g, setG] = useState('')
   const [ocupado, setOcupado] = useState(false); const [avance, setAvance] = useState(''); const [err, setErr] = useState(''); const [txs, setTxs] = useState<Txs>({})
-  const [max, setMax] = useState<number | null>(null); const [prueba, setPrueba] = useState(usarPrueba())
+  const [prueba, setPrueba] = useState(usarPrueba())
   useEffect(() => { const f = () => setPrueba(usarPrueba()); addEventListener('lockumi-cuenta', f); return () => removeEventListener('lockumi-cuenta', f) }, [])
   const leer = useCallback(async () => {
     try { const c = await cuentaInquilino(); setG(c.g); setSaldo(c.g ? await consultarUsdc(c.g) : null); setErr('') }
     catch { setErr(prueba ? 'No pudimos preparar la cuenta de prueba. Vuelve a intentarlo en un minuto.' : 'No pudimos abrir tu billetera. Cierra sesión y vuelve a entrar en esta pestaña, o activa «Usar cuenta de prueba».') }
   }, [prueba])
   useEffect(() => { void leer() }, [leer])
-  useEffect(() => { cotizar(objetivo).then(p => setMax(maximoAGastar(p))).catch(() => setMax(null)) }, [objetivo])
   const tiene = Number(saldo ?? 0)
   const pedir = async () => {
     setOcupado(true); setErr('')
@@ -65,9 +64,9 @@ export function ObtenerUsdc({ objetivo, onListo }: { objetivo: number; onListo?:
   return <div className="pila obtener-usdc">
     <p className="saldo-usdc" role="status">{saldo === undefined && !g ? 'Consultando tu saldo…' : <>Tienes <strong>{usd(tiene)}</strong> de prueba{g && <> en {prueba ? 'la cuenta de prueba' : 'tu billetera'} ({abreviar(g)})</>}.</>}</p>
     {tiene < objetivo ? <>
-      <p className="nota">Necesitas {usd(objetivo)} de prueba. Al tocar el botón: {prueba ? <>Lockumi crea el <strong>{minuscula(INQUILINO_PRUEBA)}</strong>, le da XLM de prueba gratis, habilita USDC y le envía {usd(Math.round((objetivo - tiene) * 1e7) / 1e7)} de prueba desde su tesorería de prueba. Tarda unos 15 segundos.</> : <>
-        1) activamos tu cuenta con XLM de prueba gratis si hace falta, 2) habilitamos USDC en tu cuenta y 3) compramos {usd(Math.round((objetivo - tiene) * 1e7) / 1e7)} de prueba
-        con <strong>como máximo {max ?? MAX_XLM_COMPRA} XLM de prueba</strong>. Tu billetera te mostrará una ventana para confirmar: revisa y acepta. Nada de esto es dinero real.</>}</p>
+      <p className="nota">Necesitas {usd(objetivo)} de prueba. Al tocar el botón: {prueba ? <>Lockumi crea el <strong>{minuscula(INQUILINO_PRUEBA)}</strong>, le da XLM de prueba, habilita USDC y le envía {usd(Math.round((objetivo - tiene) * 1e7) / 1e7)} de prueba desde su tesorería de prueba. Tarda unos 15 segundos.</> : <>
+        1) Lockumi crea tu cuenta de prueba con XLM de prueba si hace falta, 2) habilitamos USDC en tu cuenta y 3) Lockumi te envía {usd(Math.round((objetivo - tiene) * 1e7) / 1e7)} de prueba
+        desde su tesorería de prueba. Tu billetera te mostrará una ventana para confirmar el paso 2: revisa y acepta. Nada de esto es dinero real.</>}</p>
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado} onClick={() => void pedir()}>{ocupado ? (avance || 'Un momento…') : 'Obtener USDC de prueba'}</button>
       {!prueba && <p className="nota">¿Prefieres otra vía? En <a className="enlace" href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">faucet.circle.com</a> eliges Stellar Testnet y pegas tu dirección (20 USDC cada 2 horas). Después vuelve aquí.</p>}
     </> : <p className="nota">Ya están los USDC de prueba que hacen falta.</p>}

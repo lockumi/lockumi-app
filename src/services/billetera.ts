@@ -1,13 +1,12 @@
-// Billetera Stellar testnet con Cavos (@cavos/kit) + lectura de saldo en Horizon y fondeo con Friendbot.
+// Billetera Stellar testnet con Cavos (@cavos/kit) + lectura de saldo en Horizon y creación de la cuenta por la tesorería de Lockumi.
 // Fuentes: https://docs.cavos.xyz/docs/stellar (Cavos.connect con chains ["stellar"], network "testnet")
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
-//          https://developers.stellar.org/docs/learn/fundamentals/networks#friendbot (fondeo de testnet)
+//          https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/accounts (createAccount, reserva)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
 import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
 import { mensajePrueba, type AccionPrueba, type Prueba } from '../../api/_lib/prueba-mensaje'
 
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
-export const FRIENDBOT = 'https://friendbot.stellar.org'
 export type EstadoBilletera = 'undeployed' | 'ready' | 'needs-device-approval'
 /** `llave`: la cuenta tiene una llave de acceso (passkey) guardada; solo se sabe al conectar con `{ llave: true }`. */
 export interface Billetera { direccion: string; estado: EstadoBilletera; llave?: boolean }
@@ -35,14 +34,11 @@ export async function consultarUsdc(g: string, f: Fetch = fetch): Promise<string
   return d.balances?.find(b => b.asset_code === 'USDC' && b.asset_issuer === 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5')?.balance ?? null
 }
 
-/** Pide a Friendbot que cree y fondee la cuenta en testnet (10 000 XLM de prueba). */
+/** Pide a Lockumi que cree la cuenta en testnet: la tesorería de prueba la crea con XLM de prueba (createAccount; no hay Friendbot).
+ *  Si la cuenta ya existe, no pasa nada. */
 export async function fondear(g: string, f: Fetch = fetch): Promise<void> {
-  const r = await f(`${FRIENDBOT}/?addr=${encodeURIComponent(g)}`)
-  if (r.ok) return
-  // Friendbot responde 400 si la cuenta ya existe: no es un error para el usuario.
-  const t = await r.text().catch(() => '')
-  if (r.status === 400 && /already|createAccountAlreadyExist|op_already_exists/i.test(t)) return
-  throw new Error('friendbot ' + r.status)
+  const r = await f('/api/solo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'crear-cuenta', cuenta: g }) })
+  if (!r.ok) throw new Error('crear-cuenta ' + r.status)
 }
 
 /** "10000.0000000" → "10 000 XLM" (hasta 2 decimales). */
@@ -133,10 +129,10 @@ let cartera: CarteraStellar | null = null
 export const USDC_TESTNET = { code: 'USDC', issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' }
 async function miCartera() { await conectarBilletera(); if (!cartera) throw new ErrorBilletera('sin-cartera', 'La billetera no está conectada.'); return cartera }
 export async function firmarXdr(xdr: string): Promise<string> { return (await miCartera()).signXdr(xdr) }
-/** Abre la trustline de USDC (la cuenta tiene que existir: Friendbot primero). Paga la comisión en XLM de la propia cuenta. */
+/** Abre la trustline de USDC (la cuenta tiene que existir: la crea la tesorería de Lockumi primero). Paga la comisión en XLM de la propia cuenta. */
 export async function abrirTrustlineUsdc(): Promise<string> {
   let w = await miCartera()
-  // El kit guarda el estado al conectar: si Friendbot creó la cuenta después, volvemos a conectar para que la vea "ready".
+  // El kit guarda el estado al conectar: si la tesorería creó la cuenta después, volvemos a conectar para que la vea "ready".
   if (w.status === 'undeployed') { olvidarBilletera(); w = await miCartera() }
   return w.addTrustline(USDC_TESTNET, { sponsored: false })
 }

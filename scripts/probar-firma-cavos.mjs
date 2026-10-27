@@ -6,9 +6,10 @@
 // Uso: node scripts/probar-firma-cavos.mjs
 import { CavosStellar } from '@cavos/kit/stellar'
 import { WebCryptoControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs' // misma clase que usa el kit (no se exporta)
+import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { Keypair, Networks, rpc, TransactionBuilder, Operation, Asset, Address, nativeToScVal, BASE_FEE, Horizon } from '@stellar/stellar-sdk'
 const RPC = new rpc.Server('https://soroban-testnet.stellar.org'); const HZ = new Horizon.Server('https://horizon-testnet.stellar.org')
-const fondear = async g => { const r = await fetch('https://friendbot.stellar.org/?addr=' + g); if (!r.ok && r.status !== 400) throw new Error('friendbot ' + r.status) }
+const fondear = g => crearCuenta(g, '100')   // la tesorería crea la cuenta (sin Friendbot; LOCKUMI_TW_PLATAFORMA_SECRET en el entorno)
 const control = await WebCryptoControlKey.create(); const G = control.publicAddress()
 const otra = Keypair.random()
 console.log('Cuenta Cavos (desechable):', G, '\nCuenta B (desechable):     ', otra.publicKey())

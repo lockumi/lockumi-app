@@ -5,6 +5,7 @@
 // Uso: node scripts/e2e-testnet-tw.mjs [monto=2]
 // Lee la llave de TRUSTLESS_WORK_API_KEY o de /workspace/lockumi/.secrets/trustless-testnet-api-key.txt, y la secreta de la
 // plataforma de LOCKUMI_TW_PLATAFORMA_SECRET o de /workspace/lockumi/.secrets/plataforma-testnet.json. No imprime ninguna de las dos.
+import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { readFileSync } from 'node:fs'
 import { CavosStellar, StellarAdapter } from '@cavos/kit/stellar'
 import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs' // mismas clases del kit (no exportadas)
@@ -46,7 +47,7 @@ const firmaPlataforma = x => { const t = TransactionBuilder.fromXDR(x, Networks.
 
 async function cuentaCavos(nombre) {
   const control = await WebCryptoControlKey.create(), G = control.publicAddress()
-  const r = await fetch('https://friendbot.stellar.org/?addr=' + G); if (!r.ok) throw new Error('friendbot ' + r.status)
+  await crearCuenta(G, '100')   // la tesorería crea la cuenta (sin Friendbot)
   const w = Object.assign(Object.create(CavosStellar.prototype), { address: G, control, adapter: new StellarAdapter({ network: 'stellar-testnet' }), statusValue: 'ready' })
   w.requireControl = w.requireReadyControl = () => control
   console.log(`· ${nombre} (Cavos desechable): ${G}`)

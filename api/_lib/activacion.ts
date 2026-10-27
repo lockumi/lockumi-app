@@ -62,3 +62,32 @@ export async function firmarYEnviarActivacion(plataforma: Keypair, t: Transactio
   if (!r.ok || !j.hash) throw new ErrorActivacion(502, 'Horizon rechazó la activación: ' + JSON.stringify(j.extras?.result_codes ?? r.status).slice(0, 160))
   return j.hash
 }
+
+// ── Cuentas del servidor / de prueba: las crea la tesorería (reemplaza a Friendbot, 26/10/2026) ──
+/** XLM de prueba con que la tesorería crea una cuenta que firma sus propias transacciones (reserva de la cuenta y de la línea de
+ *  USDC, más comisiones). Para la cuenta de una persona se usa la activación patrocinada de arriba (0 XLM propios). */
+export const XLM_CUENTA_PRUEBA = '5'
+const esperar = (ms: number) => new Promise(r => setTimeout(r, ms))
+/** La tesorería (plataforma) crea la cuenta `g` con `XLM_CUENTA_PRUEBA` XLM de prueba (createAccount). Si ya existe, no hace nada y
+ *  devuelve null; si no, devuelve el hash. Reintenta si otra transacción de la tesorería ganó la secuencia. Solo testnet. */
+export async function crearCuentaDesdeTesoreria(plataforma: Keypair, g: string, f: typeof fetch = fetch, horizon: string = HORIZON_TESTNET): Promise<string | null> {
+  if (!G.test(g)) throw new ErrorActivacion(400, 'Cuenta no válida.')
+  for (let i = 1; ; i++) {
+    const ya = await f(`${horizon}/accounts/${g}`)
+    if (ya.ok) return null
+    if (ya.status !== 404) throw new ErrorActivacion(502, 'Horizon respondió ' + ya.status)
+    const r = await f(`${horizon}/accounts/${plataforma.publicKey()}`)
+    if (!r.ok) throw new ErrorActivacion(r.status === 404 ? 503 : 502, 'Horizon respondió ' + r.status + ' al leer la cuenta de la plataforma')
+    const p = await r.json() as { sequence: string }
+    const t = new TransactionBuilder(new Account(plataforma.publicKey(), p.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
+      .addOperation(Operation.createAccount({ destination: g, startingBalance: XLM_CUENTA_PRUEBA })).setTimeout(60).build()
+    t.sign(plataforma)
+    const s = await f(`${horizon}/transactions`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'tx=' + encodeURIComponent(t.toXDR()) })
+    const j = await s.json().catch(() => ({})) as { hash?: string; extras?: { result_codes?: unknown } }
+    if (s.ok && j.hash) return j.hash
+    const codigos = JSON.stringify(j.extras?.result_codes ?? s.status)
+    if (/op_already_exists/.test(codigos)) return null
+    if (i < 4 && /bad_?seq/i.test(codigos)) { await esperar(300 * i); continue }
+    throw new ErrorActivacion(502, 'Horizon rechazó la creación de la cuenta: ' + codigos.slice(0, 160))
+  }
+}

@@ -17,7 +17,7 @@ Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20
 ## Firma del servidor (alquileres nuevos de dos personas)
 - Cavos sirve solo para entrar. Para firmar, cada cuenta tiene **su propia cuenta de testnet**, derivada en el servidor
   (HMAC-SHA256 con el id de la cuenta y la etiqueta `ETIQUETA_FIRMA_SERVIDOR`; distinta de las llaves de la demo de una persona).
-  Friendbot la fondea y se le agrega la línea de confianza de USDC si falta. La llave **nunca sale del servidor**.
+  La tesorería de la plataforma la crea (`createAccount` con 5 XLM de prueba, `crearCuentaDesdeTesoreria`; sin Friendbot) y se le agrega la línea de confianza de USDC si falta. La llave **nunca sale del servidor**.
 - `/api/tw`: `mi-cuenta` devuelve solo la dirección pública; `preparar-cuenta` (máximo 12 por hora y por cuenta) la deja lista;
   `fondear` (inquilino) y `aprobar` (dueño) firman y envían en el servidor si la cuenta del alquiler es la derivada de la sesión.
   Se exige la sesión y que la persona sea participante con ese rol.

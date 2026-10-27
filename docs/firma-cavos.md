@@ -35,7 +35,7 @@ Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de
 ## Activar la cuenta como Meteorito (sin Friendbot) · `api/_lib/activacion.ts`
 Decisión de Katherine (26/10, 9:13 p. m.): idéntico a Meteorito. Antes de pagar (y el dueño, al reclamar), la **plataforma crea la cuenta con
 0 XLM y paga las reservas como patrocinador; la persona firma con Cavos la línea de confianza de USDC** (acción `activar-cuenta` de `/api/tw`,
-prueba de Cavos incluida). Ya no hay Friendbot ni compra de USDC con XLM propio en dos personas. Detalle: [fondeo-testnet.md](fondeo-testnet.md).
+prueba de Cavos incluida). Ya no hay Friendbot en ninguna parte del repo ni compra de USDC con XLM propio por la persona. Detalle: [fondeo-testnet.md](fondeo-testnet.md).
 Las cuentas viejas con llave perdida se **abandonan** (sin «cuenta nueva» ni `appSalt` nuevo): la passkey obligatoria vale para todos.
 
 ## SIMULACIÓN TESTNET: el ramp

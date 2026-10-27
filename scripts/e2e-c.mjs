@@ -25,6 +25,7 @@
 //   node scripts/e2e-c.mjs --limpiar --real      Borra los datos de prueba marcados («E2E-C …») del destino.
 // Salida: <DIR>/estado.json (ids, hashes, enlaces) e informe.md. Los datos de prueba llevan la marca «E2E-C <corrida>» en la dirección
 // y correos @lockumi.test. Cada corrida crea alquileres nuevos: nunca reintenta un pago ya hecho (y «repartir» es idempotente).
+import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { createServer } from 'vite'
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, chmodSync } from 'node:fs'
 import { randomUUID, randomBytes, createHash } from 'node:crypto'
@@ -176,14 +177,14 @@ function twFalso(c, red = false) {
   }
 }
 
-// ── Cuentas Stellar desechables (solo --real): Friendbot, trustline de USDC y USDC comprado en el DEX de testnet ──
+// ── Cuentas Stellar desechables (solo --real): creada por la tesorería, trustline de USDC y USDC comprado en el DEX de testnet ──
 const USDC = new Asset('USDC', 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'), HZ = new Horizon.Server('https://horizon-testnet.stellar.org')
 async function cuentaStellar(usdc) {
   const kp = Keypair.random(); if (!RED) return kp
-  const fb = await fetch('https://friendbot.stellar.org/?addr=' + kp.publicKey()); if (!fb.ok) throw new Error('Friendbot ' + fb.status)
+  await crearCuenta(kp.publicKey(), usdc ? '150' : '20')   // la tesorería crea la cuenta (sin Friendbot)
   const yo = await HZ.loadAccount(kp.publicKey())
   const t = new TransactionBuilder(yo, { fee: String(Number(BASE_FEE) * 10), networkPassphrase: Networks.TESTNET }).addOperation(Operation.changeTrust({ asset: USDC }))
-  if (usdc) t.addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: '9000', destination: kp.publicKey(), destAsset: USDC, destAmount: String(usdc), path: [] }))
+  if (usdc) t.addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: '140', destination: kp.publicKey(), destAsset: USDC, destAmount: String(usdc), path: [] }))
   const tx = t.setTimeout(120).build(); tx.sign(kp); await HZ.submitTransaction(tx); return kp
 }
 const firmar = (kp, xdr) => { const t = TransactionBuilder.fromXDR(xdr, Networks.TESTNET); t.sign(kp); return t.toXDR() }
@@ -196,7 +197,7 @@ const D = REAL ? await destinoReal() : await destinoSimulado()
 if (LIMPIAR) { log('Borrados', await D.limpiar(), 'alquileres marcados E2E-C en', D.nombre); await vite.close(); process.exit(0) }
 if (REAL) { const falta = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TRUSTLESS_WORK_API_KEY', 'LOCKUMI_TW_PLATAFORMA_SECRET', 'LOCKUMI_TW_MEDIADOR_PUBLICA', 'LOCKUMI_TW_MEDIADOR_SECRET'].filter(k => !env[k]); if (CORREOS && !env.RESEND_API_KEY) falta.push('RESEND_API_KEY'); if (falta.length) { log('Faltan variables:', falta.join(', ')); process.exit(2) } }
 else if (RED) {   // paso 22 · --red: base en memoria (PGlite, con la migración nueva) y Trustless Work de testnet DE VERDAD. Solo pide
-  // TRUSTLESS_WORK_API_KEY; la plataforma y la cuenta que resuelve disputas son cuentas desechables de testnet (Friendbot + trustline USDC).
+  // TRUSTLESS_WORK_API_KEY; la plataforma y la cuenta que resuelve disputas son cuentas desechables de testnet (creadas por la tesorería + trustline USDC).
   if (!env.TRUSTLESS_WORK_API_KEY) { log('Falta TRUSTLESS_WORK_API_KEY (testnet) para --red.'); process.exit(2) }
   const [P, M] = await Promise.all([cuentaStellar(0), cuentaStellar(0)])
   Object.assign(env, { LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(), LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://simulado.supabase.co', SUPABASE_ANON_KEY: 'sim', SUPABASE_SERVICE_ROLE_KEY: 'sim', RESEND_API_KEY: 'sim' })
