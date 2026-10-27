@@ -63,7 +63,7 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
     const guardado = llamadas.find(l => l.metodo === 'PATCH' && l.cuerpo?.liquidacion_tx === x.tx); expect(guardado).toBeTruthy()
     const ev = llamadas.filter(l => l.url.endsWith('/rest/v1/lk_eventos') && l.metodo === 'POST').map(l => String(l.cuerpo!.texto))
     expect(ev).toContain(REPARTO_DISPUTA)
-    expect(ev.some(t => /30,00 USDC de prueba al dueño y 70,00 USDC de prueba al inquilino.*0,3 %/.test(t))).toBe(true)
+    expect(ev.some(t => /29,91 USDC de prueba al dueño y 69,79 USDC de prueba al inquilino.*0,3 %/.test(t))).toBe(true)
     expect(JSON.stringify(x)).not.toContain(M.secret())
   })
   it('acuerdo (el inquilino aceptó el reclamo): mismo flujo con su reparto', async () => {

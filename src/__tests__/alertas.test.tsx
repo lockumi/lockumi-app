@@ -156,7 +156,7 @@ describe('aviso v2: textos aprobados por Legal (23/10) y montos del reparto real
       expect(a.linea).toEqual({ texto: `${usd(dueno)} al dueño y ${usd(inquilino)} al inquilino` })
     }
     const src = leer('../alertas.ts')
-    expect(src).toContain(': `${usd(r.inquilino)} volvieron al inquilino` }'); expect(src).toContain('linea: { texto: `${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }')
+    expect(src).toContain(': `${usdExacto(r.inquilino)} volvieron al inquilino` }'); expect(src).toContain('linea: { texto: `${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino` }')
     expect(src).not.toMatch(/linea: \{[^}]*\b\d+ USDC/)
   })
   it('error de red: «No se pudo completar» con el texto A12 sin cambios (el mismo de services/escrow.ts); sin acción', () => {
@@ -327,7 +327,7 @@ describe('líneas cortas del aviso v2 (Legal, 24/10)', () => {
     expect(al.MEDIACION_LARGO).toBe('Una persona mediadora revisa las fotos y les ayuda a buscar un acuerdo sobre el reparto del depósito.')
     const m = al.alertaPorCambio({ ...base, estado: 'reclamo' } as never, { ...base, estado: 'mediacion' } as never, 'inquilino', LOCAL)!
     expect(m.sigue).toBe(al.MEDIACION_LARGO); expect([m.sigue, al.lineaDe(m).texto].join(' ')).not.toMatch(/decide/)
-    const src = leer('../alertas.ts'); expect(src).not.toContain('Reparto decidido'); expect(src).toContain('${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino')
+    const src = leer('../alertas.ts'); expect(src).not.toContain('Reparto decidido'); expect(src).toContain('${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino')
     expect(src.match(/LEGAL: revisado \(24\/10\)/g)!.length).toBeGreaterThanOrEqual(8)
   })
   it('tarjeta de Inicio: «Pagar el depósito · Luego, fotos de entrada» (sin «Depósito protegido»)', () => {

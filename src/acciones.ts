@@ -5,7 +5,7 @@ import { escrow, type Guardar, type Avance } from './services/escrow'
 import { NOMBRE_PASO, ORDEN, esHash } from './services/comprobantes'
 import { unaVez } from './services/pasos'
 import { firmar as firmarLocal, ambos, NOMBRE, plazoMs, textoPlazo } from './flujo'
-import { usd } from './ui'
+import { usd, usdExacto } from './ui'
 import type { Alquiler, Foto, Rol, Rubro, RespuestaRubro } from './types'
 import { modoServidor, modoSolo, modoDe, dosPersonas } from './servidor/config'
 import { trustless } from './services/trustless'
@@ -118,7 +118,7 @@ const local: Acciones = {
       if (x.estado !== 'reclamo' || !x.reclamo) return
       const r = await escrow.resolver(x, x.reclamo.monto, guardarEn(a.id), avance)
       store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.reclamo!.respuesta = 'aceptado'; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
-        y.historial.push({ fecha: iso(y), texto: `El inquilino aceptó el reclamo: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+        y.historial.push({ fecha: iso(y), texto: `El inquilino aceptó el reclamo: ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
     })
     : paso(a, 'rechazo', async x => {
       if (x.estado !== 'reclamo') return
@@ -131,7 +131,7 @@ const local: Acciones = {
     store.cambiar(a.id, y => {
       if (y.estado !== 'ventana_reclamo' || y.reclamo) return
       y.estado = 'cerrado'; y.resultado = { inquilino: r.inquilino, dueno: 0, via: 'automatico', fecha: iso(y) }
-      y.historial.push({ fecha: iso(y), texto: `Sin reclamos en ${textoPlazo(y)}: ${usd(r.inquilino)} devueltos al inquilino` })
+      y.historial.push({ fecha: iso(y), texto: `Sin reclamos en ${textoPlazo(y)}: ${usdExacto(r.inquilino)} devueltos al inquilino` })
     })
   }),
   // Prueba completa (B.4): «Todo bien, devolver» después de la confirmación. Devuelve todo ya; después no se puede reclamar en la app.
@@ -142,7 +142,7 @@ const local: Acciones = {
       if (y.estado !== 'ventana_reclamo' || y.reclamo) return
       y.estado = 'cerrado'; y.resultado = { inquilino: r.inquilino, dueno: 0, via: 'devuelto', fecha: iso(y) }
       // LEGAL: revisado (25/10, lista de Legal) · historial
-      y.historial.push({ fecha: iso(y), texto: `El dueño tocó «Todo bien, devolver»: ${usd(r.inquilino)} devueltos al inquilino` })
+      y.historial.push({ fecha: iso(y), texto: `El dueño tocó «Todo bien, devolver»: ${usdExacto(r.inquilino)} devueltos al inquilino` })
     })
   }),
   // Prueba completa · reclamo por rubros: primero la disputa en la cuenta segura, después cambia la pantalla.
@@ -157,7 +157,7 @@ const local: Acciones = {
     if (responderLocal(prueba, resp, ahoraDe(x)) === 'propuesta') { store.cambiar(a.id, y => { if (y.estado === 'reclamo' && !y.reclamo!.respuestas) responderLocal(y, resp, ahoraDe(y)) }); return }
     const r = await escrow.resolver(x, x.reclamo.monto, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; responderLocal(y, resp, ahoraDe(y)); y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
-      y.historial.push({ fecha: iso(y), texto: `El inquilino aceptó el reclamo: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      y.historial.push({ fecha: iso(y), texto: `El inquilino aceptó el reclamo: ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
   }),
   votarPropuesta: (a, rol, si, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'reclamo' || !x.reclamo?.propuesta || x.reclamo.propuesta[rol]) return
@@ -170,7 +170,7 @@ const local: Acciones = {
     const r = await escrow.resolver(x, x.reclamo.propuesta.alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; votarLocal(y, rol, si, ahoraDe(y)); y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'acuerdo', fecha: iso(y) }
       // LEGAL: revisado (25/10, lista de Legal) · historial
-      y.historial.push({ fecha: iso(y), texto: `Los dos aceptaron la propuesta automática: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      y.historial.push({ fecha: iso(y), texto: `Los dos aceptaron la propuesta automática: ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
   }),
   aplicarSilencio: (a, avance = nada) => paso(a, 'reparto', async x => {
     const s = silencio(x, ahoraDe(x)); if (!s) return
@@ -182,7 +182,7 @@ const local: Acciones = {
     const r = await escrow.resolver(x, s.alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'reclamo') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'propuesta', fecha: iso(y) }
       // LEGAL: revisado (25/10, lista de Legal) · historial
-      y.historial.push({ fecha: iso(y), texto: `Se aplicó la propuesta automática (Regla 6.5.1): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      y.historial.push({ fecha: iso(y), texto: `Se aplicó la propuesta automática (Regla 6.5.1): ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
   }),
   resolverSimulacion: (a, alDueno, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'mediacion') return
@@ -190,14 +190,14 @@ const local: Acciones = {
     const r = await escrow.resolver(x, alDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'mediacion') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'simulacion', fecha: iso(y) }
       // LEGAL: revisado (24/10, v4) · B.14 (título del aviso del resultado)
-      y.historial.push({ fecha: iso(y), texto: `Reclamo resuelto (simulación): ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      y.historial.push({ fecha: iso(y), texto: `Reclamo resuelto (simulación): ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
   }),
   decidir: (a, aDueno, _motivo, avance = nada) => paso(a, 'reparto', async x => {
     if (x.estado !== 'mediacion') return
     const r = await escrow.resolver(x, aDueno, guardarEn(a.id), avance)
     store.cambiar(a.id, y => { if (y.estado !== 'mediacion') return; y.estado = 'cerrado'; y.resultado = { dueno: r.dueno, inquilino: r.inquilino, via: 'mediacion', fecha: iso(y) }
       // LEGAL: revisado (24/10) · mismo texto que el evento del servidor, sin «decidió»
-      y.historial.push({ fecha: iso(y), texto: `Acuerdo registrado: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` }) })
+      y.historial.push({ fecha: iso(y), texto: `Acuerdo registrado: ${usdExacto(r.dueno)} al dueño y ${usdExacto(r.inquilino)} al inquilino` }) })
   }),
 }
 

@@ -7,7 +7,7 @@ import type { Alquiler, Foto, Rol } from '../types'
 import { MOTIVOS, propuesta, referencia } from './propuesta'
 import { nombreRubro } from './reclamos'
 import { leerAceptacion } from '../legal/aceptacion'
-import { esDosPersonas, EXPEDIENTE_REGLA_DOS } from './dosPersonas'
+import { esDosPersonas, EXPEDIENTE_REGLA_DOS, llegaPrueba, llegadas } from './dosPersonas'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 
 // LEGAL: revisado (25/10, lista de Legal) · B.11
@@ -59,7 +59,7 @@ export function contenidoExpediente(a: Alquiler, ahora: number, ac: Aceptaciones
     { titulo: 'Fotos de salida', lineas: sal.lineas, fotos: sal.fotos },
     { titulo: 'Reclamo del dueño', lineas: rec.lineas, fotos: rec.fotos },
     { titulo: 'Propuesta y cálculo', lineas: [...p.filas.map((f, i) => `${i + 1}. Reclamado ${usdc(f.reclamado)} · propuesto ${usdc(f.propuesto)}${f.razones.length ? ' · ' + f.razones.map(z => z.replace(/\.$/, '')).join('; ') : ''}`), `Total propuesto al dueño: ${usdc(p.total)}`] },
-    { titulo: 'Resultado', lineas: a.resultado ? [`${VIA[a.resultado.via] ?? a.resultado.via} · ${cr(a.resultado.fecha)}`, `Dueño: ${usdc(a.resultado.dueno)}`, `Inquilino: ${usdc(a.resultado.inquilino)}`,
+    { titulo: 'Resultado', lineas: a.resultado ? [`${VIA[a.resultado.via] ?? a.resultado.via} · ${cr(a.resultado.fecha)}`, `Dueño: ${llegaPrueba(llegadas(a, a.resultado).dueno)}`, `Inquilino: ${llegaPrueba(llegadas(a, a.resultado).inquilino)}`,
       ...(a.resultado.via === 'simulacion' ? [NOTA_SIMULACION] : [])] : ['Sin resultado todavía'] },
     { titulo: 'Aceptaciones', lineas: [
       esDosPersonas(a) ? EXPEDIENTE_REGLA_DOS : a.regla ? `Regla de propuesta automática: ${a.regla.acepta ? 'sí' : 'no'} · Términos ${a.regla.version} · ${cr(a.regla.fecha)}` : 'Regla de propuesta automática: sin registro',
