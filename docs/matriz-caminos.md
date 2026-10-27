@@ -101,3 +101,6 @@ H. **Reputación en dos aparatos (27/10):** «Nuevo en Lockumi · 0 alquileres c
    nunca está ahí. Ahora, con servidor, lo dice `lk_reputacion_de_mis_alquileres()` (migración `20261027140000`). Detalle en `docs/reputacion.md`.
 I. **Propuesta de texto (no cambiado):** tras una decisión de la persona mediadora el alquiler muestra «Depósito devuelto · Lo aceptaron las
    dos partes». Puede ser inexacto (hubo reparto con mediación). Queda para Legal y Katherine; no se cambió ningún texto.
+J. **Control de la mediadora (fase B, 27/10, `5413ba1a`):** las dos partes aceptaron 3 de un reclamo de 4 y la mediadora no podía
+   registrar 3: en dos personas `escrowReal` es falso y el control tenía paso 10, así que solo quedaba la mitad (2). Ahora el paso es 0,01
+   con dinero de prueba (red o servidor), igual que el control de cada parte (`pasoReparto.ts`, prueba `paso-reparto-mediadora`). Sin cambios de textos ni diseño.

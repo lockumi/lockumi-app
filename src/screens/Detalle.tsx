@@ -41,6 +41,7 @@ import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 import { MasOpciones } from '../prueba/Eliminar'
 import { modoPrueba as redDePrueba } from '../servidor/config'
 import { ConSesion, ErrorPago } from './Firmante'
+import { pasoRepartoMediadora } from './pasoReparto'
 import { esTextoNoFirmante } from '../services/billetera'
 import { esTextoSinSesion } from '../services/firmante'
 
@@ -287,7 +288,7 @@ function Mediacion({ a, rol }: P) {
       {p.error}</div>}
     {mediador && (!panel ? <button type="button" className={modoVideo ? 'boton boton--primario boton--ancho boton--grande' : 'enlace'} onClick={() => setPanel(true)}>{modoServidor ? 'Registrar el acuerdo' : modoVideo ? 'Resolver el reclamo (simulación)' : 'Demo: registrar el acuerdo'}</button>
       : <div className="mediador pila"><label className="campo"><span>Para el dueño: {usd(aDueno)} · para el inquilino: {usd(a.monto - aDueno)}</span>
-          <input type="range" min={0} max={r.monto} step={escrowReal ? 0.01 : 10} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
+          <input type="range" min={0} max={r.monto} step={pasoRepartoMediadora({ escrowReal, servidor: modoServidor })} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
         {p.error}
         <button type="button" className="boton boton--primario boton--ancho" disabled={p.ocupado} onClick={() => void decidir()}>{p.texto(modoVideo ? 'Confirmar el reparto' : 'Registrar el acuerdo')}</button>
         {escrowReal && p.ocupado && NOTA_TIEMPO}</div>)}
