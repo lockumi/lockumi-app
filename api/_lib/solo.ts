@@ -6,8 +6,9 @@
 // Las llaves solo existen aquí (se derivan en memoria de variables del servidor); el navegador solo recibe claves públicas y hashes.
 // Sin estado propio: cada acción se valida contra el escrow que reporta Trustless Work con validateOnChain=true.
 import { Keypair, Networks, TransactionBuilder, Operation, Asset, Address, Account, xdr, hash, type Transaction } from '@stellar/stellar-sdk'
+import { crearCuentaDesdeTesoreria, ErrorActivacion } from './activacion.js'
 import { ErrorTw, leerTx, hashTx, datosOnChain, sinDatosPersonales, EVIDENCIA_ONCHAIN } from './tw.js'
-import { PASSPHRASE_TESTNET, HORIZON_TESTNET, FRIENDBOT, TW_TESTNET, USDC, TOPE_USDC, MONTO_MAX_USDC, adelantoPermitido, MAX_XLM_COMPRA, montoValido, mensajeSaldoAlPagar, mensajeSaldoVersionVieja, MENSAJE_RECARGA, exigirTestnet } from './red.js'
+import { PASSPHRASE_TESTNET, HORIZON_TESTNET, TW_TESTNET, USDC, TOPE_USDC, MONTO_MAX_USDC, adelantoPermitido, montoValido, mensajeSaldoAlPagar, mensajeSaldoVersionVieja, MENSAJE_RECARGA, exigirTestnet } from './red.js'
 
 export type Entorno = Record<string, string | undefined>
 const G = /^G[A-Z2-7]{55}$/, C = /^C[A-Z2-7]{55}$/, UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, TOKEN = /^[0-9a-f]{64}$/, HUELLA = /^[0-9a-f]{64}$/
@@ -72,7 +73,7 @@ export function exigirAutorizado(c: ConfigSolo, e: Escrow, p: { permiso?: unknow
 // Límite conocido: vive en la memoria de cada instancia de la función de Vercel; se reinicia en cada arranque en frío y no se
 // comparte entre instancias. Frena el abuso casual, no un ataque distribuido (para eso haría falta un almacén compartido).
 const LIMITES = { general: { n: 60, ventanaMs: 10 * 60_000 }, costosa: { n: 12, ventanaMs: 60 * 60_000 } } as const
-const COSTOSAS = new Set(['desplegar', 'cuenta-prueba', 'fondear-prueba'])
+const COSTOSAS = new Set(['desplegar', 'cuenta-prueba', 'fondear-prueba', 'crear-cuenta', 'usdc-cuenta'])
 const visitas = new Map<string, number[]>()
 export function limitar(ip: string, accion: string, ahora = Date.now()) {
   for (const [tipo, l] of Object.entries(LIMITES) as [keyof typeof LIMITES, { n: number; ventanaMs: number }][]) {
@@ -176,7 +177,7 @@ function firmarComo(k: Keypair, x: string, contrato: string | null, metodos: str
   t.sign(k); return t.toXDR()
 }
 
-// ── Horizon / Friendbot (cuentas de prueba del servidor) ──
+// ── Horizon (cuentas de prueba del servidor; las crea la tesorería, sin Friendbot) ──
 type Cuenta = { id: string; sequence: string; balances: { asset_type: string; asset_code?: string; asset_issuer?: string; balance: string }[] }
 async function cuenta(c: ConfigSolo, g: string, f: typeof fetch): Promise<Cuenta | null> {
   const r = await f(`${c.horizon}/accounts/${g}`); if (r.status === 404) return null
@@ -184,10 +185,10 @@ async function cuenta(c: ConfigSolo, g: string, f: typeof fetch): Promise<Cuenta
   return r.json() as Promise<Cuenta>
 }
 const usdcDe = (a: Cuenta | null) => a?.balances.find(b => b.asset_code === USDC.code && b.asset_issuer === USDC.issuer)?.balance ?? null
-async function friendbot(g: string, f: typeof fetch) {
-  const r = await f(`${FRIENDBOT}/?addr=${g}`)
-  if (!r.ok && !(r.status === 400 && /already|exist/i.test(await r.text()))) throw new ErrorTw(502, 'Friendbot (XLM de prueba gratis) no respondió. Intenta de nuevo en un minuto.')
-}
+/** La tesorería (plataforma) crea la cuenta con XLM de prueba (createAccount); en fila para no pisar su propia secuencia. */
+const crearDesdeTesoreria = (c: ConfigSolo, g: string, f: typeof fetch) => enFila(c.P, async () => {
+  try { return await crearCuentaDesdeTesoreria(c.plataforma, g, f, c.horizon) } catch (e) { if (e instanceof ErrorActivacion) throw new ErrorTw(e.estado === 400 ? 400 : 502, e.message); throw e }
+})
 async function enviarHorizon(c: ConfigSolo, t: Transaction, f: typeof fetch) {
   const r = await f(`${c.horizon}/transactions`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'tx=' + encodeURIComponent(t.toXDR()) })
   const j = await r.json().catch(() => ({})) as { hash?: string; extras?: { result_codes?: unknown } }
@@ -195,10 +196,10 @@ async function enviarHorizon(c: ConfigSolo, t: Transaction, f: typeof fetch) {
   return j.hash
 }
 const tb = (a: Cuenta) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
-/** Crea la cuenta (Friendbot) y abre la trustline de USDC si faltan. Devuelve el hash de la trustline si la abrió. */
+/** Crea la cuenta (la tesorería) y abre la trustline de USDC si faltan. Devuelve el hash de la trustline si la abrió. */
 async function prepararCuenta(c: ConfigSolo, k: Keypair, f: typeof fetch) {
   let a = await cuenta(c, k.publicKey(), f)
-  if (!a) { await friendbot(k.publicKey(), f); a = await cuenta(c, k.publicKey(), f) }
+  if (!a) { await crearDesdeTesoreria(c, k.publicKey(), f); a = await cuenta(c, k.publicKey(), f) }
   exigir(a, 502, 'No pudimos activar la cuenta de prueba. Intenta de nuevo en un minuto.')
   if (usdcDe(a) !== null) return { a: a!, trustline: null as string | null }
   const trustline = await conReintento(() => enFila(k.publicKey(), async () => {
@@ -218,29 +219,30 @@ const pagarDesdeTesoreria = (c: ConfigSolo, destino: string, monto: number, f: t
 const firmarYEnviar = (c: ConfigSolo, k: Keypair, ruta: string, cuerpo: unknown, escrow: string, metodos: string[], f: typeof fetch) =>
   conReintento(() => enFila(k.publicKey(), async () => (await enviarTw(c, firmarComo(k, sinFirmar(await tw(c, ruta, cuerpo, f)), escrow, metodos), f)).tx))
 
-/** Cuenta de prueba de Lockumi: la activa (Friendbot + trustline) y la completa hasta `objetivo` USDC de prueba (nunca más del tope de 20).
- *  Primero desde la tesorería (plataforma); si a la tesorería no le alcanza, la cuenta compra en el DEX de testnet con su XLM de Friendbot. */
-async function completarPrueba(c: ConfigSolo, k: Keypair, objetivo: number, f: typeof fetch) {
-  const { trustline } = await prepararCuenta(c, k, f)
-  const a = (await cuenta(c, k.publicKey(), f))!
-  const falta = Math.round((objetivo - Number(usdcDe(a) ?? 0)) * 1e7) / 1e7; let compra: string | null = null, via: 'tesoreria' | 'dex' | null = null
+/** Completa hasta `objetivo` USDC de prueba (nunca más del tope de 20) una cuenta que ya tiene la línea de USDC: la tesorería
+ *  (plataforma) envía lo que falta. Sin Friendbot ni compra en el DEX: si a la tesorería no le alcanza, se avisa (503). */
+async function completarDesdeTesoreria(c: ConfigSolo, g: string, objetivo: number, f: typeof fetch) {
+  const a = (await cuenta(c, g, f))!
+  const falta = Math.round((objetivo - Number(usdcDe(a) ?? 0)) * 1e7) / 1e7; let compra: string | null = null
   if (falta > 0) {
     const tes = await cuenta(c, c.P, f)
-    if (Number(usdcDe(tes) ?? 0) >= falta) {   // tesorería: la plataforma envía el USDC de prueba que falta
-      compra = await pagarDesdeTesoreria(c, k.publicKey(), falta, f); via = 'tesoreria'
-    } else {                                    // respaldo: la cuenta de prueba compra en el DEX de testnet con su XLM de Friendbot
-      const t = tb(a).addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: String(MAX_XLM_COMPRA), destination: k.publicKey(),
-        destAsset: new Asset(USDC.code, USDC.issuer), destAmount: falta.toFixed(7), path: [] })).setTimeout(60).build(); t.sign(k)
-      compra = await enviarHorizon(c, t, f); via = 'dex'
-    }
+    exigir(Number(usdcDe(tes) ?? 0) >= falta, 503, MENSAJE_RECARGA)
+    compra = await pagarDesdeTesoreria(c, g, falta, f)   // la plataforma envía el USDC de prueba que falta
   }
-  return { trustline, compra, via, usdc: usdcDe(await cuenta(c, k.publicKey(), f)) }
+  return { compra, via: compra ? 'tesoreria' as const : null, usdc: usdcDe(await cuenta(c, g, f)) }
+}
+/** Cuenta de prueba de Lockumi: la crea la tesorería, abre la línea de USDC y se completa hasta `objetivo` desde la tesorería. */
+async function completarPrueba(c: ConfigSolo, k: Keypair, objetivo: number, f: typeof fetch) {
+  const { trustline } = await prepararCuenta(c, k, f)
+  return { trustline, ...(await completarDesdeTesoreria(c, k.publicKey(), objetivo, f)) }
 }
 
 // ── Acciones permitidas ──
 export type PedidoSolo =
   | { accion: 'dueno'; contrato: string }
   | { accion: 'cuenta-prueba'; token: string; monto?: number }
+  | { accion: 'crear-cuenta'; cuenta: string }
+  | { accion: 'usdc-cuenta'; cuenta: string; monto: number }
   // origen: 'lockumi' (USDC de prueba de Lockumi, con el token de la cuenta de prueba) o 'propia'. Sin origen = pestaña con una versión vieja de la app.
   | { accion: 'desplegar'; contrato: string; inquilino: string; monto: number; origen?: 'lockumi' | 'propia'; token?: string }
   | { accion: 'fondear'; escrow: string; inquilino: string }
@@ -250,7 +252,7 @@ export type PedidoSolo =
   | { accion: 'liberar'; escrow: string }
   | { accion: 'disputar'; escrow: string; permiso?: string; token?: string }
   | { accion: 'resolver'; escrow: string; alDueno: number; reclamado: number; permiso?: string; token?: string }
-export const ACCIONES = ['dueno', 'cuenta-prueba', 'desplegar', 'fondear', 'enviar-deposito', 'fondear-prueba', 'aprobar', 'liberar', 'disputar', 'resolver'] as const
+export const ACCIONES = ['dueno', 'cuenta-prueba', 'crear-cuenta', 'usdc-cuenta', 'desplegar', 'fondear', 'enviar-deposito', 'fondear-prueba', 'aprobar', 'liberar', 'disputar', 'resolver'] as const
 
 const espera = (ms: number) => new Promise(r => setTimeout(r, ms))
 /** Número de secuencia viejo (tx_bad_seq / txBadSeq): otra transacción de la misma cuenta entró antes. */
@@ -277,17 +279,31 @@ export async function atenderSolo(env: Entorno, p: PedidoSolo, ip: string, f: ty
   const c = configSolo(env)
   limitar(ip, p.accion)
   switch (p.accion) {
-    case 'dueno': {   // cuenta del dueño de prueba: Friendbot + trustline de USDC (TW exige que el approver tenga trustline)
+    case 'dueno': {   // cuenta del dueño de prueba: la crea la tesorería + trustline de USDC (TW exige que el approver tenga trustline)
       exigir(UUID.test(p.contrato), 400, 'Contrato inválido.')
       const k = duenoDe(c, p.contrato); const { trustline } = await prepararCuenta(c, k, f)
       return { dueno: k.publicKey(), trustlineTx: trustline }
     }
-    case 'cuenta-prueba': {   // inquilino de prueba custodiado por el servidor: Friendbot + trustline + USDC desde la tesorería (plataforma)
+    case 'cuenta-prueba': {   // inquilino de prueba custodiado por el servidor: la crea la tesorería + trustline + USDC desde la tesorería (plataforma)
       exigir(TOKEN.test(p.token), 400, 'Falta el identificador de la cuenta de prueba.')
       const objetivo = p.monto === undefined ? TOPE_USDC : p.monto
       exigir(montoValido(objetivo, TOPE_USDC), 400, `Puedes pedir hasta ${TOPE_USDC} USDC de prueba.`)
       const k = inquilinoPruebaDe(c, p.token), r = await completarPrueba(c, k, objetivo, f)
       return { inquilino: k.publicKey(), trustlineTx: r.trustline, compraTx: r.compra, via: r.via, usdc: r.usdc }
+    }
+    case 'crear-cuenta': {   // billetera Cavos que usa la demo con cuenta propia: la tesorería la crea con XLM de prueba (reemplaza a Friendbot)
+      exigir(typeof p.cuenta === 'string' && G.test(p.cuenta), 400, 'La cuenta no es válida.')
+      exigir(p.cuenta !== c.P, 400, 'La cuenta no es válida.')
+      return { creada: (await crearDesdeTesoreria(c, p.cuenta, f)) !== null }
+    }
+    case 'usdc-cuenta': {   // la tesorería completa hasta `monto` USDC de prueba (tope de 20) en una billetera Cavos que ya abrió la línea de USDC
+      exigir(typeof p.cuenta === 'string' && G.test(p.cuenta) && p.cuenta !== c.P, 400, 'La cuenta no es válida.')
+      exigir(montoValido(p.monto, TOPE_USDC), 400, `Puedes pedir hasta ${TOPE_USDC} USDC de prueba.`)
+      const a = await cuenta(c, p.cuenta, f)
+      exigir(a, 409, 'Tu cuenta todavía no existe en la red de prueba. Toca "Obtener USDC de prueba" otra vez.')
+      exigir(usdcDe(a) !== null, 409, 'Tu cuenta todavía no tiene USDC habilitado. Toca "Obtener USDC de prueba" otra vez.')
+      const r = await completarDesdeTesoreria(c, p.cuenta, p.monto, f)
+      return { compraTx: r.compra, via: r.via, usdc: r.usdc }
     }
     case 'desplegar': {   // la plataforma crea el escrow; textos fijos y el uuid del contrato (sin datos personales)
       exigir(UUID.test(p.contrato), 400, 'Contrato inválido.')

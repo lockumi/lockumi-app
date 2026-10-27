@@ -1,10 +1,11 @@
 // Prueba E2E REAL en Stellar testnet de la fase 1 (una sola persona, sin base de datos), por los MISMOS endpoints que usa la app.
 //   inquilino = cuenta DESECHABLE con la clave WebCryptoControlKey de @cavos/kit, que firma con el signXdr REAL del kit
 //   dueño     = cuenta de prueba derivada y custodiada por el servidor (/api/solo)
-// Pasos: Friendbot → trustline (addTrustline del kit) → compra de USDC (path payment, firmado con signXdr) → dueño de prueba →
+// Pasos: cuenta creada por la tesorería (LOCKUMI_TW_PLATAFORMA_SECRET en el entorno) → trustline (addTrustline del kit) → compra de USDC (path payment, firmado con signXdr) → dueño de prueba →
 //        creación del escrow → depósito (signXdr) → evidencia + aprobación (servidor) → liberación → verificación en Horizon.
 // Uso: BASE=https://… node scripts/e2e-solo.mjs [monto=2]   (BASE por defecto http://localhost:8787)
 // Si la vista previa está protegida, VERCEL_BYPASS=<secreto de bypass> agrega el encabezado x-vercel-protection-bypass (no se imprime).
+import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { randomUUID } from 'node:crypto'
 import { CavosStellar, StellarAdapter } from '@cavos/kit/stellar'
 import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs'
@@ -38,7 +39,7 @@ const control = await WebCryptoControlKey.create(); G = control.publicAddress()
 const inq = Object.assign(Object.create(CavosStellar.prototype), { address: G, control, adapter: new StellarAdapter({ network: 'stellar-testnet' }), statusValue: 'ready' })
 inq.requireControl = inq.requireReadyControl = () => control
 console.log('· inquilino desechable:', G)
-if (!(await fetch('https://friendbot.stellar.org/?addr=' + G)).ok) throw new Error('friendbot')
+await crearCuenta(G, '100')   // la tesorería crea la cuenta (sin Friendbot)
 anotar('Trustline de USDC del inquilino (addTrustline del kit)', await inq.addTrustline({ code: 'USDC', issuer: USDC.issuer }, { sponsored: false }))
 { // compra de USDC de prueba: el mismo path payment que arma la app, con máximo a gastar, firmado con signXdr
   const q = await (await fetch(`https://horizon-testnet.stellar.org/paths/strict-receive?destination_asset_type=credit_alphanum4&destination_asset_code=USDC&destination_asset_issuer=${USDC.issuer}&destination_amount=${MONTO}&source_assets=native`)).json()

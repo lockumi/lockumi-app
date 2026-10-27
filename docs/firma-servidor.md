@@ -1,5 +1,9 @@
 # Firma del servidor en testnet y eliminar antes del pago (PR #54 · 26 de octubre de 2026)
 
+> **Reemplazado (opción A, 26/10):** el servidor ya no firma por las personas en alquileres nuevos; ver [firma-cavos.md](firma-cavos.md).
+> Lo de abajo solo vale para los alquileres creados con la cuenta derivada, hasta que cierren (`llaveLegado` en `api/_lib/tw.ts`).
+> `mi-cuenta`, `desplegar`, `fondear` y `FIRMA_SERVIDOR_TESTNET` ya no existen.
+
 Merge `a1dfc6d` en `master`. Aprobado por Katherine (26/10, 2:02 p. m. CR: «Sí, el servidor firma en testnet»).
 Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20261026090000_eliminar_sin_deposito_revert.sql`.
 
@@ -13,7 +17,7 @@ Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20
 ## Firma del servidor (alquileres nuevos de dos personas)
 - Cavos sirve solo para entrar. Para firmar, cada cuenta tiene **su propia cuenta de testnet**, derivada en el servidor
   (HMAC-SHA256 con el id de la cuenta y la etiqueta `ETIQUETA_FIRMA_SERVIDOR`; distinta de las llaves de la demo de una persona).
-  Friendbot la fondea y se le agrega la línea de confianza de USDC si falta. La llave **nunca sale del servidor**.
+  La tesorería de la plataforma la crea (`createAccount` con 5 XLM de prueba, `crearCuentaDesdeTesoreria`; sin Friendbot) y se le agrega la línea de confianza de USDC si falta. La llave **nunca sale del servidor**.
 - `/api/tw`: `mi-cuenta` devuelve solo la dirección pública; `preparar-cuenta` (máximo 12 por hora y por cuenta) la deja lista;
   `fondear` (inquilino) y `aprobar` (dueño) firman y envían en el servidor si la cuenta del alquiler es la derivada de la sesión.
   Se exige la sesión y que la persona sea participante con ese rol.
@@ -32,6 +36,10 @@ Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20
   aplicada en producción el 26/10; solo `service_role` puede usarla), que llama a `lk_borrar_alquiler` (borrado real, ver
   [eliminar-alquiler.md](eliminar-alquiler.md)).
 - Test: `src/services/__tests__/eliminar-sin-deposito.test.ts`.
+
+## Después de la opción A (PR #57)
+El servidor ya no firma por las personas en alquileres nuevos; las cuentas Cavos se activan como en Meteorito (la plataforma patrocina
+la cuenta y la persona firma la línea de USDC). Ver [firma-cavos.md](firma-cavos.md) y [fondeo-testnet.md](fondeo-testnet.md).
 
 ## Límites conocidos
 - La firma del servidor solo se usa con el modo de dos personas encendido (`VITE_DOS_PERSONAS=1`).

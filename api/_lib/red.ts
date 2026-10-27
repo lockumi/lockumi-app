@@ -8,7 +8,6 @@ export const RED_ACTIVA: string = PASSPHRASE_TESTNET
 export const adelantoPermitido = (passphrase: string = RED_ACTIVA) => passphrase === PASSPHRASE_TESTNET
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const RPC_TESTNET = 'https://soroban-testnet.stellar.org'
-export const FRIENDBOT = 'https://friendbot.stellar.org'
 export const TW_TESTNET = 'https://dev.api.trustlesswork.com'
 export const EXPLORADOR = 'https://stellar.expert/explorer/testnet'
 /** USDC de prueba de Circle en testnet (emisor que usa Trustless Work). */
@@ -27,8 +26,6 @@ export const mensajeSaldoAlPagar = (x: number, monto: number) => `Tu cuenta tien
 export const mensajeSaldoVersionVieja = (x: number, monto: number) => `Tu cuenta tiene ${fmt(x)} USDC de prueba y el depósito es de ${fmt(monto)}. Lockumi se actualizó: recarga esta página y vuelve a tocar «Pagar». Así Lockumi pone los USDC de prueba en tu cuenta antes de crear el depósito.`
 /** Ruta «USDC de prueba de Lockumi»: la tesorería no pudo recargar la cuenta de prueba (texto aprobado por Katherine el 20/10/2026). */
 export const MENSAJE_RECARGA = 'Ahora no pudimos ponerte USDC de prueba. Espera unos minutos y vuelve a tocar «Pagar».'
-/** Máximo de XLM de prueba que se gasta en una compra de USDC de prueba (cubre 20 USDC con margen; hoy ~1,13 XLM por USDC). */
-export const MAX_XLM_COMPRA = 60
 
 /** Monto válido: número > 0, ≤ tope y con 7 decimales como máximo. Por defecto el máximo de la app; con USDC de Lockumi, TOPE_USDC. */
 export function montoValido(m: unknown, tope: number = MONTO_MAX_USDC): m is number {
@@ -37,7 +34,7 @@ export function montoValido(m: unknown, tope: number = MONTO_MAX_USDC): m is num
 /** Rechaza cualquier configuración que no sea testnet. */
 export function exigirTestnet(passphrase: string, ...urls: string[]) {
   if (passphrase !== PASSPHRASE_TESTNET) throw new Error('Solo se permite la red de prueba de Stellar (testnet).')
-  for (const u of urls) if (!/^https:\/\/([a-z0-9-]+\.)*(horizon-testnet\.stellar\.org|soroban-testnet\.stellar\.org|friendbot\.stellar\.org|dev\.api\.trustlesswork\.com)(\/|$)/.test(u))
+  for (const u of urls) if (!/^https:\/\/([a-z0-9-]+\.)*(horizon-testnet\.stellar\.org|soroban-testnet\.stellar\.org|dev\.api\.trustlesswork\.com)(\/|$)/.test(u))
     throw new Error('Solo se permiten servicios de la red de prueba: ' + u.slice(0, 80))
 }
 export const enlaceTx = (h: string) => `${EXPLORADOR}/tx/${h}`
@@ -47,4 +44,4 @@ export const enlaceContrato = (c: string) => `${EXPLORADOR}/contract/${c}`
 /** 26/10/2026 (texto de Katherine): en lugar de un error técnico de Trustless Work u Horizon al preparar o pagar el depósito. */
 export const NO_PREPARAR_DEPOSITO = 'No pudimos preparar el depósito. Intenta de nuevo en un momento.'
 /** Mensajes técnicos (en inglés o con códigos HTTP) que nunca se muestran tal cual. */
-export const esTecnico = (m: string) => /Trustless Work|Horizon|respondió \d{3}|Friendbot|trustline|statusCode/i.test(m)
+export const esTecnico = (m: string) => /Trustless Work|Horizon|respondió \d{3}|trustline|statusCode/i.test(m)

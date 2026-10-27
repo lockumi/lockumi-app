@@ -114,7 +114,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Todo va detrás de `VITE_REPUTACION`, siempre con la comparación en línea `import.meta.env.VITE_REPUTACION === '1'` (así el código apagado no entra en el build). Las pantallas se cargan en diferido desde `App.tsx`.
 - La fuente única de los textos es `legal/reputacion-textos-para-producto.md` (REP-01 a REP-15), copiados al pie de la letra en `src/reputacion/textos.ts`. Textos propios con `// LEGAL: revisar`.
 - Encender y volver atrás: `docs/reputacion.md` («Encendido»). La fecha de los textos es UNA constante (`src/legal/fecha-reputacion.ts`), no una variable de entorno.
-- No se toca el login ni Cavos: desde la 1.13-demo solo cambia el texto de la casilla de los Términos (`casillaTerminos()`); al entrar con la 1.13-demo, `Pantallas.tsx` registra el perfil (`aceptarRep01` + `subirAceptacion`). Sin pantalla previa.
+- No se toca el login ni Cavos: desde la 1.13-demo solo cambia el texto de la casilla de los Términos (`casillaTerminos()`; hoy nombra la 1.14-demo); al entrar con la edición vigente (1.14-demo), `Pantallas.tsx` registra el perfil (`aceptarRep01` + `subirAceptacion`). Sin pantalla previa.
 - Reglas del puntaje solo en `src/reputacion/puntaje.ts` (funciones puras): 90 % antes del 0,3 %, 10 años, siempre visible desde el 3.er alquiler, «En revisión».
 - Estilos solo en `src/reputacion/reputacion.css` (clases `.rp-*`), sin casitas ni ilustraciones, nunca texto blanco sobre naranja. La tarjeta de bloqueo usa solo `glass tarjeta` y `boton`.
 - Nunca: rankings, números de posición, filtros por puntaje, barrio, distancia, «verificado», «Llave de Oro» (es «Llave Lockumi»), ni un botón para ocultar el perfil.
@@ -124,9 +124,13 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 
 ## Firma del servidor en testnet (`api/_lib/tw.ts`, `docs/firma-servidor.md`)
 
-- Solo red de prueba: no quites la negativa de `firmaServidorActiva` fuera de testnet. En la red principal cada persona firma con su billetera de Cavos.
-- La llave derivada nunca sale del servidor; el cliente solo recibe la dirección pública (`mi-cuenta`). Cada firma exige la sesión y que la persona sea participante con ese rol.
-- Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
+- Opción A (`docs/firma-cavos.md`): toda acción que mueve la cuenta segura exige `exigirPrueba` (prueba de Cavos revisada en el servidor, nonce de un solo uso). No agregues acciones nuevas sin ella.
+- Activación de cuentas (`api/_lib/activacion.ts`, `docs/fondeo-testnet.md`): como `activate.ts` de Meteorito, la plataforma solo patrocina reservas y la persona firma su trustline con Cavos. **Friendbot no existe en este repo** (ni en dos personas, ni en la demo de una persona, ni en los scripts, ni en las cuentas del servidor del #54): las cuentas de testnet que firman su propia transacción las crea la tesorería con `crearCuentaDesdeTesoreria` (`createAccount`, 5 XLM; en scripts, `scripts/crear-cuenta-testnet.mjs`). No guardes llaves de personas en el flujo de dos personas y no agregues rutas especiales para cuentas viejas. `activar-cuenta` es solo testnet y exige la prueba de Cavos en `preparar`.
+- La llave derivada (PR #54) queda solo para alquileres de antes (`llaveLegado`); nunca sale del servidor. No la uses para alquileres nuevos.
+- El ramp es una SIMULACIÓN TESTNET: se cambia solo en `rampActivo` (`api/_lib/rampSimulado.ts`) y no quites `exigirRampTestnet`.
+- Un solo `signMessage`, en `src/services/billetera.ts` (lo vigila `cavos-sin-firma-silenciosa.test.ts`).
+- Toda cuenta nueva lleva llave de acceso (passkey): usa `asegurarLlave` / `recuperarConLlave` de `src/services/llave.ts` desde un toque de la persona; no copies esa lógica ni abras `Cavos.connect` con `passkeyPrf` en otro lado (solo `billetera.ts`). Textos en `TEXTOS_LLAVE`, sin palabras técnicas.
+- Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
 
 ## Proponer cambios
 

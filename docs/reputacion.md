@@ -34,7 +34,7 @@ la usan REP-01, `/privacidad` y `/terminos`. Apagado, todo sigue en 1.7-demo.
 
 ## Flujo
 
-> **Desde la 1.13-demo (Legal, 26/10/2026) — reemplaza lo de abajo sobre la pantalla previa:** ya no hay pantalla REP-01 (ni REP-01b) antes
+> **Desde la 1.13-demo (Legal, 26/10/2026; la casilla hoy nombra la 1.14-demo) — reemplaza lo de abajo sobre la pantalla previa:** ya no hay pantalla REP-01 (ni REP-01b) antes
 > del login. La pantalla de inicio de siempre lleva la casilla «Acepto los Términos 1.13-demo, incluido mi perfil de reputación público.» con la
 > línea de Legal debajo; la del Aviso no cambia. Al entrar con la 1.13-demo, `Pantallas.tsx` guarda versión, fecha, hora y texto
 > (`aceptarRep01` → `subirAceptacion`) y va a Inicio; nombre visible y cantón se piden al crear o unirse al primer alquiler (o en `#/perfil`).

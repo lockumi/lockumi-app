@@ -4,6 +4,7 @@
 // El kit solo se carga (import dinámico) en modo real. No hay llaves en el código: el App ID es público.
 // Fuentes: https://docs.cavos.xyz/docs/auth · README de @cavos/kit 0.4.2 (npm).
 import type { Usuario } from '../types'
+import { guardarSesion, reponerSesion, borrarSesion } from './sesionCavos'
 
 export interface CavosLike {
   getGoogleOAuthUrl(redirectUri: string): Promise<string>
@@ -82,6 +83,8 @@ export interface AuthService {
   completarRegreso(): Promise<Usuario | null>
   actual(): Usuario | null
   salir(): void
+  /** Quita solo la sesión de Lockumi de este navegador (no la identidad de Cavos ni la llave): para no entrar sin firmante. */
+  olvidarUsuarioLocal(): void
 }
 
 async function social(metodo: 'google' | 'apple'): Promise<Usuario> {
@@ -99,6 +102,7 @@ export const auth: AuthService = {
   loginApple: () => social('apple'),
   async handleCallback(params, metodo) {
     const r = await (await proveedor()).handleCallback('?' + params.toString(), urlRegreso())
+    if (modoReal) guardarSesion(APP_ID)
     return guardar(aUsuario(r.email, metodo, r.nombre))
   },
   async completarRegreso() {
@@ -111,9 +115,10 @@ export const auth: AuthService = {
     finally { history.replaceState(null, '', window.location.pathname + window.location.hash) }
   },
   sendOtp: (email) => conLimite(proveedor().then(p => p.sendOtp(email))),
-  async verifyOtp(email, code) { const r = await (await proveedor()).verifyOtp(email, code); return guardar(aUsuario(r.email, 'correo', r.nombre)) },
+  async verifyOtp(email, code) { const r = await (await proveedor()).verifyOtp(email, code); if (modoReal) guardarSesion(APP_ID); return guardar(aUsuario(r.email, 'correo', r.nombre)) },
   actual() { try { const s = localStorage.getItem(K); return s ? JSON.parse(s) : null } catch { return null } },
-  salir() { localStorage.removeItem(K); if (modoReal) void real().then(p => p.salir?.()) },
+  olvidarUsuarioLocal() { localStorage.removeItem(K) },
+  salir() { localStorage.removeItem(K); borrarSesion(); if (modoReal) void real().then(p => p.salir?.()) },
 }
 
 /** Configuración de Cavos para la billetera: Stellar testnet. Un solo App ID sirve para los entornos
@@ -128,7 +133,7 @@ export const CAVOS_BILLETERA = {
 /** Identidad del último login real de Cavos (persistida por el kit), para conectar la billetera. */
 export async function identidadCavos() {
   if (!modoReal) return null
-  await real()
+  reponerSesion(APP_ID); await real()
   return cavosAuth?.restoreIdentity() ?? null
 }
 /** La instancia de CavosAuth (AuthProvider) con la identidad restaurada, para `Cavos.connect({ auth })`.
@@ -136,6 +141,14 @@ export async function identidadCavos() {
  *  con `auth.getAuthToken()`; con `identity` sola no hay token y falla ("registry lookup skipped: no login token"). */
 export async function authCavos() {
   if (!modoReal) return null
-  await real()
+  reponerSesion(APP_ID); await real()
   return cavosAuth?.restoreIdentity() ? cavosAuth : null
+}
+
+/** Volver a entrar con un clic (sesión perdida o vencida: no hay renovación silenciosa). Google y Apple van directo; con correo
+ *  devuelve false y la pantalla abre la hoja del código. */
+export function volverAEntrar(metodo: Usuario['metodo']): boolean {
+  if (metodo === 'google') { void auth.loginGoogle(); return true }
+  if (metodo === 'apple') { void auth.loginApple(); return true }
+  return false
 }

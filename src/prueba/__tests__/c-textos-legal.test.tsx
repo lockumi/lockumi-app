@@ -82,9 +82,11 @@ describe('3) pago en C: confirma la cuenta Lockumi (Cavos), la única que firma 
     const h = renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino', cuentas: { inquilino: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV' } })} rol="inquilino" />)
     expect(h).toContain(`<p class="nota">${PAGO} `); expect(h).not.toContain('Freighter')
   })
-  it('el depósito de dos personas solo lo firma la billetera Cavos (trustless.depositar → firmarXdr → Cavos)', async () => {
+  // Opción A (26/10/2026): la billetera Cavos firma la prueba de cada acción (firmarPrueba) y, en escrows de antes, la aprobación
+  // (firmarXdr); el depósito lo pone el ramp simulado de testnet. Ninguna otra billetera.
+  it('en dos personas solo firma la billetera Cavos (trustless → firmarPrueba / firmarXdr → Cavos)', async () => {
     const t = (await import('../../services/trustless.ts?raw')).default as string, b = (await import('../../services/billetera.ts?raw')).default as string
-    expect(t).toMatch(/import \{ firmarXdr, mensajeFirma \} from '\.\/billetera'/)
+    expect(t).toMatch(/import \{ firmarXdr, firmarPrueba, mensajeFirma, esTextoNoFirmante, conectarBilletera \} from '\.\/billetera'/)
     expect(b).toMatch(/export async function firmarXdr\(xdr: string\): Promise<string> \{ return \(await miCartera\(\)\)\.signXdr\(xdr\) \}/)
     expect(b).not.toMatch(/freighter/i)
   })

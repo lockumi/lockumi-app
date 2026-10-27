@@ -6,8 +6,9 @@
 import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, repartoAceptado, REPARTO_DISPUTA, type Entorno } from '../../../api/_lib/tw'
+import { firmado } from './prueba-falsa'
 
-const P = Keypair.random(), M = Keypair.random(), DUENO = Keypair.random().publicKey(), INQ = Keypair.random().publicKey()
+const P = Keypair.random(), M = Keypair.random(), KD = Keypair.random(), KI = Keypair.random(), DUENO = KD.publicKey(), INQ = KI.publicKey()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: 'llave', LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(),
   LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'servicio' }
 const CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', ID = '11111111-2222-3333-4444-555555555555'
@@ -39,7 +40,7 @@ function simular(contrato: Record<string, unknown>, o: { eventos?: { texto: stri
   }) as typeof fetch
   return { f, llamadas }
 }
-const repartir = (k: Record<string, unknown>, o?: Parameters<typeof simular>[1]) => { const s = simular(k, o); return { ...s, r: atender(ENV, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f) } }
+const repartir = (k: Record<string, unknown>, o?: Parameters<typeof simular>[1]) => { const s = simular(k, o); return { ...s, r: atender(ENV, firmado({ accion: 'repartir', contrato: ID }, KI), 'Bearer t', s.f) } }
 
 describe('/api/tw «repartir» · pago en la red de los cierres de dos personas', () => {
   it('mediación con las dos aceptaciones: la plataforma abre la disputa y la cuenta mediadora resuelve con el reparto aceptado', async () => {
@@ -103,7 +104,7 @@ describe('/api/tw «repartir» · pago en la red de los cierres de dos personas'
   })
   it('sin la cuenta mediadora no abre ninguna disputa', async () => {
     const s = simular(mediado)
-    await expect(atender({ ...ENV, LOCKUMI_TW_MEDIADOR_SECRET: undefined, LOCKUMI_TW_MEDIADOR_PUBLICA: undefined }, { accion: 'repartir', contrato: ID }, 'Bearer t', s.f)).rejects.toMatchObject({ estado: 503 })
+    await expect(atender({ ...ENV, LOCKUMI_TW_MEDIADOR_SECRET: undefined, LOCKUMI_TW_MEDIADOR_PUBLICA: undefined }, firmado({ accion: 'repartir', contrato: ID }, KI), 'Bearer t', s.f)).rejects.toMatchObject({ estado: 503 })
     expect(s.llamadas.some(l => l.url.includes('dispute'))).toBe(false)
   })
 })

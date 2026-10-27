@@ -61,7 +61,7 @@ describe('2) correcciones de Legal, palabra por palabra', () => {
     for (const t of HOJA_RED_C) expect(s).toContain(t)
     // Hoja «USDC de prueba»: el texto de Legal solo con C encendido en la app (dosPersonas); sin C, igual que producción.
     expect(s).toContain("USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.")
-    expect(s).toContain("como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Para obtenerlo, recibes XLM de prueba de Friendbot y compras USDC de prueba en el exchange descentralizado de la red de prueba.</> : '. Lo obtienes con Friendbot y el exchange de la red de prueba.'}")
+    expect(s).toContain("como máximo {MONTO_MAX_USDC.toLocaleString('es-CR')}{dosPersonas ? <> USDC de prueba. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).</> : '. Si tu cuenta no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline).'}")
     expect(s).toMatch(/invitar \? 'USDC de prueba' : 'USD'/)
     expect(s).toMatch(/escrowReal \|\| invitar \? 'USDC de prueba' : 'USD'/)
   })

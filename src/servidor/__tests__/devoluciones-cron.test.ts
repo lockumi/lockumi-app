@@ -6,8 +6,9 @@ import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal, StrKey } from '@stellar/stellar-sdk'
 import { pagarDevoluciones } from '../../../api/_lib/devoluciones'
 import { atender, hashTx, APROBADO, DEVUELTO_AUTO, liberadoTexto, SEGUNDOS_BLOQUEO_PAGO, TEXTO_REVISAR_PAGO, type Entorno } from '../../../api/_lib/tw'
+import { firmado } from '../../services/__tests__/prueba-falsa'
 
-const P = Keypair.random(), M = Keypair.random(), LLAVE = 'llave-tw-' + crypto.randomUUID()
+const P = Keypair.random(), M = Keypair.random(), KI = Keypair.random(), LLAVE = 'llave-tw-' + crypto.randomUUID()
 const ENV: Entorno = { TRUSTLESS_WORK_API_KEY: LLAVE, LOCKUMI_TW_PLATAFORMA_SECRET: P.secret(), LOCKUMI_TW_MEDIADOR_PUBLICA: M.publicKey(),
   LOCKUMI_TW_MEDIADOR_SECRET: M.secret(), SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon-' + crypto.randomUUID(), SUPABASE_SERVICE_ROLE_KEY: 'servicio-' + crypto.randomUUID(), CRON_SECRET: 'cron-' + crypto.randomUUID() }
 const SECRETOS = [LLAVE, P.secret(), M.secret(), ENV.SUPABASE_SERVICE_ROLE_KEY!, ENV.SUPABASE_ANON_KEY!, ENV.CRON_SECRET!]
@@ -34,7 +35,7 @@ function mundo() {
     .sort((a, b) => a.actualizado - b.actualizado).slice(0, Math.min(50, Math.max(1, n))).map(k => k.id)
 
   function alquiler(o: Partial<Fila> & { aprobado?: boolean; escrow?: Partial<Escrow> } = {}) {
-    const id = crypto.randomUUID(), cid = StrKey.encodeContract(Keypair.random().rawPublicKey()), inq = Keypair.random().publicKey()
+    const id = crypto.randomUUID(), cid = StrKey.encodeContract(Keypair.random().rawPublicKey()), inq = KI.publicKey()
     const { aprobado, escrow, ...resto } = o
     const k: Fila = { id, estado: 'cerrado', monto: 20, direccion: 'Calle 1', escrow_contract_id: cid, resultado: { via: 'automatico', dueno: 0, inquilino: 20 }, liquidacion_tx: null,
       lk_participantes: [{ rol: 'dueno', usuario: 'u-dueno', direccion_stellar: Keypair.random().publicKey() }, { rol: 'inquilino', usuario: 'u-inq', direccion_stellar: inq }],
@@ -148,7 +149,7 @@ describe('paso 22 · la corrida diaria paga la devolución sin reclamo', () => {
 
   it('no paga dos veces: dos corridas y la app a la vez → una sola disputa y una sola resolución', async () => {
     const w = mundo(), a = w.alquiler()
-    const [r1, r2, app] = await Promise.all([correr(w), correr(w), atender(ENV, { accion: 'devolver-automatico', contrato: a.id }, 'Bearer t', w.f)])
+    const [r1, r2, app] = await Promise.all([correr(w), correr(w), atender(ENV, firmado({ accion: 'devolver-automatico', contrato: a.id }, KI), 'Bearer t', w.f)])
     expect(w.envios(a.escrow_contract_id!, 'dispute-escrow')).toBe(1); expect(w.envios(a.escrow_contract_id!, 'resolve-dispute')).toBe(1)
     expect(w.eventos.filter(e => e.texto === DEVUELTO_AUTO)).toHaveLength(1)
     const pagos = [...r1.r.pagados, ...r2.r.pagados].length + (app.tx && !app.yaExistia ? 1 : 0)
@@ -159,11 +160,11 @@ describe('paso 22 · la corrida diaria paga la devolución sin reclamo', () => {
   it('la app durante la corrida ve «en curso» (sin error ni texto nuevo) y después el pago ya hecho', async () => {
     const w = mundo(), a = w.alquiler()
     a.pago_bloqueo_hasta = w.ahora() + 300_000; a.pago_bloqueo_token = crypto.randomUUID()   // la corrida lo tiene tomado
-    expect(await atender(ENV, { accion: 'devolver-automatico', contrato: a.id }, 'Bearer t', w.f)).toEqual({ enCurso: true })
+    expect(await atender(ENV, firmado({ accion: 'devolver-automatico', contrato: a.id }, KI), 'Bearer t', w.f)).toEqual({ enCurso: true })
     expect(w.escrituras()).toBe(0)
     a.pago_bloqueo_hasta = null; a.pago_bloqueo_token = null
     const { r } = await correr(w); expect(r.pagados).toHaveLength(1)
-    expect(await atender(ENV, { accion: 'devolver-automatico', contrato: a.id }, 'Bearer t', w.f)).toEqual({ tx: a.liquidacion_tx, yaExistia: true })
+    expect(await atender(ENV, firmado({ accion: 'devolver-automatico', contrato: a.id }, KI), 'Bearer t', w.f)).toEqual({ tx: a.liquidacion_tx, yaExistia: true })
   })
 
   it('un reintento no vuelve a pagar: la segunda corrida no pide nada a Trustless Work', async () => {
@@ -228,7 +229,7 @@ describe('paso 22 · la corrida diaria paga la devolución sin reclamo', () => {
     for (const k of [pagado, otro, saldo]) { expect(k.pago_revisar).toBe(true); expect(k.liquidacion_tx).toBeNull() }
     expect(logs.join('\n')).toMatch(/para revisar/)
     expect((await correr(w)).r.pendientes).toBe(0)   // no se reintenta solo
-    await expect(atender(ENV, { accion: 'devolver-automatico', contrato: otro.id }, 'Bearer t', w.f)).rejects.toMatchObject({ estado: 409, message: TEXTO_REVISAR_PAGO })
+    await expect(atender(ENV, firmado({ accion: 'devolver-automatico', contrato: otro.id }, KI), 'Bearer t', w.f)).rejects.toMatchObject({ estado: 409, message: TEXTO_REVISAR_PAGO })
   })
 
   it('respeta el tope por corrida y el tiempo: lo que no entra queda para la próxima', async () => {

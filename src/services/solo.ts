@@ -2,10 +2,10 @@
 // viven solo en el servidor: aquí solo llegan claves públicas (G…), la cuenta segura (C…) y hashes de transacciones.
 // Fuentes: https://developers.stellar.org/docs/data/apis/horizon/api-reference/list-strict-receive-payment-paths
 //          https://docs.cavos.xyz/docs/stellar (signXdr, addTrustline) · https://docs.cavos.xyz/docs/vault
-import { PASSPHRASE_TESTNET, HORIZON_TESTNET, USDC, TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar } from '../../api/_lib/red'
+import { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar } from '../../api/_lib/red'
 import { conectarBilletera, consultarUsdc, consultarSaldo, fondear, firmarXdr, abrirTrustlineUsdc, olvidarBilletera, mensajeFirma } from './billetera'
 
-export { TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar }
+export { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar }
 export class ErrorSolo extends Error {}
 async function api<T>(cuerpo: Record<string, unknown>): Promise<T> {
   let r: Response
@@ -43,65 +43,31 @@ export async function prepararCuentaPrueba(monto?: number): Promise<{ g: string;
   return { g: r.inquilino, txs: { ...(r.trustlineTx && { trustline: r.trustlineTx }), ...(r.compraTx && { compra: r.compraTx }) } }
 }
 
-/** Precio actual en XLM de prueba para recibir `cantidad` USDC de prueba (DEX de testnet). */
-export async function cotizar(cantidad: number, f: typeof fetch = fetch): Promise<number> {
-  const q = new URLSearchParams({ destination_asset_type: 'credit_alphanum4', destination_asset_code: USDC.code, destination_asset_issuer: USDC.issuer, destination_amount: cantidad.toFixed(7), source_assets: 'native' })
-  const r = await f(`${HORIZON_TESTNET}/paths/strict-receive?${q}`)
-  if (!r.ok) throw new ErrorSolo('No pudimos consultar el precio de prueba. Intenta de nuevo en un minuto.')
-  const j = await r.json() as { _embedded?: { records?: { source_amount: string }[] } }
-  const p = (j._embedded?.records ?? []).map(x => Number(x.source_amount)).filter(n => n > 0)
-  if (!p.length) throw new ErrorSolo('Ahora no hay USDC de prueba disponible en la red de prueba. Intenta más tarde o usa faucet.circle.com.')
-  return Math.min(...p)
-}
-/** Máximo a gastar: precio + 10 %, nunca más de MAX_XLM_COMPRA. Si el precio ya pasa ese tope, no se compra. */
-export function maximoAGastar(precio: number) {
-  const max = Math.ceil(precio * 1.1 * 1e7) / 1e7
-  if (precio > MAX_XLM_COMPRA) throw new ErrorSolo(`El precio de prueba subió (${precio.toFixed(2)} XLM). Por seguridad no gastamos más de ${MAX_XLM_COMPRA} XLM de prueba. Intenta más tarde.`)
-  return Math.min(max, MAX_XLM_COMPRA)
-}
-
-/** "Obtener USDC de prueba" con la billetera Cavos: Friendbot si hace falta → trustline (addTrustline) → path payment XLM→USDC (signXdr). */
+/** "Obtener USDC de prueba" con la billetera Cavos: la tesorería crea la cuenta si hace falta → trustline (addTrustline, la firma la persona) → la tesorería envía los USDC de prueba que faltan. */
 export async function obtenerUsdc(objetivo: number, avance: (t: string) => void = () => {}): Promise<{ g: string; txs: Txs; saldo: string }> {
   if (!montoValido(objetivo, TOPE_USDC)) throw new ErrorSolo(`Puedes pedir hasta ${TOPE_USDC} USDC de prueba.`)
   if (usarPrueba()) { avance('Preparando el inquilino de prueba y enviando USDC de prueba…'); const r = await prepararCuentaPrueba(objetivo); return { ...r, saldo: (await consultarUsdc(r.g)) ?? '0' } }
   return prepararCuentaCavos(objetivo, avance)
 }
 
-/** La cuenta de la billetera Cavos existe en testnet (Friendbot) y tiene la trustline de USDC (la firma la persona). Si ya está, solo lee. */
+/** La cuenta de la billetera Cavos existe en testnet (la crea la tesorería de Lockumi) y tiene la trustline de USDC (la firma la persona). Si ya está, solo lee. */
 export async function asegurarTrustline(avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; trustline?: string }> {
   const g = (await conectarBilletera()).direccion
-  if (esperada && g !== esperada) throw new ErrorSolo('No pudimos preparar el depósito. Intenta de nuevo en un momento.')   // otra billetera: no tocamos nada
-  if (await consultarSaldo(g) === null) { avance('Activando tu cuenta con XLM de prueba gratis…'); await fondear(g); olvidarBilletera() }
+  if (esperada && g !== esperada) throw Object.assign(new ErrorSolo('No pudimos preparar el depósito. Intenta de nuevo en un momento.'), { otraCuenta: true })   // otra billetera: no tocamos nada
+  if (await consultarSaldo(g) === null) { avance('Activando tu cuenta de prueba…'); await fondear(g); olvidarBilletera() }
   if (await consultarUsdc(g) !== null) return { g }
   avance('Habilitando USDC en tu cuenta…')
   try { return { g, trustline: await abrirTrustlineUsdc() } } catch (e) { throw new ErrorSolo(mensajeFirma(e)) }
 }
 
-/** Cuenta Cavos lista para pagar `objetivo`: Friendbot si hace falta → trustline → path payment XLM→USDC (signXdr) por lo que falte. */
+/** Cuenta Cavos lista para pagar `objetivo`: la tesorería crea la cuenta si hace falta → trustline → la tesorería envía por USDC de prueba lo que falte. */
 export async function prepararCuentaCavos(objetivo: number, avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; txs: Txs; saldo: string }> {
   const { g, trustline } = await asegurarTrustline(avance, esperada); const txs: Txs = { ...(trustline && { trustline }) }
   const saldo = Number(await consultarUsdc(g) ?? 0), falta = Math.round((objetivo - saldo) * 1e7) / 1e7
   if (falta > 0) {
-    avance('Consultando el precio de prueba…')
-    const max = maximoAGastar(await cotizar(falta))
-    const { TransactionBuilder, Operation, Asset, Account } = await import('@stellar/stellar-sdk')
-    const r = await fetch(`${HORIZON_TESTNET}/accounts/${g}`); if (!r.ok) throw new ErrorSolo('No pudimos leer tu cuenta en la red de prueba. Intenta de nuevo.')
-    const a = await r.json() as { sequence: string }
-    const t = new TransactionBuilder(new Account(g, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
-      .addOperation(Operation.pathPaymentStrictReceive({ sendAsset: Asset.native(), sendMax: max.toFixed(7), destination: g, destAsset: new Asset(USDC.code, USDC.issuer), destAmount: falta.toFixed(7), path: [] }))
-      .setTimeout(120).build()
-    avance('Confirma la compra en tu billetera…')
-    let firmada: string; try { firmada = await firmarXdr(t.toXDR()) } catch (e) { throw new ErrorSolo(mensajeFirma(e)) }
-    avance('Comprando USDC de prueba…')
-    const s = await fetch(`${HORIZON_TESTNET}/transactions`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'tx=' + encodeURIComponent(firmada) })
-    const j = await s.json().catch(() => ({})) as { hash?: string; extras?: { result_codes?: { operations?: string[] } } }
-    if (!s.ok || !j.hash) {
-      const c = j.extras?.result_codes?.operations?.[0] ?? ''
-      throw new ErrorSolo(/over_sendmax|too_few_offers/.test(c) ? 'El precio de prueba cambió mientras comprabas. Vuelve a tocar el botón.'
-        : /underfunded/.test(c) ? 'No te alcanza el XLM de prueba para comprar. Usa faucet.circle.com para recibir USDC de prueba gratis.'
-        : 'La red de prueba rechazó la compra. Vuelve a intentarlo en un minuto.')
-    }
-    txs.compra = j.hash
+    avance('Enviando USDC de prueba…')
+    const r = await api<{ compraTx: string | null }>({ accion: 'usdc-cuenta', cuenta: g, monto: objetivo })
+    if (r.compraTx) txs.compra = r.compraTx
   }
   return { g, txs, saldo: (await consultarUsdc(g)) ?? '0' }
 }

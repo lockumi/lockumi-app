@@ -1,5 +1,7 @@
 # Prueba completa (Términos 1.7-demo) · cómo está armada
 
+> **Nota (26/10/2026, 9:38 p. m.):** este documento es histórico. Donde dice «Friendbot», hoy la tesorería de la plataforma crea la cuenta (`createAccount`, 5 XLM; ver [fondeo-testnet.md](fondeo-testnet.md)) y la persona ya no compra USDC en el DEX: lo manda la tesorería (tope 20).
+
 Se publica por bloques (PR 2 a 10). Hasta el PR 10, todo lo visible queda detrás del **interruptor apagado**
 `VITE_PRUEBA_COMPLETA` (variable de compilación; en producción no está puesta, así que app.lockumi.com sigue igual y con 1.6-demo).
 El PR 10 enciende el interruptor junto con los Términos y la Privacidad 1.7-demo y la pantalla para volver a aceptar.

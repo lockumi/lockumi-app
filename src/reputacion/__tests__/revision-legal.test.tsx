@@ -25,7 +25,8 @@ describe('VERSIÓN: 1.10-demo con la fecha real de encendido (una sola constante
     // queda archivada con su fecha real de encendido (EDICION_V110, /terminos-1-10).
     // Legal (revisión de c97585b): la vigente pasa a la 1.12-demo (fecha-v112.ts); la 1.11-demo queda archivada (EDICION_V111, /terminos-1-11).
     // Legal (26/10/2026): la vigente pasa a la 1.13-demo (fecha-v113.ts); la 1.12-demo queda archivada (EDICION_V112, /terminos-1-12).
-    expect(v.V_REPUTACION).toBe('1.13-demo'); expect(v.EDICION_REPUTACION).toBe(`1.13-demo · ${v.FECHA_V113}`); expect(v.EDICION_V112).toBe(`1.12-demo · ${v.FECHA_V112}`); expect(v.EDICION_V111).toBe(`1.11-demo · ${v.FECHA_V111}`)
+    // Legal (26/10/2026, 9:43 p. m.): la vigente pasa a la 1.14-demo (fecha-v114.ts); la 1.13-demo queda archivada (EDICION_V113, /terminos-1-13).
+    expect(v.V_REPUTACION).toBe('1.14-demo'); expect(v.EDICION_REPUTACION).toBe(`1.14-demo · ${v.FECHA_V114}`); expect(v.EDICION_V113).toBe(`1.13-demo · ${v.FECHA_V113}`); expect(v.EDICION_V112).toBe(`1.12-demo · ${v.FECHA_V112}`); expect(v.EDICION_V111).toBe(`1.11-demo · ${v.FECHA_V111}`)
     expect(v.EDICION_V110).toBe(`1.10-demo · ${v.FECHA_ENCENDIDO_REPUTACION}`)
     expect(VERSION_TEXTOS).toBe(v.EDICION_REPUTACION)
     for (const f of ['src/reputacion/consentimiento.ts', 'src/reputacion/textos.ts', 'src/legal/condicional.ts']) { expect(await leerArchivo(f)).not.toContain(v.FECHA_ENCENDIDO_REPUTACION); expect(await leerArchivo(f)).not.toContain(v.FECHA_V111); expect(await leerArchivo(f)).not.toContain(v.FECHA_V112) }
