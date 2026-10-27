@@ -280,7 +280,7 @@ describe('27/10 · repartos aceptados que quedaron sin pagar', () => {
     expect(r.pagados.map(p => p.contrato)).toEqual([a.id, m.id])
     for (const k of [a, m]) { expect(k.liquidacion_tx).toMatch(HEX); expect(w.escrows.get(k.escrow_contract_id!)!.balance).toBe(0); expect(k.pago_bloqueo_token).toBeNull()
       expect(w.envios(k.escrow_contract_id!, 'dispute-escrow')).toBe(1); expect(w.envios(k.escrow_contract_id!, 'resolve-dispute')).toBe(1) }
-    expect(w.eventos.some(e => e.contrato_id === a.id && e.tx_hash === a.liquidacion_tx && /4,00 USDC de prueba al dueño y 6,00 USDC de prueba al inquilino/.test(e.texto))).toBe(true)
+    expect(w.eventos.some(e => e.contrato_id === a.id && e.tx_hash === a.liquidacion_tx && /llegan 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino/.test(e.texto))).toBe(true)
     expect((await pagarDevoluciones(ENV, {}, w.f) as { pendientes: number }).pendientes).toBe(0)   // la corrida de devoluciones no los toca
   })
   it('la corrida de /api/borrados los paga sola (REPARTOS_CRON=0 la apaga) y no toca casos abiertos ni en mediación', async () => {
