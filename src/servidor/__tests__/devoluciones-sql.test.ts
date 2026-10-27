@@ -16,13 +16,13 @@ const DECL = 'Declaro que la persona que invito sabe que la invito y acepta reci
 const CID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
 let db: PGlite
 const uno = async <T>(sql: string, p: unknown[] = []) => (await db.query<T>(sql, p)).rows[0]
-async function caso(o: { estado?: string; via?: string | null; escrow?: string | null; tx?: string | null; reclamo?: boolean } = {}) {
+async function caso(o: { estado?: string; via?: string | null; escrow?: string | null; tx?: string | null; reclamo?: boolean; cierre?: string } = {}) {
   await db.query(`select set_config('test.uid', $1, false)`, [DUENO])
   const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10)
   const { r } = (await uno<{ r: { id: string } }>(`select public.lk_crear_contrato_invitando('Casa de prueba', 20, $1::date, $2::date, '{}', 'invitada@correo.com', 'dueno@correo.com', $3) r`, [hoy, fin, DECL]))!
   const via = o.via === undefined ? 'automatico' : o.via
   await db.query(`update public.lk_contratos set estado = $2, resultado = $3::jsonb, escrow_contract_id = $4, liquidacion_tx = $5 where id = $1`,
-    [r.id, o.estado ?? 'cerrado', via ? JSON.stringify({ via, dueno: 0, inquilino: 20 }) : null, o.escrow === undefined ? CID : o.escrow, o.tx ?? null])
+    [r.id, o.estado ?? 'cerrado', via ? JSON.stringify({ via, dueno: 0, inquilino: 20, ...o.cierre ? { cierre: o.cierre } : {} }) : null, o.escrow === undefined ? CID : o.escrow, o.tx ?? null])
   if (o.reclamo) await db.query(`insert into public.lk_reclamos(contrato_id, monto, motivo) values ($1, 5, 'Se rompió una ventana')`, [r.id])
   return r.id
 }
@@ -41,11 +41,13 @@ beforeAll(async () => {
 describe('paso 22 · migración 20261026000000 (devolución automática)', () => {
   it('solo salen los cerrados sin reclamo (automático o aprobado por el dueño), con escrow y sin pagar', async () => {
     const auto = await caso(), devuelto = await caso({ via: 'devuelto' })
-    const no = [await caso({ estado: 'ventana_reclamo', via: null }), await caso({ reclamo: true }), await caso({ via: 'mediacion' }), await caso({ via: 'acuerdo' }),
+    const acuerdo = await caso({ via: 'acuerdo' })
+    const no = [await caso({ estado: 'ventana_reclamo', via: null }), await caso({ reclamo: true }), await caso({ via: 'mediacion' }),
       await caso({ tx: 'a'.repeat(64) }), await caso({ escrow: null }), await caso({ estado: 'reclamo', via: 'automatico' })]
     const p = await pendientes()
-    expect(p).toEqual(expect.arrayContaining([auto, devuelto])); for (const id of no) expect(p).not.toContain(id)
+    expect(p).toEqual(expect.arrayContaining([auto, devuelto])); for (const id of [...no, acuerdo]) expect(p).not.toContain(id)
     for (const id of no) expect(await tomar(id, crypto.randomUUID())).toBe(false)   // tomar repite las mismas condiciones
+    expect(await tomar(acuerdo, crypto.randomUUID())).toBe(true)   // 20261027120000: el reparto aceptado usa el mismo bloqueo (lk_repartos_pendientes)
     expect((await db.query('select * from public.lk_devoluciones_pendientes(1)')).rows).toHaveLength(1)
     expect((await db.query('select * from public.lk_devoluciones_pendientes(0)')).rows).toHaveLength(1)   // tope 1..50
   })
@@ -101,5 +103,31 @@ describe('paso 22 · migración 20261026000000 (devolución automática)', () =>
     }
     await db.exec('set role service_role')
     try { expect(Array.isArray((await db.query('select * from public.lk_devoluciones_pendientes(5)')).rows)).toBe(true) } finally { await db.exec('reset role') }
+  })
+})
+
+const repartos = async (n = 50) => (await db.query<{ id: string }>('select id from public.lk_repartos_pendientes($1) id', [n])).rows.map(x => x.id)
+describe('27/10 · migración 20261027120000 (reparto aceptado reintentable, alquiler b10557f9)', () => {
+  it('«cerrado» por acuerdo o por mediación con las dos aceptaciones, sin liquidacion_tx = por pagar (con reclamo, como siempre)', async () => {
+    const acuerdo = await caso({ via: 'acuerdo', reclamo: true }), mediacion = await caso({ via: 'mediacion', cierre: 'dos_aceptan', reclamo: true })
+    const no = [await caso({ via: 'mediacion', reclamo: true }), await caso({ via: 'regla_651', reclamo: true }), await caso({ via: 'acuerdo', tx: 'b'.repeat(64) }),
+      await caso({ via: 'acuerdo', escrow: null }), await caso({ estado: 'mediacion', via: null, reclamo: true }), await caso({ estado: 'reclamo', via: 'acuerdo' }), await caso()]
+    const p = await repartos()
+    expect(p).toEqual(expect.arrayContaining([acuerdo, mediacion])); for (const id of no) expect(p).not.toContain(id)
+    for (const id of no.slice(0, -1)) expect(await tomar(id, crypto.randomUUID())).toBe(false)
+    expect(await pendientes()).not.toContain(acuerdo)   // la corrida de devoluciones no los toca
+    const t = crypto.randomUUID(); expect(await tomar(acuerdo, t)).toBe(true); expect(await tomar(acuerdo, crypto.randomUUID())).toBe(false)
+    expect(await repartos()).not.toContain(acuerdo)   // tomado: no sale mientras dure el bloqueo
+    expect(await anotar(acuerdo, t, 'c'.repeat(64))).toBe(true)
+    await db.query(`update public.lk_contratos set liquidacion_tx = $2 where id = $1`, [acuerdo, 'c'.repeat(64)]); await soltar(acuerdo, t)
+    expect(await repartos()).not.toContain(acuerdo); expect(await tomar(acuerdo, crypto.randomUUID())).toBe(false)   // pagado: nunca otra vez
+    await db.query(`update public.lk_contratos set pago_revisar = true where id = $1`, [mediacion])
+    expect(await repartos()).not.toContain(mediacion); expect(await tomar(mediacion, crypto.randomUUID())).toBe(false)
+  })
+  it('solo service_role llama las funciones nuevas', async () => {
+    for (const fn of ['lk_repartos_pendientes(integer)', 'lk_cierre_por_pagar(lk_contratos)', 'lk_tomar_pago(uuid,uuid,integer)']) {
+      const r = (await uno<Record<string, boolean>>(`select has_function_privilege('authenticated', 'public.${fn}', 'execute') a, has_function_privilege('anon', 'public.${fn}', 'execute') b, has_function_privilege('service_role', 'public.${fn}', 'execute') s`))!
+      expect(r).toEqual({ a: false, b: false, s: true })
+    }
   })
 })

@@ -24,9 +24,9 @@ async function firmarYEnviar(contrato: string, unsignedXdr: string) {
 /** Opción A (26/10/2026): cada acción que mueve la cuenta segura va con una prueba nueva firmada con Cavos. Si este
  *  dispositivo no pudo firmarla, se pide igual (los alquileres de antes con cuenta del servidor no la necesitan) y, si el
  *  servidor la exige, se muestra el motivo real (este dispositivo no puede firmar, o volver a entrar). */
-async function conPrueba<T>(accion: AccionPrueba, contrato: string): Promise<T> {
-  let prueba: Prueba | undefined, fallo: unknown = null
-  try { prueba = await firmarPrueba(accion, contrato) } catch (e) { fallo = e }
+async function conPrueba<T>(accion: AccionPrueba, contrato: string, antes?: Prueba): Promise<T> {
+  let prueba: Prueba | undefined = antes, fallo: unknown = null
+  if (!prueba) try { prueba = await firmarPrueba(accion, contrato) } catch (e) { fallo = e }
   try { return await llamar<T>({ accion, contrato, ...prueba ? { prueba } : {} }) }
   catch (e) { if (fallo && e instanceof Error && e.message === SIN_PRUEBA) throw new ErrorTrustless(mensajeFirma(fallo)); throw e }
 }
@@ -87,8 +87,16 @@ export const trustless = {
     const { tx } = await conPrueba<{ tx: string }>('devolver-automatico', contrato); await recargar(); return tx
   },
   /** PR #22: paga en la red el reparto de un caso cerrado por acuerdo o con las dos aceptaciones (disputa + resolución en el servidor). */
-  async repartir(contrato: string): Promise<string> {
-    const { tx } = await conPrueba<{ tx: string }>('repartir', contrato); await recargar(); return tx
+  async repartir(contrato: string, prueba?: Prueba): Promise<string> {
+    const { tx } = await conPrueba<{ tx: string }>('repartir', contrato, prueba); await recargar(); return tx
+  },
+  /** 27/10/2026 (b10557f9): la prueba de «repartir» se firma ANTES de cerrar el caso en la base. Si esta pestaña perdió la sesión de
+   *  Cavos, se avisa con el texto de siempre (volver a entrar) y el reclamo sigue abierto, en vez de cerrar y quedar sin pagar.
+   *  Si el dispositivo no puede firmar por otro motivo (p. ej. la cuenta del servidor de un alquiler de antes, PR #54), devuelve
+   *  undefined y el servidor decide como antes. */
+  async pruebaReparto(contrato: string): Promise<Prueba | undefined> {
+    try { return await firmarPrueba('repartir', contrato) }
+    catch (e) { const m = mensajeFirma(e); if (esTextoSinSesion(m)) throw new ErrorTrustless(m); return undefined }
   },
   /** Libera el 100 % al inquilino (contrato cerrado sin reclamo y hito aprobado). */
   async liberar(contrato: string): Promise<string> {

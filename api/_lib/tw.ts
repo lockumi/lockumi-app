@@ -156,6 +156,12 @@ async function asegurarEventoMediador(c: Config, id: string, texto: string, tx: 
   const ev = await rest(c, 'lk_eventos', { method: 'POST', body: JSON.stringify({ contrato_id: id, texto, tx_hash: tx }) }, f)
   if (!ev.ok) throw new ErrorTw(500, `El pago ya se hizo en la red de prueba (${tx}), pero no se pudo guardar en el historial. Vuelve a abrir el alquiler.`)
 }
+/** ¿Está en lk_mediadores? (lectura con service role; el uid sale del token de sesión, validado por Supabase Auth). */
+async function esMediador(c: Config, uid: string, f = fetch) {
+  if (!/^[0-9a-f-]{36}$/i.test(uid)) return false
+  const r = await rest(c, `lk_mediadores?usuario=eq.${uid}&select=usuario`, {}, f)
+  return r.ok && ((await r.json().catch(() => [])) as unknown[]).length > 0
+}
 const rolDe = (k: Contrato, uid: string) => k.lk_participantes.find(p => p.usuario === uid)?.rol ?? null
 const cuenta = (k: Contrato, rol: Part['rol']) => {
   const g = k.lk_participantes.find(p => p.rol === rol)?.direccion_stellar
@@ -219,13 +225,10 @@ async function hayEvento(c: Config, id: string, texto: string, f = fetch) {
   const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(texto)}&select=texto`, {}, f)
   return r.ok ? ((await r.json().catch(() => [])) as unknown[]).length > 0 : false
 }
-/** Bloqueo: solo un pedido a la vez toma el caso (liquidacion_tx vacío → 'en-curso'). */
-async function tomar(c: Config, id: string, f = fetch) {
-  const r = await rest(c, `lk_contratos?id=eq.${id}&liquidacion_tx=is.null`, { method: 'PATCH', headers: { prefer: 'return=representation' }, body: JSON.stringify({ liquidacion_tx: EN_CURSO }) }, f)
-  return r.ok && ((await r.json().catch(() => [])) as unknown[]).length === 1
-}
+/** Marca del bloqueo de antes (código anterior a 20261027120000): liquidacion_tx = 'en-curso'. Ya no se escribe; si una fila
+ *  quedó así (la función se cortó con el bloqueo puesto) se contesta «en curso» y no se paga sola: una persona la revisa y la
+ *  limpia (docs/fondeo-testnet.md § «Reparto por pagar»). En producción no hay ninguna (27/10/2026). */
 const EN_CURSO = 'en-curso'
-const soltar = (c: Config, id: string, f = fetch) => rest(c, `lk_contratos?id=eq.${id}&liquidacion_tx=eq.${EN_CURSO}`, { method: 'PATCH', body: JSON.stringify({ liquidacion_tx: null }) }, f)
 
 async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
   const r = await rest(c, `lk_eventos?contrato_id=eq.${id}&texto=eq.${encodeURIComponent(APROBADO)}&select=texto`, {}, f)
@@ -357,6 +360,66 @@ export async function devolverAlInquilino(c: Config, k: Contrato, modo: ModoDevo
     }
     await soltarPago(c, k.id, token, null, false, false, f).catch(() => {})
     return modo === 'liberar' ? { tx } : { tx, disputaTx }
+  } catch (x) {
+    if (x instanceof BloqueoVencido) return { enCurso: true }
+    if (!(x instanceof ErrorRevisar)) await soltarPago(c, k.id, token, sinSecretos(x instanceof Error ? x.message : String(x)), false, enviada, f).catch(() => {})
+    throw x
+  }
+}
+// ── 27/10/2026 · Reparto aceptado (acuerdo o mediación con las dos aceptaciones), reintentable ──
+// La base cierra el caso (lk_responder_reclamo / lk_decidir_mediacion) ANTES de que exista la transacción del reparto. Si el pago
+// falla (p. ej. 401 por la prueba de billetera), el caso queda «cerrado» con liquidacion_tx vacío: eso es el estado «por pagar» y
+// se reintenta por aquí, desde la app («repartir») o desde la corrida de cada hora (pagarRepartos en devoluciones.ts;
+// apagado: REPARTOS_CRON=0) o a pedido de operación (/api/borrados?reparto=<id>). La persona mediadora también puede pedirlo (atender).
+// Mismo camino idempotente que la devolución (paso 22): bloqueo con vencimiento (lk_tomar_pago, migración 20261027120000), estado
+// del escrow en Trustless Work antes de pagar, hash firmado guardado ANTES de enviar y, si la disputa ya está abierta, solo se resuelve.
+// Antes el bloqueo era liquidacion_tx = 'en-curso': si la función se cortaba, el caso quedaba trabado para siempre.
+export type Reparto = { tx?: string; disputaTx?: string | null; yaExistia?: true; enCurso?: true; recuperado?: true }
+export async function pagarReparto(c: Config, k: Contrato, f = fetch): Promise<Reparto> {
+  if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) {
+    await asegurarEventoMediador(c, k.id, textoReparto(k), k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }
+  exigir(cierreAceptado(k) && !!k.escrow_contract_id, 409, 'Solo se reparte así un caso cerrado por el servidor con acuerdo o con las dos aceptaciones.')
+  if (k.liquidacion_tx === EN_CURSO) return { enCurso: true }
+  exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
+  const P = c.plataforma.publicKey()
+  exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
+  const reparto = repartoAceptado(k), texto = textoReparto(k), id = k.escrow_contract_id!, inquilino = cuenta(k, 'inquilino')
+  const token = crypto.randomUUID()
+  if (!(await rpcPago<boolean>(c, 'lk_tomar_pago', { p_contrato: k.id, p_token: token, p_segundos: SEGUNDOS_BLOQUEO_PAGO }, f))) {
+    const x = await estadoPago(c, k.id, f)
+    if (x.liquidacion_tx && x.liquidacion_tx !== EN_CURSO) return { tx: x.liquidacion_tx, yaExistia: true }
+    if (x.pago_revisar) throw new ErrorRevisar('marcado para revisar')
+    return { enCurso: true }
+  }
+  const revisar = async (motivo: string): Promise<never> => { await soltarPago(c, k.id, token, motivo, true, false, f); throw new ErrorRevisar(motivo) }
+  const pendiente = async (tx: string) => {
+    if (!(await rpcPago<boolean>(c, 'lk_anotar_pago_pendiente', { p_contrato: k.id, p_token: token, p_tx: tx }, f))) throw new BloqueoVencido()
+  }
+  let enviada = false
+  try {
+    const e = await leerEscrowTw(c, id, f)
+    const r = e.roles ?? {}
+    if (r.receiver !== inquilino || r.disputeResolver !== c.mediador) return await revisar('el escrow no cuadra con el alquiler (cuentas)')
+    const saldo = e.balance === undefined || e.balance === null || e.balance === '' ? null : Number(e.balance)
+    if (e.flags?.released || e.flags?.resolved || saldo === 0) {
+      const { pago_tx_pendiente: h } = await estadoPago(c, k.id, f)
+      if (h && await txExitosa(h, f)) {
+        await anotarMediador(c, k.id, texto, h, f); await soltarPago(c, k.id, token, null, false, false, f); return { tx: h, recuperado: true } }
+      return await revisar('el escrow ya está pagado y no tenemos la transacción')
+    }
+    if (saldo !== null && centavos(saldo) !== centavos(k.monto)) return await revisar('el saldo del escrow no es el depósito')
+    let disputaTx: string | null = null
+    if (!e.flags?.disputed) {   // en un reintento la disputa ya puede estar abierta (lo dice la cadena): solo se resuelve
+      const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: id, signer: P }, f)
+      const abierta = firmarComoPlataforma(c, sinFirmar(d)); enviada = true; await enviar(c, abierta, f); disputaTx = hashTx(abierta)
+      if (!(await hayEvento(c, k.id, REPARTO_DISPUTA, f)) && !(await hayEvento(c, k.id, REPARTO_DISPUTA_ANTES, f))) await anotar(c, k.id, {}, REPARTO_DISPUTA, disputaTx, f)
+    }
+    const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: id, disputeResolver: c.mediador, distributions: reparto }, f)
+    const firmada = firmarComoMediador(c, sinFirmar(j)), tx = hashTx(firmada)
+    await pendiente(tx); enviada = true; await enviar(c, firmada, f)
+    await anotarMediador(c, k.id, texto, tx, f)
+    await soltarPago(c, k.id, token, null, false, false, f).catch(() => {})
+    return { tx, disputaTx }
   } catch (x) {
     if (x instanceof BloqueoVencido) return { enCurso: true }
     if (!(x instanceof ErrorRevisar)) await soltarPago(c, k.id, token, sinSecretos(x instanceof Error ? x.message : String(x)), false, enviada, f).catch(() => {})
@@ -524,7 +587,17 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
   const c = configuracion(e)
   const uid = await usuario(c, bearer, f)
   const k = await contrato(c, p.contrato, f)
-  const rol = rolDe(k, uid); exigir(rol !== null, 403, 'No participas en este contrato.')
+  const rol = rolDe(k, uid)
+  // 27/10/2026: la persona mediadora (lk_mediadores) no es parte del alquiler. Tras «Registrar el acuerdo» (lk_decidir_mediacion, que
+  // cierra con las dos aceptaciones) pide «repartir»: el servidor valida que es mediadora y que el caso está cerrado por la mediación con
+  // las dos aceptaciones, y paga con su llave mediadora (sin prueba de billetera: la mediadora no mueve una billetera propia).
+  if (rol === null && p.accion === 'repartir' && await esMediador(c, uid, f)) {
+    exigir(k.resultado?.via === 'mediacion' && cierreAceptado(k), 409, 'Solo se reparte así un caso cerrado por el servidor con acuerdo o con las dos aceptaciones.')
+    const r = await pagarReparto(c, k, f)
+    exigir(!r.enCurso, 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
+    return r
+  }
+  exigir(rol !== null, 403, 'No participas en este contrato.')
   const P = c.plataforma.publicKey()
   switch (p.accion) {
     case 'pagar': {   // opción A: prueba del inquilino → Lockumi crea la cuenta segura y la fondea (ramp simulado, SOLO testnet)
@@ -627,28 +700,12 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       await exigirPrueba(c, k, uid, rol!, 'devolver-automatico', p.prueba, f)
       return await devolverAlInquilino(c, k, 'devolver-automatico', f)
     case 'repartir': {    // PR #22: acuerdo o mediación con las dos aceptaciones → disputa (plataforma) + resolución (cuenta mediadora)
-      if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) {
-        await asegurarEventoMediador(c, k.id, textoReparto(k), k.liquidacion_tx, f); return { tx: k.liquidacion_tx, yaExistia: true } }
+      if (k.liquidacion_tx && k.liquidacion_tx !== EN_CURSO && cierreAceptado(k)) return await pagarReparto(c, k, f)   // ya pagado: sin prueba
       await exigirPrueba(c, k, uid, rol!, 'repartir', p.prueba, f)   // opción A: quien confirma el reparto prueba su billetera
-      exigir(cierreAceptado(k) && !!k.escrow_contract_id, 409, 'Solo se reparte así un caso cerrado por el servidor con acuerdo o con las dos aceptaciones.')
-      exigir(k.liquidacion_tx !== EN_CURSO, 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
-      exigir(!!c.mediadorFirma, 503, 'Falta configurar en el servidor la cuenta que resuelve disputas. Escríbenos a business.applockumi@gmail.com.')
-      exigir(c.mediador !== P, 409, 'La cuenta que resuelve disputas tiene que ser distinta de la de Lockumi que abre la disputa.')
-      const reparto = repartoAceptado(k)
-      exigir(await tomar(c, k.id, f), 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
-      let disputaTx: string | null = null
-      try {
-        if (!(await hayEvento(c, k.id, REPARTO_DISPUTA, f)) && !(await hayEvento(c, k.id, REPARTO_DISPUTA_ANTES, f))) {   // en un reintento la disputa ya está abierta
-          const d = await tw(c, '/escrow/single-release/dispute-escrow', { contractId: k.escrow_contract_id, signer: P }, f)
-          const abierta = firmarComoPlataforma(c, sinFirmar(d)); await enviar(c, abierta, f)
-          disputaTx = hashTx(abierta); await anotar(c, k.id, {}, REPARTO_DISPUTA, disputaTx, f)
-        }
-        const j = await tw(c, '/escrow/single-release/resolve-dispute', { contractId: k.escrow_contract_id, disputeResolver: c.mediador, distributions: reparto }, f)
-        const firmada = firmarComoMediador(c, sinFirmar(j)); await enviar(c, firmada, f)
-        const tx = hashTx(firmada)
-        await anotarMediador(c, k.id, textoReparto(k), tx, f)
-        return { tx, disputaTx }
-      } catch (e) { await soltar(c, k.id, f).catch(() => {}); throw e }
+      const r = await pagarReparto(c, k, f)
+      // Otro pedido (la app de la otra parte o la corrida) lo está pagando ahora: mismo aviso de siempre, sin texto nuevo.
+      exigir(!r.enCurso, 409, 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.')
+      return r
     }
   }
   throw new ErrorTw(400, 'Acción no permitida.')

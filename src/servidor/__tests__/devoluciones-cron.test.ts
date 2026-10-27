@@ -4,7 +4,7 @@
 // en Trustless Work (banderas y saldo) y Horizon. La prueba SQL de la migración está en devoluciones-sql.test.ts.
 import { describe, it, expect } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal, StrKey } from '@stellar/stellar-sdk'
-import { pagarDevoluciones } from '../../../api/_lib/devoluciones'
+import { pagarDevoluciones, pagarRepartos } from '../../../api/_lib/devoluciones'
 import { atender, hashTx, APROBADO, DEVUELTO_AUTO, liberadoTexto, SEGUNDOS_BLOQUEO_PAGO, TEXTO_REVISAR_PAGO, type Entorno } from '../../../api/_lib/tw'
 import { firmado } from '../../services/__tests__/prueba-falsa'
 
@@ -33,6 +33,10 @@ function mundo() {
   const pendientes = (n: number) => [...filas.values()].filter(k => k.estado === 'cerrado' && ['automatico', 'devuelto'].includes(String(k.resultado?.via)) && k.escrow_contract_id
     && !k.liquidacion_tx && !k.pago_revisar && (k.pago_bloqueo_hasta === null || k.pago_bloqueo_hasta <= ahora) && !k.reclamo)
     .sort((a, b) => a.actualizado - b.actualizado).slice(0, Math.min(50, Math.max(1, n))).map(k => k.id)
+  // 20261027120000: repartos aceptados por pagar (acuerdo, o mediación con las dos aceptaciones), con reclamo
+  const repartos = (n: number) => [...filas.values()].filter(k => k.estado === 'cerrado' && (k.resultado?.via === 'acuerdo' || (k.resultado?.via === 'mediacion' && k.resultado?.cierre === 'dos_aceptan'))
+    && k.escrow_contract_id && !k.liquidacion_tx && !k.pago_revisar && (k.pago_bloqueo_hasta === null || k.pago_bloqueo_hasta <= ahora))
+    .sort((a, b) => a.actualizado - b.actualizado).slice(0, Math.min(50, Math.max(1, n))).map(k => k.id)
 
   function alquiler(o: Partial<Fila> & { aprobado?: boolean; escrow?: Partial<Escrow> } = {}) {
     const id = crypto.randomUUID(), cid = StrKey.encodeContract(Keypair.random().rawPublicKey()), inq = KI.publicKey()
@@ -54,8 +58,9 @@ function mundo() {
     if (url.includes('/rest/v1/rpc/')) {
       const fn = url.split('/rpc/')[1], k = filas.get(b.p_contrato)
       if (fn === 'lk_devoluciones_pendientes') return ok(pendientes(b.p_limite ?? 5))
+      if (fn === 'lk_repartos_pendientes') return ok(repartos(b.p_limite ?? 5))
       if (fn === 'lk_tomar_pago') {
-        const libre = k && pendientes(1e9).includes(k.id)
+        const libre = k && (pendientes(1e9).includes(k.id) || repartos(1e9).includes(k.id))
         if (libre) Object.assign(k, { pago_bloqueo_hasta: ahora + b.p_segundos * 1000, pago_bloqueo_token: b.p_token, pago_intentos: k.pago_intentos + 1 })
         return ok(!!libre)
       }
@@ -261,5 +266,63 @@ describe('paso 22 · la corrida diaria paga la devolución sin reclamo', () => {
     const max = Math.max(60, ...Object.values(v.functions ?? {}).map(x => x.maxDuration ?? 0))
     expect(SEGUNDOS_BLOQUEO_PAGO).toBeGreaterThan(max)
     expect(v.crons?.some(c => c.path === '/api/borrados')).toBe(true)
+  })
+})
+
+// 27/10/2026 · b10557f9: el inquilino aceptó el reclamo, la base cerró por acuerdo y el pago falló (401). «cerrado» sin liquidacion_tx
+// es «por pagar»: la corrida (o operación con /api/borrados?reparto=<id>) lo paga por el mismo camino idempotente que la app.
+describe('27/10 · repartos aceptados que quedaron sin pagar', () => {
+  const acuerdo = (w: ReturnType<typeof mundo>, o: Partial<Fila> = {}) => w.alquiler({ monto: 10, reclamo: true, resultado: { via: 'acuerdo', dueno: 4, inquilino: 6 }, ...o })
+  const repartirApp = (w: ReturnType<typeof mundo>, id: string) => atender(ENV, firmado({ accion: 'repartir', contrato: id }, KI), 'Bearer t', w.f)
+  it('la corrida paga el reparto 4/6 de un acuerdo y el de una mediación con las dos aceptaciones; guarda liquidacion_tx', async () => {
+    const w = mundo(), a = acuerdo(w), m = w.alquiler({ reclamo: true, resultado: { via: 'mediacion', cierre: 'dos_aceptan', dueno: 5, inquilino: 15 } })
+    const r = await pagarRepartos(ENV, { log: () => {} }, w.f) as Exclude<Awaited<ReturnType<typeof pagarRepartos>>, { apagado: true } | { error: string } | { pendientes: string[] }>
+    expect(r.pagados.map(p => p.contrato)).toEqual([a.id, m.id])
+    for (const k of [a, m]) { expect(k.liquidacion_tx).toMatch(HEX); expect(w.escrows.get(k.escrow_contract_id!)!.balance).toBe(0); expect(k.pago_bloqueo_token).toBeNull()
+      expect(w.envios(k.escrow_contract_id!, 'dispute-escrow')).toBe(1); expect(w.envios(k.escrow_contract_id!, 'resolve-dispute')).toBe(1) }
+    expect(w.eventos.some(e => e.contrato_id === a.id && e.tx_hash === a.liquidacion_tx && /4,00 USDC de prueba al dueño y 6,00 USDC de prueba al inquilino/.test(e.texto))).toBe(true)
+    expect((await pagarDevoluciones(ENV, {}, w.f) as { pendientes: number }).pendientes).toBe(0)   // la corrida de devoluciones no los toca
+  })
+  it('la corrida de /api/borrados los paga sola (REPARTOS_CRON=0 la apaga) y no toca casos abiertos ni en mediación', async () => {
+    const w = mundo(), a = acuerdo(w), abierto = w.alquiler({ estado: 'mediacion', resultado: null, reclamo: true }), sinDos = w.alquiler({ reclamo: true, resultado: { via: 'mediacion', dueno: 5, inquilino: 15 } })
+    expect(await pagarRepartos({ ...ENV, REPARTOS_CRON: '0' }, {}, w.f)).toEqual({ apagado: true }); expect(w.escrituras()).toBe(0)
+    const { ejecutarBorrados } = await import('../../../api/_lib/borrados')
+    const r = await ejecutarBorrados(ENV as Record<string, string>, w.f)
+    expect((r.repartos as { pagados: unknown[] }).pagados).toHaveLength(1); expect(a.liquidacion_tx).toMatch(HEX)
+    for (const k of [abierto, sinDos]) expect(w.pedidos.filter(p => p.cid === k.escrow_contract_id)).toEqual([])
+  })
+  it('operación: listar no paga nada; pagar UN id paga solo ese; un id mal formado no hace nada', async () => {
+    const w = mundo(), a = acuerdo(w), b = acuerdo(w)
+    expect(await pagarRepartos({ ...ENV, REPARTOS_CRON: '0' }, { listar: true }, w.f)).toEqual({ pendientes: [a.id, b.id] }); expect(w.escrituras()).toBe(0)
+    const r = await pagarRepartos({ ...ENV, REPARTOS_CRON: '0' }, { ids: [b.id], log: () => {} }, w.f) as { pagados: { contrato: string }[] }
+    expect(r.pagados.map(p => p.contrato)).toEqual([b.id]); expect(a.liquidacion_tx).toBeNull()
+    expect(await pagarRepartos(ENV, { ids: ["x' or 1=1"] }, w.f)).toEqual({ error: 'El id del alquiler no es válido.' })
+  })
+  it('no paga dos veces: dos corridas y la app a la vez → una disputa y una resolución; el reintento ya pagado no pide nada', async () => {
+    const w = mundo(), a = acuerdo(w), cid = a.escrow_contract_id!
+    const res = await Promise.allSettled([pagarRepartos(ENV, { log: () => {} }, w.f), pagarRepartos(ENV, { log: () => {} }, w.f), repartirApp(w, a.id)])
+    expect(w.envios(cid, 'dispute-escrow')).toBe(1); expect(w.envios(cid, 'resolve-dispute')).toBe(1)
+    const app = res[2]; if (app.status === 'rejected') expect(app.reason).toMatchObject({ estado: 409, message: 'El reparto ya se está pagando. Vuelve a abrir el alquiler en un momento.' })
+    const antes = w.pedidos.length
+    expect(await repartirApp(w, a.id)).toEqual({ tx: a.liquidacion_tx, yaExistia: true }); expect(w.pedidos.length).toBe(antes)
+  })
+  it('corte después de abrir la disputa: espera el bloqueo y el reintento solo resuelve; si la respuesta se pierde, lo confirma en Horizon', async () => {
+    const w = mundo(), a = acuerdo(w), cid = a.escrow_contract_id!
+    w.fallas.push({ cid, op: 'resolve-dispute', donde: 'pedir' })
+    const r1 = await pagarRepartos(ENV, { log: () => {} }, w.f) as { fallidos: unknown[] }
+    expect(r1.fallidos).toHaveLength(1); expect(a.liquidacion_tx).toBeNull(); expect(w.escrows.get(cid)!.flags.disputed).toBe(true)
+    w.avanzar(SEGUNDOS_BLOQUEO_PAGO + 1)
+    w.fallas.push({ cid, op: 'resolve-dispute', donde: 'enviar', cuando: 'despues' })
+    await pagarRepartos(ENV, { log: () => {} }, w.f); expect(a.liquidacion_tx).toBeNull(); expect(a.pago_tx_pendiente).toMatch(HEX)
+    w.avanzar(SEGUNDOS_BLOQUEO_PAGO + 1)
+    const r3 = await pagarRepartos(ENV, { log: () => {} }, w.f) as { pagados: { recuperado?: true }[] }
+    expect(r3.pagados[0].recuperado).toBe(true); expect(a.liquidacion_tx).toBe(a.pago_tx_pendiente)
+    expect(w.envios(cid, 'dispute-escrow')).toBe(1); expect(w.envios(cid)).toBe(2)   // a la red: una disputa y una resolución
+  })
+  it('si el escrow no cuadra (otro saldo o ya pagado sin la tx) no paga: queda para revisar y la app ve el texto de siempre', async () => {
+    const w = mundo(), a = acuerdo(w); w.escrows.get(a.escrow_contract_id!)!.balance = 7
+    const r = await pagarRepartos(ENV, { log: () => {} }, w.f) as { revisar: { contrato: string }[] }
+    expect(r.revisar.map(x => x.contrato)).toEqual([a.id]); expect(a.pago_revisar).toBe(true); expect(w.escrituras()).toBe(0)
+    await expect(repartirApp(w, a.id)).rejects.toMatchObject({ estado: 409, message: TEXTO_REVISAR_PAGO })
   })
 })
