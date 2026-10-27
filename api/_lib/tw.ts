@@ -8,7 +8,7 @@
 //   send     https://docs.trustlesswork.com/trustless-work/api-rest/helpers/send-transaction
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
-import { repartoCentimos, exacto, netoTW } from './centimos.js'
+import { exacto, netoTW, netoTrustless } from './centimos.js'
 import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, USDC } from './red.js'
 import { revisarPrueba } from './prueba-cavos.js'
 import { SIN_PRUEBA, type AccionPrueba, type Prueba } from './prueba-mensaje.js'
@@ -207,7 +207,8 @@ export const REPARTO_DISPUTA = 'Se abrió la disputa en Trustless Work (red de p
 /** El texto de antes (casos que abrieron la disputa antes del cambio): un reintento no vuelve a abrirla. */
 const REPARTO_DISPUTA_ANTES = 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado'
 const centavos = (x: unknown) => Math.round(Number(x) * 100)
-const textoReparto = (k: Contrato) => { const r = repartoCentimos(Number(k.resultado!.dueno), Number(k.resultado!.inquilino)); return `Se pagó el reparto aceptado desde Trustless Work: ${exacto(r.llegaDueno)} USDC de prueba al dueño y ${exacto(r.llegaInquilino)} USDC de prueba al inquilino (cada monto menos el 0,3 % de comisión de Trustless Work).` }
+// Katherine 27/10/2026, 4:00 p. m. CR («Ok dele con la a»): montos netos exactos (netoTrustless, los mismos que se envían en la red).
+const textoReparto = (k: Contrato) => { const [d, i] = netoTrustless(centavos(k.resultado!.dueno) / 100, centavos(k.resultado!.inquilino) / 100).llegan; return `Se pagó el reparto aceptado desde Trustless Work. Llegaron ${exacto(d)} USDC de prueba al dueño y ${exacto(i)} USDC de prueba al inquilino. Esos montos ya tienen descontado el 0,3 % de comisión de Trustless Work. Lockumi no cobra nada.` }
 function cierreAceptado(k: Contrato) {
   const r = k.resultado
   if (k.estado !== 'cerrado' || !r) return false

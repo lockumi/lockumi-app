@@ -58,7 +58,9 @@ describe('textos (api/_lib/textos-correos.ts): un solo archivo, con la marca de 
   it('montos de prueba menos el 0,3 % de Trustless Work', () => {
     expect(usdc(20)).toBe('20,00 USDC de prueba'); expect(usdc(0.5)).toBe('0,50 USDC de prueba'); expect(llega(20)).toBe(19.94)
     expect(TEXTOS['COR-C-07/devuelto'].cuerpo({ deposito: 20 })).toContain('llegan 19,94 USDC de prueba')
-    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 20, dueno: 5, inquilino: 15 })).toContain('Llegan 4,985 USDC de prueba al dueño y 14,955 USDC de prueba al inquilino; Trustless Work descuenta 0,06 USDC de prueba')   // exactos (Katherine 27/10): 4,985 + 14,955 + 0,06 = 20
+    expect(TEXTOS['COR-C-06/partes'].cuerpo({ deposito: 20, dueno: 5, inquilino: 15 })).toContain('Reparto acordado: 5,00 USDC de prueba al dueño y 15,00 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,06 USDC de prueba en total), así que llegan 4,985 USDC de prueba al dueño y 14,955 USDC de prueba al inquilino. Lockumi no recibe nada.')   // exactos (Katherine 27/10): 4,985 + 14,955 + 0,06 = 20
+    // Katherine 27/10/2026, 4:00 p. m. CR: el mismo tramo en el correo del inquilino que aceptó (reparto 4/6 de b10557f9)
+    expect(TEXTOS['COR-C-07/acuerdo'].cuerpo({ deposito: 10, dueno: 4, inquilino: 6 })).toContain('Reparto acordado: 4,00 USDC de prueba al dueño y 6,00 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,03 USDC de prueba en total), así que llegan 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino. Lockumi no recibe nada.')
   })
 })
 

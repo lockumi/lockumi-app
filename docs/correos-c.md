@@ -211,6 +211,18 @@ Pedido: «mejor no redondear el monto que es devuelto: réstale la comisión rea
 - **Textos legales no tocados** (`src/legal/**`, `src/screens/ContratoDoc.tsx`; Términos 5.2 ya da el ejemplo 1,994).
 - **Publicado:** PR #67 (ver `PLAN.md`).
 
+## Textos de la comisión (27/10/2026, Katherine 4:00 p. m. CR: «Ok dele con la a»)
+
+PR #71, solo textos. Cambian 3 frases; las cifras siguen saliendo de `netoTrustless` (`api/_lib/centimos.ts`) y se escriben con `exacto`, sin redondear.
+
+| Dónde | Antes | Ahora |
+|---|---|---|
+| Historial, `api/_lib/tw.ts` (`textoReparto`) | «Se pagó el reparto aceptado desde Trustless Work: 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino (cada monto menos el 0,3 % de comisión de Trustless Work).» | «Se pagó el reparto aceptado desde Trustless Work. Llegaron 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino. Esos montos ya tienen descontado el 0,3 % de comisión de Trustless Work. Lockumi no cobra nada.» |
+| COR-C-06/partes (`repartoAcordado`) | «Reparto: 4,00 … al dueño y 6,00 … al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 3,988 … al dueño y 5,982 … al inquilino; Trustless Work descuenta 0,03 USDC de prueba, y Lockumi no recibe nada.» | «Reparto acordado: 4,00 USDC de prueba al dueño y 6,00 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,03 USDC de prueba en total), así que llegan 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino. Lockumi no recibe nada.» |
+| COR-C-07/acuerdo (`repartoAcordado`) | «Reparto del depósito de prueba de 10,00 …: 4,00 … al dueño y 6,00 … al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 3,988 … y 5,982 …. Lockumi no recibe nada.» | La misma frase que COR-C-06/partes. |
+
+Ejemplo real: reparto 4/6 del alquiler b10557f9 (depósito 10). Los montos brutos se escriben como antes (`usdc`, 2 decimales). No cambian el diseño, `src/legal/**`, `src/screens/ContratoDoc.tsx`, las notas de `Detalle.tsx` ni los textos previos al pago. Los eventos que ya están en el historial no se reescriben: `asegurarEventoMediador` busca por hash de la transacción. Pruebas: `reparto-centimos.test.ts`, `correos-c-envio.test.ts`, `llaves-mediador.test.ts`, `devoluciones-cron.test.ts`.
+
 ## Textos (generados desde `api/_lib/textos-correos.ts`, con datos de ejemplo)
 
 Datos de ejemplo: depósito 2,00, reclamo 0,50, reparto 0,50 / 1,50, vence el 29 oct 2026, 9:00 a. m. Hora en 12 h y montos con 2 decimales (Legal 25/10, 5:09 p. m., punto 8).
@@ -297,7 +309,7 @@ Datos de ejemplo: depósito 2,00, reclamo 0,50, reparto 0,50 / 1,50, vence el 29
 - Asunto: Se registró el acuerdo de la Mediación Lockumi (demo)
 - Botones: «Ver el resultado» · nota: uno · pie de baja: sí
 
-> Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de 2,00 USDC de prueba, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino; Trustless Work descuenta 0,006 USDC de prueba, y Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.
+> Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de 2,00 USDC de prueba, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto acordado: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,006 USDC de prueba en total), así que llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino. Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.
 
 ### COR-C-06/vencida · `api/_lib/textos-correos.ts:125` · **LEGAL: revisado (25/10)**
 
@@ -332,7 +344,7 @@ Datos de ejemplo: depósito 2,00, reclamo 0,50, reparto 0,50 / 1,50, vence el 29
 - Asunto: El inquilino aceptó el reclamo: se repartió el depósito de prueba
 - Botones: «Ver el alquiler» · nota: uno · pie de baja: sí
 
-> El inquilino aceptó el reclamo de 0,50 USDC de prueba. Reparto del depósito de prueba de 2,00 USDC de prueba: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino, cada monto menos el 0,3 % de comisión de Trustless Work. Llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino. Lockumi no recibe nada. Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.
+> El inquilino aceptó el reclamo de 0,50 USDC de prueba. Reparto acordado: 0,50 USDC de prueba al dueño y 1,50 USDC de prueba al inquilino. Trustless Work descuenta el 0,3 % de cada monto (0,006 USDC de prueba en total), así que llegan 0,4985 USDC de prueba al dueño y 1,4955 USDC de prueba al inquilino. Lockumi no recibe nada. Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.
 
 ### COR-C-08/A · `api/_lib/textos-correos.ts:145` · **LEGAL: revisado (25/10)**
 
