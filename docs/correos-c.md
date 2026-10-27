@@ -213,7 +213,7 @@ Pedido: «mejor no redondear el monto que es devuelto: réstale la comisión rea
 
 ## Textos de la comisión (27/10/2026, Katherine 4:00 p. m. CR: «Ok dele con la a»)
 
-PR #__PR__, solo textos. Cambian 3 frases; las cifras siguen saliendo de `netoTrustless` (`api/_lib/centimos.ts`) y se escriben con `exacto`, sin redondear.
+PR #71, solo textos. Cambian 3 frases; las cifras siguen saliendo de `netoTrustless` (`api/_lib/centimos.ts`) y se escriben con `exacto`, sin redondear.
 
 | Dónde | Antes | Ahora |
 |---|---|---|
