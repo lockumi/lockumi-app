@@ -56,7 +56,7 @@ describe('App y pago usan la puerta', () => {
   it('pagar y firmar el contrato (C) piden entrar de nuevo si se perdió la sesión', async () => {
     const d = await leer('../Detalle.tsx')
     expect(d).toMatch(/<ConSesion activo=\{modoDe\(a\)\.trustless && etapa === 0\}>\s*<EsperaPago/)
-    expect(d).toMatch(/<ConSesion activo=\{esDosPersonas\(a\) && rol === 'inquilino'[^}]*\}>\s*<Firma/)
+    expect(d).toMatch(/<ConSesion activo=\{pideSesionAntesDeFirmar\(a, rol\)\}>\s*<Firma/)
     expect(d).toContain('esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error')
   })
 })
