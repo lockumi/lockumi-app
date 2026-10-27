@@ -99,5 +99,5 @@ G. **Avisos tras la mediación (27/10, `0070af80`):** la persona mediadora regis
 H. **Reputación en dos aparatos (27/10):** «Nuevo en Lockumi · 0 alquileres cerrados» con 2 cerrados por papel en la base. Causa: la app
    decidía si un alquiler cuenta mirando el perfil (REP-01) de las DOS partes en el localStorage de este navegador; el de la otra parte
    nunca está ahí. Ahora, con servidor, lo dice `lk_reputacion_de_mis_alquileres()` (migración `20261027140000`). Detalle en `docs/reputacion.md`.
-I. **Propuesta de texto (no cambiado):** tras una decisión de la persona mediadora el alquiler muestra «Depósito devuelto · Lo aceptaron las
-   dos partes». Puede ser inexacto (hubo reparto con mediación). Queda para Legal y Katherine; no se cambió ningún texto.
+I. **Verificado (27/10/2026, Coordinador/Legal):** tras el registro de la persona mediadora el alquiler muestra «Depósito devuelto · Lo aceptaron las
+   dos partes». Es correcto: el servidor solo deja registrar el acuerdo con las dos aceptaciones del mismo monto (en 0070af80 constan las dos). Sin cambios.
