@@ -207,7 +207,9 @@ Pedido: «mejor no redondear el monto que es devuelto: réstale la comisión rea
 - **Cálculo (una sola función):** `api/_lib/centimos.ts` → `netoTrustless(...partes)`, en stroops (BigInt) como el contrato: comisión = piso(total × 30 / 10000); a cada parte le toca piso(parte × comisión / total). `netoTW(monto)` para un solo monto; `exacto(n)` para el texto (2 a 7 decimales); en la app `usdExacto` (`src/ui.tsx`).
 - **Dónde:** correos COR-C-06/partes y COR-C-07 (`textos-correos.ts`), historial (`api/_lib/tw.ts`, `src/acciones.ts`), avisos (`src/alertas.ts`), cierre y «Si aceptas, recibes…» (`src/screens/Detalle.tsx`), modo real (`src/screens/Real.tsx`), expediente (`src/prueba/expediente.ts`), notas de dos personas (`src/prueba/dosPersonas.ts`) y el resultado del escrow (`src/services/escrow.ts`). El reparto **acordado** (deslizadores, aceptaciones, línea «Reparto: …» del correo) sigue en bruto con 2 decimales.
 - **Pruebas:** `src/__tests__/reparto-centimos.test.ts` (tx reales, piso como el contrato, llegadas + comisión = depósito en stroops) y `src/__tests__/usd-exacto.test.ts`.
-- **Textos legales no tocados** (Términos 5.2 ya da el ejemplo 1,994): ver el PR.
+- **Sin redacción nueva (Katherine 27/10/2026, 1:46 p. m. CR: «Publica ya solo los números, sin tocar textos legales»):** las frases son las mismas, palabra por palabra, que antes del cambio; solo cambia la cifra que va dentro (1,00 → 0,997; 0,70 + 0,30 → 0,6979 + 0,2991). Por ejemplo, el historial sigue diciendo «Se pagó el reparto aceptado desde Trustless Work: 3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino (cada monto menos el 0,3 % de comisión de Trustless Work).», el aviso de dos personas sigue con «A cada monto se le descuenta el 0,3 %…» y «Si aceptas, recibes…» sigue con «(menos 0,3 % de comisión de la red de prueba)». Una redacción que diga que esas cifras ya vienen descontadas queda para una ronda de Legal.
+- **Textos legales no tocados** (`src/legal/**`, `src/screens/ContratoDoc.tsx`; Términos 5.2 ya da el ejemplo 1,994).
+- **Publicado:** PR #67 (ver `PLAN.md`).
 
 ## Textos (generados desde `api/_lib/textos-correos.ts`, con datos de ejemplo)
 

@@ -197,7 +197,7 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       // LEGAL: revisado (25/10, lista de Legal)
       if (r.via === 'acuerdo') return {
         paso: 'acuerdo', titulo: 'Reclamo aceptado',
-        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' Son los montos que llegan, ya descontado el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
+        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
         sigue: TERMINO,
         linea: { texto: `${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino` },   // LEGAL: revisado el 23/10 (montos del reparto real)
         accion: { texto: 'Ver detalle', etiqueta: 'Ver el detalle del reparto', ir: 'detalles' },
@@ -205,7 +205,7 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
       // LEGAL: revisado (24/10) · título «Reparto del depósito», línea y texto largo con los montos reales de usd(...)
       return {
         paso: 'reparto', titulo: 'Reparto del depósito',
-        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' Son los montos que llegan, ya descontado el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
+        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
         sigue: TERMINO,
         linea: { texto: `${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino` },   // LEGAL: revisado (24/10)
         accion: { texto: 'Ver detalle →', etiqueta: 'Ver el detalle del reparto', ir: 'detalles' },
