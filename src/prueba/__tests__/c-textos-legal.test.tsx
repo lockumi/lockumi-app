@@ -86,7 +86,7 @@ describe('3) pago en C: confirma la cuenta Lockumi (Cavos), la única que firma 
   // (firmarXdr); el depósito lo pone el ramp simulado de testnet. Ninguna otra billetera.
   it('en dos personas solo firma la billetera Cavos (trustless → firmarPrueba / firmarXdr → Cavos)', async () => {
     const t = (await import('../../services/trustless.ts?raw')).default as string, b = (await import('../../services/billetera.ts?raw')).default as string
-    expect(t).toMatch(/import \{ firmarXdr, firmarPrueba, mensajeFirma, esTextoNoFirmante \} from '\.\/billetera'/)
+    expect(t).toMatch(/import \{ firmarXdr, firmarPrueba, mensajeFirma, esTextoNoFirmante, conectarBilletera \} from '\.\/billetera'/)
     expect(b).toMatch(/export async function firmarXdr\(xdr: string\): Promise<string> \{ return \(await miCartera\(\)\)\.signXdr\(xdr\) \}/)
     expect(b).not.toMatch(/freighter/i)
   })

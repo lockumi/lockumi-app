@@ -4,7 +4,7 @@
 
 
 ## Depósito de dos personas: trustline del inquilino (26/10/2026)
-Trustless Work rechazaba el deploy (400, role receiver) porque la cuenta Cavos del inquilino no existía en testnet. Ahora la app del inquilino la prepara antes (Friendbot, trustline, USDC de prueba), el servidor la revisa antes de llamar a TW y el error técnico ya no se ve («No pudimos preparar el depósito. Intenta de nuevo en un momento.»). Detalle: [docs/prueba-completa.md](docs/prueba-completa.md#depósito-de-dos-personas-la-cuenta-del-inquilino-sin-trustline-26102026).
+Trustless Work rechazaba el deploy (400, role receiver) porque la cuenta Cavos del inquilino no existía en testnet. Ahora (opción A, 26/10, 9:13 p. m.) la plataforma crea la cuenta con reservas patrocinadas y la persona firma con Cavos la trustline, como Meteorito, sin Friendbot (docs/fondeo-testnet.md); el USDC del depósito lo pone el ramp simulado, el servidor la revisa antes de llamar a TW y el error técnico ya no se ve («No pudimos preparar el depósito. Intenta de nuevo en un momento.»). Detalle: [docs/prueba-completa.md](docs/prueba-completa.md#depósito-de-dos-personas-la-cuenta-del-inquilino-sin-trustline-26102026).
 
 ## Invitación abierta con otra cuenta: código al correo invitado (26 oct 2026, aprobado por Katherine)
 
@@ -305,4 +305,5 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   Detalle, solo testnet (en mainnet firma cada persona con Cavos) y límites: `docs/firma-servidor.md`.
 - 26/10/2026 · Opción A (rama `cavos-firma`, pendiente OK de Katherine y Legal): prueba de Cavos en cada acción con la cuenta segura, Lockumi ejecuta con llaves de rol, depósito por ramp simulado de testnet; la firma del servidor queda solo para alquileres de antes. Migración 20261026110000 (no aplicada). `docs/firma-cavos.md`.
 - 26/10/2026 · Opción A **con passkey** (decisión de Katherine, 8:53 p. m.): llave de acceso obligatoria al crear la cuenta (`secureStep: 'required'`) y «Entrar con mi llave de acceso» en un dispositivo nuevo; módulo reutilizable `src/services/llave.ts` (lo usará también `fondeo-testnet`). Solo la parte de passkey del PR #53.
+- 26/10/2026 · Fondeo «estilo Meteorito» (decisión de Katherine, 9:13 p. m.; mismo PR #57, el #58 se cerró): `activar-cuenta` (`api/_lib/activacion.ts`) — la plataforma crea la cuenta con 0 XLM y patrocina reservas, la persona firma la trustline de USDC con Cavos; el depósito lo fondea el ramp simulado desde la tesorería. Sin Friendbot, sin fondeo retroactivo y sin «cuenta nueva» (cuentas viejas abandonadas). Detalle y lo que falta: [docs/fondeo-testnet.md](docs/fondeo-testnet.md).
 - 26/10/2026 · El dueño no puede aceptar su propia invitación (misma cuenta o mismo correo, también Apple): aviso «Este link es para la otra persona…» con «Cerrar sesión», y la base lo rechaza (migración 20261026100000). Ver `docs/invitacion-enlace.md`.

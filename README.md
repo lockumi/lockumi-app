@@ -68,6 +68,8 @@ Pasos en https://app.lockumi.com:
 
 **Opción A (en rama, 26 oct 2026):** se reemplaza lo anterior: cada acción con la cuenta segura lleva una prueba firmada con Cavos que el servidor revisa, y Lockumi ejecuta con sus llaves de rol; el depósito lo pone un ramp simulado de testnet (`api/_lib/rampSimulado.ts`). La cuenta lleva además una **llave de acceso (passkey) obligatoria**, creada al entrar por primera vez, para firmar con la misma cuenta desde cualquier dispositivo (`src/services/llave.ts`). Ver [docs/firma-cavos.md](docs/firma-cavos.md).
 
+**Activación como Meteorito (26 oct 2026, mismo PR):** antes de pagar, la plataforma crea la cuenta Cavos con 0 XLM y paga sus reservas como patrocinador; la persona firma con Cavos la trustline de USDC (acción `activar-cuenta`, `api/_lib/activacion.ts`). El depósito lo fondea el ramp simulado desde la tesorería de la plataforma y la cuenta segura bloquea siempre USDC. Sin Friendbot en dos personas. Ver [docs/fondeo-testnet.md](docs/fondeo-testnet.md).
+
 Abre cada "Ver comprobante en la red de prueba" para ver la transacción en `stellar.expert/explorer/testnet`: creación del escrow, depósito, aprobación, devolución, reclamo y reparto.
 
 ¿Prefieres ver primero cómo funciona? La primera vez que entras en un navegador se abre solo un **recorrido guiado de 6 pasos** sobre las pantallas reales (tiene «Saltar»). Para verlo otra vez, toca «¿Cómo funciona?» en el encabezado o «Ver el recorrido» en la tarjeta «¿Primera vez?» de Inicio. Los pasos 4 a 6 usan un alquiler de ejemplo de solo lectura: no crea nada ni mueve USDC. Ver [`docs/recorrido.md`](docs/recorrido.md).

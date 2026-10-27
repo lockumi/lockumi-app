@@ -13,6 +13,7 @@ import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, FRIENDBOT, USDC } 
 import { revisarPrueba } from './prueba-cavos.js'
 import { SIN_PRUEBA, type AccionPrueba, type Prueba } from './prueba-mensaje.js'
 export { SIN_PRUEBA }
+import { estadoCuenta, construirActivacion, validarActivacion, firmarYEnviarActivacion, ErrorActivacion } from './activacion.js'
 import { exigirRampTestnet, rampActivo, type DepsRamp } from './rampSimulado.js'
 
 export type Entorno = Record<string, string | undefined>
@@ -518,6 +519,7 @@ export type Pedido =
   | { accion: 'liberar'; contrato: string; prueba?: Prueba }
   | { accion: 'devolver-automatico'; contrato: string; prueba?: Prueba }
   | { accion: 'repartir'; contrato: string; prueba?: Prueba }
+  | { accion: 'activar-cuenta'; contrato: string; paso: 'estado' | 'preparar' | 'enviar'; prueba?: Prueba; signedXdr?: string }
   | { accion: 'preparar-cuenta'; contrato: string }
   | { accion: 'eliminar'; contrato: string }
 
@@ -592,6 +594,24 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
       const r = await rest(c, 'rpc/lk_eliminar_sin_deposito', { method: 'POST', body: JSON.stringify({ p_contrato: k.id, p_usuario: uid }) }, f)
       exigir(r.ok && (await r.json().catch(() => false)) === true, 409, 'Este alquiler tiene un depósito guardado.')
       return { eliminado: true }
+    }
+    case 'activar-cuenta': {   // como api/wallet/activate.ts de Meteorito: la plataforma patrocina la cuenta; la persona firma la línea de USDC
+      soloTestnet(e)
+      const g = cuenta(k, rol!)
+      if (llaveLegado(c, uid, g)) return { listo: true }   // alquileres de antes con cuenta del servidor: se prepara al pagar
+      try {
+        const estado = await estadoCuenta(g, f)
+        if (estado === 'listo') return { listo: true }
+        if (p.paso === 'estado') return { listo: false, estado }
+        if (p.paso === 'preparar') {
+          limitarPreparar(uid)
+          await exigirPrueba(c, k, uid, rol!, 'activar-cuenta', p.prueba, f)
+          return { listo: false, estado, unsignedXdr: (await construirActivacion(c.plataforma, g, estado, f)).toXDR() }
+        }
+        exigir(p.paso === 'enviar' && typeof p.signedXdr === 'string' && p.signedXdr.length <= 10_000, 400, 'Acción no permitida.')
+        const tx = await firmarYEnviarActivacion(c.plataforma, validarActivacion(p.signedXdr!, g, P), f)
+        return { listo: (await estadoCuenta(g, f)) === 'listo', tx }
+      } catch (x) { if (x instanceof ErrorActivacion) throw new ErrorTw(x.estado, x.message); throw x }
     }
     case 'preparar-cuenta': {   // LEGADO PR #54: solo la trustline de la cuenta del servidor de un alquiler que ya la usaba
       const legado = llaveLegado(c, uid, cuenta(k, rol!))

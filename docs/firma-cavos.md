@@ -32,6 +32,12 @@ Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de
   hasta que Katherine decida otra cosa.
 - Origen: solo la parte de passkey del PR #53 (commit d08526d); no se trajo la oferta con «Ahora no».
 
+## Activar la cuenta como Meteorito (sin Friendbot) · `api/_lib/activacion.ts`
+Decisión de Katherine (26/10, 9:13 p. m.): idéntico a Meteorito. Antes de pagar (y el dueño, al reclamar), la **plataforma crea la cuenta con
+0 XLM y paga las reservas como patrocinador; la persona firma con Cavos la línea de confianza de USDC** (acción `activar-cuenta` de `/api/tw`,
+prueba de Cavos incluida). Ya no hay Friendbot ni compra de USDC con XLM propio en dos personas. Detalle: [fondeo-testnet.md](fondeo-testnet.md).
+Las cuentas viejas con llave perdida se **abandonan** (sin «cuenta nueva» ni `appSalt` nuevo): la passkey obligatoria vale para todos.
+
 ## SIMULACIÓN TESTNET: el ramp
 - `pagar` crea la cuenta segura y la **fondea Lockumi desde su tesorería** (plataforma) con USDC de prueba, como el `mockRampFund`
   de Meteorito. La tesorería compra el USDC que falte con XLM (path payment en testnet). Queda en el historial como fondeo simulado.
@@ -45,7 +51,7 @@ Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de
 - Repartir, liberar y devolución automática piden la prueba a las cuentas Cavos. La corrida diaria (cron) no cambia.
 
 ## Migración (NO aplicada)
-- `supabase/migrations/20261026110000_pruebas_cavos.sql` (tabla de nonces usados, solo `service_role`).
+- `supabase/migrations/20261026110000_pruebas_cavos.sql` (tabla de nonces usados, solo `service_role`; acepta las acciones de prueba, incluida `activar-cuenta`).
   Vuelta atrás: `supabase/revert/20261026110000_pruebas_cavos_revert.sql`. Sin ella el servidor responde 503 en las acciones con prueba.
 
 ## Textos nuevos (pendientes de Legal)
@@ -60,8 +66,10 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
 - `src/__tests__/cavos-sin-firma-silenciosa.test.ts`: `signMessage` solo en `billetera.ts` (pendiente OK de Legal).
 - `scripts/e2e-c.mjs --simulado`: el recorrido de dos cuentas con pruebas.
 
-## Falta para la prueba real con dos cuentas Cavos
-1. Aplicar la migración en la base de prueba (no en producción sin OK).
-2. Tesorería (plataforma) con XLM/USDC en testnet.
-3. Confirmar en testnet que Trustless Work acepta approver = plataforma (misma cuenta que serviceProvider/releaseSigner).
-4. Dos cuentas Cavos en sus aparatos originales, y la llave de acceso probada en un segundo dispositivo real (el vault pide la passkey en su ventana; no se puede simular). 5. OK de Katherine y de Legal (textos y `signMessage`).
+## Falta para la prueba real con dos cuentas Cavos (leído en solo lectura el 26/10, 9:20 p. m. CR)
+1. **Migración:** producción llega a `20261026100000`; falta `20261026110000_pruebas_cavos` (no existe `lk_pruebas_cavos`). Sin ella el servidor responde 503 en las acciones con prueba. Aplicarla solo con OK de Katherine.
+2. **Tesorería** (`GCTLNUBV…TJ4G`, la misma que la variable de producción): 9 234,09 XLM y 42,985 USDC. Alcanza para varias pruebas; cada cuenta patrocinada cuesta ~1,5 XLM.
+   **Variables de Vercel:** las que usa el código ya están en producción (`LOCKUMI_TW_PLATAFORMA_SECRET`, `LOCKUMI_TW_MEDIADOR_SECRET` y `_PUBLICA`, `TRUSTLESS_WORK_API_KEY`, `SUPABASE_*`, `VITE_CAVOS_APP_ID`, `VITE_TRUSTLESS`, `VITE_DOS_PERSONAS`/`LOCKUMI_DOS_PERSONAS`); este PR no pide ninguna nueva.
+3. **Orígenes de Cavos:** el servidor de Cavos responde CORS abierto (no revela la lista); la lista real está en el panel de Cavos. app.lockumi.com ya inicia sesión con Cavos en producción, pero la **passkey** (WebAuthn) y las URL de vista previa de Vercel hay que confirmarlas en el panel o probando en app.lockumi.com.
+4. Confirmar en testnet que Trustless Work acepta approver = plataforma (misma cuenta que serviceProvider/releaseSigner).
+5. Dos cuentas Cavos en sus aparatos originales, y la llave de acceso probada en un segundo dispositivo real (el vault pide la passkey en su ventana; no se puede simular). 6. OK de Katherine y de Legal (textos y `signMessage`).

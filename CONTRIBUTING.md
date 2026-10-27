@@ -125,6 +125,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 ## Firma del servidor en testnet (`api/_lib/tw.ts`, `docs/firma-servidor.md`)
 
 - Opción A (`docs/firma-cavos.md`): toda acción que mueve la cuenta segura exige `exigirPrueba` (prueba de Cavos revisada en el servidor, nonce de un solo uso). No agregues acciones nuevas sin ella.
+- Activación de cuentas (`api/_lib/activacion.ts`, `docs/fondeo-testnet.md`): como `activate.ts` de Meteorito, la plataforma solo patrocina reservas y la persona firma su trustline con Cavos. No uses Friendbot ni guardes llaves de personas en el flujo de dos personas, y no agregues rutas especiales para cuentas viejas. `activar-cuenta` es solo testnet y exige la prueba de Cavos en `preparar`.
 - La llave derivada (PR #54) queda solo para alquileres de antes (`llaveLegado`); nunca sale del servidor. No la uses para alquileres nuevos.
 - El ramp es una SIMULACIÓN TESTNET: se cambia solo en `rampActivo` (`api/_lib/rampSimulado.ts`) y no quites `exigirRampTestnet`.
 - Un solo `signMessage`, en `src/services/billetera.ts` (lo vigila `cavos-sin-firma-silenciosa.test.ts`).

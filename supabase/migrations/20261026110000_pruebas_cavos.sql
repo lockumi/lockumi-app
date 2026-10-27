@@ -5,7 +5,7 @@
 create table if not exists public.lk_pruebas_cavos (
   nonce text primary key check (nonce ~ '^[0-9a-f]{32}$'),
   usuario uuid not null,
-  accion text not null check (accion in ('pagar', 'aprobar', 'repartir', 'liberar', 'devolver-automatico')),
+  accion text not null check (accion in ('pagar', 'aprobar', 'repartir', 'liberar', 'devolver-automatico', 'activar-cuenta')),
   contrato_id uuid not null references public.lk_contratos(id) on delete cascade,
   usada_en timestamptz not null default now()
 );

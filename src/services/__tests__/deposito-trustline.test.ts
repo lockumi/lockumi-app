@@ -1,6 +1,6 @@
 // 26/10/2026 · Dos personas: Trustless Work respondía 400 «The trustline for address G… (role: receiver) could not be validated»
 // porque la cuenta Cavos del inquilino no existía en testnet. Ahora (1) la app del inquilino prepara su cuenta antes de crear la
-// cuenta segura (opción A: solo Friendbot y trustline; el depósito lo pone el ramp simulado), (2) el servidor revisa la trustline del receiver antes de llamar a TW y (3) nunca se ve el error técnico.
+// cuenta segura (opción A: activación patrocinada por la plataforma y trustline firmada por la persona, sin Friendbot; el depósito lo pone el ramp simulado), (2) el servidor revisa la trustline del receiver antes de llamar a TW y (3) nunca se ve el error técnico.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Keypair, Account, TransactionBuilder, Operation, Networks, Address, nativeToScVal } from '@stellar/stellar-sdk'
 import { atender, mensajeParaPersona, ErrorTw, type Entorno } from '../../../api/_lib/tw'
@@ -63,7 +63,7 @@ vi.mock('../billetera', () => ({
   conectarBilletera: async () => ({ direccion: INQ_CLIENTE, estado: 'ready' }),
   consultarSaldo: async () => (b.existe ? '10000' : null),
   consultarUsdc: async () => (!b.existe ? undefined : b.trust ? (b.llamadas.includes('compra') ? '1' : '0') : null),
-  fondear: async () => { b.llamadas.push('friendbot'); b.existe = true },
+  fondear: async () => { b.llamadas.push('friendbot'); b.existe = true },   // ya no se usa en dos personas: la prueba exige que no se llame
   olvidarBilletera: () => {},
   abrirTrustlineUsdc: async () => { b.llamadas.push('trustline'); b.trust = true; return 'tx-trust' },
   firmarXdr: async (x: string) => { b.llamadas.push('firma'); return x },
@@ -77,17 +77,26 @@ const INQ_CLIENTE = vi.hoisted(() => 'GDJU2MWJWMC37S3PWUVUABI2NPDMGGTMCMY2O3PFNT
 describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segura', () => {
   beforeEach(() => { b.llamadas.length = 0; b.existe = false; b.trust = false; b.sinLlave = false })
   const fetchFalso = (tw: (cuerpo: Record<string, unknown>) => Response) => vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === '/api/tw') { const c = JSON.parse(String(init!.body)); b.llamadas.push('tw:' + c.accion); return tw(c) }
+    if (url === '/api/tw') {
+      const c = JSON.parse(String(init!.body)); b.llamadas.push('tw:' + c.accion + (c.paso ? ':' + c.paso : ''))
+      if (c.accion === 'activar-cuenta') {   // activación patrocinada (como /api/wallet/activate de Meteorito)
+        if (c.paso === 'estado') return new Response(JSON.stringify({ listo: b.trust }))
+        if (c.paso === 'preparar') return new Response(JSON.stringify({ unsignedXdr: 'xdr-sin-firmar' }))
+        b.trust = true; return new Response(JSON.stringify({ listo: true, tx: 'tx-act' }))
+      }
+      return tw(c)
+    }
     if (url.includes('/paths/strict-receive')) return new Response(JSON.stringify({ _embedded: { records: [{ source_amount: '5' }] } }))
     if (url.includes('/accounts/')) return new Response(JSON.stringify({ sequence: '1' }))
     if (url.endsWith('/transactions')) { b.llamadas.push('compra'); return new Response(JSON.stringify({ hash: 'h' })) }
     return new Response('no', { status: 404 })
   })
-  it('Friendbot → trustline → prueba de Cavos → pagar (sin comprar USDC ni firmar transacciones del depósito)', async () => {
+  it('activación patrocinada → prueba de Cavos → pagar (sin Friendbot, sin comprar USDC y sin firmar transacciones del depósito)', async () => {
     vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' && c.prueba ? { contractId: CID, tx: 'tx-dep' } : {}))))
     const { trustless } = await import('../trustless')
     expect(await trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).toBe('tx-dep')
-    expect(b.llamadas).toEqual(['friendbot', 'trustline', 'prueba:pagar', 'tw:pagar'])
+    expect(b.llamadas).toEqual(['tw:activar-cuenta:estado', 'prueba:activar-cuenta', 'tw:activar-cuenta:preparar', 'firma', 'tw:activar-cuenta:enviar', 'prueba:pagar', 'tw:pagar'])
+    expect(b.llamadas).not.toContain('friendbot')
   })
   it('un error técnico que llegue del servidor no se muestra: «No pudimos preparar el depósito…»', async () => {
     b.existe = true; b.trust = true

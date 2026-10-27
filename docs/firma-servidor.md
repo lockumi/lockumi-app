@@ -37,6 +37,10 @@ Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20
   [eliminar-alquiler.md](eliminar-alquiler.md)).
 - Test: `src/services/__tests__/eliminar-sin-deposito.test.ts`.
 
+## Después de la opción A (PR #57)
+El servidor ya no firma por las personas en alquileres nuevos; las cuentas Cavos se activan como en Meteorito (la plataforma patrocina
+la cuenta y la persona firma la línea de USDC). Ver [firma-cavos.md](firma-cavos.md) y [fondeo-testnet.md](fondeo-testnet.md).
+
 ## Límites conocidos
 - La firma del servidor solo se usa con el modo de dos personas encendido (`VITE_DOS_PERSONAS=1`).
 - Para depósitos de más de 20 USDC, el cambio de XLM a USDC en la red tiene un tope de 9000 XLM.
