@@ -49,3 +49,12 @@ su propia transacción y pagan su fee**, así que necesitan XLM; las de dos pers
 
 ## Falta para la prueba con datos reales (leído el 26/10, 9:20 p. m. CR)
 Ver la lista al final de `docs/firma-cavos.md`.
+
+## La cuenta de la persona se guarda al pagar si faltaba (27/10/2026)
+- **Qué pasó (prueba real en producción, 27/10, 9:59 a. m. CR):** el inquilino tenía la sesión de Cavos caducada en su navegador (perfil que volvía horas después) y **aceptó la invitación sin billetera conectada**: el
+  alquiler quedó con `lk_participantes.direccion_stellar` vacía. Después entró de nuevo, firmó y tocó «Pagar»; `activar-cuenta` (paso `estado`) contestó 409 «Falta la cuenta Stellar del inquilino.» y el pago no avanzó.
+  `lk_actualizar_direccion` existía pero ninguna pantalla la llamaba.
+- **Arreglo (`src/services/trustless.ts`, `activarCuenta`):** si el alquiler no trae la cuenta de esa persona (`esperada` vacío), antes de preguntar al servidor se guarda la de la billetera conectada con `servidor.actualizarCuenta`
+  (RPC `lk_actualizar_direccion`: solo su propia fila y solo mientras no exista la cuenta segura). Si guardar falla, no se corta el pago: sigue y decide el servidor. Alquileres con la cuenta ya guardada o con cuenta del servidor (PR #54): sin cambios.
+- **Pruebas:** `src/services/__tests__/deposito-trustline.test.ts` (3 casos nuevos: guarda antes de consultar y paga; si guardar falla sigue; con cuenta ya guardada no vuelve a guardar).
+- Sin cambios de diseño, de flujo ni de base de datos.

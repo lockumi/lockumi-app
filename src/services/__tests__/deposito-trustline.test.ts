@@ -71,7 +71,7 @@ vi.mock('../billetera', () => ({
   mensajeFirma: (e: unknown) => String(e).includes('authorized signer') ? 'NO_FIRMANTE' : String(e),
   esTextoNoFirmante: (t: string) => t === 'NO_FIRMANTE',
 }))
-vi.mock('../../servidor/repositorio', () => ({ tokenSesion: async () => 't', recargar: async () => {} }))
+vi.mock('../../servidor/repositorio', () => ({ tokenSesion: async () => 't', recargar: async () => {}, servidor: { actualizarCuenta: async (_id: string, g: string) => { b.llamadas.push('registrar-cuenta:' + (g === INQ_CLIENTE ? 'billetera' : 'otra')) } } }))
 const INQ_CLIENTE = vi.hoisted(() => 'GDJU2MWJWMC37S3PWUVUABI2NPDMGGTMCMY2O3PFNTWMPFDL7QL3VRBX')   // cuenta Cavos de prueba (al azar)
 
 describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segura', () => {
@@ -97,6 +97,25 @@ describe('cliente: el inquilino prepara su cuenta antes de crear la cuenta segur
     expect(await trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)).toBe('tx-dep')
     expect(b.llamadas).toEqual(['tw:activar-cuenta:estado', 'prueba:activar-cuenta', 'tw:activar-cuenta:preparar', 'firma', 'tw:activar-cuenta:enviar', 'prueba:pagar', 'tw:pagar'])
     expect(b.llamadas).not.toContain('friendbot')
+  })
+  it('alquiler sin la cuenta de la persona (aceptó sin sesión de Cavos): guarda la de su billetera ANTES de preguntar al servidor y paga', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' && c.prueba ? { contractId: CID, tx: 'tx-dep' } : {}))))
+    const { trustless } = await import('../trustless')
+    expect(await trustless.depositar(ID, 1, () => {})).toBe('tx-dep')
+    expect(b.llamadas.slice(0, 2)).toEqual(['registrar-cuenta:billetera', 'tw:activar-cuenta:estado'])
+    expect(b.llamadas.at(-1)).toBe('tw:pagar')
+  })
+  it('si guardar la cuenta falla, no se corta el pago: sigue y decide el servidor', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' && c.prueba ? { contractId: CID, tx: 'tx-dep' } : {}))))
+    const { servidor } = await import('../../servidor/repositorio')
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {}); vi.spyOn(servidor, 'actualizarCuenta').mockRejectedValueOnce(new Error('El depósito ya está creado: la cuenta no se puede cambiar.'))
+    const { trustless } = await import('../trustless')
+    expect(await trustless.depositar(ID, 1, () => {})).toBe('tx-dep'); aviso.mockRestore()
+  })
+  it('con la cuenta ya guardada en el alquiler no se vuelve a guardar', async () => {
+    vi.stubGlobal('fetch', fetchFalso(c => new Response(JSON.stringify(c.accion === 'pagar' && c.prueba ? { contractId: CID, tx: 'tx-dep' } : {}))))
+    const { trustless } = await import('../trustless'); await trustless.depositar(ID, 1, () => {}, INQ_CLIENTE)
+    expect(b.llamadas.some(x => x.startsWith('registrar-cuenta'))).toBe(false)
   })
   it('un error técnico que llegue del servidor no se muestra: «No pudimos preparar el depósito…»', async () => {
     b.existe = true; b.trust = true
