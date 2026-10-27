@@ -114,7 +114,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - Todo va detrás de `VITE_REPUTACION`, siempre con la comparación en línea `import.meta.env.VITE_REPUTACION === '1'` (así el código apagado no entra en el build). Las pantallas se cargan en diferido desde `App.tsx`.
 - La fuente única de los textos es `legal/reputacion-textos-para-producto.md` (REP-01 a REP-15), copiados al pie de la letra en `src/reputacion/textos.ts`. Textos propios con `// LEGAL: revisar`.
 - Encender y volver atrás: `docs/reputacion.md` («Encendido»). La fecha de los textos es UNA constante (`src/legal/fecha-reputacion.ts`), no una variable de entorno.
-- No se toca el login ni Cavos: desde la 1.13-demo solo cambia el texto de la casilla de los Términos (`casillaTerminos()`; hoy nombra la 1.14-demo); al entrar con la edición vigente (1.14-demo), `Pantallas.tsx` registra el perfil (`aceptarRep01` + `subirAceptacion`). Sin pantalla previa.
+- No se toca el login ni Cavos: desde la 1.13-demo solo cambia el texto de la casilla de los Términos (`casillaTerminos()`; hoy nombra la 1.15-demo); al entrar con la edición vigente (1.15-demo), `Pantallas.tsx` registra el perfil (`aceptarRep01` + `subirAceptacion`). Sin pantalla previa.
 - Reglas del puntaje solo en `src/reputacion/puntaje.ts` (funciones puras): 90 % antes del 0,3 %, 10 años, siempre visible desde el 3.er alquiler, «En revisión».
 - Estilos solo en `src/reputacion/reputacion.css` (clases `.rp-*`), sin casitas ni ilustraciones, nunca texto blanco sobre naranja. La tarjeta de bloqueo usa solo `glass tarjeta` y `boton`.
 - Nunca: rankings, números de posición, filtros por puntaje, barrio, distancia, «verificado», «Llave de Oro» (es «Llave Lockumi»), ni un botón para ocultar el perfil.

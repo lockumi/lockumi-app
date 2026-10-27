@@ -13,7 +13,7 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 ## Qué datos recogemos
 - **Datos de acceso:** tu correo electrónico y, si entras con Google o Apple, el nombre asociado a ese servicio. El inicio de sesión lo gestiona Cavos.
 - **Billetera (tu cuenta digital en la app):** la dirección pública de tu billetera, que crea Cavos. Si eliges el USDC de prueba que te da Lockumi, el depósito no sale de tu billetera, sino de una cuenta de inquilino de prueba de Lockumi. Lockumi no recibe ni guarda tu llave privada. Como Lockumi puede vincular esa dirección con tu correo, **la tratamos como un dato personal**.
-<!-- LEGAL: revisado (26/10, 1.14-demo) -->
+<!-- LEGAL: revisado (26/10, 1.15-demo) -->
 - **Firmas de prueba:** para confirmar cada acción guardamos un código de un solo uso de tu firma de prueba, nunca tu llave.
 <!-- LEGAL: revisado (24/10) · ronda 9b (quién firma: ver Términos 5.3) -->
 - **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Si usas Freighter, las transacciones de tu billetera las confirmas tú en la extensión. Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba. Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
