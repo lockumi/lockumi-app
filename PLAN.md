@@ -3,6 +3,9 @@
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
 
+## Fondeo automático en testnet y cuenta nueva (26/10/2026, Katherine; rama `fondeo-testnet`, PR en borrador, sin publicar)
+Al iniciar sesión (y otra vez al pagar) cada cuenta Cavos se fondea una sola vez en testnet: XLM por Friendbot, línea de confianza de USDC (la firma la persona) y USDC de prueba desde la cuenta de la plataforma. No bloquea el acceso; si falla, el pago explica cómo seguir. Cuentas con llave perdida: botón «Crear cuenta nueva» (passkey), la vieja queda en el historial. Interruptores `LOCKUMI_FONDEO_TESTNET` y `LOCKUMI_CUENTA_NUEVA`. Detalle y límites en [docs/fondeo-testnet.md](docs/fondeo-testnet.md).
+
 ## Depósito de dos personas: trustline del inquilino (26/10/2026)
 Trustless Work rechazaba el deploy (400, role receiver) porque la cuenta Cavos del inquilino no existía en testnet. Ahora la app del inquilino la prepara antes (Friendbot, trustline, USDC de prueba), el servidor la revisa antes de llamar a TW y el error técnico ya no se ve («No pudimos preparar el depósito. Intenta de nuevo en un momento.»). Detalle: [docs/prueba-completa.md](docs/prueba-completa.md#depósito-de-dos-personas-la-cuenta-del-inquilino-sin-trustline-26102026).
 

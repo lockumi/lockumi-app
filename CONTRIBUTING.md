@@ -128,6 +128,13 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - La llave derivada nunca sale del servidor; el cliente solo recibe la dirección pública (`mi-cuenta`). Cada firma exige la sesión y que la persona sea participante con ese rol.
 - Interruptor: `FIRMA_SERVIDOR_TESTNET=0`. Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
 
+## Fondeo en testnet y cuenta nueva (`api/_lib/fondeo.ts`, `api/_lib/cuentaNueva.ts`, `docs/fondeo-testnet.md`)
+
+- Solo testnet: no quites `exigirTestnet` ni el interruptor `LOCKUMI_FONDEO_TESTNET`. El fondeo nunca debe bloquear el acceso ni lanzar por fallos del faucet.
+- La marca de «ya fondeada» es la red (pagos de la plataforma a la cuenta), no una tabla: no la cambies sin pensar en la idempotencia.
+- `appSalt` `lockumi` es la derivación de las cuentas existentes: no se cambia. Las cuentas nuevas usan `lockumi-N` según `lk_cuenta_generacion`.
+- Las migraciones (`supabase/migrations`) llevan su revert en `supabase/revert` y no se aplican en producción sin aprobación. Textos visibles: cortos, en español neutro y sin palabras técnicas.
+
 ## Proponer cambios
 
 1. Abre un *issue* con el problema o la idea, o comenta en uno existente.

@@ -9,7 +9,9 @@
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
 import { repartoCentimos } from './centimos.js'
-import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, RED_ACTIVA, FRIENDBOT, USDC, TOPE_USDC } from './red.js'
+import { fondearCuenta } from './fondeo.js'
+import { cuentaNueva } from './cuentaNueva.js'
+import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, RED_ACTIVA, FRIENDBOT, USDC, TOPE_USDC, exigirTestnet } from './red.js'
 
 export type Entorno = Record<string, string | undefined>
 export class ErrorTw extends Error { estado: number; constructor(estado: number, m: string) { super(m); this.estado = estado } }
@@ -35,7 +37,7 @@ export function configuracion(e: Entorno) {
   return { base, llave: e.TRUSTLESS_WORK_API_KEY!.trim(), plataforma, mediador, mediadorFirma, trustline,
     supa: { url: e.SUPABASE_URL!.replace(/\/$/, ''), anon: e.SUPABASE_ANON_KEY!, servicio: e.SUPABASE_SERVICE_ROLE_KEY! } }
 }
-type Config = ReturnType<typeof configuracion>
+export type Config = ReturnType<typeof configuracion>
 
 /** PR #22 · condición (a) para encender C (encendido-lista.md): la llave mediadora es distinta de la de la plataforma P y está en
  *  otro secreto. Solo compara llaves PÚBLICAS y muestra sus últimos 4 caracteres: nunca devuelve ni imprime un secreto. */
@@ -64,14 +66,14 @@ export function responderLlaves(e: Entorno, url: string): Response {
 }
 
 // ── Trustless Work ──
-async function tw<T = Record<string, unknown>>(c: Config, ruta: string, cuerpo: unknown, f = fetch, metodo: 'POST' | 'GET' = 'POST'): Promise<T> {
+export async function tw<T = Record<string, unknown>>(c: Config, ruta: string, cuerpo: unknown, f = fetch, metodo: 'POST' | 'GET' | 'PUT' = 'POST'): Promise<T> {
   const r = await f(c.base + ruta, { method: metodo, headers: { 'content-type': 'application/json', 'x-api-key': c.llave }, body: metodo === 'GET' ? undefined : JSON.stringify(cuerpo) })
   const t = await r.text(); let j: Record<string, unknown> = {}; try { j = JSON.parse(t) } catch { /* texto */ }
   // Paso 22: el mensaje de TW nunca lleva la llave (igual que api/_lib/solo.ts), aunque TW la repitiera en su respuesta.
   if (!r.ok) throw new ErrorTw(r.status === 429 ? 429 : 502, `Trustless Work ${ruta.split('?')[0]} respondió ${r.status}: ${String(j.message ?? t).split(c.llave).join('[llave]').slice(0, 300)}`)
   return j as T
 }
-const sinFirmar = (j: Record<string, unknown>) => {
+export const sinFirmar = (j: Record<string, unknown>) => {
   const x = j.unsignedTransaction ?? j.unsignedXdr
   if (typeof x !== 'string') throw new ErrorTw(502, 'Trustless Work no devolvió la transacción sin firmar.'); return x
 }
@@ -94,7 +96,7 @@ export function firmarComoMediador(c: Config, xdr: string) {
   if (!t.operations.length || t.operations.some(o => o.type !== 'invokeHostFunction')) throw new ErrorTw(502, 'La cuenta que resuelve disputas solo firma llamadas a contratos.')
   t.sign(c.mediadorFirma); return t.toXDR()
 }
-const enviar = (c: Config, signedXdr: string, f = fetch) => tw(c, '/helper/send-transaction', { signedXdr }, f)
+export const enviar = (c: Config, signedXdr: string, f = fetch) => tw(c, '/helper/send-transaction', { signedXdr }, f)
 
 /** ¿La cuenta existe en testnet y tiene la trustline de USDC (emisor de Circle)? Si Horizon no responde, se deja pasar: decide TW. */
 export async function tieneUsdc(g: string, f = fetch): Promise<boolean> {
@@ -122,7 +124,7 @@ export async function usuario(c: Config, bearer: string | null, f = fetch) {
 }
 type Part = { rol: 'dueno' | 'inquilino'; usuario: string; direccion_stellar: string | null }
 export type Contrato = { id: string; estado: string; monto: number; direccion: string; escrow_contract_id: string | null; resultado: { via?: string; cierre?: string; dueno?: number; inquilino?: number } | null; liquidacion_tx: string | null; lk_participantes: Part[] }
-const rest = (c: Config, ruta: string, init: RequestInit = {}, f = fetch) => f(`${c.supa.url}/rest/v1/${ruta}`, { ...init,
+export const rest = (c: Config, ruta: string, init: RequestInit = {}, f = fetch) => f(`${c.supa.url}/rest/v1/${ruta}`, { ...init,
   headers: { apikey: c.supa.servicio, authorization: 'Bearer ' + c.supa.servicio, 'content-type': 'application/json', ...init.headers } })
 export async function contrato(c: Config, id: string, f = fetch): Promise<Contrato> {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new ErrorTw(400, 'Contrato inválido.')
@@ -156,7 +158,7 @@ const cuenta = (k: Contrato, rol: Part['rol']) => {
   const g = k.lk_participantes.find(p => p.rol === rol)?.direccion_stellar
   if (!g || !G.test(g)) throw new ErrorTw(409, `Falta la cuenta Stellar del ${rol === 'dueno' ? 'dueño' : 'inquilino'}.`); return g
 }
-const exigir = (ok: boolean, estado: number, m: string) => { if (!ok) throw new ErrorTw(estado, m) }
+export const exigir = (ok: boolean, estado: number, m: string) => { if (!ok) throw new ErrorTw(estado, m) }
 
 // ── Privacidad on-chain (Ley 8968) ──
 // Todo lo que va en el deploy queda público y permanente en Stellar. Solo textos fijos y un ID opaco:
@@ -402,19 +404,19 @@ export function firmarComoCuenta(k: Keypair, xdr: string) {
   if (t.operations.length !== 1 || t.operations[0].type !== 'invokeHostFunction') throw new ErrorTw(502, 'Transacción inesperada.')
   t.sign(k); return t.toXDR()
 }
-type CuentaH = { id: string; sequence: string; balances: { asset_code?: string; asset_issuer?: string; balance: string }[] }
-async function leerCuenta(g: string, f = fetch): Promise<CuentaH | null> {
+export type CuentaH = { id: string; sequence: string; balances: { asset_code?: string; asset_issuer?: string; balance: string }[] }
+export async function leerCuenta(g: string, f = fetch): Promise<CuentaH | null> {
   const r = await f(`${HORIZON_TESTNET}/accounts/${g}`); if (r.status === 404) return null
   if (!r.ok) throw new ErrorTw(502, 'Horizon respondió ' + r.status); return r.json() as Promise<CuentaH>
 }
-const usdcDe = (a: CuentaH | null) => { const b = a?.balances?.find(x => x.asset_code === USDC.code && x.asset_issuer === USDC.issuer); return b ? Number(b.balance) : null }
-async function enviarHorizon(t: Transaction, f = fetch) {
+export const usdcDe = (a: CuentaH | null) => { const b = a?.balances?.find(x => x.asset_code === USDC.code && x.asset_issuer === USDC.issuer); return b ? Number(b.balance) : null }
+export async function enviarHorizon(t: Transaction, f = fetch) {
   const r = await f(`${HORIZON_TESTNET}/transactions`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'tx=' + encodeURIComponent(t.toXDR()) })
   const j = await r.json().catch(() => ({})) as { hash?: string; extras?: { result_codes?: unknown } }
   if (!r.ok || !j.hash) throw new ErrorTw(502, 'Horizon rechazó la operación: ' + JSON.stringify(j.extras?.result_codes ?? r.status).slice(0, 160))
   return j.hash
 }
-const tbH = (a: CuentaH) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
+export const tbH = (a: CuentaH) => new TransactionBuilder(new Account(a.id, a.sequence), { fee: '1000', networkPassphrase: PASSPHRASE_TESTNET })
 /** Friendbot si falta la cuenta, trustline de USDC si falta y, con `objetivo`, USDC de prueba hasta el monto del depósito:
  *  desde la tesorería (plataforma) si falta poco (≤ TOPE_USDC), si no, compra en el DEX de testnet con su XLM de Friendbot. */
 export async function prepararCuentaServidor(c: Config, k: Keypair, objetivo: number | null, f = fetch) {
@@ -465,6 +467,8 @@ export type Pedido =
   | { accion: 'devolver-automatico'; contrato: string }
   | { accion: 'repartir'; contrato: string }
   | { accion: 'mi-cuenta' }
+  | { accion: 'fondear-cuenta'; cuenta: string }
+  | { accion: 'cuenta-nueva'; cuenta: string }
   | { accion: 'preparar-cuenta'; contrato: string }
   | { accion: 'eliminar'; contrato: string }
 
@@ -473,6 +477,21 @@ export async function atender(e: Entorno, p: Pedido, bearer: string | null, f: t
   const uid = await usuario(c, bearer, f)
   // Firma del servidor en testnet: la cuenta de testnet de esta sesión (solo la pública), o null con el interruptor apagado.
   if (p.accion === 'mi-cuenta') return { cuenta: firmaServidorActiva(e) ? cuentaServidorDe(c, uid).publicKey() : null }
+  // Fondeo de testnet (api/_lib/fondeo.ts): XLM + USDC de prueba para la billetera de esta sesión. Apagado sin LOCKUMI_FONDEO_TESTNET=1.
+  if (p.accion === 'fondear-cuenta') {
+    exigir(G.test(String(p.cuenta)), 400, 'La cuenta no es válida.')
+    if (e.LOCKUMI_FONDEO_TESTNET?.trim() !== '1') return { estado: 'apagado' }
+    limitarPreparar(uid)
+    return { ...await fondearCuenta(e, c.plataforma, p.cuenta, f) }
+  }
+  // Cuenta nueva (api/_lib/cuentaNueva.ts): la billetera Cavos anterior perdió su llave. Apagado sin LOCKUMI_CUENTA_NUEVA=1; solo testnet.
+  if (p.accion === 'cuenta-nueva') {
+    exigir(G.test(String(p.cuenta)), 400, 'La cuenta no es válida.')
+    exigir(e.LOCKUMI_CUENTA_NUEVA?.trim() === '1', 403, 'Esta opción no está disponible ahora.')
+    try { exigirTestnet(e.STELLAR_NETWORK_PASSPHRASE?.trim() || PASSPHRASE_TESTNET, HORIZON_TESTNET, FRIENDBOT) } catch { throw new ErrorTw(403, 'Esta opción no está disponible ahora.') }
+    limitarPreparar(uid)
+    return { ...await cuentaNueva(c, uid, p.cuenta, f) }
+  }
   const k = await contrato(c, p.contrato, f)
   const rol = rolDe(k, uid); exigir(rol !== null, 403, 'No participas en este contrato.')
   const P = c.plataforma.publicKey()

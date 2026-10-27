@@ -3,6 +3,7 @@
 // Fuentes: https://developers.stellar.org/docs/data/apis/horizon/api-reference/list-strict-receive-payment-paths
 //          https://docs.cavos.xyz/docs/stellar (signXdr, addTrustline) · https://docs.cavos.xyz/docs/vault
 import { PASSPHRASE_TESTNET, HORIZON_TESTNET, USDC, TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar } from '../../api/_lib/red'
+import { pedirFondeo, MENSAJE_FONDEO_PENDIENTE } from './fondeoTestnet'
 import { conectarBilletera, consultarUsdc, consultarSaldo, fondear, firmarXdr, abrirTrustlineUsdc, olvidarBilletera, mensajeFirma } from './billetera'
 
 export { TOPE_USDC, MONTO_MAX_USDC, MAX_XLM_COMPRA, montoValido, mensajeSaldoPropio, mensajeSaldoAlPagar }
@@ -80,8 +81,10 @@ export async function asegurarTrustline(avance: (t: string) => void = () => {}, 
 /** Cuenta Cavos lista para pagar `objetivo`: Friendbot si hace falta → trustline → path payment XLM→USDC (signXdr) por lo que falte. */
 export async function prepararCuentaCavos(objetivo: number, avance: (t: string) => void = () => {}, esperada?: string): Promise<{ g: string; txs: Txs; saldo: string }> {
   const { g, trustline } = await asegurarTrustline(avance, esperada); const txs: Txs = { ...(trustline && { trustline }) }
+  // Testnet: el servidor completa XLM y USDC de prueba una sola vez por cuenta (también para cuentas creadas antes). Sin interruptor, no hace nada.
+  const fondeo = await pedirFondeo(g)
   const saldo = Number(await consultarUsdc(g) ?? 0), falta = Math.round((objetivo - saldo) * 1e7) / 1e7
-  if (falta > 0) {
+  if (falta > 0) try {
     avance('Consultando el precio de prueba…')
     const max = maximoAGastar(await cotizar(falta))
     const { TransactionBuilder, Operation, Asset, Account } = await import('@stellar/stellar-sdk')
@@ -102,6 +105,8 @@ export async function prepararCuentaCavos(objetivo: number, avance: (t: string) 
         : 'La red de prueba rechazó la compra. Vuelve a intentarlo en un minuto.')
     }
     txs.compra = j.hash
+  } catch (e) {   // la carga automática no se pudo y la compra de respaldo tampoco: mensaje claro de cómo seguir
+    throw fondeo === 'pendiente' && !(e instanceof ErrorSolo && /firma|billetera/i.test(e.message)) ? new ErrorSolo(MENSAJE_FONDEO_PENDIENTE) : e
   }
   return { g, txs, saldo: (await consultarUsdc(g)) ?? '0' }
 }

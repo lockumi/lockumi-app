@@ -33,6 +33,10 @@ Vuelta atrás: `git revert -m 1 a1dfc6d` y, para el borrado, `supabase/revert/20
   [eliminar-alquiler.md](eliminar-alquiler.md)).
 - Test: `src/services/__tests__/eliminar-sin-deposito.test.ts`.
 
+## Relación con el fondeo de Cavos
+El fondeo de las cuentas Cavos (XLM, línea de USDC y USDC de prueba) y la cuenta nueva para quien perdió la llave están en
+[fondeo-testnet.md](fondeo-testnet.md). Esta firma del servidor no cambia.
+
 ## Límites conocidos
 - La firma del servidor solo se usa con el modo de dos personas encendido (`VITE_DOS_PERSONAS=1`).
 - Para depósitos de más de 20 USDC, el cambio de XLM a USDC en la red tiene un tope de 9000 XLM.

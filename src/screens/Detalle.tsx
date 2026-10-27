@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { CuentaNueva } from './CuentaNueva'
+import { NO_FIRMANTE } from '../services/billetera'
 import { LogoAnimado } from '../LogoAnimado'
 import { store, useAlquileres, obtener, ahoraDe, DIA, vistaDe, rolDe, fijarVista } from '../store'
 import { acciones, plazoMs, textoPlazo } from '../acciones'
@@ -92,6 +94,7 @@ function PagoSimulado({ a, rol }: P) {
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
       {p.error}
+      {p.err === NO_FIRMANTE && <CuentaNueva />}
       <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} />
     </> : <Espera texto="Esperando que el inquilino pague el depósito." />}
   </section>

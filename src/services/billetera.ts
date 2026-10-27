@@ -84,7 +84,7 @@ export const esNoFirmante = (m: string) => /not an authorized signer|needs-devic
 
 let conexion: Promise<Billetera> | null = null
 /** Conecta la billetera con la identidad del login de Cavos. Solo en modo real. */
-export function conectarBilletera(): Promise<Billetera> {
+export function conectarBilletera(saltNuevo?: string): Promise<Billetera> {
   if (import.meta.env.DEV) { // gancho de prueba local, nunca en el build
     const g = localStorage.getItem('lockumi.billetera.prueba')
     if (g) return Promise.resolve({ direccion: g, estado: 'undeployed' })
@@ -97,9 +97,14 @@ export function conectarBilletera(): Promise<Billetera> {
     const { Cavos } = await import('@cavos/kit')
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
     const rec = await opcionesRecuperacion(auth)
-    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
+    // Cuenta nueva (billetera Cavos anterior con la llave perdida): otro appSalt según el número de cuenta de la persona (cuentaNueva.ts).
+    const { generacionActual, saltDe } = await import('./cuentaNueva')
+    const appSalt = saltNuevo ?? saltDe(await generacionActual())
+    const s = await Cavos.connect({ ...CAVOS_BILLETERA, appSalt, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
+    // Testnet: al crearse (o volver a abrirse) la billetera, el servidor la fondea si falta (apagado sin LOCKUMI_FONDEO_TESTNET=1). No bloquea nada.
+    void import('./fondeoTestnet').then(m => m.fondearEnSegundoPlano(w.address)).catch(() => {})
     return { direccion: w.address, estado: w.status as EstadoBilletera }
   })().catch(e => { conexion = null; throw e })
 }

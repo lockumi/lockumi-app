@@ -179,6 +179,10 @@ Escrow *single-release* de Trustless Work (API REST v1). Asignación según `api
 
 El depósito (`fund-escrow`) lo firma el inquilino. En alquileres nuevos de dos personas en testnet, el servidor firma por el inquilino (depósito) y por el dueño (aprobación) con la cuenta de testnet derivada de cada cuenta; apagable con `FIRMA_SERVIDOR_TESTNET=0` y bloqueado fuera de testnet ([docs/firma-servidor.md](docs/firma-servidor.md)). El servidor exige que las cuentas del dueño, del inquilino y de la plataforma sean distintas.
 
+## Fondeo automático en testnet y cuenta nueva (26 oct 2026, en borrador)
+
+Con `LOCKUMI_FONDEO_TESTNET=1` el servidor fondea cada cuenta Cavos una sola vez en testnet (XLM por Friendbot, USDC de prueba desde la cuenta de la plataforma; la línea de confianza la firma la persona) al iniciar sesión o al pagar. Nunca en mainnet y sin bloquear el acceso. Para cuentas con llave perdida, `LOCKUMI_CUENTA_NUEVA=1` permite crear una cuenta Cavos nueva con passkey (migración `20261026200000_cuenta_nueva.sql`, con revert, sin aplicar en producción). Ver [docs/fondeo-testnet.md](docs/fondeo-testnet.md).
+
 ## Contratos e IDs en testnet
 
 Verificados en Horizon testnet (`horizon-testnet.stellar.org`) y Soroban RPC de testnet el 18/10/2026.
@@ -392,6 +396,9 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 | `TRUSTLESS_WORK_API_KEY` | Servidor | Llave de la API de testnet de Trustless Work. Nunca con prefijo `VITE_`. |
 | `LOCKUMI_TW_PLATAFORMA_SECRET` | Servidor | Clave secreta de la cuenta de la plataforma (platformAddress, serviceProvider, releaseSigner y disputeResolver). |
 | `LOCKUMI_DEMO_SEED` | Servidor | Semilla (32 caracteres o más) de la que se derivan las cuentas del dueño de prueba y del inquilino de prueba. |
+| `LOCKUMI_FONDEO_TESTNET` | Servidor | `1` fondea cada cuenta Cavos una vez en testnet (XLM, línea de USDC y USDC de prueba de la plataforma). Sin ella, apagado. Ver `docs/fondeo-testnet.md`. |
+| `LOCKUMI_FONDEO_USDC` | Servidor | USDC de prueba por cuenta (por defecto y como máximo 20). |
+| `LOCKUMI_CUENTA_NUEVA` | Servidor | `1` permite crear una cuenta Cavos nueva con passkey para quien perdió la llave. Requiere la migración `20261026200000_cuenta_nueva.sql`. |
 | `RESEND_API_KEY` | Servidor | Llave de Resend para el correo de invitación (Parte 4) y, con la reputación, para el código del segundo factor. En Vercel en **Production** y **Preview**, marcada como sensible. |
 | `VITE_REPUTACION` | Cliente | `1` enciende la reputación (paso 19): perfil (aceptado con la casilla de los Términos 1.13-demo de la pantalla de inicio; nombre y cantón al crear o unirse al primer alquiler), puntaje, vitrinas, revisión, eliminación de la cuenta y REP-14/REP-15 en los textos legales. Sin definir: apagado (las pantallas no entran en el build). Ver [docs/reputacion.md](docs/reputacion.md). |
 | `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`, `CAVOS_AUD_EMAIL`, `CAVOS_APP_ID` | Servidor | Reputación (paso 19): verificación del correo de la sesión con el token de Cavos (`/api/verificar-correo`). `CAVOS_APP_ID` es el id interno de la app en Cavos (UUID del nonce), **no** el `cav_…` de `VITE_CAVOS_APP_ID`. Valores encontrados y qué falta confirmar con un token real: `docs/reputacion.md` («Valores reales de CAVOS_*»). En Production: `CAVOS_APP_ID`, `CAVOS_AUD_GOOGLE`, `CAVOS_AUD_APPLE`; `CAVOS_AUD_EMAIL` **se llena al encender** (`encender-reputacion.sh <AUD>`). Sin ellas se rechaza (cierre por defecto). |
