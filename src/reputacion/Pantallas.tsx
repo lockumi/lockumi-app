@@ -3,11 +3,12 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres } from '../store'
+import { useAlquileres as useAlquileresStore } from '../store'
+import { usePerfilesServidor, infoReputacion } from './perfilesServidor'
 import { ir } from '../router'
 import { suscribirRecorrido, recorridoEnCurso } from '../recorrido'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
-  valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
+  valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, alquileresDeReputacionServidor, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
 import { useReputacion, guardarDatos, aceptarRep01, aceptar, activa, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
@@ -91,7 +92,11 @@ const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
 /** Los alquileres de esta persona en este papel que cuentan para su reputación (los dos con perfil: Legal, 25/10). */
 // Legal (26/10, 2:27 a. m.; Ley 8968, art. 5): un alquiler cuenta solo si las dos partes tienen perfil, y solo si cerró después de aceptarlo.
-const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
+// 27/10: con servidor, el perfil de la otra parte lo sabe el servidor (no este navegador): lk_reputacion_de_mis_alquileres.
+const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => conServidor ? alquileresDeReputacionServidor(todos, u.email, rol, infoReputacion)
+  : alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
+/** Los alquileres de la app y, con servidor, la información de reputación de cada uno (vuelve a dibujar cuando llega). */
+function useAlquileres() { const t = useAlquileresStore(); usePerfilesServidor(t, conServidor); return t }
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
