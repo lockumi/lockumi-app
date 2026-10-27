@@ -201,3 +201,14 @@ export async function haySesionFirma(): Promise<boolean> {
   if (!modoReal) return true
   try { const a = await authCavos(); return !!a && !!a.getAuthToken() } catch { return false }
 }
+
+/** Lectura del saldo (XLM) de la cuenta en Horizon: 'sin-cuenta' = 404 (aún no existe). */
+export type SaldoCuenta = { t: 'cargando' } | { t: 'ok'; xlm: string } | { t: 'sin-cuenta' } | { t: 'error' }
+
+/** Saldo de USDC en Horizon: 'cargando' (aún no se lee), null = sin trustline, undefined = cuenta inexistente o lectura fallida, texto = saldo. */
+export type UsdcLeido = string | null | undefined | 'cargando'
+
+/** «Lista ✓» solo con la cuenta ya creada y activa en Horizon (no 404) y, con Trustless Work, con el USDC habilitado (trustline). Antes (o si la lectura falla) se ve «Preparando tu cuenta…». */
+export const cuentaLista = (saldo: SaldoCuenta, usdc: UsdcLeido, trustless: boolean): boolean =>
+  saldo.t === 'ok' && (!trustless || (usdc !== 'cargando' && usdc !== undefined && usdc !== null))
+

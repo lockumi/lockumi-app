@@ -126,3 +126,12 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
   1 de los 5 intentos por sesión cada 10 minutos. Ahora se recuerda una huella (SHA-256 cortado, nunca el token) 7 minutos en `localStorage`
   (`lockumi.cavos.token-enviado`). Y si se recarga ANTES de escribir el código, vuelve «Revisa tu correo» (antes no volvía con un token de menos de 6 minutos).
   Un fallo de red (la petición no llegó) no se recuerda: se reintenta.
+
+## «Tu cuenta para el depósito»: «Lista ✓» solo con la cuenta activa (27/10/2026, PR #60)
+- Antes `src/screens/Billetera.tsx` mostraba «Lista ✓» apenas Cavos entregaba la dirección Stellar, aunque la cuenta no existiera todavía en la red de prueba
+  (Horizon 404: la activa Lockumi con la tesorería al pagar el depósito, `docs/testnet-e2e.md`). Era un falso «lista» para el inquilino.
+- Ahora (`cuentaLista` en `src/services/billetera.ts`): «Lista ✓» solo si Horizon ya devuelve la cuenta (no 404) y, con Trustless Work
+  (`VITE_DOS_PERSONAS`), si además tiene el USDC habilitado (trustline), porque la tarjeta dice «Aquí se guarda y se devuelve el depósito». Antes, y si la lectura
+  de Horizon falla, se ve el texto de espera que la tarjeta ya tenía mientras se conecta la llave: «Preparando tu cuenta…» (reloj, color de «pendiente»).
+  Los «Detalles» (dirección, saldo, «Activar cuenta de prueba», «Habilitar USDC de prueba») no cambian. Sin textos nuevos, sin cambio de diseño ni de flujo.
+- Prueba: `src/screens/__tests__/billetera-lista.test.tsx` (404 → sin «Lista ✓»; cuenta activa con USDC → «Lista ✓»; sin trustline y en carga/error → todavía no).
