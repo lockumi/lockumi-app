@@ -221,7 +221,14 @@ const remoto: Acciones = {
     await servidor.reclamar(a.id, m, mot, fotos)
   },
   // PR #22: si el inquilino acepta, el servidor cierra por acuerdo y /api/tw paga el reparto en la red («repartir»).
-  async responder(a, acepta) { await servidor.responder(a.id, acepta); if (acepta && modoDe(a).trustless && a.escrowId) await trustless.repartir(a.id) },
+  // 27/10/2026 (b10557f9): la prueba de billetera se firma ANTES de cerrar (si falta la sesión de Cavos, el reclamo queda abierto).
+  // Si el pago falla después, el caso queda «cerrado» sin liquidacion_tx = por pagar, y se reintenta por el servidor (pagarReparto).
+  async responder(a, acepta) {
+    const pagar = acepta && modoDe(a).trustless && !!a.escrowId
+    const prueba = pagar ? await trustless.pruebaReparto(a.id) : undefined
+    await servidor.responder(a.id, acepta)
+    if (pagar) await trustless.repartir(a.id, prueba)
+  },
   async cerrarSinReclamo(a) {
     const cerro = await servidor.cerrarSinReclamo(a.id)
     // PR #22: un caso ya cerrado por acuerdo o por la mediación con las dos aceptaciones y sin pagar → «repartir» (el servidor lo valida).

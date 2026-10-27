@@ -3,6 +3,11 @@
 > **Documento histórico (fases 1 y 2, 16 oct 2026).** No describe lo que hace hoy app.lockumi.com. Hoy la app corre en la red de prueba de Stellar (testnet) con escrow real de Trustless Work y USDC de prueba en cada paso, login real con Cavos, una sola persona (tú eres el inquilino y el dueño es un dueño de prueba de Lockumi) y sin selector «Ver la demo como». Las fechas se escriben dd/mm/aa (también dd/mm/aaaa). El rendimiento con Blend **no está activo** y nunca sería garantizado. Las invitaciones por correo o link y el modo de dos personas son **próximamente**. El estado actual está en el [README](README.md).
 
 
+## Cierre sin pago del reparto aceptado (27/10/2026, rama `cierre-pago-reintento`)
+- Prod `b10557f9`: «Aceptar reclamo» cerró el caso y el pago dio 401 (pestaña sin token de Cavos → «repartir» sin prueba). Mediación: la persona mediadora recibía 403. Ninguno se reintentaba.
+- Arreglo sin cambios visibles: prueba firmada antes de cerrar; `pagarReparto` idempotente (bloqueo del paso 22); mediadora validada en `lk_mediadores`; corrida de cada hora y `/api/borrados?reparto=<id>` para los casos por pagar.
+  Migración `20261027120000` antes del código. Detalle: `docs/fondeo-testnet.md` § «Reparto por pagar»; matriz: filas 16, 18 y 21, nota F.
+
 ## Depósito de dos personas: trustline del inquilino (26/10/2026)
 Trustless Work rechazaba el deploy (400, role receiver) porque la cuenta Cavos del inquilino no existía en testnet. Ahora (opción A, 26/10, 9:13 p. m.) la plataforma crea la cuenta con reservas patrocinadas y la persona firma con Cavos la trustline, como Meteorito, sin Friendbot (docs/fondeo-testnet.md); el USDC del depósito lo pone el ramp simulado, el servidor la revisa antes de llamar a TW y el error técnico ya no se ve («No pudimos preparar el depósito. Intenta de nuevo en un momento.»). Detalle: [docs/prueba-completa.md](docs/prueba-completa.md#depósito-de-dos-personas-la-cuenta-del-inquilino-sin-trustline-26102026).
 
