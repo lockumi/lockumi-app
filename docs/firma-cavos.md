@@ -2,6 +2,21 @@
 
 Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de su OK final**. Textos nuevos **pendientes de Legal**.
 
+## Causa real de «No pudimos abrir tu cuenta»: faltaba `Buffer` (27/10/2026, 12:30 a. m. CR)
+- **Síntoma:** al entrar con una cuenta nueva, la conexión con Cavos salía bien (cuenta nueva creada, la bóveda firmaba), y justo después
+  la pantalla decía «No pudimos abrir tu cuenta» con el detalle `firma · ReferenceError: Buffer is not defined`.
+- **Causa:** el kit de Cavos y sus dependencias usan el `Buffer` global. Next.js (Meteorito) lo agrega solo; **Vite (Lockumi) no**.
+  En `probarFirma`, tras `signMessage`, `CavosStellar.signMessage` (`@cavos/kit/dist/chunk-PVYWFWFZ.mjs:1057`) llama a
+  `control.publicAddress()`, que en el vault es `VaultClient.stellarSigner().publicAddress` (`chunk-CEOXXKEN.mjs:627`:
+  `StrKey.encodeEd25519PublicKey(Buffer.from(publicKey))`); `Buffer` ahí es una referencia global. Antes de ese punto todo funciona
+  (la firma ya se hizo en la bóveda), por eso nada parecía fallar en la red. `clasificarFirma` lo clasificaba como `error` genérico.
+- **Arreglo:** `src/polyfills.ts` (`globalThis.Buffer ??= Buffer` del paquete `buffer`, ya en `dependencies`) se importa como
+  **primera línea de `src/main.tsx`**, antes de React, de Cavos y de Stellar. Sin cambios visuales ni de flujo.
+- **Pruebas:** `src/__tests__/polyfill-buffer.test.ts` (define `globalThis.Buffer` cuando falta, no pisa uno existente y `main.tsx` lo
+  importa primero). En el build servido bajo `https://app.lockumi.com`, `typeof Buffer` es `'function'`; con el build anterior era
+  `'undefined'`, y ese mismo código del kit lanza `ReferenceError: Buffer is not defined` sin el polyfill y devuelve la dirección con él.
+- **No quitar `src/polyfills.ts`** (ni moverlo después de otra importación).
+
 ## Qué cambia
 - **Entrar:** Cavos (`@cavos/kit` 0.4.2); al entrar se revisa que el aparato tenga la llave (`signMessage`).
 - **Cada acción que mueve la cuenta segura** (pagar, «Todo bien, devolver», repartir, liberar, devolución automática) lleva una
