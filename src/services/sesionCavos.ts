@@ -8,7 +8,7 @@ const ESPEJO = 'lockumi.cavos.sesion'
 const MARGEN_S = 300   // tolerancia de reloj, como Meteorito
 const claves = (appId: string) => ({ token: `cavos-kit:token:${appId || 'default'}`, identidad: `cavos-kit:identity:${appId || 'default'}` })
 
-function datosJwt(t: string): { exp?: number; sub?: string } | null {
+function datosJwt(t: string): { exp?: number; sub?: string; iat?: number } | null {
   try { const p = t.split('.')[1]; return JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(p.length / 4) * 4, '='))) } catch { return null }
 }
 function usuarioIdentidad(local: Almacen, appId: string): string | null {
@@ -30,5 +30,36 @@ export function reponerSesion(appId: string, sesion: Almacen = sessionStorage, l
     sesion.setItem(k.token, t); return true
   } catch { return false }
 }
-/** Al salir (o al cambiar de cuenta). */
-export function borrarSesion(local: Almacen = localStorage) { try { local.removeItem(ESPEJO) } catch { /* nada */ } }
+/** Al salir (o al cambiar de cuenta). También olvida el «Revisa tu correo» pendiente de este aparato. */
+export function borrarSesion(local: Almacen = localStorage) { try { local.removeItem(ESPEJO); local.removeItem(PENDIENTE) } catch { /* nada */ } }
+
+// Volver con el código del correo todavía por confirmar (27/10/2026, PR #60). El servidor exige un token de Cavos de 5 minutos como máximo
+// (api/_lib/cavos-token.ts: EDAD_MAXIMA, como el enclave) y lo gasta una sola vez; el kit no renueva el token en silencio. Quien deja la
+// pantalla «Revisa tu correo» sin escribir el código (cierra la pestaña, el código llega tarde) y vuelve con su llave de acceso trae el
+// token de hace rato: el servidor lo rechaza (403 «Sal de Lockumi…»), el correo nunca queda confirmado y la app no vuelve a pedir el código.
+// El servidor sí recuerda el correo por confirmar 1 hora (lk_correo_pendiente), y «Reenviar código» ya funciona sin token. Por eso la app
+// guarda aquí SOLO el correo por confirmar (no el token ni el código) y, al volver con un token que ya no sirve, muestra de nuevo la misma
+// pantalla «Revisa tu correo». No verifica nada: el correo solo queda verificado con el código correcto (/api/codigo-correo).
+const PENDIENTE = 'lockumi.correo-por-confirmar'
+export const VIDA_PENDIENTE_MS = 55 * 60_000   // el servidor lo guarda 1 hora; 5 minutos menos para no mostrar una pantalla que ya no sirve
+/** Máximo que la app deja pasar antes de NO mandar un token: el servidor lo rechaza con más de 5 minutos (+60 s de margen del reloj). */
+export const EDAD_MAXIMA_TOKEN_S = 360
+/** ¿Este token ya no le sirve al servidor (emitido hace más de 6 minutos o vencido)? Un token que no es un JWT: false (decide el servidor). */
+export function tokenYaNoSirve(t: string, ahora = Date.now()): boolean {
+  const d = datosJwt(t); if (!d) return false
+  const s = ahora / 1000
+  return (typeof d.iat === 'number' && s - d.iat > EDAD_MAXIMA_TOKEN_S) || (typeof d.exp === 'number' && d.exp + 60 < s)
+}
+export function guardarPorConfirmar(c: string, correo: string, ahora = Date.now(), local: Almacen = localStorage) {
+  try { local.setItem(PENDIENTE, JSON.stringify({ c, correo, hasta: ahora + VIDA_PENDIENTE_MS })) } catch { /* sin almacenamiento */ }
+}
+/** El correo por confirmar guardado para la cuenta `c` (null si no hay, es de otra cuenta o ya pasó la hora del servidor). */
+export function leerPorConfirmar(c: string, ahora = Date.now(), local: Almacen = localStorage): { c: string; correo: string } | null {
+  try {
+    const g = JSON.parse(local.getItem(PENDIENTE) ?? 'null') as { c?: unknown; correo?: unknown; hasta?: unknown } | null
+    if (!g || typeof g.c !== 'string' || typeof g.correo !== 'string' || typeof g.hasta !== 'number') return null
+    if (g.hasta <= ahora) { local.removeItem(PENDIENTE); return null }
+    return g.c === c ? { c: g.c, correo: g.correo } : null
+  } catch { return null }
+}
+export function borrarPorConfirmar(local: Almacen = localStorage) { try { local.removeItem(PENDIENTE) } catch { /* nada */ } }

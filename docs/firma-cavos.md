@@ -111,3 +111,12 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
 3. **Orígenes de Cavos:** el servidor de Cavos responde CORS abierto (no revela la lista); la lista real está en el panel de Cavos. app.lockumi.com ya inicia sesión con Cavos en producción, pero la **passkey** (WebAuthn) y las URL de vista previa de Vercel hay que confirmarlas en el panel o probando en app.lockumi.com.
 4. Confirmar en testnet que Trustless Work acepta approver = plataforma (misma cuenta que serviceProvider/releaseSigner).
 5. Dos cuentas Cavos en sus aparatos originales, y la llave de acceso probada en un segundo dispositivo real (el vault pide la passkey en su ventana; no se puede simular). 6. OK de Katherine y de Legal (textos y `signMessage`).
+
+## Volver con la llave de acceso: correo por confirmar (27/10/2026, PR #60)
+- Prueba real (dueño, Gmail dos): login nuevo con código de Cavos → llave de acceso creada → `/api/verificar-correo` aceptó el token (403 `codigo: true`,
+  «Revisa tu correo»). Al volver 20 minutos después solo con la llave de acceso, el token del espejo (`sesionCavos.ts`, el kit no renueva en silencio;
+  JWT del enclave de 1 hora, `aud` «cavos-email») ya tenía más de 5 minutos y el servidor lo rechazó (403), igual que ya lo gastó la primera vez.
+  Sin correo confirmado, `lk_aceptar_reputacion` y crear un alquiler (disparador `lk_participante_correo_verificado`) responden 403.
+- Arreglo (solo app, sin cambiar diseño ni flujo): no se manda un token vencido para el servidor y se recuerda en este navegador, 55 minutos, que la
+  cuenta dejó el correo por confirmar; al volver se muestra de nuevo «Revisa tu correo». Detalle: `docs/reputacion.md` («Volver con la llave de acceso…»).
+- Al cambiar `CAVOS_APP_ID` / `CAVOS_AUD_EMAIL` en producción no cambia nada de esto: el `aud` del enclave es «cavos-email» para todas las apps.

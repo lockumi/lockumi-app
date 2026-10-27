@@ -223,6 +223,23 @@ correo válido de OTRA app de Cavos habría verificado ese correo en Lockumi.
    `lk_confirmar_correo_pendiente` usa el código (`lk_usar_codigo(usuario, correo, 'verificar_correo')`) y SOLO entonces registra el correo
    (método `email`). «Reenviar código» = `{ paso: 'pedir', accion: 'verificar_correo' }`. Al recargar (token ya usado, misma sesión y mismo
    correo) responde otra vez 403 `codigo: true` sin mandar otro código.
+**Volver con la llave de acceso sin haber escrito el código (27/10/2026, prueba real del PR #60):** el token que la app manda a
+`/api/verificar-correo` es el que el kit de Cavos guardó en el login (espejo de `src/services/sesionCavos.ts` en `localStorage`; el kit no
+renueva el token en silencio). El JWT del enclave dura 1 hora (`exp - iat` = 3600, medido el 27/10/2026 en un login real; `aud` «cavos-email»),
+pero el servidor solo lo acepta en sus primeros 5 minutos y una vez. Quien dejaba «Revisa tu correo» sin escribir el código (cerró la pestaña,
+el código llegó tarde) y volvía con su llave de acceso mandaba un token de hace 20 minutos o más: 403 «No pudimos confirmar el correo de tu
+cuenta. Sal de Lockumi…» (la app no lo muestra), el correo seguía sin confirmar, `lk_aceptar_reputacion` y el disparador
+`lk_participante_correo_verificado` (crear alquiler) respondían 403 y la app no volvía a pedir el código. Arreglo solo en la app (el servidor
+y el login no cambian, ni el diseño ni el flujo): (1) no se manda un token que el servidor va a rechazar (`tokenYaNoSirve`: `iat` de hace más de
+6 minutos —5 del servidor más 60 s de reloj— o vencido; un token que no es JWT sí se manda); (2) cuando el servidor deja el correo por
+confirmar, la app guarda en `localStorage` (`lockumi.correo-por-confirmar`) SOLO la cuenta, el correo y una vigencia de 55 minutos (el
+servidor lo guarda 1 hora: `lk_correo_pendiente`), nunca el token ni el código; (3) sin token que sirva (token viejo, ya enviado o pestaña nueva)
+y con esa marca vigente de la MISMA cuenta, `asegurarCorreo` vuelve a mostrar «Revisa tu correo» (la misma pantalla) sin mandar nada: el código
+que ya llegó vale 10 minutos y «Reenviar código» (`/api/codigo-correo`, `verificar_correo`) ya funciona sin token. No verifica nada: el correo
+solo queda verificado con el código correcto. La marca se borra al confirmar, si el servidor verifica el correo directo (Google/Apple) y al
+salir (`borrarSesion`). Fuera de esa hora, o sin marca (sesión de Supabase nueva, otro aparato), sigue valiendo «Sal de Lockumi y vuelve a
+entrar con tu correo»: hace falta un token nuevo de Cavos (un código por correo). Si el correo ya estaba confirmado, volver con la llave de
+acceso no necesita el token: el servidor decide con lo que esa sesión ya verificó. Pruebas: `src/reputacion/__tests__/volver-por-confirmar.test.ts`.
 Un token de otra app de Cavos ya no basta: el código llega al buzón de la persona dueña del correo. Google y Apple no cambian (siguen con su
 `aud` y el `nonce` con `CAVOS_APP_ID`). Si algún día `CAVOS_AUD_EMAIL` es un `aud` propio de Lockumi, el correo se registra como antes.
 Textos literales de Legal: título «Revisa tu correo»; «Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu
@@ -286,7 +303,7 @@ misma huella.
   (https://developer.apple.com/documentation/signinwithapple/verifying-a-user). Observado por terceros: `exp - iat` = 10 minutos
   (https://blog.curtisherbert.com/so-theyve-signed-in-with-apple-now-what/). No es documentación de Apple.
 - Cavos, código por correo: el CÓDIGO vence a los 5 minutos y admite 3 intentos (https://docs.cavos.xyz/docs/auth). La duración del JWT del
-  enclave NO está documentada: hay que medir `exp - iat` en un token real (lista de abajo).
+  enclave NO está documentada; medida el 27/10/2026 en un login real: `exp - iat` = 3600 s (1 hora), `aud` «cavos-email».
 Con cualquiera de los tres, Lockumi solo acepta el token en sus primeros 5 minutos (y una sola vez).
 
 **El nonce NO se verifica del todo (riesgo residual aceptado para la demo):** Cavos arma el nonce de Google/Apple como
