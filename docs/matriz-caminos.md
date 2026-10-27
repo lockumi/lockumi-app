@@ -38,8 +38,8 @@ La parte del cliente (`activarCuenta` llamando a `actualizarCuenta`) queda solo 
 ## (d) U4: el dueño firma sin sesión de Cavos y el pago da 409
 
 Prod 27/10 (`d475db0a…`): el dueño entró solo con su llave de acceso, firmó sin token de Cavos y su cuenta quedó vacía; al pagar, 409 «Falta la cuenta Stellar del dueño.». Arreglo: al firmar el contrato se guarda la cuenta de la billetera si falta, y el dueño la vuelve a intentar al abrir el alquiler en «pendiente de pago» (detalle en `docs/fondeo-testnet.md`).
-Límite: sin sesión de Cavos del dueño no hay dirección que guardar, y el pago del inquilino no puede guardar la del dueño (`lk_actualizar_direccion` solo cambia la fila propia). Un dueño solo con llave de acceso sigue sin cuenta hasta que entre de nuevo; el arreglo completo (pedir sesión a la firma del dueño) es un cambio de flujo y espera aprobación.
-Propuesta en borrador (rama `firma-dueno-con-sesion`, «NO FUSIONAR: espera OK de Katherine»): con la cuenta del dueño vacía, su firma pide antes «Entrar de nuevo» (mismo `ConSesion` y textos que el inquilino). Prueba: `sesion-firma-dueno.test.ts`.
+Límite: sin sesión de Cavos del dueño no hay dirección que guardar, y el pago del inquilino no puede guardar la del dueño (`lk_actualizar_direccion` solo cambia la fila propia). Un dueño solo con llave de acceso sigue sin cuenta hasta que entre de nuevo; el arreglo completo (pedir sesión a la firma del dueño) es un cambio de flujo, aprobado y publicado con el PR #65 (línea siguiente).
+Arreglo con el OK de Katherine (27/10/2026, 12:54 p. m. CR; rama `firma-dueno-con-sesion`, PR #65): con la cuenta del dueño vacía, su firma pide antes «Entrar de nuevo» (mismo `ConSesion` y textos que el inquilino). Prueba: `sesion-firma-dueno.test.ts`.
 
 ## Tabla de caminos
 

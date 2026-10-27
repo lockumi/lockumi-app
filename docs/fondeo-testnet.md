@@ -67,12 +67,12 @@ Ver la lista al final de `docs/firma-cavos.md`.
 - **Arreglo (`src/services/trustless.ts`, `guardarCuentaSiFalta`; `src/acciones.ts`, `firmar`):** al firmar el contrato con Trustless Work, si el alquiler no trae la cuenta de quien firma,
   antes de firmar se guarda la de la billetera conectada con `servidor.actualizarCuenta` (RPC `lk_actualizar_direccion`, igual que #62). Si no hay billetera o guardar falla, la firma sigue igual (no se corta nada).
 - **Respaldo para quien ya firmó (`src/screens/Detalle.tsx`, `Pago`):** cuando el dueño abre el alquiler en «pendiente de pago» y su cuenta falta, la app la guarda en segundo plano (sin textos ni pantallas nuevas).
-- **Límite (documentado, no resuelto aquí):** ambos caminos necesitan la sesión de Cavos del dueño. Sin token no hay dirección de billetera, así que un dueño que entra **solo con la llave de acceso** y no vuelve a entrar
+- **Límite (resuelto después con el PR #65, ver abajo):** ambos caminos necesitan la sesión de Cavos del dueño. Sin token no hay dirección de billetera, así que un dueño que entra **solo con la llave de acceso** y no vuelve a entrar
   sigue dejando la cuenta vacía. El pago del inquilino **no** puede guardar la cuenta del dueño: la dirección solo vive en `lk_participantes` (por alquiler) y `lk_actualizar_direccion` solo cambia la fila de quien llama.
   El arreglo completo sería pedir sesión (`ConSesion`, componente y textos ya existentes) a la firma del dueño cuando falta su cuenta; es un cambio de flujo y necesita aprobación.
 - **Pruebas:** `src/services/__tests__/cuenta-dueno-firma.test.ts` (guarda y luego firma; sin sesión firma igual; con cuenta no guarda; respaldo en `Pago`) y
   `src/servidor/__tests__/ciclo-dos-personas-sql.test.ts` («U4»: sin la cuenta del dueño, 409 «Falta la cuenta Stellar del dueño.»; con `lk_actualizar_direccion` del dueño, sigue).
 - Sin cambios de diseño, de textos visibles ni de base de datos.
-- **Propuesta para el límite (rama `firma-dueno-con-sesion`, PR en borrador «NO FUSIONAR: espera OK de Katherine»):** si al dueño le falta su cuenta Stellar, su firma del contrato pide antes
+- **Arreglo del límite (rama `firma-dueno-con-sesion`, PR #65; aprobado por Katherine el 27/10/2026, 12:54 p. m. CR):** si al dueño le falta su cuenta Stellar, su firma del contrato pide antes
   «Entrar de nuevo» con el mismo `ConSesion` y los mismos textos que ya ve el inquilino (`src/screens/sesionFirma.ts`, `pideSesionAntesDeFirmar`). Con la cuenta ya guardada el dueño firma como antes.
-  Es un cambio de flujo (un paso más solo para el dueño sin sesión): espera el OK de Katherine. Pruebas: `src/screens/__tests__/sesion-firma-dueno.test.ts`.
+  Es un cambio de flujo (un paso más solo para el dueño sin sesión), aprobado por Katherine. Pruebas: `src/screens/__tests__/sesion-firma-dueno.test.ts`.
