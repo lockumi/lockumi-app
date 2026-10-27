@@ -8,7 +8,7 @@
 //   send     https://docs.trustlesswork.com/trustless-work/api-rest/helpers/send-transaction
 //   esquemas https://dev.api.trustlesswork.com/docs  (approve-milestone, change-milestone-status)
 import { Keypair, Networks, TransactionBuilder, FeeBumpTransaction, Operation, Asset, Account, hash, type Transaction } from '@stellar/stellar-sdk'
-import { repartoCentimos } from './centimos.js'
+import { repartoCentimos, exacto, netoTW } from './centimos.js'
 import { NO_PREPARAR_DEPOSITO, esTecnico, PASSPHRASE_TESTNET, USDC } from './red.js'
 import { revisarPrueba } from './prueba-cavos.js'
 import { SIN_PRUEBA, type AccionPrueba, type Prueba } from './prueba-mensaje.js'
@@ -201,8 +201,7 @@ export const REPARTO_DISPUTA = 'Se abrió la disputa en Trustless Work (red de p
 /** El texto de antes (casos que abrieron la disputa antes del cambio): un reintento no vuelve a abrirla. */
 const REPARTO_DISPUTA_ANTES = 'Se abrió la disputa en Trustless Work para pagar el reparto aceptado'
 const centavos = (x: unknown) => Math.round(Number(x) * 100)
-const dosDecimales = (x: unknown) => (Math.round(Number(x) * 100) / 100).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const textoReparto = (k: Contrato) => { const r = repartoCentimos(Number(k.resultado!.dueno), Number(k.resultado!.inquilino)); return `Se pagó el reparto aceptado desde Trustless Work: ${dosDecimales(r.dueno)} USDC de prueba al dueño y ${dosDecimales(r.inquilino)} USDC de prueba al inquilino (cada monto menos el 0,3 % de comisión de Trustless Work).` }
+const textoReparto = (k: Contrato) => { const r = repartoCentimos(Number(k.resultado!.dueno), Number(k.resultado!.inquilino)); return `Se pagó el reparto aceptado desde Trustless Work: llegan ${exacto(r.llegaDueno)} USDC de prueba al dueño y ${exacto(r.llegaInquilino)} USDC de prueba al inquilino (ya descontado el 0,3 % de comisión de Trustless Work).` }
 function cierreAceptado(k: Contrato) {
   const r = k.resultado
   if (k.estado !== 'cerrado' || !r) return false
@@ -243,7 +242,7 @@ async function aprobadoPorDueno(c: Config, id: string, f = fetch) {
 // En la red, además, el contrato del escrow no deja pagar dos veces: un segundo envío fallaría (y no se anotaría).
 export const SEGUNDOS_BLOQUEO_PAGO = 300
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
-export const liberadoTexto = (k: Pick<Contrato, 'monto'>) => `Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)`
+export const liberadoTexto = (k: Pick<Contrato, 'monto'>) => `Se liberó el depósito al inquilino desde Trustless Work (llegan ${exacto(netoTW(Number(k.monto)))} USDC de prueba, ya descontada la comisión de 0,3 % de Trustless Work)`
 export type ModoDevolucion = 'liberar' | 'devolver-automatico'
 export type Devolucion = { tx?: string; disputaTx?: string | null; yaExistia?: true; enCurso?: true; recuperado?: true }
 // Texto del paso 22 (Legal: OK tal cual, 25/10/2026 11:15 p. m. CR): la app lo muestra solo si el escrow no cuadra con el alquiler o

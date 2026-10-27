@@ -47,7 +47,7 @@ describe('2) correcciones de Legal, palabra por palabra', () => {
     expect(s).toContain('`No hubo reclamos en el plazo. Se devolvió automáticamente al inquilino el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work: llegaron ${llegaPrueba(recibeInquilino(r.inquilino))}. El dueño y Lockumi no reciben nada.`')
     expect(s).toContain('`${llegaPrueba(recibeInquilino(r.inquilino))} volvieron al inquilino`')
     expect(s).toContain("'El inquilino tiene 7 días naturales para aceptar o no el reclamo, desde que el aviso le llega en la app. Si no lo acepta o no responde a tiempo, el caso pasa a la Mediación Lockumi (demo). La mediación no decide por ustedes: el reparto solo se aplica si los dos lo aceptan.'")
-    expect(s).toContain("' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.'")
+    expect(s).toContain("' Son los montos que llegan, ya descontado el 0,3 % de comisión de Trustless Work en la red de prueba.'")
     expect(s).toContain("'Pasa a la Mediación Lockumi (demo)'")
     expect(s).toContain("'Si los dos lo piden, una persona del equipo de Lockumi les ayuda a buscar un acuerdo. No decide: el reparto solo se aplica si los dos lo aceptan.'")
   })
