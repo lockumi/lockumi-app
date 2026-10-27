@@ -2,6 +2,28 @@
 
 Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de su OK final**. Textos nuevos **pendientes de Legal**.
 
+## App de Cavos «Lockumi v2» (27/10/2026): nuevo `VITE_CAVOS_APP_ID`
+- **Qué es:** una app nueva en el panel de Cavos llamada **«Lockumi v2»**. App ID público de producción: `cav_14f91c44d57f4290070c0f9705f50164564b` (clave pública del frontend, no es un secreto). App ID de desarrollo: `cav_73230a9b7f198345f9498855557aec6eacd9`. Mismos orígenes y URL de retorno que la app vieja (`https://app.lockumi.com/`, `https://lockumi-app-demo-preview.vercel.app/`, `http://localhost:5173/`), recuperación social/enclave activada y las mismas aprobaciones de Stellar (política de firma «Ask the user»).
+- **Por qué:** en el registro de la app vieja (`cav_c1b1cec42e7b62cd01f377b5a3291b276079`) quedaron billeteras quemadas por el error de `Buffer` de arriba (la cuenta se creó pero nunca pudo firmar). El registro de Cavos se identifica por **userId + appId + cadena + red**, así que un `appId` nuevo **reinicia las billeteras**: las personas entran como cuenta nueva y se crean limpias. **`appSalt` no cambia** (`'lockumi'`, `src/services/auth.ts`; nunca cambiar con usuarios). Cadena `stellar`, red `testnet` y `environment: 'production'` tampoco cambian.
+- **Dónde se lee:** solo de la variable `VITE_CAVOS_APP_ID` (`src/services/auth.ts`). **No hay ningún App ID escrito en el código como valor de respaldo**; sin la variable la app usa el acceso simulado.
+- **Cambio a producción (NO hecho):** consiste en poner `VITE_CAVOS_APP_ID=cav_14f91c44d57f4290070c0f9705f50164564b` en las variables de Vercel (Production) y volver a desplegar. Se hace **solo con el OK de Katherine**. **Volver atrás:** poner otra vez `cav_c1b1cec42e7b62cd01f377b5a3291b276079` y desplegar (las billeteras de la app vieja siguen donde estaban). Este PR no cambia ninguna variable de Vercel.
+- **Servidor (aparte del cliente):** `CAVOS_APP_ID` (UUID interno, prefijo del nonce de Google y Apple) es **otro valor por app**. El de «Lockumi v2» es `b2f83f81-a07d-4ef5-b8a5-167502aea497` (leído como en `docs/reputacion.md`, «Valores reales de CAVOS_*», sin iniciar sesión). Al pasar a producción hay que cambiar **también** `CAVOS_APP_ID` en Vercel (si no, `/api/verificar-correo` rechaza con 403 el nonce de Google/Apple de la app nueva; el correo con código no depende de él). `CAVOS_AUD_GOOGLE`/`CAVOS_AUD_APPLE` no cambian (mismo `client_id` de Cavos). Revertir los dos juntos.
+
+## Causa real de «No pudimos abrir tu cuenta»: faltaba `Buffer` (27/10/2026, 12:30 a. m. CR)
+- **Síntoma:** al entrar con una cuenta nueva, la conexión con Cavos salía bien (cuenta nueva creada, la bóveda firmaba), y justo después
+  la pantalla decía «No pudimos abrir tu cuenta» con el detalle `firma · ReferenceError: Buffer is not defined`.
+- **Causa:** el kit de Cavos y sus dependencias usan el `Buffer` global. Next.js (Meteorito) lo agrega solo; **Vite (Lockumi) no**.
+  En `probarFirma`, tras `signMessage`, `CavosStellar.signMessage` (`@cavos/kit/dist/chunk-PVYWFWFZ.mjs:1057`) llama a
+  `control.publicAddress()`, que en el vault es `VaultClient.stellarSigner().publicAddress` (`chunk-CEOXXKEN.mjs:627`:
+  `StrKey.encodeEd25519PublicKey(Buffer.from(publicKey))`); `Buffer` ahí es una referencia global. Antes de ese punto todo funciona
+  (la firma ya se hizo en la bóveda), por eso nada parecía fallar en la red. `clasificarFirma` lo clasificaba como `error` genérico.
+- **Arreglo:** `src/polyfills.ts` (`globalThis.Buffer ??= Buffer` del paquete `buffer`, ya en `dependencies`) se importa como
+  **primera línea de `src/main.tsx`**, antes de React, de Cavos y de Stellar. Sin cambios visuales ni de flujo.
+- **Pruebas:** `src/__tests__/polyfill-buffer.test.ts` (define `globalThis.Buffer` cuando falta, no pisa uno existente y `main.tsx` lo
+  importa primero). En el build servido bajo `https://app.lockumi.com`, `typeof Buffer` es `'function'`; con el build anterior era
+  `'undefined'`, y ese mismo código del kit lanza `ReferenceError: Buffer is not defined` sin el polyfill y devuelve la dirección con él.
+- **No quitar `src/polyfills.ts`** (ni moverlo después de otra importación).
+
 ## Qué cambia
 - **Entrar:** Cavos (`@cavos/kit` 0.4.2); al entrar se revisa que el aparato tenga la llave (`signMessage`).
 - **Cada acción que mueve la cuenta segura** (pagar, «Todo bien, devolver», repartir, liberar, devolución automática) lleva una
@@ -19,9 +41,25 @@ Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de
   `desplegar`, `fondear`, `FIRMA_SERVIDOR_TESTNET`).
 
 ## Llave de acceso (passkey) · `src/services/llave.ts`
-- **Al crear la cuenta** (o al entrar con una que no la tiene): después de la firma de prueba, la puerta consulta si la cuenta tiene
-  llave (`consultarLlave`, `Cavos.connect` con `PasskeyPrf`; en un dispositivo que ya firma no pide nada). Sin llave: no se entra
-  hasta crearla (`crearLlave` = `VaultClient.enrollPasskey`; Cavos guarda la llave envuelta con el PRF de la passkey y no puede abrirla).
+- **Al crear la cuenta** (o al entrar con una que no la tiene): si la conexión dice que la cuenta no tiene llave (`passkeyRestore`
+  falso), la llave se **crea sola** (`LlaveAutomatica` en `src/screens/Firmante.tsx` → `asegurarLlave` → `crearLlave` =
+  `VaultClient.enrollPasskey`, lo mismo que `enrollPasskeyDefault` del `CavosProvider` de Meteorito con `secureStep: 'required'`).
+  No hay pantalla ni botón «Crea tu llave de acceso»: solo «Entrando a tu cuenta…» y la línea «Confirma con Face ID o tu huella
+  para proteger tu cuenta». Cavos guarda la llave envuelta con el PRF de la passkey y no puede abrirla.
+- **Gesto en iOS/Safari:** `navigator.credentials.create` lo exige. Lockumi no lo llama: lo hace el vault de Cavos (origen
+  `vault.cavos.xyz`, iframe con `allow="publickey-credentials-create"`), que abre su propia ventana «Add a passkey» con el botón
+  «Create passkey»; ese toque dentro del vault es el gesto (`host.js` del vault, `showPasskey`; si el navegador no deja, ofrece
+  «Continue in a Cavos window»). Si no se completa (cancelada o bloqueada), la misma línea muestra el error y «Intentar de nuevo»
+  (un toque en la página de Lockumi, otro gesto válido).
+- **Igual que Meteorito (27/10), una sola conexión:** el `CavosProvider` de Meteorito (`lib/cavosBridge.tsx:84-88`, `@cavos/kit/react`)
+  hace un único `Cavos.connect` por entrada y, con vault y sin recuperación social, pasa `passkeyPrf` desde esa primera conexión
+  (`appDeviceApproval === 'passkey'`; kit `react/index.mjs:1572-1575, 1623`). Lockumi (#57) conectaba SIN llave (`probarFirma`) y justo
+  después otra vez CON llave (`consultarLlave`), sola y sin toque: en una cuenta nueva (iPhone Safari) fallaba o dejaba la cuenta
+  registrada sin copia local y se veía «No pudimos abrir tu cuenta. Revisa tu conexión» (`consultarLlave` se tragaba el error). Ahora
+  `conectarBilletera` siempre pasa `passkeyPrf` (`billetera.ts`), `probarCuenta` usa esa misma conexión (en caché) y su `llave`, y
+  `consultarLlave` se quitó. El kit sigue en 0.4.2 (el provider de 0.4.2 hace lo mismo; bajar a 0.3.0 no es necesario).
+- **Detalle técnico del error:** la pantalla «No pudimos abrir tu cuenta» muestra en texto pequeño `paso · tipo: mensaje`
+  (`anotarFallo` / `detalleFallo` en `src/services/firmante.ts`; sin URL, correos ni textos largos; solo en memoria) para saber la causa.
 - **Dispositivo nuevo sin la llave de la cuenta** (`needs-device-approval`): el botón «Entrar con mi llave de acceso» recupera la llave
   con la passkey (`aprobarConLlave`, `passkeyPrf`; el vault pide la passkey). Si falla, un texto corto dice cómo resolverlo.
 - Solo se recuerda `lockumi.llave.<correo> = creada` (para no preguntar en cada entrada). Nunca la llave ni la passkey.
@@ -73,3 +111,27 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
 3. **Orígenes de Cavos:** el servidor de Cavos responde CORS abierto (no revela la lista); la lista real está en el panel de Cavos. app.lockumi.com ya inicia sesión con Cavos en producción, pero la **passkey** (WebAuthn) y las URL de vista previa de Vercel hay que confirmarlas en el panel o probando en app.lockumi.com.
 4. Confirmar en testnet que Trustless Work acepta approver = plataforma (misma cuenta que serviceProvider/releaseSigner).
 5. Dos cuentas Cavos en sus aparatos originales, y la llave de acceso probada en un segundo dispositivo real (el vault pide la passkey en su ventana; no se puede simular). 6. OK de Katherine y de Legal (textos y `signMessage`).
+
+## Volver con la llave de acceso: correo por confirmar (27/10/2026, PR #60)
+- Prueba real (dueño, Gmail dos): login nuevo con código de Cavos → llave de acceso creada → `/api/verificar-correo` aceptó el token (403 `codigo: true`,
+  «Revisa tu correo»). Al volver 20 minutos después solo con la llave de acceso, el token del espejo (`sesionCavos.ts`, el kit no renueva en silencio;
+  JWT del enclave de 1 hora, `aud` «cavos-email») ya tenía más de 5 minutos y el servidor lo rechazó (403), igual que ya lo gastó la primera vez.
+  Sin correo confirmado, `lk_aceptar_reputacion` y crear un alquiler (disparador `lk_participante_correo_verificado`) responden 403.
+- Arreglo (solo app, sin cambiar diseño ni flujo): no se manda un token vencido para el servidor y se recuerda en este navegador, 55 minutos, que la
+  cuenta dejó el correo por confirmar; al volver se muestra de nuevo «Revisa tu correo». Detalle: `docs/reputacion.md` («Volver con la llave de acceso…»).
+- Al cambiar `CAVOS_APP_ID` / `CAVOS_AUD_EMAIL` en producción no cambia nada de esto: el `aud` del enclave es «cavos-email» para todas las apps.
+- Recargar la página después de confirmar el correo (prueba real del inquilino, 27/10, 2:00 a. m.): la app volvía a mandar a `/api/verificar-correo`
+  el mismo token de Cavos (el espejo, de menos de 6 minutos) porque la lista de «tokens ya enviados» vivía solo en memoria; el servidor ya lo había
+  gastado y respondía 403 «Sal de Lockumi…» (la app lo ignora, no bloquea el pago, el correo seguía confirmado en `lk_correos_verificados`), pero gastaba
+  1 de los 5 intentos por sesión cada 10 minutos. Ahora se recuerda una huella (SHA-256 cortado, nunca el token) 7 minutos en `localStorage`
+  (`lockumi.cavos.token-enviado`). Y si se recarga ANTES de escribir el código, vuelve «Revisa tu correo» (antes no volvía con un token de menos de 6 minutos).
+  Un fallo de red (la petición no llegó) no se recuerda: se reintenta.
+
+## «Tu cuenta para el depósito»: «Lista ✓» solo con la cuenta activa (27/10/2026, PR #60)
+- Antes `src/screens/Billetera.tsx` mostraba «Lista ✓» apenas Cavos entregaba la dirección Stellar, aunque la cuenta no existiera todavía en la red de prueba
+  (Horizon 404: la activa Lockumi con la tesorería al pagar el depósito, `docs/testnet-e2e.md`). Era un falso «lista» para el inquilino.
+- Ahora (`cuentaLista` en `src/services/billetera.ts`): «Lista ✓» solo si Horizon ya devuelve la cuenta (no 404) y, con Trustless Work
+  (`VITE_DOS_PERSONAS`), si además tiene el USDC habilitado (trustline), porque la tarjeta dice «Aquí se guarda y se devuelve el depósito». Antes, y si la lectura
+  de Horizon falla, se ve el texto de espera que la tarjeta ya tenía mientras se conecta la llave: «Preparando tu cuenta…» (reloj, color de «pendiente»).
+  Los «Detalles» (dirección, saldo, «Activar cuenta de prueba», «Habilitar USDC de prueba») no cambian. Sin textos nuevos, sin cambio de diseño ni de flujo.
+- Prueba: `src/screens/__tests__/billetera-lista.test.tsx` (404 → sin «Lista ✓»; cuenta activa con USDC → «Lista ✓»; sin trustline y en carga/error → todavía no).

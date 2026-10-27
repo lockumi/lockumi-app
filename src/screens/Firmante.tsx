@@ -1,9 +1,9 @@
 // Firmante (26/10/2026): qué se ve cuando este dispositivo no puede firmar con la billetera de la cuenta, y el pedido de
 // volver a entrar cuando la sesión se perdió (pestaña nueva o vencida). Reusa la entrada (Entrando), la tarjeta y los botones.
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Entrando, Hoja } from './Login'
 import { LogoAnimado } from '../LogoAnimado'
-import { TEXTOS_FIRMANTE as T, esTextoSinSesion, type EstadoFirmante } from '../services/firmante'
+import { TEXTOS_FIRMANTE as T, esTextoSinSesion, detalleFallo, type EstadoFirmante } from '../services/firmante'
 import { TEXTOS_LLAVE as L, asegurarLlave, recuperarConLlave } from '../services/llave'
 import { haySesionFirma, olvidarBilletera } from '../services/billetera'
 import { auth, volverAEntrar } from '../services/auth'
@@ -15,34 +15,57 @@ import type { Usuario } from '../types'
  *  «sin-sesion» = volver a entrar; «error» = reintentar. Nunca se entra a la app desde aquí sin firmar y sin llave. */
 export function PuertaFirmante({ x, estado, reintentar, otraCuenta }: { x: Usuario; estado: EstadoFirmante | 'probando'; reintentar: () => void; otraCuenta: () => void }) {
   if (estado === 'probando' || estado === 'puede') return <Entrando />
-  const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-llave' ? L.crearTitulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
+  if (estado === 'sin-llave') return <LlaveAutomatica email={x.email} alListo={reintentar} otraCuenta={otraCuenta} />
+  const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <LogoAnimado className="entrada-app__arte marca-c__arte" />
     <h2 className="entrada-app__titulo">{titulo}</h2>
     <section className="glass tarjeta pila" aria-live="polite">
-      {estado === 'no-firmante' && <><p>{L.conLlave}</p><BotonLlave modo="entrar" email={x.email} alListo={reintentar} /></>}
-      {estado === 'sin-llave' && <><p>{L.crear}</p><BotonLlave modo="crear" email={x.email} alListo={reintentar} /></>}
+      {estado === 'no-firmante' && <><p>{L.conLlave}</p><BotonLlave email={x.email} alListo={reintentar} /></>}
       {estado === 'sin-sesion' && <><p>{T.sesion}</p><VolverAEntrar u={x} /></>}
       {estado === 'error' && <><p>{T.error}</p>
+        {detalleFallo() && <p className="nota">Detalle técnico: {detalleFallo()}</p>}
         <button type="button" className="boton boton--primario boton--ancho" onClick={reintentar}>{T.reintentar}</button></>}
     </section>
     <button type="button" className="boton boton--secundario boton--ancho" onClick={otraCuenta}>{T.otraCuenta}</button>
   </main>
 }
 
+/** Llave de acceso automática (27/10, como Meteorito con secureStep 'required'): con una cuenta que no tiene llave, la creación
+ *  se lanza sola, sin pantalla ni botón. El vault de Cavos abre su propia ventana («Add a passkey» → «Create passkey», en su origen),
+ *  y ese toque dentro del vault es el gesto que Safari exige para crear la passkey. Si no se completa (cancelada, bloqueada), la
+ *  misma línea ofrece un toque para intentarlo de nuevo, también un gesto de la persona. Sin pantalla nueva: mismo estilo de Entrando. */
+export function LlaveAutomatica({ email, alListo, otraCuenta }: { email: string; alListo: () => void; otraCuenta: () => void }) {
+  const [error, setError] = useState(''); const [ocupado, setOcupado] = useState(true); const lanzada = useRef(false)
+  const crear = async () => {
+    setOcupado(true); setError('')
+    const r = await asegurarLlave(email)
+    if (r.ok) alListo(); else { setOcupado(false); setError(r.mensaje) }
+  }
+  useEffect(() => { if (lanzada.current) return; lanzada.current = true; void crear() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
+  return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app ingreso-cargando" aria-busy={ocupado}>
+    <LogoAnimado className="entrada-app__arte marca-c__arte" />
+    <p className="entrada-app__titulo" role="status">Entrando a tu cuenta…</p>
+    <p className="nota">{L.auto}</p>
+    {error && <p className="error" role="alert">{error}</p>}
+    {error && <button type="button" className="boton boton--secundario boton--ancho" onClick={() => void crear()}>{L.reintentar}</button>}
+    {error && <button type="button" className="boton boton--secundario boton--ancho" onClick={otraCuenta}>{T.otraCuenta}</button>}
+  </main>
+}
+
 /** Botón de la llave de acceso (crearla o entrar con ella). Si algo falla, el mismo texto corto dice cómo resolverlo. */
-export function BotonLlave({ modo, email, alListo }: { modo: 'crear' | 'entrar'; email: string; alListo: () => void }) {
+export function BotonLlave({ email, alListo }: { email: string; alListo: () => void }) {
   const [ocupado, setOcupado] = useState(false); const [error, setError] = useState('')
   const tocar = async () => {
     setOcupado(true); setError('')
-    const r = await (modo === 'crear' ? asegurarLlave(email) : recuperarConLlave(email))
+    const r = await recuperarConLlave(email)
     setOcupado(false)
     if (r.ok) alListo(); else setError(r.mensaje)
   }
   return <>
     {error && <p className="error" role="alert">{error}</p>}
     <button type="button" className="boton boton--primario boton--ancho" disabled={ocupado} onClick={() => void tocar()}>
-      {modo === 'crear' ? (ocupado ? L.creando : L.crearBoton) : (ocupado ? L.entrando : L.entrarBoton)}</button>
+      {ocupado ? L.entrando : L.entrarBoton}</button>
   </>
 }
 

@@ -15,6 +15,15 @@ export function leerFirmante(email: string, s: Pick<Storage, 'getItem'> = localS
 export const esNoFirmanteKit = (m: string) => /not an authorized signer|needs-device-approval|restore by connecting with the enclave|protected by recovery|complete a fresh social login|no local key and no recovery wrap|does not hold this wallet's key/i.test(m)
 /** Sesión de Cavos perdida o vencida: sin token en esta pestaña, sin identidad, o el registro rechaza el token (401/403). */
 export const esSinSesion = (m: string) => /no login token|sin-token|sin-identidad|no tiene token|registry .*failed: 40[13]/i.test(m)
+/** Detalle técnico del último fallo al entrar (solo para la pantalla «No pudimos abrir tu cuenta»): paso + tipo + mensaje corto.
+ *  Sin tokens ni correos: se recortan los textos largos y las URL. Vive solo en memoria. */
+let ultimoDetalle = ''
+export function anotarFallo(paso: string, e: unknown) {
+  const m = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+  ultimoDetalle = `${paso} · ${m}`.replace(/https?:\/\/\S+/g, '[url]').replace(/\S+@\S+/g, '[correo]').replace(/[A-Za-z0-9_\-.+/=]{32,}/g, '…').slice(0, 160)
+}
+export const detalleFallo = () => ultimoDetalle
+export const limpiarDetalle = () => { ultimoDetalle = '' }
 export function clasificarFirma(e: unknown): EstadoFirmante {
   const m = (e as { codigo?: string })?.codigo + ' ' + (e instanceof Error ? e.message : String(e))
   if (esSinSesion(m)) return 'sin-sesion'

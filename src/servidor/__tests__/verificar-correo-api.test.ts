@@ -75,7 +75,7 @@ describe('verificarTokenCavos: el correo sale de un token firmado por Google, Ap
     await expect(verificarTokenCavos(t, { ...ENV, CAVOS_AUD_GOOGLE: '' }, f, AHORA)).rejects.toThrow(/CAVOS_AUD_GOOGLE/)
     await expect(verificarTokenCavos(t, { ...ENV, CAVOS_APP_ID: '' }, f, AHORA)).rejects.toThrow(/CAVOS_APP_ID/)
     // La clave pública del frontend (cav_…) no es el prefijo del nonce: se avisa con 503 en vez de rechazar todo en silencio.
-    await expect(verificarTokenCavos(t, { ...ENV, CAVOS_APP_ID: 'cav_c1b1cec42e7b62cd01f377b5a3291b276079' }, f, AHORA)).rejects.toMatchObject({ estado: 503, message: /UUID/ })
+    await expect(verificarTokenCavos(t, { ...ENV, CAVOS_APP_ID: 'cav_14f91c44d57f4290070c0f9705f50164564b' }, f, AHORA)).rejects.toMatchObject({ estado: 503, message: /UUID/ })
   })
 })
 

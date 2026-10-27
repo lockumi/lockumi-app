@@ -16,9 +16,12 @@ describe('pantalla al entrar cuando este dispositivo no puede firmar', () => {
     const h = ver('no-firmante'); expect(h).toContain(T.titulo); expect(h).toContain(L.conLlave); expect(h).toContain(L.entrarBoton)
     expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.crearBoton)
   })
-  it('cuenta sin llave de acceso: paso obligatorio «Crear llave de acceso» antes de entrar', () => {
-    const h = ver('sin-llave'); expect(h).toContain(L.crearTitulo); expect(h).toContain(L.crear); expect(h).toContain(L.crearBoton)
-    expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.entrarBoton)
+  it('cuenta sin llave de acceso: la llave se crea sola; solo una línea corta, sin pantalla ni botón «Crea tu llave de acceso»', async () => {
+    const h = ver('sin-llave'); expect(h).toContain(L.auto); expect(h).toContain('Entrando a tu cuenta…')
+    expect(h).not.toContain(L.crearTitulo); expect(h).not.toContain(L.crearBoton); expect(h).not.toContain('<button'); expect(h).not.toContain(L.entrarBoton)
+    const fuente = (await import(/* @vite-ignore */ '../Firmante.tsx?raw')).default as string   // se lanza al montar y, si no se completa, un toque lo repite
+    expect(fuente).toMatch(/useEffect\(\(\) => \{ if \(lanzada\.current\) return; lanzada\.current = true; void crear\(\) \}/)
+    expect(fuente).toContain('{L.reintentar}')
   })
   it('el mensaje del dispositivo solo aparece cuando hace falta', () => {
     for (const e of ['error', 'sin-sesion', 'sin-llave', 'probando'] as const) expect(ver(e)).not.toContain(T.titulo)
