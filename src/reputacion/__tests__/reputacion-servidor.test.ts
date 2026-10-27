@@ -2,7 +2,7 @@
 // papel en la base. Causa: la app miraba el perfil (REP-01) de la OTRA parte en el localStorage de ESTE navegador, donde nunca está.
 // Ahora, con servidor, el servidor dice por alquiler si cuenta y desde cuándo (lk_reputacion_de_mis_alquileres).
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import migracion from '../../../supabase/migrations/20261027140000_reputacion_contraparte.sql?raw'
 import type { Alquiler } from '../../types'
 import { alquileresDeReputacion, alquileresDeReputacionServidor, calcularPuntaje } from '../puntaje'
 import { cargarInfoReputacion, infoReputacion, _reiniciarInfoReputacion } from '../perfilesServidor'
@@ -39,7 +39,7 @@ describe('reputación con servidor: el perfil de la otra parte', () => {
     await cargarInfoReputacion(DOS, pedir); expect(pedir).toHaveBeenCalledTimes(1)
   })
   it('la función SQL solo responde por los alquileres de quien llama y no devuelve correos', () => {
-    const sql = readFileSync('supabase/migrations/20261027140000_reputacion_contraparte.sql', 'utf8')
+    const sql = migracion
     expect(sql).toMatch(/m\.usuario = auth\.uid\(\)/)
     expect(sql).toMatch(/returns table \(contrato_id uuid, cuenta boolean, desde timestamptz\)/)
     expect(sql).toMatch(/revoke all on function public\.lk_reputacion_de_mis_alquileres\(\) from public, anon;/)
