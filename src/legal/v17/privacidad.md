@@ -13,7 +13,7 @@ Cuando usas la demo de app.lockumi.com, tratamos la información necesaria para 
 ## Qué datos recogemos
 - **Datos de acceso:** tu correo electrónico y, si entras con Google o Apple, el nombre asociado a ese servicio. El inicio de sesión lo gestiona Cavos.
 - **Billetera (tu cuenta digital en la app):** la dirección pública de tu billetera, que crea Cavos. Si eliges el USDC de prueba que te da Lockumi, el depósito no sale de tu billetera, sino de una cuenta de inquilino de prueba de Lockumi. Lockumi no recibe ni guarda tu llave privada. Como Lockumi puede vincular esa dirección con tu correo, **la tratamos como un dato personal**.
-<!-- LEGAL: revisado (26/10, 1.14-demo) -->
+<!-- LEGAL: revisado (26/10, 1.15-demo) -->
 - **Firmas de prueba:** para confirmar cada acción guardamos un código de un solo uso de tu firma de prueba, nunca tu llave.
 <!-- LEGAL: revisado (24/10) · ronda 9b (quién firma: ver Términos 5.3) -->
 - **Freighter (opcional):** si en «Usar mi propio USDC de prueba» eliges «Usar Freighter», Lockumi **solo recibe la dirección pública** de esa billetera, y la tratamos igual que la de las otras billeteras. Si usas Freighter, las transacciones de tu billetera las confirmas tú en la extensión. Las demás acciones del contrato las firma Lockumi (ver la cláusula 5.3 de los Términos) en la red de prueba. Lockumi nunca ve tu clave privada. Freighter es una billetera de un tercero, la Stellar Development Foundation (https://www.freighter.app/privacy), que trata tus datos según su propia política. **No es un encargado de Lockumi**: Lockumi no le envía tus datos.
@@ -147,7 +147,6 @@ Lockumi genera y guarda en su servidor la llave de las **cuentas de prueba rotul
 <!-- si: correos -->
   - **Plus Five Five, Inc.**, que opera **Resend** (Estados Unidos). Envía los correos {{dos-personas:de invitación y }}de avisos desde invitaciones@lockumi.com, una dirección que solo envía y no recibe respuestas. Recibe {{dos-personas:el correo de la persona invitada, su papel, un resumen del alquiler simulado (sin el lugar ni fotos) y el enlace para unirse, y }}el correo de quien pide los avisos, con montos de prueba, fechas y un enlace a la app. Actúa como encargado del tratamiento. Política de privacidad: https://resend.com/legal/privacy-policy
 <!-- fin -->
-- **Servicios de la red de prueba:** el **exchange descentralizado** de la red de prueba (donde compras USDC de prueba) es un servicio público de la red. No le enviamos datos personales; solo recibe la dirección pública de tu billetera cuando la usas.
 - Al aceptar este aviso, **autorizas de forma expresa** que tus datos se transfieran a estos proveedores (Vercel, Supabase, Cavos{{!correos: y Trustless Work}}{{correos:, Trustless Work y Resend}}), fuera de Costa Rica, solo para los fines descritos (Ley 8968, art. 14).
 <!-- si: reputacion -->
 - Cualquier persona en internet con el enlace puede ver los datos indicados en «Perfil de reputación», mientras exista tu cuenta.
