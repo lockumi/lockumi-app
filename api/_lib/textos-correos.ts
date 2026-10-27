@@ -68,7 +68,7 @@ const reparto = (d: DatosCorreo) => `${m(rc(d).dueno)} al dueño y ${m(rc(d).inq
 // Lo que llega y la comisión: exactos, sin redondear ni ceros de más (Katherine 27/10/2026, 1:05 p. m. CR; antes 4 decimales fijos)
 const m4 = (n: number) => `${exacto(n)} USDC de prueba`
 const comision = (d: DatosCorreo) => m4(rc(d).comision)
-const repartoAcordado = (d: DatosCorreo) => `Reparto acordado: ${reparto(d)}. Trustless Work descuenta el 0,3 % de cada monto (${comision(d)} en total), así que llegan ${m4(rc(d).llegaDueno)} al dueño y ${m4(rc(d).llegaInquilino)} al inquilino. Lockumi no recibe nada.`   // Katherine 27/10/2026, 4:00 p. m. CR: brutos como antes; comisión y netos exactos
+const repartoAcordado = (d: DatosCorreo, inicio = 'Reparto acordado') => `${inicio}: ${reparto(d)}. Trustless Work descuenta el 0,3 % de cada monto (${comision(d)} en total), así que llegan ${m4(rc(d).llegaDueno)} al dueño y ${m4(rc(d).llegaInquilino)} al inquilino. Lockumi no recibe nada.`   // Katherine 27/10/2026, 4:00 p. m. CR: brutos como antes; comisión y netos exactos
 const REVISAR_Y_RECLAMAR = [{ texto: 'Revisar y reclamar', destino: 'alquiler' as const }, { texto: 'Todo bien, devolver', destino: 'devolver' as const }]
 
 /** Plantillas de C por clave «COR-C-0x/variante». Cada una con su marca de Legal en el comentario de arriba. */
@@ -140,7 +140,7 @@ export const TEXTOS: Record<string, Plantilla> = {
   // LEGAL: revisado (25/10) · COR-C-07 c) el inquilino aceptó el reclamo (P-07)
   'COR-C-07/acuerdo': { id: 'COR-C-07', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el alquiler', destino: 'alquiler' }],
     asunto: () => 'El inquilino aceptó el reclamo: se repartió el depósito de prueba',
-    cuerpo: d => `El inquilino aceptó el reclamo de ${m(d.dueno)}. ${repartoAcordado(d)} Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.` },
+    cuerpo: d => `El inquilino aceptó el reclamo de ${m(d.dueno)}. ${repartoAcordado(d, `Reparto del depósito de prueba de ${m(d.deposito)}`)} Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.` },
   // LEGAL: revisado (25/10) · COR-C-08 variante A (sin alquiler abierto). Correo de servicio: no depende de la casilla.
   'COR-C-08/A': { id: 'COR-C-08', legal: 'revisado', baja: false, nota: null, botones: [],
     asunto: () => 'Recibimos tu pedido para eliminar tu cuenta de Lockumi',
