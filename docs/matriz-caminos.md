@@ -107,3 +107,15 @@ J. **Control de la mediadora (fase B, 27/10, `5413ba1a`):** las dos partes acept
 K. **Fase B en producción (27/10, `5413ba1a`):** depósito 10 USDC de prueba al escrow (tx `845154cf…0b73`, ledger 5421582); fotos, «Recibí la casa»,
    reclamo de 4, rechazo → mediación, las dos partes aceptan 3, la mediadora registra 3 / 7 tras el PR #69 (tx `0f66f2ca…22ac`, ledger 5422962:
    2,991 al dueño, 6,979 al inquilino, 0,03 de comisión; escrow en 0). Camino 16 con prueba PGlite `devolucion-7-dias-sql` (7 días desde «Recibí la casa»; 7 + 2 sin tocarlo).
+L. **Fase B en producción, resto (27/10, hora de Costa Rica):**
+   - Camino 18 (`39b0b19b`): depósito 10 USDC (tx `1bcc8307…d9f9`, ledger 5423192); fotos; camino 12 visto en producción (al cambiar el acta se borra la
+     confirmación de la otra persona); reclamo de 4 aceptado: la app muestra «3,988 USDC de prueba al dueño y 5,982 USDC de prueba al inquilino»
+     (tx `5a8ba842…23c2`, ledger 5423242; comisión 0,03; escrow en 0).
+   - Mediación (`44dccb44`): depósito (tx `70cad2d9…9ce3`, ledger 5423397); reclamo, rechazo, las dos partes aceptan 3; la mediadora registra 3 / 7
+     (tx `bccd99e9…2e61`, ledger 5423492: 2,991 / 6,979 / 0,03; escrow en 0); su aviso `/api/correo` → 200.
+   - Camino 22: un alquiler con fondos no ofrece «Eliminar»; uno sin depósito (`d8eae517`) se elimina, sale de la lista y su enlace dice «No encontramos ese alquiler».
+   - Camino 23: los dos perfiles vuelven por la llave de acceso, sin código. Camino 8: con una sola firma el contrato quedó en `firmas` (R-A, 16:17–16:19).
+   - U1–U3 siguen: con la sesión de Cavos vencida, firmar pide «Entrar de nuevo» (código de Cavos) y pagar pide además el código de Lockumi. U4 ya no
+     pasa: la app pide entrar de nuevo antes de firmar y el pago no da 409.
+   - Reputación tras los cierres: dueño 5,0 / 5, inquilino 3,4 / 5; sin errores de RPC.
+   - Observado: un aviso de reputación del inquilino dio 502 («No pudimos enviar el correo ahora…», 16:41:06); los demás, 200. Sin registros del servidor para ver la causa.
