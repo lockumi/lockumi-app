@@ -140,7 +140,7 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     <section className="glass tarjeta" aria-labelledby="rp-solo">
       <p id="rp-solo" className="rp-solo"><Icono n="candado" />{UI.soloTu}</p>
       <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>
-      {rol === 'dueno' && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
+      {rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
     </section>
     {!borrado && <section className="glass tarjeta" aria-labelledby="rp-op">
       <p><Md t={PERFIL_FIJO} /></p>
