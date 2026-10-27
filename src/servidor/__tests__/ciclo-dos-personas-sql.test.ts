@@ -237,4 +237,18 @@ describe('(c) #62: aceptar sin cuenta → volver a entrar → «Pagar» (paso ac
     const e = await atender(ENV, pedido(id), 'Bearer t', red(id, DUENO)).catch(x => x)
     expect(e).toBeInstanceOf(ErrorTw); expect(e.message).toBe('Falta la cuenta Stellar del dueño.')
   })
+  it('U4 (27/10): dueño que creó y firmó sin cuenta; con el arreglo guarda la suya (al firmar o al abrir el depósito con sesión) y el inquilino ya no recibe 409', async () => {
+    const hoy = new Date().toISOString().slice(0, 10), fin = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10)
+    const r = await rpc<{ id: string; token: string }>(DUENO, 'lk_crear_contrato_invitando', 'Casa sin cuenta del dueño', 10, hoy, fin, ['No fumar'], CORREO, 'dueno@lockumi.com', DECL, null)
+    await rpc(INQ, 'lk_aceptar_invitacion', r.id, r.token, CORREO, GI)
+    await rpc(INQ, 'lk_firmar', r.id, 'contrato'); await rpc(DUENO, 'lk_firmar', r.id, 'contrato')
+    expect(await dirDe(r.id, 'dueno')).toBeNull()
+    // el servidor lee la cuenta del dueño con la misma función que usa «pagar» (cuenta() en api/_lib/tw.ts): 409, lo que vio la prueba real de las 11:36 (d475db0a)
+    const e = await atender(ENV, pedido(r.id), 'Bearer t', red(r.id, DUENO)).catch(x => x)
+    expect(e).toBeInstanceOf(ErrorTw); expect(e.message).toBe('Falta la cuenta Stellar del dueño.')
+    await rpc(DUENO, 'lk_actualizar_direccion', r.id, GD)                                            // ya firmado y sin cuenta segura: se permite
+    expect(await dirDe(r.id, 'dueno')).toBe(GD); expect(await dirDe(r.id, 'inquilino')).toBe(GI)     // solo cambia la suya
+    expect(await atender(ENV, pedido(r.id), 'Bearer t', red(r.id, DUENO))).toEqual({ listo: false, estado: 'sin-cuenta' })
+    expect(await atender(ENV, pedido(r.id), 'Bearer t', red(r.id, INQ))).toEqual({ listo: false, estado: 'sin-cuenta' })
+  })
 })

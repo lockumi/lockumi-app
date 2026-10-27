@@ -52,6 +52,17 @@ async function activarCuenta(contrato: string, avance: (t: string) => void, espe
   await llamar({ accion: 'activar-cuenta', contrato, paso: 'enviar', signedXdr })
 }
 export const trustless = {
+  /** U4 (27/10/2026): un dueño que crea el alquiler sin sesión de Cavos en la pestaña (entró solo con la llave de acceso) lo deja sin
+   *  su cuenta, y al pagar el inquilino recibe 409 «Falta la cuenta Stellar del dueño.». Igual que el #62 para el inquilino: si el
+   *  alquiler no trae la cuenta de esta persona, se guarda la de su billetera conectada (lk_actualizar_direccion: solo la suya y solo
+   *  antes de crear la cuenta segura). Sin sesión de Cavos no hay billetera que leer: no hace nada. Nunca lanza; dice si la guardó. */
+  async guardarCuentaSiFalta(contrato: string, cuenta?: string): Promise<boolean> {
+    if (cuenta) return false
+    try {
+      const g = (await conectarBilletera()).direccion; if (!g) return false
+      await servidor.actualizarCuenta(contrato, g); return true
+    } catch (e) { console.warn('[Lockumi] guardar la cuenta del alquiler:', e instanceof Error ? e.message : e); return false }
+  },
   /** Opción A (26/10/2026, SIMULACIÓN TESTNET): el inquilino prueba con Cavos que la billetera es suya; Lockumi crea la cuenta
    *  segura y la fondea con USDC de prueba (ramp simulado, api/_lib/rampSimulado.ts). Antes deja lista su cuenta para recibir
    *  la devolución (Friendbot y trustline, si faltan). `cuenta`: la del alquiler. Devuelve el hash del fondeo. */
