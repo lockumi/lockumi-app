@@ -19,9 +19,25 @@ Decisión de Katherine (26/10, 5:42 p. m. CR). Opción A **en rama, pendiente de
   `desplegar`, `fondear`, `FIRMA_SERVIDOR_TESTNET`).
 
 ## Llave de acceso (passkey) · `src/services/llave.ts`
-- **Al crear la cuenta** (o al entrar con una que no la tiene): después de la firma de prueba, la puerta consulta si la cuenta tiene
-  llave (`consultarLlave`, `Cavos.connect` con `PasskeyPrf`; en un dispositivo que ya firma no pide nada). Sin llave: no se entra
-  hasta crearla (`crearLlave` = `VaultClient.enrollPasskey`; Cavos guarda la llave envuelta con el PRF de la passkey y no puede abrirla).
+- **Al crear la cuenta** (o al entrar con una que no la tiene): si la conexión dice que la cuenta no tiene llave (`passkeyRestore`
+  falso), la llave se **crea sola** (`LlaveAutomatica` en `src/screens/Firmante.tsx` → `asegurarLlave` → `crearLlave` =
+  `VaultClient.enrollPasskey`, lo mismo que `enrollPasskeyDefault` del `CavosProvider` de Meteorito con `secureStep: 'required'`).
+  No hay pantalla ni botón «Crea tu llave de acceso»: solo «Entrando a tu cuenta…» y la línea «Confirma con Face ID o tu huella
+  para proteger tu cuenta». Cavos guarda la llave envuelta con el PRF de la passkey y no puede abrirla.
+- **Gesto en iOS/Safari:** `navigator.credentials.create` lo exige. Lockumi no lo llama: lo hace el vault de Cavos (origen
+  `vault.cavos.xyz`, iframe con `allow="publickey-credentials-create"`), que abre su propia ventana «Add a passkey» con el botón
+  «Create passkey»; ese toque dentro del vault es el gesto (`host.js` del vault, `showPasskey`; si el navegador no deja, ofrece
+  «Continue in a Cavos window»). Si no se completa (cancelada o bloqueada), la misma línea muestra el error y «Intentar de nuevo»
+  (un toque en la página de Lockumi, otro gesto válido).
+- **Igual que Meteorito (27/10), una sola conexión:** el `CavosProvider` de Meteorito (`lib/cavosBridge.tsx:84-88`, `@cavos/kit/react`)
+  hace un único `Cavos.connect` por entrada y, con vault y sin recuperación social, pasa `passkeyPrf` desde esa primera conexión
+  (`appDeviceApproval === 'passkey'`; kit `react/index.mjs:1572-1575, 1623`). Lockumi (#57) conectaba SIN llave (`probarFirma`) y justo
+  después otra vez CON llave (`consultarLlave`), sola y sin toque: en una cuenta nueva (iPhone Safari) fallaba o dejaba la cuenta
+  registrada sin copia local y se veía «No pudimos abrir tu cuenta. Revisa tu conexión» (`consultarLlave` se tragaba el error). Ahora
+  `conectarBilletera` siempre pasa `passkeyPrf` (`billetera.ts`), `probarCuenta` usa esa misma conexión (en caché) y su `llave`, y
+  `consultarLlave` se quitó. El kit sigue en 0.4.2 (el provider de 0.4.2 hace lo mismo; bajar a 0.3.0 no es necesario).
+- **Detalle técnico del error:** la pantalla «No pudimos abrir tu cuenta» muestra en texto pequeño `paso · tipo: mensaje`
+  (`anotarFallo` / `detalleFallo` en `src/services/firmante.ts`; sin URL, correos ni textos largos; solo en memoria) para saber la causa.
 - **Dispositivo nuevo sin la llave de la cuenta** (`needs-device-approval`): el botón «Entrar con mi llave de acceso» recupera la llave
   con la passkey (`aprobarConLlave`, `passkeyPrf`; el vault pide la passkey). Si falla, un texto corto dice cómo resolverlo.
 - Solo se recuerda `lockumi.llave.<correo> = creada` (para no preguntar en cada entrada). Nunca la llave ni la passkey.

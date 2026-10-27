@@ -129,7 +129,7 @@ Publicado el 23 oct 2026 (avisos v2). Ver [`docs/alertas.md`](docs/alertas.md).
 - La llave derivada (PR #54) queda solo para alquileres de antes (`llaveLegado`); nunca sale del servidor. No la uses para alquileres nuevos.
 - El ramp es una SIMULACIÓN TESTNET: se cambia solo en `rampActivo` (`api/_lib/rampSimulado.ts`) y no quites `exigirRampTestnet`.
 - Un solo `signMessage`, en `src/services/billetera.ts` (lo vigila `cavos-sin-firma-silenciosa.test.ts`).
-- Toda cuenta nueva lleva llave de acceso (passkey): usa `asegurarLlave` / `recuperarConLlave` de `src/services/llave.ts` desde un toque de la persona; no copies esa lógica ni abras `Cavos.connect` con `passkeyPrf` en otro lado (solo `billetera.ts`). Textos en `TEXTOS_LLAVE`, sin palabras técnicas.
+- Toda cuenta nueva lleva llave de acceso (passkey): usa `asegurarLlave` / `recuperarConLlave` de `src/services/llave.ts` (la creación se lanza sola al entrar y el vault de Cavos pone el gesto; el reintento es un toque de la persona); no copies esa lógica ni abras `Cavos.connect` con `passkeyPrf` en otro lado (solo `billetera.ts`). Textos en `TEXTOS_LLAVE`, sin palabras técnicas.
 - Eliminar antes del pago: el servidor tiene que leer el saldo en la red, no solo el estado de la base.
 
 ## Proponer cambios

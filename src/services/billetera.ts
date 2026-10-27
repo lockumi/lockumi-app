@@ -3,7 +3,7 @@
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
 //          https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/accounts (createAccount, reserva)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
-import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
+import { MENSAJE_PRUEBA, SIN_SESION, anotarFallo, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
 import { mensajePrueba, type AccionPrueba, type Prueba } from '../../api/_lib/prueba-mensaje'
 
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
@@ -85,9 +85,12 @@ export const esNoFirmante = (m: string) => /not an authorized signer|needs-devic
 
 let conexion: Promise<Billetera> | null = null
 /** Conecta la billetera con la identidad del login de Cavos. Solo en modo real.
- *  `{ llave: true }`: conecta con la llave de acceso (passkey), para averiguar si la cuenta tiene una o para aprobar este
- *  dispositivo con ella (el vault de Cavos la pide en su propia ventana). Si este dispositivo ya tiene la llave de la cuenta,
- *  no pide nada. Nunca se pasa en las conexiones automáticas: abriría esa ventana sin que la persona lo pida. */
+ *  UNA sola conexión por entrada, como el CavosProvider de Meteorito (@cavos/kit/react, `connect`): con vault y sin recuperación
+ *  social el provider pasa `passkeyPrf` desde la primera conexión (`appDeviceApproval === 'passkey'`) y de ahí sale `passkeyRestore`
+ *  (¿la cuenta ya tiene llave de acceso?). Antes (#57) la entrada conectaba SIN llave y, justo después, otra vez CON llave
+ *  (`consultarLlave`), sola y sin toque: en una cuenta nueva (iPhone Safari) eso fallaba y se veía «Revisa tu conexión» (27/10).
+ *  La passkey la pide el vault en su propia ventana, en su origen. `{ llave: true }` solo fuerza una conexión nueva (aprobar el
+ *  dispositivo con la llave). */
 export function conectarBilletera(o: { llave?: boolean } = {}): Promise<Billetera> {
   if (import.meta.env.DEV) { // gancho de prueba local, nunca en el build
     const g = localStorage.getItem('lockumi.billetera.prueba')
@@ -102,12 +105,12 @@ export function conectarBilletera(o: { llave?: boolean } = {}): Promise<Billeter
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
     const rec = await opcionesRecuperacion(auth)
     // Con vault, el objeto PasskeyPrf solo marca recovery "passkey": la passkey la pide el vault en su propio origen.
-    const llave = o.llave ? { passkeyPrf: new PasskeyPrf({ rpName: 'Lockumi' }) } : {}
+    const llave = { passkeyPrf: new PasskeyPrf({ rpName: 'Lockumi' }) }   // igual que Meteorito: siempre, desde la primera conexión
     const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, ...llave, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
     const b: Billetera = { direccion: w.address, estado: w.status as EstadoBilletera }
-    return o.llave ? { ...b, llave: (w as unknown as { passkeyRestore?: boolean }).passkeyRestore === true } : b
+    return { ...b, llave: (w as unknown as { passkeyRestore?: boolean }).passkeyRestore === true }
   }
   if (o.llave) { const p = conectar(); conexion = p.catch(e => { conexion = null; throw e }); conexion.catch(() => {}); return p }
   return conexion ??= conectar().catch(e => { conexion = null; throw e })
@@ -186,10 +189,10 @@ export async function probarFirma(): Promise<EstadoFirmante> {
     const b = await conectarBilletera()
     if (b.estado === 'needs-device-approval') return 'no-firmante'
     if (g) { const f = localStorage.getItem('lockumi.billetera.prueba.firma'); return f === 'no' ? 'no-firmante' : f === 'sin-sesion' || f === 'error' ? f : 'puede' }
-    if (!cartera) return 'error'
+    if (!cartera) { anotarFallo('firma', new Error('sin cartera')); return 'error' }
     await firmarMensaje(cartera, MENSAJE_PRUEBA)
     return 'puede'
-  } catch (e) { return clasificarFirma(e) }
+  } catch (e) { const c = clasificarFirma(e); if (c === 'error') anotarFallo('firma', e); return c }
 }
 /** ¿Hay sesión de Cavos con token en esta pestaña? Sin Cavos (demo) siempre true. No lee ni muestra el token: solo si existe. */
 export async function haySesionFirma(): Promise<boolean> {
