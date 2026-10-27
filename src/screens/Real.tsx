@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { store } from '../store'
 import { NOMBRE_PASO, ORDEN, esHash } from '../services/comprobantes'
 import type { Alquiler, PasoRed, Rol } from '../types'
-import { usd, fechaHora, Simulado } from '../ui'
+import { usd, usdExacto, fechaHora, Simulado } from '../ui'
+import { netoTW } from '../../api/_lib/centimos'
 import { enlaceTx, enlaceCuenta, enlaceContrato, TOPE_USDC } from '../../api/_lib/red'
 import { consultarUsdc, conectarBilletera, abreviar } from '../services/billetera'
 import { obtenerUsdc, depositar, reintentarDeposito, aprobar, liberar, huellaActa, usarPrueba, fijarUsarPrueba, cuentaInquilino, type Txs } from '../services/solo'
@@ -134,7 +135,7 @@ export function CierreReal({ a, rol }: { a: Alquiler; rol: Rol }) {
   })
   const liberarYa = () => correr(async () => {
     setAvance('Devolviendo el depósito…'); const r = await liberar(escrow)
-    anotar(a.id, { liberacion: r.tx }, x => { x.estado = 'cerrado'; x.resultado = { inquilino: Math.round(x.monto * 0.997 * 1e7) / 1e7, dueno: 0, via: 'automatico', fecha: new Date().toISOString() } })
+    anotar(a.id, { liberacion: r.tx }, x => { x.estado = 'cerrado'; x.resultado = { inquilino: netoTW(x.monto), dueno: 0, via: 'automatico', fecha: new Date().toISOString() } })
   })
   return <div className="pila cierre-real">
     {!aprobado ? (rol === 'dueno' ? <>
@@ -143,7 +144,7 @@ export function CierreReal({ a, rol }: { a: Alquiler; rol: Rol }) {
     </> : <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>Esperando que el dueño de prueba apruebe. Toca «Ver como dueño» para hacerlo.</p></div>) : <>
       <p>El dueño de prueba aprobó. Ya se puede devolver el depósito al inquilino.</p>
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado} onClick={() => void liberarYa()}>{ocupado ? (avance || 'Un momento…') : 'Devolver el depósito al inquilino'}</button>
-      <p className="nota">Trustless Work descuenta 0,3 % al devolver: el inquilino recibe {usd(Math.round(a.monto * 0.997 * 1e7) / 1e7)} de prueba.</p></>}
+      <p className="nota">Trustless Work descuenta 0,3 % al devolver: el inquilino recibe {usdExacto(netoTW(a.monto))} de prueba.</p></>}
     {(a.red?.txs.evidencia || (a.red?.txs.aprobacion && a.red.txs.aprobacion !== 'ya-aprobado')) && <ul className="lista comprobantes">
       {a.red?.txs.evidencia && <li><span>{NOMBRE_PASO.evidencia}</span><VerTx h={a.red.txs.evidencia} /></li>}
       {a.red?.txs.aprobacion && a.red.txs.aprobacion !== 'ya-aprobado' && <li><span>{NOMBRE_PASO.aprobacion}</span><VerTx h={a.red.txs.aprobacion} /></li>}</ul>}
@@ -189,9 +190,9 @@ export function DetalleSolo({ a }: { a: Alquiler }) {
   })
   const liberarYa = () => correr(async () => {
     setAvance('Devolviendo el depósito…'); const r = await liberar(a.red!.escrow!)
-    anotar(a.id, { liberacion: r.tx }, x => { x.estado = 'cerrado'; x.resultado = { inquilino: Math.round(x.monto * 0.997 * 1e7) / 1e7, dueno: 0, via: 'automatico', fecha: new Date().toISOString() } })
+    anotar(a.id, { liberacion: r.tx }, x => { x.estado = 'cerrado'; x.resultado = { inquilino: netoTW(x.monto), dueno: 0, via: 'automatico', fecha: new Date().toISOString() } })
   })
-  const recibe = usd(Math.round(a.monto * 0.997 * 1e7) / 1e7)
+  const recibe = usdExacto(netoTW(a.monto))
   const ultimo = (k: PasoRed) => t[k] && t[k] !== 'ya-aprobado' ? <p className="ultimo-comprobante nota" role="status">✓ {NOMBRE_PASO[k]} · <VerTx h={t[k]!} /></p> : null
   const pantalla = [
     null,

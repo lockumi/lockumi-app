@@ -57,7 +57,7 @@ describe('C: cerrado por «Todo bien, devolver» (devuelto)', async () => {
   const cerrado = (x: Partial<Alquiler>) => renderToStaticMarkup(<Cerrado a={{ ...base, estado: 'cerrado', escrowId: CID, resultado: { via: 'devuelto', dueno: 0, inquilino: 800, fecha: ENTREGA }, ...x } as Alquiler} rol="dueno" />)
   it('montos en USDC de prueba, con la comisión del 0,3 %', () => {
     const h = cerrado({ liquidacionTx: TX })
-    expect(h).toContain('797,6000 USDC de prueba'); expect(h).toContain('descuenta el 0,3 %'); expect(h).not.toMatch(/\bUSD\b(?! ?C)/)
+    expect(h).toContain('797,60 USDC de prueba'); expect(h).toContain('descuenta el 0,3 %'); expect(h).not.toMatch(/\bUSD\b(?! ?C)/)
     expect(h).toContain('stellar.expert/explorer/testnet/tx/' + TX)
   })
   it('si la liberación no llegó a la red, ofrece reintentarla', () => {

@@ -101,3 +101,9 @@ H. **Reputación en dos aparatos (27/10):** «Nuevo en Lockumi · 0 alquileres c
    nunca está ahí. Ahora, con servidor, lo dice `lk_reputacion_de_mis_alquileres()` (migración `20261027140000`). Detalle en `docs/reputacion.md`.
 I. **Verificado (27/10/2026, Coordinador/Legal):** tras el registro de la persona mediadora el alquiler muestra «Depósito devuelto · Lo aceptaron las
    dos partes». Es correcto: el servidor solo deja registrar el acuerdo con las dos aceptaciones del mismo monto (en 0070af80 constan las dos). Sin cambios.
+J. **Control de la mediadora (fase B, 27/10, `5413ba1a`):** las dos partes aceptaron 3 de un reclamo de 4 y la mediadora no podía
+   registrar 3: en dos personas `escrowReal` es falso y el control tenía paso 10, así que solo quedaba la mitad (2). Ahora el paso es 0,01
+   con dinero de prueba (red o servidor), igual que el control de cada parte (`pasoReparto.ts`, prueba `paso-reparto-mediadora`). Sin cambios de textos ni diseño.
+K. **Fase B en producción (27/10, `5413ba1a`):** depósito 10 USDC de prueba al escrow (tx `845154cf…0b73`, ledger 5421582); fotos, «Recibí la casa»,
+   reclamo de 4, rechazo → mediación, las dos partes aceptan 3, la mediadora registra 3 / 7 tras el PR #69 (tx `0f66f2ca…22ac`, ledger 5422962:
+   2,991 al dueño, 6,979 al inquilino, 0,03 de comisión; escrow en 0). Camino 16 con prueba PGlite `devolucion-7-dias-sql` (7 días desde «Recibí la casa»; 7 + 2 sin tocarlo).

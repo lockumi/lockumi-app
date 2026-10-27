@@ -9,6 +9,7 @@ import type { Alquiler, PasoRed, RedPrueba } from '../types'
 import { escrowReal } from '../servidor/config'
 import * as solo from './solo'
 import { TOPE_USDC, montoValido, MENSAJE_RECARGA } from '../../api/_lib/red'
+import { netoTW, netoTrustless } from '../../api/_lib/centimos'
 import * as propia from './cuentaPropia'
 
 export type Txs = Partial<Record<PasoRed, string>>
@@ -37,7 +38,8 @@ export const montoPermitido = (m: number, tope: number | null) => !escrowReal ? 
 export const COMISION = 0.003
 export const COMISION_TEXTO = '0,3 %'
 const r7 = (n: number) => Math.round(n * 1e7) / 1e7
-export const neto = (n: number) => escrowReal ? r7(n * (1 - COMISION)) : n
+/** Lo que llega de un monto liberado: exacto, como el contrato de Trustless Work (api/_lib/centimos.ts). Sin red (simulado), sin comisión. */
+export const neto = (n: number) => escrowReal ? netoTW(n) : n
 
 /** Mensajes técnicos del servidor (Trustless Work, Horizon, códigos HTTP) → instrucción clara para la persona. */
 function claro(e: unknown): Error {
@@ -146,7 +148,9 @@ const real: EscrowService = {
       avance('Repartiendo el depósito en la red de prueba…')
       try { const r = await solo.resolver(red.escrow, d, reclamado, solo.autorizacion(red)); guardar({ resolucion: r.tx ?? 'ya-resuelto' }) } catch (x) { throw claro(x) }
     }
-    return { dueno: neto(d), inquilino: neto(r7(m - d)) }
+    if (!escrowReal) return { dueno: d, inquilino: r7(m - d) }
+    const [dueno, inquilino] = netoTrustless(d, r7(m - d)).llegan   // la comisión se reparte como en el contrato (resolve_dispute)
+    return { dueno, inquilino }
   },
 }
 

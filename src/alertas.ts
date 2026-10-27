@@ -1,11 +1,11 @@
 import { reglas17 } from './prueba/version'
-import { esDosPersonas, llegaPrueba, recibeInquilino } from './prueba/dosPersonas'
+import { esDosPersonas, llegaPrueba, recibeInquilino, llegadas } from './prueba/dosPersonas'
 // Avisos emergentes después de cada paso del flujo: confirman qué pasó y dicen qué sigue.
 // Aviso v2 (toast): pila de hasta 3, el más nuevo al frente. Las pantallas llaman a `avisar`; <Alertas /> (en App) los muestra con <Tostada />.
 // Los textos con sentido legal están marcados con `// LEGAL: revisar` (pendientes de revisión de Legal).
 import type { Alquiler, Rol } from './types'
 import { NOMBRE, otro } from './flujo'
-import { usd } from './ui'
+import { usd, usdExacto } from './ui'
 import { textoPlazo } from './acciones'
 import { modoReal } from './services/auth'
 import { modoPrueba, modoVideo, escrowReal } from './servidor/config'
@@ -183,30 +183,31 @@ export function alertaPorCambio(antes: Instantanea, ahora: Alquiler, rol: Rol, c
     case 'cerrado': {
       if (!r) return null
       const red = c.red ? ' en la red de prueba' : ''
+      const llego = (n: number) => esDosPersonas(ahora) ? llegaPrueba(n) : usdExacto(n)   // lo que llega, exacto (Katherine 27/10)
       // LEGAL: revisado (25/10, lista de Legal)
       if (r.via === 'automatico') return {
         paso: 'devolucion', titulo: 'Depósito devuelto',
         hecho: esDosPersonas(ahora) ? `No hubo reclamos en el plazo. Se devolvió automáticamente al inquilino el 100 % del depósito de prueba, menos el 0,3 % de comisión de Trustless Work: llegaron ${llegaPrueba(recibeInquilino(r.inquilino))}. El dueño y Lockumi no reciben nada.`
-          : c.red ? `No hubo reclamos en ${textoPlazo(ahora)}. El dueño de prueba aprobó y Lockumi devolvió ${usd(r.inquilino)} al inquilino en la red de prueba.`
-          : `No hubo reclamos en ${textoPlazo(ahora)}. El depósito volvió completo al inquilino: ${usd(r.inquilino)}.`,
+          : c.red ? `No hubo reclamos en ${textoPlazo(ahora)}. El dueño de prueba aprobó y Lockumi devolvió ${usdExacto(r.inquilino)} al inquilino en la red de prueba.`
+          : `No hubo reclamos en ${textoPlazo(ahora)}. El depósito volvió completo al inquilino: ${usdExacto(r.inquilino)}.`,
         sigue: TERMINO,
-        linea: { texto: esDosPersonas(ahora) ? `${llegaPrueba(recibeInquilino(r.inquilino))} volvieron al inquilino` : `${usd(r.inquilino)} volvieron al inquilino` },   // LEGAL: revisado el 23/10 (monto del reparto real)
+        linea: { texto: esDosPersonas(ahora) ? `${llegaPrueba(recibeInquilino(r.inquilino))} volvieron al inquilino` : `${usdExacto(r.inquilino)} volvieron al inquilino` },   // LEGAL: revisado el 23/10 (monto del reparto real)
         accion: { texto: 'Ver detalle', etiqueta: 'Ver el detalle del depósito devuelto', ir: 'detalles' },
       }
       // LEGAL: revisado (25/10, lista de Legal)
       if (r.via === 'acuerdo') return {
         paso: 'acuerdo', titulo: 'Reclamo aceptado',
-        hecho: `Se repartió el depósito${red}: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
+        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
         sigue: TERMINO,
-        linea: { texto: `${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` },   // LEGAL: revisado el 23/10 (montos del reparto real)
+        linea: { texto: `${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino` },   // LEGAL: revisado el 23/10 (montos del reparto real)
         accion: { texto: 'Ver detalle', etiqueta: 'Ver el detalle del reparto', ir: 'detalles' },
       }
       // LEGAL: revisado (24/10) · título «Reparto del depósito», línea y texto largo con los montos reales de usd(...)
       return {
         paso: 'reparto', titulo: 'Reparto del depósito',
-        hecho: `Se repartió el depósito${red}: ${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
+        hecho: `Se repartió el depósito${red}: ${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino.` + (esDosPersonas(ahora) ? ' A cada monto se le descuenta el 0,3 % de comisión de Trustless Work en la red de prueba.' : ''),
         sigue: TERMINO,
-        linea: { texto: `${usd(r.dueno)} al dueño y ${usd(r.inquilino)} al inquilino` },   // LEGAL: revisado (24/10)
+        linea: { texto: `${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino` },   // LEGAL: revisado (24/10)
         accion: { texto: 'Ver detalle →', etiqueta: 'Ver el detalle del reparto', ir: 'detalles' },
       }
     }
