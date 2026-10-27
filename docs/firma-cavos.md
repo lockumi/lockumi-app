@@ -127,6 +127,13 @@ Errores: ver `TEXTOS_LLAVE` (navegador sin llaves, cancelado, sin llave en la cu
   (`lockumi.cavos.token-enviado`). Y si se recarga ANTES de escribir el código, vuelve «Revisa tu correo» (antes no volvía con un token de menos de 6 minutos).
   Un fallo de red (la petición no llegó) no se recuerda: se reintenta.
 
+## Volver con la llave de acceso cuando la marca local ya venció (27/10/2026, PR #61)
+- Causa: la marca `lockumi.correo-por-confirmar` dura 55 minutos y solo está en el aparato que vio «Revisa tu correo». Pasado ese tiempo (o en otro
+  aparato) la sesión de Supabase restaurada seguía sin fila en `lk_correos_verificados`: «Tus alquileres» vacío, sin pantalla, `lk_aceptar_reputacion` 403 callado.
+- Arreglo (solo app): sin token que sirva y sin marca, `asegurarCorreo` pregunta al servidor con `lk_necesita_rep01` (ya existía); `28000`/403 = correo sin
+  confirmar → la misma pantalla «Revisa tu correo». Error de red u otro error: nada. Sin textos, diseño ni flujo nuevos; sin migraciones ni variables de entorno.
+  Detalle y pruebas: `docs/reputacion.md` («Sesión restaurada sin el correo confirmado»).
+
 ## «Tu cuenta para el depósito»: «Lista ✓» solo con la cuenta activa (27/10/2026, PR #60)
 - Antes `src/screens/Billetera.tsx` mostraba «Lista ✓» apenas Cavos entregaba la dirección Stellar, aunque la cuenta no existiera todavía en la red de prueba
   (Horizon 404: la activa Lockumi con la tesorería al pagar el depósito, `docs/testnet-e2e.md`). Era un falso «lista» para el inquilino.

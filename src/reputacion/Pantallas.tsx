@@ -1,6 +1,6 @@
 // Paso 19 · Pantallas de la reputación («coral con amor», sin casitas ni ilustraciones). Se cargan solo con VITE_REPUTACION=1
 // (carga diferida desde App.tsx), junto con su CSS propio (reputacion.css, solo clases .rp-*). Una pantalla = un paso.
-import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
 import { useAlquileres } from '../store'
@@ -541,7 +541,12 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // con la fecha y hora de esa aceptación (u.terminos.fecha). Una cuenta con un REP-01 anterior lo conserva (aceptarRep01 no lo pisa).
   useState(() => { try { if (u.terminos?.version === V_REPUTACION) aceptarRep01(u.email, textoPerfil113(), u.terminos.fecha) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email)
+  const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
   useEffect(() => { subirAceptacion(u.email, e.rep01).catch(() => { /* se reintenta en la próxima carga; el servidor explica qué hacer si bloquea */ }) }, [u.email, e.rep01])
+  // Al confirmar el correo con el código (porConfirmar pasa a null) se reintenta: antes de eso el servidor la rechazaba (403) sin avisar.
+  const sinConfirmar = !!porConfirmar, estuvoSinConfirmar = useRef(false)
+  useEffect(() => { if (sinConfirmar) { estuvoSinConfirmar.current = true; return }
+    if (estuvoSinConfirmar.current) { estuvoSinConfirmar.current = false; subirAceptacion(u.email, e.rep01).catch(() => { /* idem */ }) } }, [sinConfirmar, u.email, e.rep01])
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -551,7 +556,6 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
   // Legal 9:00 p. m.: entró con el código por correo de Cavos → primero «Revisa tu correo» (el código de Lockumi). «Cancelar» la oculta
   // en esta carga; sin el código el servidor no da el correo por verificado (las acciones de la reputación dicen cómo seguir).
-  const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
   const enRecorrido = useSyncExternalStore(suscribirRecorrido, recorridoEnCurso, () => false)
   if (porConfirmar && !omitido) return <ConfirmarCorreo key={porConfirmar.correo} p={porConfirmar} cancelar={() => setOmitido(true)} />
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />
