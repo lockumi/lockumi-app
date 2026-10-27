@@ -495,3 +495,28 @@ Términos 15.1). No devuelve correos ni datos de la otra parte. Sin servidor (de
 no cuenta nada y se vuelve a preguntar en la próxima carga. Sin cambios de textos ni de diseño.
 Pruebas: `src/reputacion/__tests__/reputacion-servidor.test.ts`. Ensayo en producción dentro de una transacción que se deshizo (27/10).
 **Volver atrás:** `supabase/revert/20261027140000_reputacion_contraparte_revert.sql` y `git revert -m 1 <merge>` (primero el código).
+
+## «Solo tú ves esto»: frase corta (27/10/2026)
+
+Aprobado por Katherine el 27/10/2026, 4:52 p. m. CR («Usa la frase corta de la reputación», opción B de Legal), y los casos de Legal
+el 27/10/2026, 5:03 p. m. CR («Sí, aprueba los casos de Legal para la frase de reputación»). Solo textos: `UI.devolvioDe`, `UI.recibioDe`
+y `UI.notaReparto` en `src/reputacion/textos.ts` (los usa «Mi perfil» en `Pantallas.tsx`). Sin cambios de diseño, de la insignia
+«Devolvió el depósito completo», de `src/legal/**` ni de `ContratoDoc.tsx`.
+
+{t} = alquileres que cuentan para el puntaje; {c} = los de `fraccionDescontada === 0` (como antes); {r} = {t} − {c}. Reparto = «un reparto
+del depósito (reclamo aceptado o mediación)».
+
+| Caso | Dueño | Inquilino |
+|---|---|---|
+| t = 0 | «Todavía no tienes alquileres cerrados.» | «Todavía no tienes alquileres cerrados.» |
+| t = 1, completo | «Tu único alquiler cerrado terminó con el depósito devuelto completo al inquilino.» | «En tu único alquiler cerrado recibiste tu depósito completo.» |
+| t = 1, reparto | «Tu único alquiler cerrado terminó con un reparto del depósito (reclamo aceptado o mediación).» + nota | «En tu único alquiler cerrado hubo un reparto del depósito (reclamo aceptado o mediación).» |
+| t ≥ 2, todos completos | «Tus {t} alquileres cerrados terminaron con el depósito devuelto completo.» | «En tus {t} alquileres cerrados recibiste tu depósito completo.» |
+| t ≥ 2, todos con reparto | «Tus {t} alquileres cerrados terminaron con un reparto del depósito (reclamo aceptado o mediación).» + nota | «En tus {t} alquileres cerrados hubo un reparto del depósito (reclamo aceptado o mediación).» |
+| mixta (c ≥ 1 y r ≥ 1) | «De tus {t} alquileres cerrados: {c} con el depósito devuelto completo y {r} con un reparto del depósito (reclamo aceptado o mediación).» + nota | «De tus {t} alquileres cerrados: en {c} recibiste tu depósito completo y en {r} hubo un reparto del depósito (reclamo aceptado o mediación).» |
+
+- En la frase mixta, una parte que vale 1 se queda igual («1 con…», «en 1 recibiste…»). Nunca sale «0 con…».
+- **Nota 15.3** (debajo, solo para el dueño y solo con r ≥ 1; nunca con t = 0): «Un reparto no baja tu puntaje, salvo que se haya devuelto al
+  inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).»
+
+Pruebas: `src/reputacion/__tests__/frase-corta.test.tsx` (un test por caso y la nota en pantalla; la insignia no cambia).
