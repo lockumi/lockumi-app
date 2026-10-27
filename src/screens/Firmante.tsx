@@ -4,27 +4,24 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Entrando, Hoja } from './Login'
 import { LogoAnimado } from '../LogoAnimado'
 import { TEXTOS_FIRMANTE as T, esTextoSinSesion, type EstadoFirmante } from '../services/firmante'
-import { TEXTOS_LLAVE as L, asegurarLlave, guardarRegistro, leerRegistro, posponer, recuperarConLlave } from '../services/llave'
+import { TEXTOS_LLAVE as L, asegurarLlave, recuperarConLlave } from '../services/llave'
 import { haySesionFirma, olvidarBilletera } from '../services/billetera'
 import { auth, volverAEntrar } from '../services/auth'
 import { guardarRegreso } from '../regreso'
 import type { Usuario } from '../types'
 
 /** Al entrar: «probando» = «Entrando a tu cuenta…»; «no-firmante» = este dispositivo no tiene la llave de la cuenta: se recupera
- *  con la llave de acceso; «sin-llave» = cuenta NUEVA sin llave de acceso: se crea antes de entrar (obligatorio);
- *  «oferta-llave» = cuenta que ya existía sin llave: se ofrece, con «Ahora no» (opcional);
+ *  con la llave de acceso; «sin-llave» = la cuenta no tiene llave de acceso: se crea antes de entrar (paso obligatorio);
  *  «sin-sesion» = volver a entrar; «error» = reintentar. Nunca se entra a la app desde aquí sin firmar y sin llave. */
-export function PuertaFirmante({ x, estado, reintentar, otraCuenta, seguir }: { x: Usuario; estado: EstadoFirmante | 'probando'; reintentar: () => void; otraCuenta: () => void; seguir: () => void }) {
+export function PuertaFirmante({ x, estado, reintentar, otraCuenta }: { x: Usuario; estado: EstadoFirmante | 'probando'; reintentar: () => void; otraCuenta: () => void }) {
   if (estado === 'probando' || estado === 'puede') return <Entrando />
-  const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-llave' ? L.crearTitulo : estado === 'oferta-llave' ? L.ofertaTitulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
+  const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-llave' ? L.crearTitulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <LogoAnimado className="entrada-app__arte marca-c__arte" />
     <h2 className="entrada-app__titulo">{titulo}</h2>
     <section className="glass tarjeta pila" aria-live="polite">
       {estado === 'no-firmante' && <><p>{L.conLlave}</p><BotonLlave modo="entrar" email={x.email} alListo={reintentar} /></>}
       {estado === 'sin-llave' && <><p>{L.crear}</p><BotonLlave modo="crear" email={x.email} alListo={reintentar} /></>}
-      {estado === 'oferta-llave' && <><p>{L.oferta}</p><BotonLlave modo="crear" email={x.email} alListo={reintentar} />
-        <button type="button" className="boton boton--secundario boton--ancho" onClick={() => { guardarRegistro(x.email, posponer(leerRegistro(x.email), Date.now())); seguir() }}>{L.ahoraNo}</button></>}
       {estado === 'sin-sesion' && <><p>{T.sesion}</p><VolverAEntrar u={x} /></>}
       {estado === 'error' && <><p>{T.error}</p>
         <button type="button" className="boton boton--primario boton--ancho" onClick={reintentar}>{T.reintentar}</button></>}

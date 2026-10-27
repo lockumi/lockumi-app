@@ -3,7 +3,6 @@
 //          https://developers.stellar.org/docs/data/apis/horizon/api-reference/resources/accounts (GET /accounts/{id}, 404 si no existe)
 //          https://developers.stellar.org/docs/learn/fundamentals/networks#friendbot (fondeo de testnet)
 import { CAVOS_BILLETERA, authCavos, modoReal, APP_ID } from './auth'
-import { marcarNueva } from './llaveRegistro'
 import { MENSAJE_PRUEBA, SIN_SESION, clasificarFirma, esSinSesion, type EstadoFirmante } from './firmante'
 import { mensajePrueba, type AccionPrueba, type Prueba } from '../../api/_lib/prueba-mensaje'
 
@@ -111,9 +110,6 @@ export function conectarBilletera(o: { llave?: boolean } = {}): Promise<Billeter
     const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, ...llave, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
-    // Cuenta NUEVA = Cavos creó la billetera en esta conexión (`isNewAccount`): la llave de acceso es obligatoria (llaveRegistro.ts).
-    const email = auth.restoreIdentity()?.email
-    if ((w as unknown as { isNewAccount?: boolean }).isNewAccount === true && email) marcarNueva(email)
     const b: Billetera = { direccion: w.address, estado: w.status as EstadoBilletera }
     return o.llave ? { ...b, llave: (w as unknown as { passkeyRestore?: boolean }).passkeyRestore === true } : b
   }
