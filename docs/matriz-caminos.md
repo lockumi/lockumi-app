@@ -119,3 +119,5 @@ L. **Fase B en producción, resto (27/10, hora de Costa Rica):**
      pasa: la app pide entrar de nuevo antes de firmar y el pago no da 409.
    - Reputación tras los cierres: dueño 5,0 / 5, inquilino 3,4 / 5; sin errores de RPC.
    - Observado: un aviso de reputación del inquilino dio 502 («No pudimos enviar el correo ahora…», 16:41:06); los demás, 200. Sin registros del servidor para ver la causa.
+
+**Nota M (27/10, 16:55 CR) · causa del 502 de las 16:41:06.** Registros de runtime de producción (dpl_9s9G…, requestId 75fhg-1793140866424-6d197b25cdc1): `correo resend reputacion 409 invalid_idempotent_request`. El aviso de puntaje del inquilino usa la clave `rep:<para>:<aviso>:<alquiler>:<después>`, que no incluye `antes` ni `fechaMs`; al repetir el mismo aviso con otro cuerpo, Resend responde 409 y la API lo devolvía como 502. Arreglo (PR correo-rep-409): en `api/_lib/correo.ts`, solo para `reputacion`, un 409 `invalid_idempotent_request` o `concurrent_idempotent_requests` cuenta como ya enviado (`{ enviado: true, repetido: true }`); 429, 5xx y cualquier otro error siguen en 502. Sin cambios de textos ni de diseño.

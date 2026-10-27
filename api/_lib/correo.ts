@@ -168,7 +168,7 @@ export function limite(clave: string, max: number, ahora = Date.now()) {
   v.push(ahora); usos.set(clave, v)
 }
 
-export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch): Promise<{ enviado: true; id?: string } | { consentimiento: boolean }> {
+export async function atenderCorreo(env: Record<string, string | undefined>, pedido: PedidoCorreo, origen: string, ip: string, f: typeof fetch = fetch): Promise<{ enviado: true; id?: string; repetido?: true } | { consentimiento: boolean }> {
   exigir(origenPermitido(origen), 403, 'Los correos solo salen desde la vista previa de la prueba.')
   if (pedido?.tipo === 'consentimiento') return registrarConsentimiento(pedido)
   const p = validar(pedido)
@@ -186,7 +186,13 @@ export async function atenderCorreo(env: Record<string, string | undefined>, ped
     // Apple con correo oculto: el aviso va al correo real guardado (20261026080000); la casilla y los límites siguen con el de la cuenta.
     body: JSON.stringify({ from: REMITENTE, to: [await correoAviso(servicio(env), p.para, f)], subject: c.asunto, html: c.html, text: c.texto }),
   })
-  const j = await r.json().catch(() => ({})) as { id?: string; message?: string }
+  const j = await r.json().catch(() => ({})) as { id?: string; message?: string; name?: string }
+  // Aviso de puntaje con la misma clave (misma persona, aviso, alquiler y puntaje nuevo): Resend responde 409 si ya lo envió con otro
+  // cuerpo (p. ej. otra fecha) o si el mismo envío sigue en curso. Ese aviso ya salió o está saliendo: lo contamos como enviado, sin 502.
+  if (p.tipo === 'reputacion' && r.status === 409 && (j.name === 'invalid_idempotent_request' || j.name === 'concurrent_idempotent_requests')) {
+    console.warn('correo resend reputacion 409 ya enviado', j.name)
+    return { enviado: true, repetido: true }
+  }
   if (!(r.ok && j.id)) {
     // Solo el estado y el nombre del error de Resend (p. ej. 429 daily_quota_exceeded): nunca la llave ni el correo de la persona.
     console.error('correo resend', p.tipo, r.status, (j as { name?: string }).name ?? '')

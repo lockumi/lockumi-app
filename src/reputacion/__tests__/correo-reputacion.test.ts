@@ -40,6 +40,18 @@ describe('servidor: correo REP-12 (sin texto libre, sin dirección)', () => {
     expect((init.headers as Record<string, string>)['idempotency-key']).toBe('rep:demo@lockumi.com:cambio:00000000-0000-4000-8000-000000000103:4,2 de 5')
     expect(JSON.parse(init.body as string).subject).toBe('Tu puntaje cambió')
   })
+  it('409 de idempotencia de Resend (ya enviado con otra fecha o en curso): cuenta como enviado, sin 502 (16:41:06 del 27/10)', async () => {
+    for (const name of ['invalid_idempotent_request', 'concurrent_idempotent_requests']) {
+      const f = vi.fn(async () => new Response(JSON.stringify({ name, statusCode: 409 }), { status: 409 })) as unknown as typeof fetch
+      expect(await atenderCorreo({ RESEND_API_KEY: 'prueba' }, pedido({ para: `rep409.${name.length}@lockumi.com` }), ORIGEN, '1.1.1.1', f)).toEqual({ enviado: true, repetido: true })
+    }
+  })
+  it('otros fallos de Resend (429, 5xx o 409 de otro tipo) siguen en 502', async () => {
+    for (const [status, name] of [[429, 'rate_limit_exceeded'], [500, 'internal_server_error'], [409, 'otro']] as const) {
+      const f = vi.fn(async () => new Response(JSON.stringify({ name }), { status })) as unknown as typeof fetch
+      await expect(atenderCorreo({ RESEND_API_KEY: 'prueba' }, pedido({ para: `rep${status}.${name.length}@lockumi.com` }), ORIGEN, '1.1.1.1', f)).rejects.toMatchObject({ estado: 502 })
+    }
+  })
 })
 
 describe('app: se envía solo con VITE_CORREOS=1 (y la prueba completa), una vez por cambio', () => {
