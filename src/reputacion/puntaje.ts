@@ -36,6 +36,11 @@ export const alquileresDeReputacion = (xs: readonly Alquiler[], email: string, r
   desde: (email: string) => string | undefined = () => undefined): Alquiler[] =>
   xs.filter(a => igual(rol === 'dueno' ? a.duenoEmail : a.inquilinoEmail, email) && !!a.duenoEmail && !!a.inquilinoEmail && conPerfil(a.duenoEmail) && conPerfil(a.inquilinoEmail)
     && !cerradoAntes(a, desde(a.duenoEmail)) && !cerradoAntes(a, desde(a.inquilinoEmail)))
+/** Con servidor (27/10): el perfil de la OTRA parte no está en este navegador; el servidor dice por alquiler si cuenta y desde cuándo
+ *  (lk_reputacion_de_mis_alquileres). Misma regla que arriba: las dos partes con perfil y cerrado después de la aceptación más tardía. */
+export const alquileresDeReputacionServidor = (xs: readonly Alquiler[], email: string, rol: 'dueno' | 'inquilino',
+  info: (id: string) => { cuenta: boolean; desde?: string | null } | undefined): Alquiler[] =>
+  xs.filter(a => { const i = info(a.id); return igual(rol === 'dueno' ? a.duenoEmail : a.inquilinoEmail, email) && !!i?.cuenta && !cerradoAntes(a, i.desde ?? undefined) })
 const cerradoAntes = (a: Alquiler, desde?: string) => !!desde && !!a.resultado?.fecha && Date.parse(a.resultado.fecha) < Date.parse(desde)
 
 /** Parte del depósito que se descontó (0 a 1). 0 si el reclamo se cerró sin descontar nada o si no hubo reclamo. */

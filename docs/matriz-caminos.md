@@ -92,3 +92,12 @@ D. Los scripts `scripts/e2e-*.mjs` y `e2e/pruebas/red.e2e.ts` escriben en produc
 E. Caso #62: la corrida real de producción tenía sesión viva del inquilino al aceptar, así que no prueba por sí sola que el camino «sin sesión» funcione en prod. Eso lo cubre el arnés local (fila 9).
 F. **Cierre sin pago (27/10, `b10557f9`):** acuerdo y mediación cerraban en la base antes de que existiera la transacción del reparto y no había reintento. Ahora la prueba se firma antes de cerrar,
    `cerrado` sin `liquidacion_tx` es «por pagar» y lo paga la corrida de cada hora, la app o la persona mediadora por un solo camino idempotente. Detalle en `docs/fondeo-testnet.md` § «Reparto por pagar».
+G. **Avisos tras la mediación (27/10, `0070af80`):** la persona mediadora registró el acuerdo 2 / 8 (tx `fabc89e5…2609`, pagada), pero
+   `POST /api/correo { tipo: 'avisos' }` le respondía 403 «No participas en este alquiler.» y no salían los avisos del cierre. Ahora el
+   servidor acepta a quien está en `lk_mediadores` si el alquiler está en `mediacion` o cerró con `resultado.via = 'mediacion'`, igual
+   que el PR #66 en `/api/tw` (`api/_lib/correos-c.ts`, pruebas en `correos-c-api.test.ts`). Fuera de eso, sigue en 403.
+H. **Reputación en dos aparatos (27/10):** «Nuevo en Lockumi · 0 alquileres cerrados» con 2 cerrados por papel en la base. Causa: la app
+   decidía si un alquiler cuenta mirando el perfil (REP-01) de las DOS partes en el localStorage de este navegador; el de la otra parte
+   nunca está ahí. Ahora, con servidor, lo dice `lk_reputacion_de_mis_alquileres()` (migración `20261027140000`). Detalle en `docs/reputacion.md`.
+I. **Propuesta de texto (no cambiado):** tras una decisión de la persona mediadora el alquiler muestra «Depósito devuelto · Lo aceptaron las
+   dos partes». Puede ser inexacto (hubo reparto con mediación). Queda para Legal y Katherine; no se cambió ningún texto.
