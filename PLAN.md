@@ -280,6 +280,11 @@ No se usan llaves ni secretos. Toda integración simulada lleva la insignia "Dem
   (`NO_FIRMANTE`). **Pendiente de Katherine:** activar la recuperación social en el panel de Cavos (entorno production) y, para una
   billetera ya creada, entrar una vez desde el navegador de origen para sellarla. Prueba `dispositivo-firmante.test.ts`; E2E
   `scripts/e2e-dispositivo.mjs`.
+- [ ] App de Cavos «Lockumi v2» (27/10/2026, PR #60): app nueva en el panel de Cavos (producción `cav_14f91c44d57f4290070c0f9705f50164564b`; mismos orígenes, recuperación
+  social/enclave y aprobaciones de Stellar que la vieja `cav_c1b1cec42e7b62cd01f377b5a3291b276079`). Motivo: el registro de la app vieja tiene billeteras quemadas por el error
+  de `Buffer`; el registro de Cavos va por userId + appId + cadena + red, así que un App ID nuevo reinicia las billeteras (`appSalt` `'lockumi'`
+  sin cambio). **Pendiente de Katherine:** el cambio en producción es poner `VITE_CAVOS_APP_ID` (y `CAVOS_APP_ID` interno
+  `b2f83f81-a07d-4ef5-b8a5-167502aea497`) en Vercel, solo con su OK; volver atrás = poner otra vez los valores viejos. No se tocó Vercel. Detalle: `docs/firma-cavos.md`.
 - [x] Correo real para avisos con Apple (Katherine por el Coordinador, 26/10 10:18 a. m.): con Apple y un correo
   `@privaterelay.appleid.com` los avisos no llegan. Dentro de «Crear alquiler» y de la invitación, un campo corto («Correo para avisos»)
   pide UNA vez un correo real y lo confirma con el código de 6 números (acción `correo_real`). Se guarda para esa cuenta de Apple en

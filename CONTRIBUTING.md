@@ -35,6 +35,7 @@ Cuando se publica, el servidor cambia al instante, pero una pestaña que ya esta
 
 - Un cambio en `/api/solo` tiene que seguir funcionando con lo que manda la versión anterior, o responder un mensaje que diga qué hacer («recarga esta página y vuelve a tocar «Pagar»»).
 - Lo importante (por ejemplo, recargar la cuenta de prueba antes de crear la cuenta segura) va también en el servidor, no solo en el navegador.
+- App de Cavos: `VITE_CAVOS_APP_ID` es el único lugar del App ID (no hay valor de respaldo en el código). La app nueva «Lockumi v2» es `cav_14f91c44d57f4290070c0f9705f50164564b` (desarrollo en `.env.example`); producción cambia solo con el OK de Katherine (ver [`docs/firma-cavos.md`](docs/firma-cavos.md)). No cambies `appSalt`.
 - Para reproducir con sesión de Cavos sin hacer login real: `scripts/saldo0-login/` (Vite en localhost:5173 con `VITE_CAVOS_APP_ID`, sesión simulada en localStorage tal como la guarda el login y `/api/solo` a una vista previa con `vercel curl`). Ver [`docs/testnet-e2e.md`](docs/testnet-e2e.md#8-saldo-0-con-sesión-de-cavos-20-oct-2026-rama-arreglo-saldo-0-login).
 
 ## Contrato plegable (`src/screens/ContratoDoc.tsx`)

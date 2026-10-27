@@ -363,8 +363,8 @@ prueba «JWKS reales» usa esta copia: las llaves pasan la regla y la del enclav
 dejara de publicar `use`, todas las entradas de ese emisor darían 403: volver a leer el JWKS antes de encender.
 
 **Valores reales de CAVOS_* (Legal 6:04 p. m., sin pedir secretos; 25/10 6:06 p. m. CR):**
-- `VITE_CAVOS_APP_ID` (clave pública del frontend): `cav_c1b1cec42e7b62cd01f377b5a3291b276079`, en el bundle publicado de app.lockumi.com
-  (`/assets/index-KGYSB8bC.js`). NO es el prefijo del nonce.
+- `VITE_CAVOS_APP_ID` (clave pública del frontend): `cav_c1b1cec42e7b62cd01f377b5a3291b276079` (app vieja), en el bundle publicado de app.lockumi.com
+  (`/assets/index-KGYSB8bC.js`). NO es el prefijo del nonce. **27/10/2026:** existe la app nueva «Lockumi v2» (`cav_14f91c44d57f4290070c0f9705f50164564b`, su `CAVOS_APP_ID` interno es `b2f83f81-a07d-4ef5-b8a5-167502aea497`); producción sigue con la vieja hasta que Katherine apruebe el cambio. Ver [firma-cavos.md](firma-cavos.md#app-de-cavos-lockumi-v2-27102026-nuevo-vite_cavos_app_id).
 - `CAVOS_APP_ID` = **`514692ec-9202-4015-b53c-4b8824dca4d5`** (confirmado): `GET https://cavos.xyz/api/oauth/v2/google?app_id=cav_…&nonce=<hash>`
   (lo mismo que hace el kit al tocar «Google», `dist/chunk-GD4BWPID.mjs:94-101`, sin completar el login) devuelve la URL de Google con
   `nonce=514692ec-….<hash>` y un `state` con `"app_id":"514692ec-9202-4015-b53c-4b8824dca4d5"`. Igual en Apple. Es el «app id» del nonce que

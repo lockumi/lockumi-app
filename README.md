@@ -253,6 +253,8 @@ El flujo mínimo anterior de 5 pasos (crear, obtener USDC, depositar, aprobar y 
 
 Sin `VITE_CAVOS_APP_ID` (por ejemplo, en local) la app usa un acceso simulado.
 
+**App de Cavos «Lockumi v2» (27/10/2026).** Hay una app nueva en Cavos, «Lockumi v2» (App ID público de producción `cav_14f91c44d57f4290070c0f9705f50164564b`; desarrollo `cav_73230a9b7f198345f9498855557aec6eacd9`), creada porque el registro de la app vieja (`cav_c1b1cec42e7b62cd01f377b5a3291b276079`) tiene billeteras quemadas por el error de `Buffer` ya corregido; el registro de Cavos se identifica por usuario + App ID + cadena + red, así que un App ID nuevo reinicia las billeteras (`appSalt` `'lockumi'` no cambia). El App ID solo se lee de `VITE_CAVOS_APP_ID` (no hay valor escrito en el código). Pasar producción a la app nueva = poner esa variable en Vercel (y `CAVOS_APP_ID` del servidor), **solo con el OK de Katherine**; volver atrás = poner otra vez el App ID viejo. Detalle: [docs/firma-cavos.md](docs/firma-cavos.md).
+
 ## Correo con Resend (próximamente)
 
 El correo de invitación de la Parte 4 (dos personas) saldrá con **Resend** desde `invitaciones@lockumi.com`, solo para enviar. **La Parte 4 no está activa** en app.lockumi.com: hoy la app no envía correos, y **lockumi.com no recibe correo** (no tiene MX en la raíz). Lo que ya está listo:
@@ -389,7 +391,7 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 
 | Variable | Dónde | Qué hace |
 |---|---|---|
-| `VITE_CAVOS_APP_ID` | Cliente | App ID público de Cavos. Sin esta variable la app usa el acceso simulado. |
+| `VITE_CAVOS_APP_ID` | Cliente | App ID público de Cavos. Sin esta variable la app usa el acceso simulado. Producción hoy: app vieja; app nueva «Lockumi v2»: `cav_14f91c44d57f4290070c0f9705f50164564b` (cambio solo con OK de Katherine; ver [docs/firma-cavos.md](docs/firma-cavos.md)). |
 | `VITE_TRUSTLESS` | Cliente | `1` activa la red de prueba con escrow real de Trustless Work. Sin Supabase, es el flujo de una persona por `/api/solo` (lo que corre en app.lockumi.com). |
 | `VITE_FLUJO` | Cliente | `solo` vuelve al flujo mínimo anterior de 5 pasos. Sin definir: flujo completo de 8 pasos. |
 | `VITE_VENTANA_SEGUNDOS` | Cliente | Plazo de reclamos al crear, en segundos (mínimo 60; por defecto 7 días). |
