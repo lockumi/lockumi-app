@@ -2,7 +2,7 @@
 // Camino feliz: la plataforma despliega → el inquilino deposita (firma con Cavos) → acta de salida → el dueño aprueba
 // (firma con Cavos) → se cierra sin reclamo → la plataforma libera el 100 % al inquilino.
 // Fuentes: https://docs.trustlesswork.com/trustless-work/api-rest/introduction · https://docs.cavos.xyz/docs/stellar
-import { tokenSesion, recargar } from '../servidor/repositorio'
+import { tokenSesion, recargar, servidor } from '../servidor/repositorio'
 import { firmarXdr, firmarPrueba, mensajeFirma, esTextoNoFirmante, conectarBilletera } from './billetera'
 import { SIN_PRUEBA, type AccionPrueba, type Prueba } from '../../api/_lib/prueba-mensaje'
 import { esTextoSinSesion } from './firmante'
@@ -38,6 +38,9 @@ const esLegado = (e: unknown) => (e as { otraCuenta?: boolean })?.otraCuenta ===
 async function activarCuenta(contrato: string, avance: (t: string) => void, esperada?: string): Promise<void> {
   const g = (await conectarBilletera()).direccion
   if (esperada && g !== esperada) throw Object.assign(new ErrorTrustless(NO_PREPARAR_DEPOSITO), { otraCuenta: true })   // otra billetera: no tocamos nada
+  // El alquiler todavía no tiene la cuenta de esta persona (aceptó la invitación, o creó el alquiler, sin sesión de Cavos en la pestaña: se guardó sin cuenta): se
+  // guarda ahora la de la billetera conectada (lk_actualizar_direccion: solo la suya y solo antes de crear la cuenta segura). Sin esto el servidor contesta 409 «Falta la cuenta Stellar…».
+  if (!esperada) await servidor.actualizarCuenta(contrato, g).catch(e => console.warn('[Lockumi] guardar la cuenta del alquiler:', e instanceof Error ? e.message : e))
   if ((await llamar<{ listo: boolean }>({ accion: 'activar-cuenta', contrato, paso: 'estado' })).listo) return
   avance('Activando tu cuenta de prueba…')
   let prueba: Prueba
