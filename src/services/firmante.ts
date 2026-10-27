@@ -2,7 +2,7 @@
 // Al entrar se prueba con signMessage('lockumi-login') (gratis, aunque la cuenta no esté desplegada). Solo se recuerda
 // «puede» o «no puede» por correo: nunca la firma ni ningún token. No existe renovación silenciosa de la sesión de Cavos:
 // si se pierde (pestaña nueva, vencida), se pide volver a entrar con un clic.
-export type EstadoFirmante = 'puede' | 'no-firmante' | 'sin-sesion' | 'error'
+export type EstadoFirmante = 'puede' | 'no-firmante' | 'sin-llave' | 'sin-sesion' | 'error'
 export const MENSAJE_PRUEBA = 'lockumi-login'
 
 const clave = (email: string) => 'lockumi.firmante.' + email.toLowerCase()
@@ -22,10 +22,10 @@ export function clasificarFirma(e: unknown): EstadoFirmante {
   return 'error'
 }
 
-/** Textos de la pantalla que aparece al entrar cuando este dispositivo no puede firmar (y del pedido de volver a entrar). */
+/** Textos de la pantalla que aparece al entrar cuando este dispositivo no puede firmar (y del pedido de volver a entrar).
+ *  Los de la llave de acceso (crearla, entrar con ella y sus errores) están en llave.ts. */
 export const TEXTOS_FIRMANTE = {
   titulo: 'Este dispositivo todavía no puede usar tu cuenta',
-  sinLlave: 'Abre Lockumi una vez en el dispositivo donde creaste tu cuenta.',
   otraCuenta: 'Usar otra cuenta',
   errorTitulo: 'No pudimos abrir tu cuenta',
   error: 'Revisa tu conexión y vuelve a intentarlo.',

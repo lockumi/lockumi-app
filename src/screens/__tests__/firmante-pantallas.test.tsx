@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 vi.mock('../../services/auth', async o => ({ ...(await o() as object), auth: { actual: () => ({ email: 'ana.prueba@ejemplo.cr', nombre: 'Ana', metodo: 'google' }), salir() {}, olvidarUsuarioLocal() {} } }))
 const { PuertaFirmante, PedirEntrar, ErrorPago } = await import('../Firmante')
 const { TEXTOS_FIRMANTE: T, SIN_SESION } = await import('../../services/firmante')
+const { TEXTOS_LLAVE: L } = await import('../../services/llave')
 const { NO_FIRMANTE } = await import('../../services/billetera')
 const x = { email: 'ana.prueba@ejemplo.cr', nombre: 'Ana', metodo: 'google' as const }
 const ver = (e: Parameters<typeof PuertaFirmante>[0]['estado']) => renderToStaticMarkup(<PuertaFirmante x={x} estado={e} reintentar={() => {}} otraCuenta={() => {}} />)
@@ -11,15 +12,23 @@ describe('pantalla al entrar cuando este dispositivo no puede firmar', () => {
   it('mientras se prueba: solo «Entrando a tu cuenta…», sin mensaje', () => {
     const h = ver('probando'); expect(h).toContain('Entrando a tu cuenta…'); expect(h).not.toContain(T.titulo); expect(h).not.toContain('<button')
   })
-  it('sin la llave en este dispositivo: abrir Lockumi en el dispositivo de origen (sin llave de acceso)', () => {
-    const h = ver('no-firmante'); expect(h).toContain(T.titulo); expect(h).toContain(T.sinLlave); expect(h).not.toMatch(/llave de acceso|passkey/i)
+  it('dispositivo nuevo sin la llave de la cuenta: «Entrar con mi llave de acceso» (la misma tarjeta, sin pantalla nueva)', () => {
+    const h = ver('no-firmante'); expect(h).toContain(T.titulo); expect(h).toContain(L.conLlave); expect(h).toContain(L.entrarBoton)
+    expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.crearBoton)
+  })
+  it('cuenta sin llave de acceso: paso obligatorio «Crear llave de acceso» antes de entrar', () => {
+    const h = ver('sin-llave'); expect(h).toContain(L.crearTitulo); expect(h).toContain(L.crear); expect(h).toContain(L.crearBoton)
+    expect(h).toContain(T.otraCuenta); expect(h).not.toContain(L.entrarBoton)
   })
   it('el mensaje del dispositivo solo aparece cuando hace falta', () => {
-    for (const e of ['error', 'sin-sesion', 'probando'] as const) expect(ver(e)).not.toContain(T.titulo)
+    for (const e of ['error', 'sin-sesion', 'sin-llave', 'probando'] as const) expect(ver(e)).not.toContain(T.titulo)
     expect(ver('error')).toContain(T.reintentar); expect(ver('sin-sesion')).toContain(T.entrar)
   })
   it('textos cortos, sin voseo ni palabras técnicas', () => {
     for (const t of [...Object.values(T), SIN_SESION]) { expect(t).not.toMatch(/token|Cavos|wallet|firmante|signer|kit|sesión de/i); expect(t).not.toMatch(/\b(tenés|podés|abrí|tocá|volvé|entrá)\b/i); expect(t.length).toBeLessThan(90) }
+    // «Cavos» solo aparece en el único texto que cita el nombre con que el dispositivo guarda la llave.
+    for (const t of [...Object.values(L), NO_FIRMANTE]) { expect(t).not.toMatch(/passkey|PRF|WebAuthn|token|kit|vault|wallet|signer|firmante/i); expect(t).not.toMatch(/\b(tenés|podés|abrí|tocá|volvé|entrá|elegí)\b/i); expect(t.length).toBeLessThan(90) }
+    expect(Object.values(L).filter(t => /Cavos/.test(t))).toEqual([L.noAbrio])
   })
 })
 
@@ -38,7 +47,7 @@ describe('App y pago usan la puerta', () => {
   const leer = async (f: string) => (await import(/* @vite-ignore */ f + '?raw')).default as string
   it('al entrar se prueba la firma y sin firma no se entra', async () => {
     const app = await leer('../../App.tsx')
-    expect(app).toContain('const e = await probarFirma()'); expect(app).toContain("if (e === 'puede') return pasar(x)")
+    expect(app).toContain('const e = await probarCuenta(x.email)'); expect(app).toContain("if (e === 'puede') return pasar(x)")
     expect(app).toContain('auth.olvidarUsuarioLocal(); setU(null); setPuerta({ x, e })')
   })
   it('pagar y firmar el contrato (C) piden entrar de nuevo si se perdió la sesión', async () => {

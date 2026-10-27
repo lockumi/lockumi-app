@@ -9,7 +9,8 @@ import { mensajePrueba, type AccionPrueba, type Prueba } from '../../api/_lib/pr
 export const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org'
 export const FRIENDBOT = 'https://friendbot.stellar.org'
 export type EstadoBilletera = 'undeployed' | 'ready' | 'needs-device-approval'
-export interface Billetera { direccion: string; estado: EstadoBilletera }
+/** `llave`: la cuenta tiene una llave de acceso (passkey) guardada; solo se sabe al conectar con `{ llave: true }`. */
+export interface Billetera { direccion: string; estado: EstadoBilletera; llave?: boolean }
 type Fetch = typeof fetch
 
 export const esDireccionStellar = (g: string) => /^G[A-Z2-7]{55}$/.test(g)
@@ -80,31 +81,40 @@ export async function opcionesRecuperacion(auth: AuthRecuperacion, activa: () =>
   return { socialRecovery, ...cred ? { socialRecoveryCredential: cred } : {} } as unknown as Pick<import('@cavos/kit').ConnectOptions, 'socialRecovery' | 'socialRecoveryCredential'>
 }
 
-/** Texto para cuando este dispositivo no puede firmar con la billetera (creada en otro navegador o equipo). */
-export const NO_FIRMANTE = 'Este dispositivo todavía no puede firmar con tu billetera. Sal y vuelve a entrar con la misma cuenta, y paga enseguida. Si sigue igual, entra una vez desde el navegador donde creaste tu cuenta y luego vuelve a intentarlo aquí.'
+/** Texto para cuando este dispositivo no puede firmar con la cuenta (creada en otro navegador o equipo). Al entrar, la puerta
+ *  (screens/Firmante.tsx) ofrece «Entrar con mi llave de acceso»; este texto es para cuando falla a mitad de una acción. */
+export const NO_FIRMANTE = 'Este dispositivo no puede usar tu cuenta. Sal y vuelve a entrar con tu llave de acceso.'
 export const esTextoNoFirmante = (t: string | null | undefined) => !!t && t.includes(NO_FIRMANTE)
 export const esNoFirmante = (m: string) => /not an authorized signer|needs-device-approval|restore by connecting with the enclave|protected by recovery|complete a fresh social login/i.test(m)
 
 let conexion: Promise<Billetera> | null = null
-/** Conecta la billetera con la identidad del login de Cavos. Solo en modo real. */
-export function conectarBilletera(): Promise<Billetera> {
+/** Conecta la billetera con la identidad del login de Cavos. Solo en modo real.
+ *  `{ llave: true }`: conecta con la llave de acceso (passkey), para averiguar si la cuenta tiene una o para aprobar este
+ *  dispositivo con ella (el vault de Cavos la pide en su propia ventana). Si este dispositivo ya tiene la llave de la cuenta,
+ *  no pide nada. Nunca se pasa en las conexiones automáticas: abriría esa ventana sin que la persona lo pida. */
+export function conectarBilletera(o: { llave?: boolean } = {}): Promise<Billetera> {
   if (import.meta.env.DEV) { // gancho de prueba local, nunca en el build
     const g = localStorage.getItem('lockumi.billetera.prueba')
     if (g) return Promise.resolve({ direccion: g, estado: 'undeployed' })
   }
   if (!modoReal) return Promise.reject(new Error('simulado'))
-  return conexion ??= (async () => {
+  const conectar = async () => {
     const auth = await authCavos()
     if (!auth) throw new ErrorBilletera('sin-identidad', 'No hay identidad de Cavos guardada en este navegador.')
     if (!auth.getAuthToken()) throw new ErrorBilletera('sin-token', 'La sesión de Cavos no tiene token en esta pestaña (se abrió en otra pestaña o se cerró).')
-    const { Cavos } = await import('@cavos/kit')
+    const { Cavos, PasskeyPrf } = await import('@cavos/kit')
     // `auth` (no solo `identity`): el kit lee el token del login con auth.getAuthToken() para el registro y el vault.
     const rec = await opcionesRecuperacion(auth)
-    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, vault: true })
+    // Con vault, el objeto PasskeyPrf solo marca recovery "passkey": la passkey la pide el vault en su propio origen.
+    const llave = o.llave ? { passkeyPrf: new PasskeyPrf({ rpName: 'Lockumi' }) } : {}
+    const s = await Cavos.connect({ ...CAVOS_BILLETERA, chains: [...CAVOS_BILLETERA.chains], auth, appId: APP_ID, ...rec, ...llave, vault: true })
     const w = s.wallet('stellar')
     cartera = w as unknown as CarteraStellar
-    return { direccion: w.address, estado: w.status as EstadoBilletera }
-  })().catch(e => { conexion = null; throw e })
+    const b: Billetera = { direccion: w.address, estado: w.status as EstadoBilletera }
+    return o.llave ? { ...b, llave: (w as unknown as { passkeyRestore?: boolean }).passkeyRestore === true } : b
+  }
+  if (o.llave) { const p = conectar(); conexion = p.catch(e => { conexion = null; throw e }); conexion.catch(() => {}); return p }
+  return conexion ??= conectar().catch(e => { conexion = null; throw e })
 }
 export const olvidarBilletera = () => { conexion = null; cartera = null }
 

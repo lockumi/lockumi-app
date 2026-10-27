@@ -5,7 +5,8 @@ import { conAceptacion } from './legal/aceptacion'
 import { rutaLegal } from './legal/documentos'
 import { PaginaLegal } from './legal/PaginaLegal'
 import { Pie } from './legal/Pie'
-import { olvidarBilletera, probarFirma } from './services/billetera'
+import { olvidarBilletera } from './services/billetera'
+import { probarCuenta } from './services/llave'
 import { recordarFirmante, type EstadoFirmante } from './services/firmante'
 import { Alertas } from './Alertas'
 import { avisar, alertaIngreso, alertaIngresoFallo } from './alertas'
@@ -48,12 +49,12 @@ export default function App() {
   // si no termina, el error queda escrito en Entrar hasta que la persona vuelve a intentar o entra bien.
   const [regreso, setRegreso] = useState<'esperando' | 'fallo' | null>(() => !auth.actual() && hayRegreso() ? 'esperando' : null)
   // Al entrar, la aceptación de los Términos (guardada al marcar la casilla) se copia al usuario.
-  // Firmante (26/10): al entrar, la billetera firma 'lockumi-login' (gratis). Si este dispositivo no puede firmar, no se entra:
-  // se ve PuertaFirmante (abrir Lockumi en el dispositivo de origen). Solo se recuerda sí/no.
+  // Firmante (26/10): al entrar, la billetera firma 'lockumi-login' (gratis) y la cuenta tiene que tener llave de acceso. Si no, no se
+  // entra: PuertaFirmante pide crearla o entrar con ella (dispositivo nuevo). Solo se recuerda sí/no.
   const [puerta, setPuerta] = useState<{ x: Usuario; e: EstadoFirmante | 'probando' } | null>(null)
   const pasar = (x: Usuario) => { setPuerta(null); setU(guardarUsuario(conAceptacion(x))); avisar(alertaIngreso(modoReal)); location.hash = volver() }
   const probar = async (x: Usuario) => {
-    setPuerta({ x, e: 'probando' }); const e = await probarFirma()
+    setPuerta({ x, e: 'probando' }); const e = await probarCuenta(x.email)
     if (e === 'puede' || e === 'no-firmante') recordarFirmante(x.email, e === 'puede')
     if (e === 'puede') return pasar(x)
     auth.olvidarUsuarioLocal(); setU(null); setPuerta({ x, e })   // sin entrar; la identidad de Cavos queda

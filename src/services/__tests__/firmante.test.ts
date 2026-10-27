@@ -23,7 +23,7 @@ describe('puerta al entrar: firma de prueba', () => {
   it('firma «lockumi-login» una vez y deja entrar', async () => {
     expect(await probarFirma()).toBe('puede')
     expect(h.sign).toHaveBeenCalledWith(MENSAJE_PRUEBA); expect(MENSAJE_PRUEBA).toBe('lockumi-login')
-    expect(h.connect).toHaveBeenCalledTimes(1); expect(h.connect.mock.calls[0][0]).not.toHaveProperty('passkeyPrf')
+    expect(h.connect).toHaveBeenCalledTimes(1); expect(h.connect.mock.calls[0][0]).not.toHaveProperty('passkeyPrf') // la llave no se pide sola
   })
   it('cuenta sin desplegar también puede (la firma es gratis)', async () => { h.estado = 'undeployed'; expect(await probarFirma()).toBe('puede') })
   it('needs-device-approval: no entra, sin intentar firmar', async () => {
