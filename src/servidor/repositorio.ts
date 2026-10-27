@@ -11,7 +11,8 @@ import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
 import type { Aceptacion } from './aceptaciones'
 import { usarCuentaCon, salirCon, K_SESION } from './cuenta-sesion'
 
-export class ErrorServidor extends Error {}
+/** codigo: el SQLSTATE de Postgres cuando el servidor rechazó la llamada (p. ej. '28000' = el correo de la sesión no está verificado); sin él: falla de red u otra. */
+export class ErrorServidor extends Error { codigo?: string }
 let cliente: Promise<SupabaseClient> | null = null
 export const supabase = () => cliente ??= import('@supabase/supabase-js').then(({ createClient }) =>
   createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: K_SESION } }))
@@ -32,7 +33,8 @@ export async function tokenSesion(): Promise<string> {
 }
 const rpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Promise<T> => {
   await sesion(); const { data, error } = await (await supabase()).rpc(fn, args)
-  if (error) throw new ErrorServidor(mensajeServidor(error)); return data as T
+  if (error) { const e = new ErrorServidor(mensajeServidor(error)); const c = (error as { code?: unknown }).code; if (typeof c === 'string') e.codigo = c; throw e }
+  return data as T
 }
 
 // ── Caché y suscripción ──
