@@ -58,3 +58,18 @@ Ver la lista al final de `docs/firma-cavos.md`.
   (RPC `lk_actualizar_direccion`: solo su propia fila y solo mientras no exista la cuenta segura). Si guardar falla, no se corta el pago: sigue y decide el servidor. Alquileres con la cuenta ya guardada o con cuenta del servidor (PR #54): sin cambios.
 - **Pruebas:** `src/services/__tests__/deposito-trustline.test.ts` (3 casos nuevos: guarda antes de consultar y paga; si guardar falla sigue; con cuenta ya guardada no vuelve a guardar).
 - Sin cambios de diseño, de flujo ni de base de datos.
+
+## La cuenta del dueño se guarda al firmar si faltaba (U4, 27/10/2026)
+- **Qué pasó (prueba real en producción, alquiler `d475db0a…`, 27/10, 11:36 a. m. CR):** el dueño entró solo con su llave de acceso (sin token de Cavos en la pestaña), creó el alquiler y firmó el contrato.
+  El alquiler quedó con la `direccion_stellar` del dueño vacía (`repositorio.ts`, `p_direccion_stellar: cuenta ?? null`). El inquilino firmó y tocó «Pagar»: `activar-cuenta` dio 200 `listo` para él y
+  después el servidor contestó 409 «Falta la cuenta Stellar del dueño.» (`cuenta()` en `api/_lib/tw.ts`). No se movió dinero. La firma del dueño no pasa por `ConSesion` (solo la del inquilino y el pago),
+  y el único arreglo posterior (`prepararDueno` → `activarCuenta`) corre al abrir un reclamo, después del pago.
+- **Arreglo (`src/services/trustless.ts`, `guardarCuentaSiFalta`; `src/acciones.ts`, `firmar`):** al firmar el contrato con Trustless Work, si el alquiler no trae la cuenta de quien firma,
+  antes de firmar se guarda la de la billetera conectada con `servidor.actualizarCuenta` (RPC `lk_actualizar_direccion`, igual que #62). Si no hay billetera o guardar falla, la firma sigue igual (no se corta nada).
+- **Respaldo para quien ya firmó (`src/screens/Detalle.tsx`, `Pago`):** cuando el dueño abre el alquiler en «pendiente de pago» y su cuenta falta, la app la guarda en segundo plano (sin textos ni pantallas nuevas).
+- **Límite (documentado, no resuelto aquí):** ambos caminos necesitan la sesión de Cavos del dueño. Sin token no hay dirección de billetera, así que un dueño que entra **solo con la llave de acceso** y no vuelve a entrar
+  sigue dejando la cuenta vacía. El pago del inquilino **no** puede guardar la cuenta del dueño: la dirección solo vive en `lk_participantes` (por alquiler) y `lk_actualizar_direccion` solo cambia la fila de quien llama.
+  El arreglo completo sería pedir sesión (`ConSesion`, componente y textos ya existentes) a la firma del dueño cuando falta su cuenta; es un cambio de flujo y necesita aprobación.
+- **Pruebas:** `src/services/__tests__/cuenta-dueno-firma.test.ts` (guarda y luego firma; sin sesión firma igual; con cuenta no guarda; respaldo en `Pago`) y
+  `src/servidor/__tests__/ciclo-dos-personas-sql.test.ts` («U4»: sin la cuenta del dueño, 409 «Falta la cuenta Stellar del dueño.»; con `lk_actualizar_direccion` del dueño, sigue).
+- Sin cambios de diseño, de textos visibles ni de base de datos.

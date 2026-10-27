@@ -203,7 +203,12 @@ const local: Acciones = {
 
 const remoto: Acciones = {
   crear: (d, email, cuenta) => servidor.crear(d, email, cuenta),
-  firmar: async (a, etapa) => { await servidor.firmar(a.id, etapa) },        // el servidor deduce el rol de la sesión
+  // U4 (27/10/2026): al firmar el contrato, si el alquiler no trae la cuenta de quien firma (el dueño lo creó sin sesión de Cavos), se guarda
+  // antes la de su billetera; sin sesión no hace nada y la firma sigue igual.
+  firmar: async (a, etapa) => {
+    if (etapa === 'contrato' && modoDe(a).trustless && a.miRol && !a.cuentas?.[a.miRol]) await trustless.guardarCuentaSiFalta(a.id)
+    await servidor.firmar(a.id, etapa)        // el servidor deduce el rol de la sesión
+  },
   marcar: (a, etapa, c, i, e) => servidor.marcar(a.id, etapa, c, i, e).then(() => {}),
   nota: (a, etapa, c, n) => servidor.nota(a.id, etapa, c, n).then(() => {}),
   agregarFoto: (a, etapa, c, f) => servidor.agregarFoto(a.id, etapa, c, f).then(() => {}),

@@ -8,6 +8,7 @@ import { abreviar } from '../services/billetera'
 import { PagoReal, CierreReal, Comprobantes, Cuentas, UltimoComprobante, DetalleSolo, VerTx } from './Real'
 import { esHash } from '../services/comprobantes'
 import { servidor } from '../servidor/repositorio'
+import { trustless } from '../services/trustless'
 import { estadoAceptaciones, type Aceptacion } from '../servidor/aceptaciones'
 import { modoReal } from '../services/auth'
 import { NOMBRE_ROL, type Alquiler, type Rol, type Foto, type Usuario } from '../types'
@@ -68,7 +69,12 @@ export function Contrato({ a, rol }: P) {
 
 /** Paso del depósito. Parte 2: en modoVideo cambiar PagoSimulado por el depósito real (PagoReal ya existe para la red de prueba). */
 export function Pago({ a, rol }: P) {
-  const { solo: modoSolo } = modoDe(a)
+  const { solo: modoSolo, trustless: conTw } = modoDe(a)
+  // U4 (27/10/2026), respaldo para alquileres que el dueño ya firmó sin su cuenta: al abrir el paso del depósito con sesión de Cavos,
+  // se guarda la de su billetera si falta (en silencio; sin sesión no hace nada). Así el inquilino puede pagar sin el 409.
+  useEffect(() => {
+    if (conTw && rol === 'dueno' && a.miRol === 'dueno' && !a.escrowId && !a.cuentas?.dueno) void trustless.guardarCuentaSiFalta(a.id)
+  }, [a.id, conTw, rol, a.miRol, a.escrowId, a.cuentas?.dueno])
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
