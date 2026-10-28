@@ -537,6 +537,8 @@ Sin cambios de diseño, estilos, textos, datos, `src/legal/**` ni `ContratoDoc.t
 - `estadoAlquileres()` / `useEstadoAlquileres()` (`src/store.ts`): sin servidor, siempre «listo».
 - `estadoInfoReputacion(todos)` (`src/reputacion/perfilesServidor.ts`): sin alquileres cerrados, «listo»; si no, «cargando» hasta la respuesta
   para ese conjunto de alquileres cerrados, o «error» si falló (se reintenta en la próxima carga, como antes).
+- Los avisos de «Tu puntaje cambió» (REP-12) tampoco comparan mientras carga o si falló: el 0 de la carga no se guarda como «visto»
+  ni produce un aviso (o correo) de cambio falso.
 - Con datos, t = 0 sigue mostrando «Todavía no tienes alquileres cerrados.» y t ≥ 1 la frase de siempre.
 
-Pruebas: `src/reputacion/__tests__/parpadeo-carga.test.tsx` (cargando, error, t = 0 y t ≥ 1; y los estados de la información del servidor).
+Pruebas: `src/reputacion/__tests__/parpadeo-carga.test.tsx` (cargando, error, sin aviso falso, t = 0 y t ≥ 1; y los estados de la información del servidor).

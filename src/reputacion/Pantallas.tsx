@@ -97,6 +97,9 @@ const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => conServidor ? alquiler
   : alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
 /** Los alquileres de la app y, con servidor, la información de reputación de cada uno (vuelve a dibujar cuando llega). */
 function useAlquileres() { const t = useAlquileresStore(); usePerfilesServidor(t, conServidor); return t }
+/** Si ya llegaron los alquileres y, con servidor, la información de reputación. Mientras carga, o si la carga falló, no se muestra el
+ *  conteo ni se compara el puntaje: así no aparece un 0 falso («Todavía no tienes alquileres cerrados.», «Nuevo en Lockumi · 0…»). */
+function useListo(todos: readonly Alquiler[]) { const l = useEstadoAlquileres(); return (l === 'listo' ? (conServidor ? estadoInfoReputacion(todos) : 'listo') : l) === 'listo' }
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
@@ -108,10 +111,7 @@ function Insignias({ lista }: { lista: Insignia[] }) {
 /** Puntaje con las revisiones pedidas (REP-11): esos alquileres no cuentan y se ve «En revisión». */
 const puntajeDe = (todos: Alquiler[], u: Usuario, rol: Rol, ahora = Date.now()) => calcularPuntaje(mios(todos, u, rol), rol, ahora, enRevisionIds(u.email, rol))
 function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
-  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), lista = useEstadoAlquileres()
-  // Mientras cargan los alquileres (o la información de reputación del servidor), o si la carga falló, no se muestra el conteo:
-  // así no aparece un 0 falso («Todavía no tienes alquileres cerrados.», «Nuevo en Lockumi · 0…») antes del dato real.
-  const listo = (lista === 'listo' ? (conServidor ? estadoInfoReputacion(todos) : 'listo') : lista) === 'listo'
+  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), listo = useListo(todos)
   const xs = mios(todos, u, rol), p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol), llave = tieneLlave(xs, rol, ahora)
   const borrado = solicitudBorrado(u.email)
   const nombre = nombreDe(e, u), cerrados = xs.filter(cuentaParaPuntaje), completos = cerrados.filter(a => fraccionDescontada(a, ahora) === 0).length
@@ -255,8 +255,9 @@ function PedirRevision({ u }: { u: Usuario }) {
 }
 
 // ——— REP-12: avisos en la app cuando cambia el puntaje o un hecho deja de contar ———
-function useAvisos(u: Usuario, activo = true): [Aviso | null, () => void] {
-  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0)
+function useAvisos(u: Usuario, encendido = true): [Aviso | null, () => void] {
+  // Mientras carga (o si falló) no se compara: el 0 de la carga no se guarda como «visto» ni da un aviso (o correo) de cambio falso.
+  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0), listo = useListo(todos), activo = encendido && listo
   const estado = (['dueno', 'inquilino'] as Rol[]).map(rol => { const xs = mios(todos, u, rol), linea = lineaPublica(puntajeDe(todos, u, rol, ahora)), v = visto(u.email, rol)
     const vencidos = hechosVencidos(xs, rol, ahora, v.vencidos ?? [])
     return { rol, linea, v, vencidos, aviso: vencidos[0] ? avisoVencido(vencidos[0], linea) : avisoCambio(v.linea, linea, xs) } })

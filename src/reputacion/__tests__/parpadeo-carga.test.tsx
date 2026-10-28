@@ -33,6 +33,10 @@ describe('«Solo tú ves esto» mientras carga', () => {
     estado = 'error'
     for (const r of ['/perfil/dueno', '/perfil/inquilino']) { const t = await pantalla(r); expect(t).toContain('Solo tú ves esto'); expect(t).not.toContain(CERO); expect(t).not.toContain(CERO_PUBLICO) }
   })
+  it('cargando o error: tampoco sale un aviso «Tu puntaje cambió» falso (con un puntaje ya visto)', async () => {
+    const { marcarVisto } = await import('../avisos'); marcarVisto(U.email, 'dueno', { linea: '5,0 de 5', vencidos: [] })
+    for (const x of ['cargando', 'error'] as const) { estado = x; expect(await pantalla()).not.toContain('Tu puntaje cambió') }
+  })
   it('datos con t = 0: sí aparece la frase de 0', async () => {
     const t = await pantalla(); expect(t).toContain(CERO); expect(t).toContain(CERO_PUBLICO)
   })
