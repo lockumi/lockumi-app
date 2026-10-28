@@ -520,3 +520,25 @@ del depósito (reclamo aceptado o mediación)».
   inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).»
 
 Pruebas: `src/reputacion/__tests__/frase-corta.test.tsx` (un test por caso y la nota en pantalla; la insignia no cambia).
+
+## «Mi perfil» sin parpadeo mientras carga (27/10/2026)
+
+Aprobado por Katherine el 27/10/2026, 9:21 p. m. CR («Sí, arreglen el parpadeo sin tocar el diseño»).
+
+**Problema:** con servidor, mientras llegaban los alquileres (o la información de reputación de `lk_reputacion_de_mis_alquileres()`),
+«Mi perfil» contaba 0 alquileres y mostraba un momento «Todavía no tienes alquileres cerrados.» (y «Nuevo en Lockumi · 0 alquileres
+cerrados») antes del conteo real.
+
+**Arreglo:** «Mi perfil» espera la respuesta antes de mostrar el conteo. Mientras carga, o si la carga falla, no se muestra nada en esos
+lugares (ni la frase de «Solo tú ves esto», ni la nota 15.3, ni la línea del puntaje, el anillo o la Llave); el resto de la pantalla queda igual.
+Sin cambios de diseño, estilos, textos, datos, `src/legal/**` ni `ContratoDoc.tsx`.
+
+- `repositorio.estado()` (`src/servidor/repositorio.ts`): «cargando» hasta la primera respuesta, «error» si esa carga falló, «listo» con datos.
+- `estadoAlquileres()` / `useEstadoAlquileres()` (`src/store.ts`): sin servidor, siempre «listo».
+- `estadoInfoReputacion(todos)` (`src/reputacion/perfilesServidor.ts`): sin alquileres cerrados, «listo»; si no, «cargando» hasta la respuesta
+  para ese conjunto de alquileres cerrados, o «error» si falló (se reintenta en la próxima carga, como antes).
+- Los avisos de «Tu puntaje cambió» (REP-12) tampoco comparan mientras carga o si falló: el 0 de la carga no se guarda como «visto»
+  ni produce un aviso (o correo) de cambio falso.
+- Con datos, t = 0 sigue mostrando «Todavía no tienes alquileres cerrados.» y t ≥ 1 la frase de siempre.
+
+Pruebas: `src/reputacion/__tests__/parpadeo-carga.test.tsx` (cargando, error, sin aviso falso, t = 0 y t ≥ 1; y los estados de la información del servidor).

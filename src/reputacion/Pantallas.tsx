@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres as useAlquileresStore } from '../store'
-import { usePerfilesServidor, infoReputacion } from './perfilesServidor'
+import { useAlquileres as useAlquileresStore, useEstadoAlquileres } from '../store'
+import { usePerfilesServidor, infoReputacion, estadoInfoReputacion } from './perfilesServidor'
 import { ir } from '../router'
 import { suscribirRecorrido, recorridoEnCurso } from '../recorrido'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
@@ -97,6 +97,9 @@ const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => conServidor ? alquiler
   : alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
 /** Los alquileres de la app y, con servidor, la información de reputación de cada uno (vuelve a dibujar cuando llega). */
 function useAlquileres() { const t = useAlquileresStore(); usePerfilesServidor(t, conServidor); return t }
+/** Si ya llegaron los alquileres y, con servidor, la información de reputación. Mientras carga, o si la carga falló, no se muestra el
+ *  conteo ni se compara el puntaje: así no aparece un 0 falso («Todavía no tienes alquileres cerrados.», «Nuevo en Lockumi · 0…»). */
+function useListo(todos: readonly Alquiler[]) { const l = useEstadoAlquileres(); return (l === 'listo' ? (conServidor ? estadoInfoReputacion(todos) : 'listo') : l) === 'listo' }
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
@@ -108,7 +111,7 @@ function Insignias({ lista }: { lista: Insignia[] }) {
 /** Puntaje con las revisiones pedidas (REP-11): esos alquileres no cuentan y se ve «En revisión». */
 const puntajeDe = (todos: Alquiler[], u: Usuario, rol: Rol, ahora = Date.now()) => calcularPuntaje(mios(todos, u, rol), rol, ahora, enRevisionIds(u.email, rol))
 function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
-  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now()
+  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), listo = useListo(todos)
   const xs = mios(todos, u, rol), p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol), llave = tieneLlave(xs, rol, ahora)
   const borrado = solicitudBorrado(u.email)
   const nombre = nombreDe(e, u), cerrados = xs.filter(cuentaParaPuntaje), completos = cerrados.filter(a => fraccionDescontada(a, ahora) === 0).length
@@ -127,11 +130,11 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
         <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{zonaDe(e.canton)}</span>}</div>
         <p className="nota" style={{ marginTop: 8 }}>{UI.asiTeVen}{desde(xs) ? ' · ' + UI.enLockumiDesde(mesAnio(desde(xs)!)) : ''}</p>
         <div className="rp-puntaje">
-          {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
-          <div><div className="rp-linea">{lineaPublica(p)}</div>
-            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
+          {listo && puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
+          {listo && <div><div className="rp-linea">{lineaPublica(p)}</div>
+            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>}
         </div>
-        {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
+        {listo && llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
         <Insignias lista={ins} />
         <p className="rp-aviso">{AVISO_PERFIL} <a href="#/perfil/calculo">{UI.comoSeCalcula}</a></p>
@@ -139,8 +142,8 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     </section>
     <section className="glass tarjeta" aria-labelledby="rp-solo">
       <p id="rp-solo" className="rp-solo"><Icono n="candado" />{UI.soloTu}</p>
-      <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>
-      {rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
+      {listo && <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>}
+      {listo && rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
     </section>
     {!borrado && <section className="glass tarjeta" aria-labelledby="rp-op">
       <p><Md t={PERFIL_FIJO} /></p>
@@ -252,8 +255,9 @@ function PedirRevision({ u }: { u: Usuario }) {
 }
 
 // ——— REP-12: avisos en la app cuando cambia el puntaje o un hecho deja de contar ———
-function useAvisos(u: Usuario, activo = true): [Aviso | null, () => void] {
-  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0)
+function useAvisos(u: Usuario, encendido = true): [Aviso | null, () => void] {
+  // Mientras carga (o si falló) no se compara: el 0 de la carga no se guarda como «visto» ni da un aviso (o correo) de cambio falso.
+  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0), listo = useListo(todos), activo = encendido && listo
   const estado = (['dueno', 'inquilino'] as Rol[]).map(rol => { const xs = mios(todos, u, rol), linea = lineaPublica(puntajeDe(todos, u, rol, ahora)), v = visto(u.email, rol)
     const vencidos = hechosVencidos(xs, rol, ahora, v.vencidos ?? [])
     return { rol, linea, v, vencidos, aviso: vencidos[0] ? avisoVencido(vencidos[0], linea) : avisoCambio(v.linea, linea, xs) } })
