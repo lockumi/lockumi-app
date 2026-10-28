@@ -3,8 +3,8 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres as useAlquileresStore } from '../store'
-import { usePerfilesServidor, infoReputacion } from './perfilesServidor'
+import { useAlquileres as useAlquileresStore, useEstadoAlquileres } from '../store'
+import { usePerfilesServidor, infoReputacion, estadoInfoReputacion } from './perfilesServidor'
 import { ir } from '../router'
 import { suscribirRecorrido, recorridoEnCurso } from '../recorrido'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
@@ -108,7 +108,10 @@ function Insignias({ lista }: { lista: Insignia[] }) {
 /** Puntaje con las revisiones pedidas (REP-11): esos alquileres no cuentan y se ve «En revisión». */
 const puntajeDe = (todos: Alquiler[], u: Usuario, rol: Rol, ahora = Date.now()) => calcularPuntaje(mios(todos, u, rol), rol, ahora, enRevisionIds(u.email, rol))
 function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
-  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now()
+  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), lista = useEstadoAlquileres()
+  // Mientras cargan los alquileres (o la información de reputación del servidor), o si la carga falló, no se muestra el conteo:
+  // así no aparece un 0 falso («Todavía no tienes alquileres cerrados.», «Nuevo en Lockumi · 0…») antes del dato real.
+  const listo = (lista === 'listo' ? (conServidor ? estadoInfoReputacion(todos) : 'listo') : lista) === 'listo'
   const xs = mios(todos, u, rol), p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol), llave = tieneLlave(xs, rol, ahora)
   const borrado = solicitudBorrado(u.email)
   const nombre = nombreDe(e, u), cerrados = xs.filter(cuentaParaPuntaje), completos = cerrados.filter(a => fraccionDescontada(a, ahora) === 0).length
@@ -127,11 +130,11 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
         <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{zonaDe(e.canton)}</span>}</div>
         <p className="nota" style={{ marginTop: 8 }}>{UI.asiTeVen}{desde(xs) ? ' · ' + UI.enLockumiDesde(mesAnio(desde(xs)!)) : ''}</p>
         <div className="rp-puntaje">
-          {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
-          <div><div className="rp-linea">{lineaPublica(p)}</div>
-            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
+          {listo && puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
+          {listo && <div><div className="rp-linea">{lineaPublica(p)}</div>
+            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>}
         </div>
-        {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
+        {listo && llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
         <Insignias lista={ins} />
         <p className="rp-aviso">{AVISO_PERFIL} <a href="#/perfil/calculo">{UI.comoSeCalcula}</a></p>
@@ -139,8 +142,8 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     </section>
     <section className="glass tarjeta" aria-labelledby="rp-solo">
       <p id="rp-solo" className="rp-solo"><Icono n="candado" />{UI.soloTu}</p>
-      <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>
-      {rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
+      {listo && <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>}
+      {listo && rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
     </section>
     {!borrado && <section className="glass tarjeta" aria-labelledby="rp-op">
       <p><Md t={PERFIL_FIJO} /></p>

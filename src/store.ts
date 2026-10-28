@@ -90,8 +90,13 @@ const subscribeMezcla = (f: () => void) => {
   if (tieneSesionServidor()) conectar(); conectores.add(conectar)
   return () => { bajaLocal(); bajaServidor?.(); conectores.delete(conectar) }
 }
+/** Si la lista de alquileres ya llegó: sin servidor siempre «listo»; con servidor, «cargando» o «error» hasta tener la respuesta. */
+export const estadoAlquileres = (): 'cargando' | 'listo' | 'error' =>
+  modoServidor || (dosPersonas && tieneSesionServidor()) ? repositorio.estado() : 'listo'
 export const useAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : dosPersonas ? subscribeMezcla : store.subscribe,
   modoServidor ? repositorio.todos : dosPersonas ? todosMezcla : store.todos)
+/** Igual que `estadoAlquileres`, pero vuelve a dibujar cuando cambia (también cuando la carga falla sin cambiar la lista). */
+export const useEstadoAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : dosPersonas ? subscribeMezcla : store.subscribe, estadoAlquileres, estadoAlquileres)
 /** Alquiler por id desde su origen (servidor compartido o este navegador). */
 export const obtener = (id: string) => modoServidor ? repositorio.obtener(id) : (dosPersonas && repositorio.obtener(id)) || store.obtener(id)
 const KV = 'lockumi.vista'

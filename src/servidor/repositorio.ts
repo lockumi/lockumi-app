@@ -38,17 +38,19 @@ const rpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Prom
 }
 
 // ── Caché y suscripción ──
-let datos: Alquiler[] = []; let yo = ''; let cargado = false
+let datos: Alquiler[] = []; let yo = ''; let cargado = false; let fallo = false
 const subs = new Set<() => void>(); const avisar = () => subs.forEach(f => f())
 // Cuenta de esta sesión (cuenta-sesion.ts): al cambiar de cuenta o salir, la lista de la cuenta anterior se borra de inmediato.
 let cambio: { c: string; p: Promise<boolean> } | null = null
 const deps = { get storage() { return localStorage }, salir: async () => (await supabase()).auth.signOut() }
-const vaciar = () => { datos = []; yo = ''; cargado = false; avisar() }
+const vaciar = () => { datos = []; yo = ''; cargado = false; fallo = false; avisar() }
+/** La primera carga falló: se marca como cargada (para no esperar para siempre), pero sin datos confiables. */
+const fallar = () => { cargado = true; fallo = true; avisar() }
 /** Llamar con el correo de la cuenta que entró (al entrar y al cargar la app). Si la sesión era de otra cuenta, la termina. */
 export function usarCuenta(correo: string): Promise<boolean> {
   const c = correo.trim().toLowerCase()
   if (cambio?.c === c) return cambio.p
-  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(() => { cargado = true; avisar() }) } return otra }).catch(() => false)
+  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(fallar) } return otra }).catch(() => false)
   cambio = { c, p }; return p
 }
 /** Al salir: termina la sesión anónima de esta cuenta y borra su lista. */
@@ -65,7 +67,7 @@ export async function recargar() {
   const sb = await supabase(); yo = await sesion()
   const { data: cs, error } = await sb.from('lk_contratos').select('id, direccion, monto, inicio, fin, reglas, email_inquilino, estado, ventana_inicio, ventana_segundos, escrow_contract_id, resultado, liquidacion_tx, creado_en, actualizado_en').order('creado_en', { ascending: false })
   if (error) throw new ErrorServidor(mensajeServidor(error))
-  const ids = (cs ?? []).map(c => c.id); if (!ids.length) { datos = []; cargado = true; avisar(); return }
+  const ids = (cs ?? []).map(c => c.id); if (!ids.length) { datos = []; cargado = true; fallo = false; avisar(); return }
   const de = (t: string, cols: string) => sb.from(t).select('contrato_id, ' + cols).in('contrato_id', ids)
   const [ps, as, fs, fts, rs, es] = await Promise.all([
     de('lk_participantes', 'rol, usuario, email_cavos, direccion_stellar'), de('lk_actas', 'etapa, cuartos'), de('lk_firmas', 'etapa, rol, firmado_en'),
@@ -103,7 +105,7 @@ export async function recargar() {
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
-  cargado = true; avisar()
+  cargado = true; fallo = false; avisar()
 }
 
 let canal: RealtimeChannel | null = null; let sondeo: ReturnType<typeof setInterval> | null = null; let pendiente: ReturnType<typeof setTimeout> | null = null
@@ -120,9 +122,11 @@ export const repositorio = {
   todos: () => datos,
   obtener: (id: string) => datos.find(a => a.id === id),
   cargado: () => cargado,
+  /** «cargando» hasta la primera respuesta; «error» si esa carga falló (la lista vacía no es un 0 real). */
+  estado: (): 'cargando' | 'listo' | 'error' => !cargado ? 'cargando' : fallo ? 'error' : 'listo',
   subscribe(f: () => void) {
     subs.add(f)
-    if (subs.size === 1) { void recargar().catch(() => { cargado = true; avisar() }); void conectarTiempoReal().catch(() => {}) }
+    if (subs.size === 1) { void recargar().catch(fallar); void conectarTiempoReal().catch(() => {}) }
     return () => { subs.delete(f); if (!subs.size) { void canal?.unsubscribe(); canal = null; if (sondeo) clearInterval(sondeo) } }
   },
 }
