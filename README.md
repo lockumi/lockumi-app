@@ -60,13 +60,13 @@ Pasos en https://app.lockumi.com:
 5. **Fotos de entrada.** Toma una foto de cada espacio y completa la lista de revisión; confirma. El dueño de prueba confirma solo. Si no tienes cámara, puedes usar "Demo: usar una foto de ejemplo".
 6. **Fotos de salida.** Cuando entregues el lugar, toca "Empezar fotos de salida", toma las fotos, completa la lista y confirma. El dueño de prueba confirma solo.
 7. **7 días para reclamos.** Corre el plazo de 7 días. Tienes dos opciones:
-   - **"Solo red de prueba: adelantar el plazo"**: termina el plazo ahora; el dueño de prueba aprueba en la cadena y Lockumi te devuelve el depósito (Trustless Work descuenta su comisión de 0,3 %). Este botón existe solo en testnet: está bloqueado en el cliente y en el servidor. Con dinero real siempre aplicarían los 7 días.
+   - **"Solo red de prueba: adelantar el plazo"**: termina el plazo ahora; el dueño de prueba aprueba en la cadena y Lockumi te devuelve el depósito (Trustless Work descuenta su comisión de 0,3 %; la app muestra lo que llega exacto, sin redondear: de 1 USDC de prueba llegan 0,997). Este botón existe solo en testnet: está bloqueado en el cliente y en el servidor. Con dinero real siempre aplicarían los 7 días.
    - **"Hacer un reclamo como dueño de prueba"**: escribes el monto, el motivo y una foto del daño en nombre del dueño de prueba. El reclamo queda registrado en el escrow (disputa).
 8. **Reclamo y mediador.** Como inquilino, toca "Aceptar reclamo" (se reparte según el reclamo) o "No estoy de acuerdo". En ese caso toca "Resolver el reclamo (simulación)", elige el reparto y toca "Confirmar el reparto": el escrow reparte el saldo en la cadena.
 
 **Dos personas en testnet (26 oct 2026):** en alquileres nuevos de dos personas el servidor firma por cada persona con una cuenta de testnet propia de su cuenta (Cavos solo sirve para entrar), así que «Pagar» y «Todo bien, devolver» no piden firmas en el aparato. El dueño puede eliminar el alquiler mientras el depósito no esté pagado. Solo red de prueba; en la red principal cada persona firmaría con su billetera de Cavos. Ver [docs/firma-servidor.md](docs/firma-servidor.md).
 
-**Opción A (en rama, 26 oct 2026):** se reemplaza lo anterior: cada acción con la cuenta segura lleva una prueba firmada con Cavos que el servidor revisa, y Lockumi ejecuta con sus llaves de rol; el depósito lo pone un ramp simulado de testnet (`api/_lib/rampSimulado.ts`). La cuenta lleva además una **llave de acceso (passkey) obligatoria**, creada al entrar por primera vez, para firmar con la misma cuenta desde cualquier dispositivo (`src/services/llave.ts`). Ver [docs/firma-cavos.md](docs/firma-cavos.md).
+**Opción A (en rama, 26 oct 2026):** se reemplaza lo anterior: cada acción con la cuenta segura lleva una prueba firmada con Cavos que el servidor revisa, y Lockumi ejecuta con sus llaves de rol; el depósito lo pone un ramp simulado de testnet (`api/_lib/rampSimulado.ts`). La cuenta lleva además una **llave de acceso (passkey) obligatoria**, creada sola al entrar por primera vez (el vault de Cavos pide Face ID o huella; sin botón «Crea tu llave de acceso»), para firmar con la misma cuenta desde cualquier dispositivo (`src/services/llave.ts`). Vite no incluye `Buffer` y el kit de Cavos lo usa: `src/polyfills.ts` lo define y es la primera importación de `src/main.tsx` (no quitar). Ver [docs/firma-cavos.md](docs/firma-cavos.md).
 
 **Activación como Meteorito (26 oct 2026, mismo PR):** antes de pagar, la plataforma crea la cuenta Cavos con 0 XLM y paga sus reservas como patrocinador; la persona firma con Cavos la trustline de USDC (acción `activar-cuenta`, `api/_lib/activacion.ts`). El depósito lo fondea el ramp simulado desde la tesorería de la plataforma y la cuenta segura bloquea siempre USDC. Sin Friendbot. **Friendbot quedó fuera de todo el PR** (26/10, 9:38 p. m.): las cuentas que firman su propia transacción (demo de una persona, cuentas de servidor del #54, scripts) las crea la tesorería con `createAccount` y 5 XLM (`crearCuentaDesdeTesoreria`, `api/_lib/activacion.ts`); el USDC del flujo de una persona lo manda la tesorería (tope 20) y ya no se compra en el DEX por la persona. Ver [docs/fondeo-testnet.md](docs/fondeo-testnet.md).
 
@@ -253,6 +253,8 @@ El flujo mínimo anterior de 5 pasos (crear, obtener USDC, depositar, aprobar y 
 
 Sin `VITE_CAVOS_APP_ID` (por ejemplo, en local) la app usa un acceso simulado.
 
+**App de Cavos «Lockumi v2» (27/10/2026).** Hay una app nueva en Cavos, «Lockumi v2» (App ID público de producción `cav_14f91c44d57f4290070c0f9705f50164564b`; desarrollo `cav_73230a9b7f198345f9498855557aec6eacd9`), creada porque el registro de la app vieja (`cav_c1b1cec42e7b62cd01f377b5a3291b276079`) tiene billeteras quemadas por el error de `Buffer` ya corregido; el registro de Cavos se identifica por usuario + App ID + cadena + red, así que un App ID nuevo reinicia las billeteras (`appSalt` `'lockumi'` no cambia). El App ID solo se lee de `VITE_CAVOS_APP_ID` (no hay valor escrito en el código). Pasar producción a la app nueva = poner esa variable en Vercel (y `CAVOS_APP_ID` del servidor), **solo con el OK de Katherine**; volver atrás = poner otra vez el App ID viejo. Detalle: [docs/firma-cavos.md](docs/firma-cavos.md).
+
 ## Correo con Resend (próximamente)
 
 El correo de invitación de la Parte 4 (dos personas) saldrá con **Resend** desde `invitaciones@lockumi.com`, solo para enviar. **La Parte 4 no está activa** en app.lockumi.com: hoy la app no envía correos, y **lockumi.com no recibe correo** (no tiene MX en la raíz). Lo que ya está listo:
@@ -389,7 +391,7 @@ Variables de entorno (ver `.env.example`; **nunca subas `.env`**, está en `.git
 
 | Variable | Dónde | Qué hace |
 |---|---|---|
-| `VITE_CAVOS_APP_ID` | Cliente | App ID público de Cavos. Sin esta variable la app usa el acceso simulado. |
+| `VITE_CAVOS_APP_ID` | Cliente | App ID público de Cavos. Sin esta variable la app usa el acceso simulado. Producción hoy: app vieja; app nueva «Lockumi v2»: `cav_14f91c44d57f4290070c0f9705f50164564b` (cambio solo con OK de Katherine; ver [docs/firma-cavos.md](docs/firma-cavos.md)). |
 | `VITE_TRUSTLESS` | Cliente | `1` activa la red de prueba con escrow real de Trustless Work. Sin Supabase, es el flujo de una persona por `/api/solo` (lo que corre en app.lockumi.com). |
 | `VITE_FLUJO` | Cliente | `solo` vuelve al flujo mínimo anterior de 5 pasos. Sin definir: flujo completo de 8 pasos. |
 | `VITE_VENTANA_SEGUNDOS` | Cliente | Plazo de reclamos al crear, en segundos (mínimo 60; por defecto 7 días). |

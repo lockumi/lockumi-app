@@ -11,7 +11,7 @@
 //          https://docs.cavos.xyz (passkeys, multi-device). Origen: PR #53 (solo la parte de passkey).
 import { ErrorBilletera, conectarBilletera, olvidarBilletera, probarFirma } from './billetera'
 import { APP_ID, CAVOS_BILLETERA, authCavos, modoReal } from './auth'
-import type { EstadoFirmante } from './firmante'
+import { limpiarDetalle, type EstadoFirmante } from './firmante'
 
 /** Equivale a `secureStep` del modal de Cavos: la cuenta no se usa sin llave de acceso. */
 export const SECURE_STEP = 'required' as const
@@ -21,6 +21,8 @@ export const TEXTOS_LLAVE = {
   crear: 'Es un solo paso. Con ella entras a tu cuenta desde cualquier dispositivo.',
   crearBoton: 'Crear llave de acceso',
   creando: 'Creando…',
+  auto: 'Confirma con Face ID o tu huella para proteger tu cuenta',
+  reintentar: 'Intentar de nuevo',
   entrarBoton: 'Entrar con mi llave de acceso',
   entrando: 'Entrando…',
   conLlave: 'Usa tu llave de acceso para entrar desde este dispositivo.',
@@ -72,10 +74,6 @@ export function resultadoAprobar(c: { estado: string; llave?: boolean }): Result
   return c.llave ? 'no-abrio' : 'sin-llave'
 }
 
-/** ¿La cuenta ya tiene llave de acceso? null si no se pudo saber (o este dispositivo no puede firmar). No pide nada. */
-export async function consultarLlave(): Promise<boolean | null> {
-  try { const b = await conectarBilletera({ llave: true }); return b.estado === 'needs-device-approval' ? null : b.llave === true } catch { return null }
-}
 /** Crea la llave de acceso (passkey) de la cuenta, en el vault de Cavos. Este dispositivo tiene que poder firmar. */
 export async function crearLlave(): Promise<void> {
   const auth = await authCavos(); const id = auth?.restoreIdentity()
@@ -111,12 +109,16 @@ export async function recuperarConLlave(email: string): Promise<ResultadoLlave> 
 }
 
 /** Puerta al entrar: firma de prueba (probarFirma) y, si el dispositivo puede firmar, que la cuenta tenga llave de acceso.
- *  'sin-llave' = hay que crearla antes de entrar. Si no se puede saber (red), 'error': se reintenta, no se entra sin llave. */
+ *  Una sola conexión (la de probarFirma, ya con `passkeyPrf` como en Meteorito): `llave` (= `passkeyRestore`) dice si la cuenta tiene
+ *  llave. Sin llave → 'sin-llave': la puerta la crea sola (LlaveAutomatica → asegurarLlave → el vault pide Face ID o huella).
+ *  Se quitó `consultarLlave`, la segunda conexión automática que dejaba «No pudimos abrir tu cuenta. Revisa tu conexión». */
 export async function probarCuenta(email: string): Promise<EstadoFirmante> {
+  limpiarDetalle()
   const e = await probarFirma()
   const local = import.meta.env.DEV && !!localStorage.getItem('lockumi.billetera.prueba') // gancho de prueba local, nunca en el build
-  if (e !== 'puede' || !modoReal || local || llaveRegistrada(email)) return e // sin Cavos (demo) no hay llave
-  const tiene = await consultarLlave()
-  if (tiene === true) { registrarLlave(email); return 'puede' }
-  return tiene === false ? 'sin-llave' : 'error'
+  if (e !== 'puede' || !modoReal || local) return e // sin Cavos (demo) no hay llave
+  const b = await conectarBilletera()   // la misma conexión (en caché): no abre otra
+  if (b.llave === true) { registrarLlave(email); return 'puede' }
+  if (llaveRegistrada(email)) return 'puede'   // la acaba de crear este dispositivo (la conexión en caché aún no lo sabe)
+  return 'sin-llave'
 }

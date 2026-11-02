@@ -4,7 +4,8 @@
 // mediadora (api/_lib/tw.ts, acción «devolver-automatico»).
 import type { Alquiler } from '../types'
 import { pruebaCompleta } from './interruptor'
-import { repartoCentimos, cuatroDecimales } from '../../api/_lib/centimos'
+import { escrowReal } from '../servidor/config'
+import { repartoCentimos, exacto, netoTW } from '../../api/_lib/centimos'
 
 /** Mismo texto que api/_lib/tw.ts APROBADO (sin importar el SDK de Stellar en el navegador). */
 export const APROBADO_DUENO = 'El dueño aprobó en la cadena devolver el depósito completo'
@@ -21,15 +22,15 @@ export const TEXTO_CERRADO_AUTO = 'El dueño no aprobó ni reclamó dentro de su
 
 /** Comisión de Trustless Work en la red de prueba: 0,3 % también al resolver una disputa (medido en testnet el 24/10/2026:
  *  resolve_dispute 3a1c92a7…, eeca5f43…, cd92c786…: 1 USDC → 0,003 a la cuenta de comisión de Trustless Work). */
-const COMISION_TW = 0.003
+// El cálculo exacto (contrato de Trustless Work, en stroops) vive en api/_lib/centimos.ts (netoTrustless / netoTW).
 // Legal 25/10 5:09 p. m. (punto 8): hora en 12 h («4:44 p. m.», espacios duros) y montos con 2 decimales («0,50»).
 const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** «800 USDC de prueba» (Legal 24/10: los montos dicen «de prueba»). */
 export const montoPrueba = (n: number) => `${fmt(n)} USDC de prueba`
-/** Solo para las líneas del reparto (lo que llega a cada parte y la comisión): 4 decimales exactos (Legal 25/10, 6:10 p. m.). */
-export const llegaPrueba = (n: number) => `${cuatroDecimales(n)} USDC de prueba`
+/** Lo que llega a cada parte y la comisión: exacto, sin redondear ni ceros de más (Katherine 27/10/2026, 1:05 p. m. CR; antes 4 decimales fijos). */
+export const llegaPrueba = (n: number) => `${exacto(n)} USDC de prueba`
 /** Lo que llega de verdad al inquilino en la devolución automática (100 % menos la comisión de la red de prueba). */
-export const recibeInquilino = (monto: number) => Math.round(monto * (1 - COMISION_TW) * 1e7) / 1e7
+export const recibeInquilino = (monto: number) => netoTW(monto)
 // LEGAL: revisado (25/10, lista de Legal) · nota bajo los montos al terminar (devolución automática)
 export const notaComisionAuto = (monto: number) =>
   `Llegaron ${llegaPrueba(repartoCentimos(0, monto).llegaInquilino)}: la red de prueba de Trustless Work descuenta el 0,3 % (${llegaPrueba(repartoCentimos(0, monto).comision)}). El dueño y Lockumi no reciben nada.`
@@ -71,3 +72,16 @@ export const TEXTO_SILENCIO_DOS = 'Venció el plazo para responder. El caso pasa
 export const BOTON_EXPEDIENTE_DOS = 'Descargar el expediente (datos de prueba)'
 // C: línea de «Aceptaciones» del expediente. Aprobado (25/10, 3:16 a. m.)
 export const EXPEDIENTE_REGLA_DOS = 'Regla de propuesta automática: no se ofrece en esta versión (cláusula 6.5.1 d)'
+
+// ── Lo que llega de verdad a cada parte (Katherine 27/10/2026, 1:05 p. m. CR: sin redondear, menos la comisión real de Trustless Work) ──
+/** Lo que llegó a cada parte de un resultado. Con dos personas el servidor guarda el reparto acordado (antes de la comisión): se descuenta
+ *  la comisión real (api/_lib/centimos.ts). Con una persona y la red de prueba, escrow.ts ya guarda lo que llegó; sin red no hay comisión. */
+export function llegadas(a: Pick<Alquiler, 'dosPersonas'>, r: { dueno: number; inquilino: number }): { dueno: number; inquilino: number } {
+  if (!esDosPersonas(a)) return { dueno: r.dueno, inquilino: r.inquilino }
+  const x = repartoCentimos(r.dueno, r.inquilino); return { dueno: x.llegaDueno, inquilino: x.llegaInquilino }
+}
+/** Lo que llegaría a cada parte con un reparto que todavía no se aplica (con la red de prueba, menos la comisión real). */
+export function llegaria(alDueno: number, deposito: number): { dueno: number; inquilino: number } {
+  const x = repartoCentimos(alDueno, deposito - alDueno)
+  return escrowReal ? { dueno: x.llegaDueno, inquilino: x.llegaInquilino } : { dueno: x.dueno, inquilino: x.inquilino }
+}

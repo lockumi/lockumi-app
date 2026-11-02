@@ -3,16 +3,18 @@ import { LogoAnimado } from '../LogoAnimado'
 import { store, useAlquileres, obtener, ahoraDe, DIA, vistaDe, rolDe, fijarVista } from '../store'
 import { acciones, plazoMs, textoPlazo } from '../acciones'
 import { modoDe } from '../servidor/config'
+import { pideSesionAntesDeFirmar } from './sesionFirma'
 import { COMISION_TEXTO, usaCuentaPropia } from '../services/escrow'
 import { abreviar } from '../services/billetera'
 import { PagoReal, CierreReal, Comprobantes, Cuentas, UltimoComprobante, DetalleSolo, VerTx } from './Real'
 import { esHash } from '../services/comprobantes'
 import { servidor } from '../servidor/repositorio'
+import { trustless } from '../services/trustless'
 import { estadoAceptaciones, type Aceptacion } from '../servidor/aceptaciones'
 import { modoReal } from '../services/auth'
 import { NOMBRE_ROL, type Alquiler, type Rol, type Foto, type Usuario } from '../types'
 import { fotoEjemplo } from '../demoFotos'
-import { Demo, Simulado, Icono, LineaTiempo, usd, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
+import { Demo, Simulado, Icono, LineaTiempo, usd, usdExacto, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
 import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
@@ -26,7 +28,7 @@ import { useProceso, conPunto, NOTA_TIEMPO } from '../proceso'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { reglas17, puedeCambiarVersion } from '../prueba/version'
 import { CambioVersion } from '../prueba/CambioVersion'
-import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, TEXTO_SOLOS_DOS, montoPrueba, llegaPrueba, notaComisionAuto, notaComisionReparto } from '../prueba/dosPersonas'
+import { esDosPersonas, TEXTO_INVITACION_VENCE, TEXTO_CERRADO_AUTO, TEXTO_AUTO_DUENO, TEXTO_AUTO_INQUILINO, TEXTO_ACEPTARON_DOS, TITULO_RECLAMO_DOS, TEXTO_RECLAMO_DOS, TEXTO_PAGO_DOS, TEXTO_ESCROW_DOS, TEXTO_SOLOS_DOS, montoPrueba, llegaPrueba, notaComisionAuto, notaComisionReparto, llegaria } from '../prueba/dosPersonas'
 import { ReglaPropuesta, registroRegla } from '../prueba/Regla'
 import { correoInvitacionEnviado, linkNuevoSinCorreo, EVENTO_CORREO_INVITACION, textoEnlaceEnviado, BOTON_WHATSAPP, enlaceWhatsApp } from '../prueba/invitacion'
 import { PlazoDueno } from '../prueba/PlazoDueno'
@@ -39,6 +41,7 @@ import { venceMediacionC, textoPlazoMediacionC } from '../prueba/mediacion'
 import { MasOpciones } from '../prueba/Eliminar'
 import { modoPrueba as redDePrueba } from '../servidor/config'
 import { ConSesion, ErrorPago } from './Firmante'
+import { pasoRepartoMediadora } from './pasoReparto'
 import { esTextoNoFirmante } from '../services/billetera'
 import { esTextoSinSesion } from '../services/firmante'
 
@@ -59,8 +62,9 @@ export function Contrato({ a, rol }: P) {
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <ContratoDoc a={a} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
-    {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera) */}
-    <ConSesion activo={esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && modoDe(a).trustless}>
+    {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
+        U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
+    <ConSesion activo={pideSesionAntesDeFirmar(a, rol)}>
     <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
       texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." /></ConSesion>
   </div>
@@ -68,7 +72,12 @@ export function Contrato({ a, rol }: P) {
 
 /** Paso del depósito. Parte 2: en modoVideo cambiar PagoSimulado por el depósito real (PagoReal ya existe para la red de prueba). */
 export function Pago({ a, rol }: P) {
-  const { solo: modoSolo } = modoDe(a)
+  const { solo: modoSolo, trustless: conTw } = modoDe(a)
+  // U4 (27/10/2026), respaldo para alquileres que el dueño ya firmó sin su cuenta: al abrir el paso del depósito con sesión de Cavos,
+  // se guarda la de su billetera si falta (en silencio; sin sesión no hace nada). Así el inquilino puede pagar sin el 409.
+  useEffect(() => {
+    if (conTw && rol === 'dueno' && a.miRol === 'dueno' && !a.escrowId && !a.cuentas?.dueno) void trustless.guardarCuentaSiFalta(a.id)
+  }, [a.id, conTw, rol, a.miRol, a.escrowId, a.cuentas?.dueno])
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
@@ -237,7 +246,7 @@ function Reclamo({ a, rol }: P) {
     {modoSolo && <p className="nota">En este ejemplo, el reclamo es simulado: no se registra en la red de prueba ni bloquea ningún depósito. La mediación también es simulada.</p>}
     {modoVideo && <p className="nota">El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.</p>}
     {rol === 'inquilino' ? <>
-      <p>Si aceptas, recibes {usd(a.monto - r.monto)} y el dueño {usd(r.monto)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
+      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {p.error}
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button>
       <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
@@ -279,7 +288,7 @@ function Mediacion({ a, rol }: P) {
       {p.error}</div>}
     {mediador && (!panel ? <button type="button" className={modoVideo ? 'boton boton--primario boton--ancho boton--grande' : 'enlace'} onClick={() => setPanel(true)}>{modoServidor ? 'Registrar el acuerdo' : modoVideo ? 'Resolver el reclamo (simulación)' : 'Demo: registrar el acuerdo'}</button>
       : <div className="mediador pila"><label className="campo"><span>Para el dueño: {usd(aDueno)} · para el inquilino: {usd(a.monto - aDueno)}</span>
-          <input type="range" min={0} max={r.monto} step={escrowReal ? 0.01 : 10} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
+          <input type="range" min={0} max={r.monto} step={pasoRepartoMediadora({ escrowReal, servidor: modoServidor })} value={aDueno} onChange={e => setAD(Number(e.target.value))} aria-valuetext={`${usd(aDueno)} para el dueño`} /></label>
         {p.error}
         <button type="button" className="boton boton--primario boton--ancho" disabled={p.ocupado} onClick={() => void decidir()}>{p.texto(modoVideo ? 'Confirmar el reparto' : 'Registrar el acuerdo')}</button>
         {escrowReal && p.ocupado && NOTA_TIEMPO}</div>)}
@@ -346,7 +355,8 @@ export function Cerrado({ a, rol }: P) {
     {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
-      : <ul className="lista"><li><span>Inquilino</span><strong>{usd(repartoCentimos(r.dueno, r.inquilino).inquilino)}</strong></li><li><span>Dueño</span><strong>{usd(repartoCentimos(r.dueno, r.inquilino).dueno)}</strong></li></ul>}
+      : esDosPersonas(a) ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
+      : <ul className="lista"><li><span>Inquilino</span><strong>{usdExacto(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usdExacto(r.dueno)}</strong></li></ul>}{/* una persona: r ya es lo que llegó (escrow.ts) */}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}

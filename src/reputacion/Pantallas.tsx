@@ -1,13 +1,14 @@
 // Paso 19 · Pantallas de la reputación («coral con amor», sin casitas ni ilustraciones). Se cargan solo con VITE_REPUTACION=1
 // (carga diferida desde App.tsx), junto con su CSS propio (reputacion.css, solo clases .rp-*). Una pantalla = un paso.
-import { useEffect, useId, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import './reputacion.css'
 import type { Alquiler, Rol, Usuario } from '../types'
-import { useAlquileres } from '../store'
+import { useAlquileres as useAlquileresStore, useEstadoAlquileres } from '../store'
+import { usePerfilesServidor, infoReputacion, estadoInfoReputacion } from './perfilesServidor'
 import { ir } from '../router'
 import { suscribirRecorrido, recorridoEnCurso } from '../recorrido'
 import { calcularPuntaje, lineaPublica, puntajeVisible, insignias, tieneLlave, formatoPuntaje, cuentaParaPuntaje, fraccionDescontada, fraccionReclamoDevuelta,
-  valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
+  valorDelAlquiler, ordenarVitrina, alquileresDeReputacion, alquileresDeReputacionServidor, zonaVitrina, MINIMO_PARA_PUNTAJE, MINIMO_POR_CANTON, type Insignia } from './puntaje'
 import { useReputacion, guardarDatos, aceptarRep01, aceptar, activa, leer, validarNombre, validarCanton, type EstadoReputacion, type Opcion } from './consentimiento'
 import { pedirRevision, revisiones, enRevisionIds, validarRevision, NOTA_MAX, type Revision } from './revision'
 import { avisoCambio, hechosVencidos, avisoVencido, visto, marcarVisto, type Aviso } from './avisos'
@@ -91,7 +92,14 @@ const nombreDe = (e: EstadoReputacion, u: Usuario) => e.nombre ?? u.nombre
 const rolDeRuta = (x?: string): Rol => x === 'inquilino' ? 'inquilino' : 'dueno'
 /** Los alquileres de esta persona en este papel que cuentan para su reputación (los dos con perfil: Legal, 25/10). */
 // Legal (26/10, 2:27 a. m.; Ley 8968, art. 5): un alquiler cuenta solo si las dos partes tienen perfil, y solo si cerró después de aceptarlo.
-const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
+// 27/10: con servidor, el perfil de la otra parte lo sabe el servidor (no este navegador): lk_reputacion_de_mis_alquileres.
+const mios = (todos: Alquiler[], u: Usuario, rol: Rol) => conServidor ? alquileresDeReputacionServidor(todos, u.email, rol, infoReputacion)
+  : alquileresDeReputacion(todos, u.email, rol, tienePerfilReputacion, perfilDesde)
+/** Los alquileres de la app y, con servidor, la información de reputación de cada uno (vuelve a dibujar cuando llega). */
+function useAlquileres() { const t = useAlquileresStore(); usePerfilesServidor(t, conServidor); return t }
+/** Si ya llegaron los alquileres y, con servidor, la información de reputación. Mientras carga, o si la carga falló, no se muestra el
+ *  conteo ni se compara el puntaje: así no aparece un 0 falso («Todavía no tienes alquileres cerrados.», «Nuevo en Lockumi · 0…»). */
+function useListo(todos: readonly Alquiler[]) { const l = useEstadoAlquileres(); return (l === 'listo' ? (conServidor ? estadoInfoReputacion(todos) : 'listo') : l) === 'listo' }
 const desde = (xs: Alquiler[]) => xs.map(a => a.inicio).filter(Boolean).sort()[0]
 
 function Insignias({ lista }: { lista: Insignia[] }) {
@@ -103,7 +111,7 @@ function Insignias({ lista }: { lista: Insignia[] }) {
 /** Puntaje con las revisiones pedidas (REP-11): esos alquileres no cuentan y se ve «En revisión». */
 const puntajeDe = (todos: Alquiler[], u: Usuario, rol: Rol, ahora = Date.now()) => calcularPuntaje(mios(todos, u, rol), rol, ahora, enRevisionIds(u.email, rol))
 function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
-  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now()
+  const todos = useAlquileres(), e = useReputacion(u.email), ahora = Date.now(), listo = useListo(todos)
   const xs = mios(todos, u, rol), p = puntajeDe(todos, u, rol, ahora), ins = insignias(xs, rol), llave = tieneLlave(xs, rol, ahora)
   const borrado = solicitudBorrado(u.email)
   const nombre = nombreDe(e, u), cerrados = xs.filter(cuentaParaPuntaje), completos = cerrados.filter(a => fraccionDescontada(a, ahora) === 0).length
@@ -122,11 +130,11 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
         <div className="rp-fila"><Papel rol={rol} />{e.canton && <span className="chip chip--neutro chip--mini">{zonaDe(e.canton)}</span>}</div>
         <p className="nota" style={{ marginTop: 8 }}>{UI.asiTeVen}{desde(xs) ? ' · ' + UI.enLockumiDesde(mesAnio(desde(xs)!)) : ''}</p>
         <div className="rp-puntaje">
-          {puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
-          <div><div className="rp-linea">{lineaPublica(p)}</div>
-            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>
+          {listo && puntajeVisible(p) ? <Anillo valor={p.valor!} /> : null}
+          {listo && <div><div className="rp-linea">{lineaPublica(p)}</div>
+            <p className="nota">{p.enRevision ? NOTA_EN_REVISION : p.cerrados < MINIMO_PARA_PUNTAJE ? TEXTO_PUNTAJE_NUEVO : UI.segunLockumi}</p></div>}
         </div>
-        {llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
+        {listo && llave && puntajeVisible(p) && <p style={{ marginTop: 12 }}><span className="rp-llave rp-ondas"><Sello />{NOMBRE_LLAVE}</span></p>}
         <h3 className="h3" style={{ marginTop: 'var(--s4)' }}>{UI.insignias}</h3>
         <Insignias lista={ins} />
         <p className="rp-aviso">{AVISO_PERFIL} <a href="#/perfil/calculo">{UI.comoSeCalcula}</a></p>
@@ -134,7 +142,8 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
     </section>
     <section className="glass tarjeta" aria-labelledby="rp-solo">
       <p id="rp-solo" className="rp-solo"><Icono n="candado" />{UI.soloTu}</p>
-      <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>
+      {listo && <p style={{ marginTop: 6 }}>{rol === 'dueno' ? UI.devolvioDe(completos, cerrados.length) : UI.recibioDe(completos, cerrados.length)}</p>}
+      {listo && rol === 'dueno' && cerrados.length - completos >= 1 && <p className="nota" style={{ marginTop: 6 }}>{UI.notaReparto}</p>}
     </section>
     {!borrado && <section className="glass tarjeta" aria-labelledby="rp-op">
       <p><Md t={PERFIL_FIJO} /></p>
@@ -246,8 +255,9 @@ function PedirRevision({ u }: { u: Usuario }) {
 }
 
 // ——— REP-12: avisos en la app cuando cambia el puntaje o un hecho deja de contar ———
-function useAvisos(u: Usuario, activo = true): [Aviso | null, () => void] {
-  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0)
+function useAvisos(u: Usuario, encendido = true): [Aviso | null, () => void] {
+  // Mientras carga (o si falló) no se compara: el 0 de la carga no se guarda como «visto» ni da un aviso (o correo) de cambio falso.
+  const todos = useAlquileres(), ahora = Date.now(), [, setN] = useState(0), listo = useListo(todos), activo = encendido && listo
   const estado = (['dueno', 'inquilino'] as Rol[]).map(rol => { const xs = mios(todos, u, rol), linea = lineaPublica(puntajeDe(todos, u, rol, ahora)), v = visto(u.email, rol)
     const vencidos = hechosVencidos(xs, rol, ahora, v.vencidos ?? [])
     return { rol, linea, v, vencidos, aviso: vencidos[0] ? avisoVencido(vencidos[0], linea) : avisoCambio(v.linea, linea, xs) } })
@@ -541,7 +551,12 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   // con la fecha y hora de esa aceptación (u.terminos.fecha). Una cuenta con un REP-01 anterior lo conserva (aceptarRep01 no lo pisa).
   useState(() => { try { if (u.terminos?.version === V_REPUTACION) aceptarRep01(u.email, textoPerfil113(), u.terminos.fecha) } catch { /* sin almacenamiento */ } return 0 })
   const e = useReputacion(u.email)
+  const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
   useEffect(() => { subirAceptacion(u.email, e.rep01).catch(() => { /* se reintenta en la próxima carga; el servidor explica qué hacer si bloquea */ }) }, [u.email, e.rep01])
+  // Al confirmar el correo con el código (porConfirmar pasa a null) se reintenta: antes de eso el servidor la rechazaba (403) sin avisar.
+  const sinConfirmar = !!porConfirmar, estuvoSinConfirmar = useRef(false)
+  useEffect(() => { if (sinConfirmar) { estuvoSinConfirmar.current = true; return }
+    if (estuvoSinConfirmar.current) { estuvoSinConfirmar.current = false; subirAceptacion(u.email, e.rep01).catch(() => { /* idem */ }) } }, [sinConfirmar, u.email, e.rep01])
   const [raiz, a, b] = r.split('/').filter(Boolean)   // ['perfil', a, b]
   const perfil = raiz === 'perfil'
   useNoIndex(perfil)
@@ -551,7 +566,6 @@ export default function Reputacion({ u, r, salir, children }: { u: Usuario; r: s
   const [aviso, avisoListo] = useAvisos(u, !pendiente)
   // Legal 9:00 p. m.: entró con el código por correo de Cavos → primero «Revisa tu correo» (el código de Lockumi). «Cancelar» la oculta
   // en esta carga; sin el código el servidor no da el correo por verificado (las acciones de la reputación dicen cómo seguir).
-  const porConfirmar = usePorConfirmar(u.email), [omitido, setOmitido] = useState(false)
   const enRecorrido = useSyncExternalStore(suscribirRecorrido, recorridoEnCurso, () => false)
   if (porConfirmar && !omitido) return <ConfirmarCorreo key={porConfirmar.correo} p={porConfirmar} cancelar={() => setOmitido(true)} />
   if (perfil && a === 'eliminar') return <Eliminar u={u} paso={b} salir={salir} />

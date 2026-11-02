@@ -11,7 +11,8 @@ import { aAlquiler, mensajeServidor, type Filas } from './mapeo'
 import type { Aceptacion } from './aceptaciones'
 import { usarCuentaCon, salirCon, K_SESION } from './cuenta-sesion'
 
-export class ErrorServidor extends Error {}
+/** codigo: el SQLSTATE de Postgres cuando el servidor rechazó la llamada (p. ej. '28000' = el correo de la sesión no está verificado); sin él: falla de red u otra. */
+export class ErrorServidor extends Error { codigo?: string }
 let cliente: Promise<SupabaseClient> | null = null
 export const supabase = () => cliente ??= import('@supabase/supabase-js').then(({ createClient }) =>
   createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storageKey: K_SESION } }))
@@ -32,21 +33,24 @@ export async function tokenSesion(): Promise<string> {
 }
 const rpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Promise<T> => {
   await sesion(); const { data, error } = await (await supabase()).rpc(fn, args)
-  if (error) throw new ErrorServidor(mensajeServidor(error)); return data as T
+  if (error) { const e = new ErrorServidor(mensajeServidor(error)); const c = (error as { code?: unknown }).code; if (typeof c === 'string') e.codigo = c; throw e }
+  return data as T
 }
 
 // ── Caché y suscripción ──
-let datos: Alquiler[] = []; let yo = ''; let cargado = false
+let datos: Alquiler[] = []; let yo = ''; let cargado = false; let fallo = false
 const subs = new Set<() => void>(); const avisar = () => subs.forEach(f => f())
 // Cuenta de esta sesión (cuenta-sesion.ts): al cambiar de cuenta o salir, la lista de la cuenta anterior se borra de inmediato.
 let cambio: { c: string; p: Promise<boolean> } | null = null
 const deps = { get storage() { return localStorage }, salir: async () => (await supabase()).auth.signOut() }
-const vaciar = () => { datos = []; yo = ''; cargado = false; avisar() }
+const vaciar = () => { datos = []; yo = ''; cargado = false; fallo = false; avisar() }
+/** La primera carga falló: se marca como cargada (para no esperar para siempre), pero sin datos confiables. */
+const fallar = () => { cargado = true; fallo = true; avisar() }
 /** Llamar con el correo de la cuenta que entró (al entrar y al cargar la app). Si la sesión era de otra cuenta, la termina. */
 export function usarCuenta(correo: string): Promise<boolean> {
   const c = correo.trim().toLowerCase()
   if (cambio?.c === c) return cambio.p
-  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(() => { cargado = true; avisar() }) } return otra }).catch(() => false)
+  const p = usarCuentaCon(c, deps).then(otra => { if (otra) { vaciar(); if (subs.size) void recargar().catch(fallar) } return otra }).catch(() => false)
   cambio = { c, p }; return p
 }
 /** Al salir: termina la sesión anónima de esta cuenta y borra su lista. */
@@ -63,7 +67,7 @@ export async function recargar() {
   const sb = await supabase(); yo = await sesion()
   const { data: cs, error } = await sb.from('lk_contratos').select('id, direccion, monto, inicio, fin, reglas, email_inquilino, estado, ventana_inicio, ventana_segundos, escrow_contract_id, resultado, liquidacion_tx, creado_en, actualizado_en').order('creado_en', { ascending: false })
   if (error) throw new ErrorServidor(mensajeServidor(error))
-  const ids = (cs ?? []).map(c => c.id); if (!ids.length) { datos = []; cargado = true; avisar(); return }
+  const ids = (cs ?? []).map(c => c.id); if (!ids.length) { datos = []; cargado = true; fallo = false; avisar(); return }
   const de = (t: string, cols: string) => sb.from(t).select('contrato_id, ' + cols).in('contrato_id', ids)
   const [ps, as, fs, fts, rs, es] = await Promise.all([
     de('lk_participantes', 'rol, usuario, email_cavos, direccion_stellar'), de('lk_actas', 'etapa, cuartos'), de('lk_firmas', 'etapa, rol, firmado_en'),
@@ -101,7 +105,7 @@ export async function recargar() {
     if (a.miRol === 'dueno' && !a.inquilinoUnido && inv[a.id]) a.invitacion = linkInvitacion(a.id, inv[a.id])
     return a
   })
-  cargado = true; avisar()
+  cargado = true; fallo = false; avisar()
 }
 
 let canal: RealtimeChannel | null = null; let sondeo: ReturnType<typeof setInterval> | null = null; let pendiente: ReturnType<typeof setTimeout> | null = null
@@ -118,9 +122,11 @@ export const repositorio = {
   todos: () => datos,
   obtener: (id: string) => datos.find(a => a.id === id),
   cargado: () => cargado,
+  /** «cargando» hasta la primera respuesta; «error» si esa carga falló (la lista vacía no es un 0 real). */
+  estado: (): 'cargando' | 'listo' | 'error' => !cargado ? 'cargando' : fallo ? 'error' : 'listo',
   subscribe(f: () => void) {
     subs.add(f)
-    if (subs.size === 1) { void recargar().catch(() => { cargado = true; avisar() }); void conectarTiempoReal().catch(() => {}) }
+    if (subs.size === 1) { void recargar().catch(fallar); void conectarTiempoReal().catch(() => {}) }
     return () => { subs.delete(f); if (!subs.size) { void canal?.unsubscribe(); canal = null; if (sondeo) clearInterval(sondeo) } }
   },
 }
@@ -174,6 +180,8 @@ export const servidor = {
   /** Apple con correo oculto: ¿esta cuenta ya guardó su correo real para avisos? (20261026080000; no devuelve correos) */
   tengoCorreoReal: () => rpc<boolean>('lk_tengo_correo_real', {}),
   necesitaRep01: (email: string) => rpc<boolean>('lk_necesita_rep01', { p_correo: email }),
+  /** Reputación con servidor (20261027140000): por cada alquiler propio, si cuenta (las dos partes con perfil) y desde cuándo. Sin correos. */
+  reputacionDeMisAlquileres: () => rpc<{ contrato_id: string; cuenta: boolean; desde: string | null }[]>('lk_reputacion_de_mis_alquileres', {}),
   /** Manda el token que el kit de Cavos ya guarda (getAuthToken(); el login no cambia) a /api/verificar-correo con la sesión de Supabase.
    *  codigo: true (403, Legal 25/10 9:00 p. m.) = token de correo con aud «cavos-email»: el correo queda por confirmar con el código de
    *  6 números que Lockumi mandó (motivo: 'minuto' | 'hora' | 'envio' si no salió uno nuevo). */

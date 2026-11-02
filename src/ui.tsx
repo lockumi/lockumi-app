@@ -1,4 +1,5 @@
 import { pruebaCompleta } from './prueba/interruptor'
+import { exacto } from '../api/_lib/centimos'
 import { modoReal } from './services/auth'
 import { abrirRecorrido } from './recorrido'
 import { modoPrueba, escrowReal } from './servidor/config'
@@ -73,6 +74,12 @@ const dos = (n: number) => new Intl.NumberFormat('es-CR', { minimumFractionDigit
 export const usd = (n: number) => pruebaCompleta() ? dos(n) + ' USDC de prueba'
   : escrowReal ? dos(n) + ' USDC'
   : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code' }).format(n)
+/** Lo que se devuelve o se reparte (ya sin la comisión real de Trustless Work): mismo criterio que usd() (coma decimal, al menos
+ *  2 decimales y el mismo sufijo), pero exacto, sin redondear ni ceros de más: «0,997 USDC», «1,994 USDC de prueba», «1,00 USDC».
+ *  Pedido de Katherine (27/10/2026, 1:05 p. m. CR). El cálculo está en api/_lib/centimos.ts (netoTrustless). */
+export const usdExacto = (n: number) => pruebaCompleta() ? exacto(n) + ' USDC de prueba'
+  : escrowReal ? exacto(n) + ' USDC'
+  : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code', minimumFractionDigits: 2, maximumFractionDigits: 7 }).format(n)
 /** Rótulo siempre visible para lo que sigue simulado en la fase 1 (reglas, reclamos y mediador). */
 export const Simulado = ({ texto = 'Simulado' }: { texto?: string }) => <span className="demo demo--simulado">{texto}</span>
 const d = (s: string | number) => typeof s === 'string' && s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s)

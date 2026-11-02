@@ -8,8 +8,9 @@ vi.mock('../auth', () => ({
   authCavos: async () => ({ getAuthToken: () => 'tok', restoreIdentity: () => ({ userId: 'u-1', email: 'ana@ejemplo.cr' }), hasSocialRecoveryCredential: () => false, consumeSocialRecoveryCredential: () => undefined }),
 }))
 vi.mock('@cavos/kit', () => ({ Cavos: { connect: h.connect }, PasskeyPrf: class { o: unknown; constructor(o: unknown) { this.o = o } }, VaultClient: { attach: h.attach } }))
+import { detalleFallo } from '../firmante'
 import { conectarBilletera, olvidarBilletera, NO_FIRMANTE, esTextoNoFirmante, mensajeFirma } from '../billetera'
-import { SECURE_STEP, TEXTOS_LLAVE as T, asegurarLlave, recuperarConLlave, consultarLlave, crearLlave, aprobarConLlave, probarCuenta,
+import { SECURE_STEP, TEXTOS_LLAVE as T, asegurarLlave, recuperarConLlave, crearLlave, aprobarConLlave, probarCuenta,
   codigoErrorLlave, mensajeLlave, navegadorPermite, resultadoAprobar, llaveRegistrada, registrarLlave } from '../llave'
 
 const mem = () => { const m = new Map<string, string>(); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) } }
@@ -26,8 +27,8 @@ describe('paso obligatorio (secureStep required)', () => {
   it('la llave es obligatoria, como en Meteorito sin recuperación social', () => { expect(SECURE_STEP).toBe('required') })
   it('cuenta nueva (sin llave): la puerta pide crearla y no deja entrar', async () => {
     expect(await probarCuenta('ana@ejemplo.cr')).toBe('sin-llave')
-    expect(h.connect.mock.calls[0][0]).not.toHaveProperty('passkeyPrf')   // la firma de prueba no abre la ventana de la llave
-    expect(h.connect.mock.calls[1][0]).toHaveProperty('passkeyPrf')       // solo averigua si hay llave
+    expect(h.connect.mock.calls[0][0]).toHaveProperty('passkeyPrf')       // como Meteorito: passkeyPrf desde la primera conexión
+    expect(h.connect).toHaveBeenCalledTimes(1)                            // sin segunda conexión automática con llave
   })
   it('crear la llave: la guarda en el vault con la cuenta y el token del login, y la siguiente entrada pasa', async () => {
     expect(await asegurarLlave('ana@ejemplo.cr')).toEqual({ ok: true })
@@ -36,13 +37,12 @@ describe('paso obligatorio (secureStep required)', () => {
     expect(llaveRegistrada('ana@ejemplo.cr')).toBe(true); h.connect.mockClear()
     expect(await probarCuenta('ana@ejemplo.cr')).toBe('puede'); expect(h.connect).not.toHaveBeenCalled() // reusa la conexión, sin preguntar por la llave
   })
-  it('cuenta que ya tiene llave: entra y se recuerda', async () => {
-    h.restore = true; expect(await probarCuenta('ana@ejemplo.cr')).toBe('puede'); expect(llaveRegistrada('ana@ejemplo.cr')).toBe(true)
+  it('cuenta que ya tiene llave (la conexión lo dice): entra, sin segunda conexión', async () => {
+    h.restore = true; expect(await probarCuenta('ana@ejemplo.cr')).toBe('puede'); expect(llaveRegistrada('ana@ejemplo.cr')).toBe(true); expect(await probarCuenta('ana@ejemplo.cr')).toBe('puede'); expect(h.connect).toHaveBeenCalledTimes(1)
   })
-  it('si no se puede saber (red), no se entra sin llave: error para reintentar', async () => {
-    h.connect.mockImplementationOnce(async () => ({ wallet: () => ({ address: 'GPRUEBA', status: 'ready', signMessage: h.sign }) }))
-      .mockRejectedValueOnce(new Error('network down'))
-    expect(await probarCuenta('ana@ejemplo.cr')).toBe('error')
+  it('si la firma de prueba falla por red: error para reintentar, sin pedir llave', async () => {
+    h.connect.mockReset().mockRejectedValueOnce(new Error('network down'))
+    expect(await probarCuenta('ana@ejemplo.cr')).toBe('error'); expect(detalleFallo()).toMatch(/^firma · Error: network down/)
   })
   it('dispositivo sin la llave de la cuenta: no pregunta por la llave, queda en no-firmante', async () => {
     h.estado = 'needs-device-approval'; expect(await probarCuenta('ana@ejemplo.cr')).toBe('no-firmante'); expect(h.connect).toHaveBeenCalledTimes(1)
@@ -78,8 +78,7 @@ describe('dispositivo nuevo: recuperar con la llave de acceso', () => {
     expect(await recuperarConLlave('ana@ejemplo.cr')).toEqual({ ok: false, mensaje: T.noSoporta })
   })
   it('consultar, crear y aprobar sueltos (para otros flujos)', async () => {
-    h.restore = true; expect(await consultarLlave()).toBe(true); h.restore = false; expect(await consultarLlave()).toBe(false)
-    h.estado = 'needs-device-approval'; expect(await consultarLlave()).toBeNull(); h.estado = 'ready'
+    h.restore = true; olvidarBilletera(); expect((await conectarBilletera()).llave).toBe(true); h.restore = false; olvidarBilletera(); expect((await conectarBilletera()).llave).toBe(false)
     await crearLlave(); expect(h.enroll).toHaveBeenCalledTimes(1)
     expect((await aprobarConLlave()).estado).toBe('ready')
   })

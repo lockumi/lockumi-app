@@ -71,7 +71,7 @@ describe('(d) cierre con las dos aceptaciones', () => {
   it('dice que lo aceptaron las dos partes, con la comisión de 0,3 % y el comprobante', () => {
     const h = ver(cerrado)
     expect(h).toContain('Lo aceptaron las dos partes.'); expect(h).not.toContain('Lo decidió una persona mediadora')
-    expect(h).toContain('0,3 %'); expect(h).toContain('498,5000 USDC de prueba'); expect(h).toContain('299,1000 USDC de prueba')
+    expect(h).toContain('0,3 %'); expect(h).toContain('498,50 USDC de prueba'); expect(h).toContain('299,10 USDC de prueba')
     expect(h).toContain('https://stellar.expert/explorer/testnet/tx/' + 'b'.repeat(64)); expect(h).toContain('Ver comprobante en la red de prueba')
   })
   it('el mapeo conserva «cierre» del servidor', () => {

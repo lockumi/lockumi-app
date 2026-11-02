@@ -8,10 +8,12 @@ import { ESPERA_MEDIACION_C } from '../../screens/Detalle'
 
 const ID = '11111111-2222-4333-8444-555555555555', UID = '99999999-2222-4333-8444-555555555555'
 const ENV = { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srv', RESEND_API_KEY: 're_x', CORREOS_C: '1', LOCKUMI_CORREOS_BORRADOR: '1' }
-const falso = (participa: boolean, sesion = true) => { const urls: string[] = []
+const falso = (participa: boolean, sesion = true, med: { mediador?: boolean; estado?: string; via?: string } = {}) => { const urls: string[] = []
   const f = vi.fn(async (url: string) => { urls.push(url)
     if (url.endsWith('/auth/v1/user')) return sesion ? Response.json({ id: UID }) : new Response('{}', { status: 401 })
     if (url.includes('/rest/v1/lk_participantes')) return Response.json(participa ? [{ rol: 'dueno' }] : [])
+    if (url.includes('/rest/v1/lk_mediadores')) return Response.json(med.mediador ? [{ usuario: UID }] : [])
+    if (url.includes('/rest/v1/lk_contratos')) return Response.json([{ estado: med.estado ?? 'cerrado', resultado: med.via ? { via: med.via } : null }])
     if (url.includes('/rpc/lk_mediacion_vencimientos')) return Response.json(0)
     if (url.includes('/rpc/lk_correos_pendientes')) return Response.json([])
     if (url.includes('/rpc/')) return Response.json(0)
@@ -44,6 +46,22 @@ describe('POST /api/correo { tipo: avisos }', () => {
     const x = falso(true)
     await expect(atenderAvisos({ ...ENV, LOCKUMI_CORREOS_BORRADOR: undefined }, { alquiler: ID }, 'Bearer t', '', x.f)).rejects.toMatchObject({ estado: 503 })
     expect(x.urls).toContain('https://p.supabase.co/rest/v1/rpc/lk_mediacion_vencimientos')
+  })
+})
+
+describe('POST /api/correo { tipo: avisos } · persona mediadora (lk_mediadores, 27/10)', () => {
+  it('la mediadora registrada recibe 200 en un caso en mediación o cerrado por la mediación (antes 403)', async () => {
+    expect(await atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', '', falso(false, true, { mediador: true, estado: 'mediacion' }).f)).toEqual({ enviados: 0 })
+    const x = falso(false, true, { mediador: true, estado: 'cerrado', via: 'mediacion' })
+    expect(await atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', '', x.f)).toEqual({ enviados: 0 })
+    expect(x.urls.some(u => u.includes('/rest/v1/lk_mediadores?select=usuario&usuario=eq.' + UID))).toBe(true)
+  })
+  it('sigue en 403: mediadora en un alquiler que no pasó por la mediación, o alguien que no es mediadora', async () => {
+    await expect(atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', '', falso(false, true, { mediador: true, estado: 'cerrado', via: 'devuelto' }).f)).rejects.toMatchObject({ estado: 403 })
+    await expect(atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', '', falso(false, true, { mediador: true, estado: 'activo' }).f)).rejects.toMatchObject({ estado: 403 })
+    const y = falso(false, true, { mediador: false, estado: 'mediacion' })
+    await expect(atenderAvisos(ENV, { alquiler: ID }, 'Bearer t', '', y.f)).rejects.toMatchObject({ estado: 403 })
+    expect(y.urls.some(u => u.includes('/rpc/'))).toBe(false)
   })
 })
 

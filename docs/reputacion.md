@@ -223,6 +223,44 @@ correo válido de OTRA app de Cavos habría verificado ese correo en Lockumi.
    `lk_confirmar_correo_pendiente` usa el código (`lk_usar_codigo(usuario, correo, 'verificar_correo')`) y SOLO entonces registra el correo
    (método `email`). «Reenviar código» = `{ paso: 'pedir', accion: 'verificar_correo' }`. Al recargar (token ya usado, misma sesión y mismo
    correo) responde otra vez 403 `codigo: true` sin mandar otro código.
+**Volver con la llave de acceso sin haber escrito el código (27/10/2026, prueba real del PR #60):** el token que la app manda a
+`/api/verificar-correo` es el que el kit de Cavos guardó en el login (espejo de `src/services/sesionCavos.ts` en `localStorage`; el kit no
+renueva el token en silencio). El JWT del enclave dura 1 hora (`exp - iat` = 3600, medido el 27/10/2026 en un login real; `aud` «cavos-email»),
+pero el servidor solo lo acepta en sus primeros 5 minutos y una vez. Quien dejaba «Revisa tu correo» sin escribir el código (cerró la pestaña,
+el código llegó tarde) y volvía con su llave de acceso mandaba un token de hace 20 minutos o más: 403 «No pudimos confirmar el correo de tu
+cuenta. Sal de Lockumi…» (la app no lo muestra), el correo seguía sin confirmar, `lk_aceptar_reputacion` y el disparador
+`lk_participante_correo_verificado` (crear alquiler) respondían 403 y la app no volvía a pedir el código. Arreglo solo en la app (el servidor
+y el login no cambian, ni el diseño ni el flujo): (1) no se manda un token que el servidor va a rechazar (`tokenYaNoSirve`: `iat` de hace más de
+6 minutos —5 del servidor más 60 s de reloj— o vencido; un token que no es JWT sí se manda); (2) cuando el servidor deja el correo por
+confirmar, la app guarda en `localStorage` (`lockumi.correo-por-confirmar`) SOLO la cuenta, el correo y una vigencia de 55 minutos (el
+servidor lo guarda 1 hora: `lk_correo_pendiente`), nunca el token ni el código; (3) sin token que sirva (token viejo, ya enviado o pestaña nueva)
+y con esa marca vigente de la MISMA cuenta, `asegurarCorreo` vuelve a mostrar «Revisa tu correo» (la misma pantalla) sin mandar nada: el código
+que ya llegó vale 10 minutos y «Reenviar código» (`/api/codigo-correo`, `verificar_correo`) ya funciona sin token. No verifica nada: el correo
+solo queda verificado con el código correcto. La marca se borra al confirmar, si el servidor verifica el correo directo (Google/Apple) y al
+salir (`borrarSesion`). Fuera de esa hora, o sin marca (otro aparato), ver «Sesión restaurada sin el correo confirmado» más abajo (PR #61). Si el correo ya estaba confirmado, volver con la llave de
+acceso no necesita el token: el servidor decide con lo que esa sesión ya verificó. Pruebas: `src/reputacion/__tests__/volver-por-confirmar.test.ts`.
+Recargar la página (27/10/2026, prueba real del inquilino): `enviados` (tokens ya mandados) era solo de memoria, así que cada carga con el mismo token
+(menos de 6 minutos) lo volvía a mandar a `/api/verificar-correo`: 403 «Sal de Lockumi…» (ignorado por la app; el correo seguía confirmado en
+`lk_correos_verificados` por la sesión de Supabase, y el pago no depende de esa llamada), pero con 1 de los 5 intentos por sesión y 10 minutos menos, y
+si faltaba el código no volvía «Revisa tu correo». Ahora `sesionCavos.ts` guarda en `localStorage` (`lockumi.cavos.token-enviado`) la huella SHA-256
+(24 caracteres) de cada token que el servidor ya recibió o rechazó (7 minutos; máximo 5; se borra en `borrarSesion`; un fallo de red no cuenta) y
+`asegurarCorreo` no lo manda otra vez (con marca de por confirmar, vuelve la pantalla). Mismo test.
+**Sesión restaurada sin el correo confirmado (27/10/2026, PR #61; jurado, prueba real):** la marca local de 55 minutos solo existe en el aparato que
+mostró «Revisa tu correo» y vence; pasada esa hora (o en otro aparato) quien volvía con su llave de acceso entraba con «Tus alquileres» vacío y sin
+pedir el código, y `lk_aceptar_reputacion` respondía 403 sin avisar (la sesión de Supabase no tenía fila en `lk_correos_verificados`, así que los
+alquileres tampoco se vinculaban: `lk_vincular_alquileres` solo corre al confirmar el código). Detección (mecanismo que ya existía, sin migración ni
+endpoint nuevo): la app no puede leer `lk_correos_verificados` (RLS: `revoke all` a `authenticated`), así que, cuando no hay token que sirva y no hay
+marca vigente, `asegurarCorreo` llama a `lk_necesita_rep01(correo)` (stable, sin efectos; ya la usa la pantalla previa de REP-01), que responde
+**28000 (HTTP 403)** si el correo no es el verificado ACTIVO de ESTA sesión. `ErrorServidor.codigo` (repositorio.ts) ahora conserva el SQLSTATE del
+rechazo; solo `28000` cuenta como «sin confirmar» y muestra la MISMA pantalla «Revisa tu correo» (mismo flujo, «Reenviar código» sin token, sin
+textos nuevos). Una falla de red, `PGRST301` (sesión vencida) u otro error NO muestran nada (no hay falso aviso) y se vuelve a preguntar la próxima
+vez; con el correo confirmado no cambia nada y no se pregunta dos veces en la misma carga. No se guarda marca local (el servidor es la fuente).
+Al confirmar el código, `Reputacion` reintenta `subirAceptacion` (antes quedaba esperando la próxima carga) y los alquileres se vinculan
+(`vinculados` → recarga). No cambia: entrada normal con token reciente (`/api/verificar-correo`), recarga con la huella (412a806), «Reenviar código»
+sin token (56c20ba), invitaciones (`InvitacionCodigo`) ni el servidor. Límite conocido: si el servidor ya olvidó el correo por confirmar (más de 1 hora,
+`lk_correo_pendiente`), «Reenviar código» responde con el texto de siempre «Sal de Lockumi, vuelve a entrar con tu correo…» (hace falta un token nuevo de
+Cavos). Pruebas: `src/reputacion/__tests__/sesion-sin-correo.test.tsx` (sin confirmar → «Revisa tu correo»; confirmado → la lista; error de red → sin
+falso aviso).
 Un token de otra app de Cavos ya no basta: el código llega al buzón de la persona dueña del correo. Google y Apple no cambian (siguen con su
 `aud` y el `nonce` con `CAVOS_APP_ID`). Si algún día `CAVOS_AUD_EMAIL` es un `aud` propio de Lockumi, el correo se registra como antes.
 Textos literales de Legal: título «Revisa tu correo»; «Te enviamos un código de 6 números a {correo}. Escríbelo aquí para confirmar tu
@@ -286,7 +324,7 @@ misma huella.
   (https://developer.apple.com/documentation/signinwithapple/verifying-a-user). Observado por terceros: `exp - iat` = 10 minutos
   (https://blog.curtisherbert.com/so-theyve-signed-in-with-apple-now-what/). No es documentación de Apple.
 - Cavos, código por correo: el CÓDIGO vence a los 5 minutos y admite 3 intentos (https://docs.cavos.xyz/docs/auth). La duración del JWT del
-  enclave NO está documentada: hay que medir `exp - iat` en un token real (lista de abajo).
+  enclave NO está documentada; medida el 27/10/2026 en un login real: `exp - iat` = 3600 s (1 hora), `aud` «cavos-email».
 Con cualquiera de los tres, Lockumi solo acepta el token en sus primeros 5 minutos (y una sola vez).
 
 **El nonce NO se verifica del todo (riesgo residual aceptado para la demo):** Cavos arma el nonce de Google/Apple como
@@ -363,8 +401,8 @@ prueba «JWKS reales» usa esta copia: las llaves pasan la regla y la del enclav
 dejara de publicar `use`, todas las entradas de ese emisor darían 403: volver a leer el JWKS antes de encender.
 
 **Valores reales de CAVOS_* (Legal 6:04 p. m., sin pedir secretos; 25/10 6:06 p. m. CR):**
-- `VITE_CAVOS_APP_ID` (clave pública del frontend): `cav_c1b1cec42e7b62cd01f377b5a3291b276079`, en el bundle publicado de app.lockumi.com
-  (`/assets/index-KGYSB8bC.js`). NO es el prefijo del nonce.
+- `VITE_CAVOS_APP_ID` (clave pública del frontend): `cav_c1b1cec42e7b62cd01f377b5a3291b276079` (app vieja), en el bundle publicado de app.lockumi.com
+  (`/assets/index-KGYSB8bC.js`). NO es el prefijo del nonce. **27/10/2026:** existe la app nueva «Lockumi v2» (`cav_14f91c44d57f4290070c0f9705f50164564b`, su `CAVOS_APP_ID` interno es `b2f83f81-a07d-4ef5-b8a5-167502aea497`); producción sigue con la vieja hasta que Katherine apruebe el cambio. Ver [firma-cavos.md](firma-cavos.md#app-de-cavos-lockumi-v2-27102026-nuevo-vite_cavos_app_id).
 - `CAVOS_APP_ID` = **`514692ec-9202-4015-b53c-4b8824dca4d5`** (confirmado): `GET https://cavos.xyz/api/oauth/v2/google?app_id=cav_…&nonce=<hash>`
   (lo mismo que hace el kit al tocar «Google», `dist/chunk-GD4BWPID.mjs:94-101`, sin completar el login) devuelve la URL de Google con
   `nonce=514692ec-….<hash>` y un `state` con `"app_id":"514692ec-9202-4015-b53c-4b8824dca4d5"`. Igual en Apple. Es el «app id» del nonce que
@@ -441,3 +479,66 @@ No se implementan (por ahora): perfil solo para registrados, apagar Destacados/N
   existir; los registros ya guardados con la 1.11-demo (aceptaciones del login, REP-01, alquileres locales de una persona) se quedan con
   esa etiqueta, pero ninguna ruta mostraría su texto (su link abriría la 1.6-demo, `rutaDe`), así que habría que volver a publicarla o
   guardarla como archivo.
+
+## Reputación con servidor: el perfil de la otra parte (27/10/2026)
+
+**Bug (matriz en producción, 27/10):** el dueño y el inquilino de `0070af80` y `b10557f9` (2 cerrados por papel, los dos con perfil en
+`lk_reputacion_aceptaciones`) veían «Nuevo en Lockumi · 0 alquileres cerrados». **Causa:** `alquileresDeReputacion` exige que las dos partes
+tengan perfil (regla de Legal, 25/10) y lo miraba con `tienePerfilReputacion(email)` / `perfilDesde(email)`, que leen el localStorage de ESTE
+navegador. En dos aparatos el perfil de la otra parte nunca está ahí, así que ningún alquiler contaba. No era la función SQL, la dirección,
+el rol ni la pestaña.
+
+**Arreglo:** con servidor (`conServidor`), `Pantallas.tsx` usa `alquileresDeReputacionServidor` con la respuesta de
+`lk_reputacion_de_mis_alquileres()` (migración `20261027140000_reputacion_contraparte.sql`): por cada alquiler donde participa quien llama,
+`cuenta` (= `lk_cuenta_para_reputacion`) y `desde` (la primera aceptación de perfil más tardía de las dos partes; lo cerrado antes no cuenta,
+Términos 15.1). No devuelve correos ni datos de la otra parte. Sin servidor (demo de una persona) no cambia nada. Sin respuesta del servidor
+no cuenta nada y se vuelve a preguntar en la próxima carga. Sin cambios de textos ni de diseño.
+Pruebas: `src/reputacion/__tests__/reputacion-servidor.test.ts`. Ensayo en producción dentro de una transacción que se deshizo (27/10).
+**Volver atrás:** `supabase/revert/20261027140000_reputacion_contraparte_revert.sql` y `git revert -m 1 <merge>` (primero el código).
+
+## «Solo tú ves esto»: frase corta (27/10/2026)
+
+Aprobado por Katherine el 27/10/2026, 4:52 p. m. CR («Usa la frase corta de la reputación», opción B de Legal), y los casos de Legal
+el 27/10/2026, 5:03 p. m. CR («Sí, aprueba los casos de Legal para la frase de reputación»). Solo textos: `UI.devolvioDe`, `UI.recibioDe`
+y `UI.notaReparto` en `src/reputacion/textos.ts` (los usa «Mi perfil» en `Pantallas.tsx`). Sin cambios de diseño, de la insignia
+«Devolvió el depósito completo», de `src/legal/**` ni de `ContratoDoc.tsx`.
+
+{t} = alquileres que cuentan para el puntaje; {c} = los de `fraccionDescontada === 0` (como antes); {r} = {t} − {c}. Reparto = «un reparto
+del depósito (reclamo aceptado o mediación)».
+
+| Caso | Dueño | Inquilino |
+|---|---|---|
+| t = 0 | «Todavía no tienes alquileres cerrados.» | «Todavía no tienes alquileres cerrados.» |
+| t = 1, completo | «Tu único alquiler cerrado terminó con el depósito devuelto completo al inquilino.» | «En tu único alquiler cerrado recibiste tu depósito completo.» |
+| t = 1, reparto | «Tu único alquiler cerrado terminó con un reparto del depósito (reclamo aceptado o mediación).» + nota | «En tu único alquiler cerrado hubo un reparto del depósito (reclamo aceptado o mediación).» |
+| t ≥ 2, todos completos | «Tus {t} alquileres cerrados terminaron con el depósito devuelto completo.» | «En tus {t} alquileres cerrados recibiste tu depósito completo.» |
+| t ≥ 2, todos con reparto | «Tus {t} alquileres cerrados terminaron con un reparto del depósito (reclamo aceptado o mediación).» + nota | «En tus {t} alquileres cerrados hubo un reparto del depósito (reclamo aceptado o mediación).» |
+| mixta (c ≥ 1 y r ≥ 1) | «De tus {t} alquileres cerrados: {c} con el depósito devuelto completo y {r} con un reparto del depósito (reclamo aceptado o mediación).» + nota | «De tus {t} alquileres cerrados: en {c} recibiste tu depósito completo y en {r} hubo un reparto del depósito (reclamo aceptado o mediación).» |
+
+- En la frase mixta, una parte que vale 1 se queda igual («1 con…», «en 1 recibiste…»). Nunca sale «0 con…».
+- **Nota 15.3** (debajo, solo para el dueño y solo con r ≥ 1; nunca con t = 0): «Un reparto no baja tu puntaje, salvo que se haya devuelto al
+  inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).»
+
+Pruebas: `src/reputacion/__tests__/frase-corta.test.tsx` (un test por caso y la nota en pantalla; la insignia no cambia).
+
+## «Mi perfil» sin parpadeo mientras carga (27/10/2026)
+
+Aprobado por Katherine el 27/10/2026, 9:21 p. m. CR («Sí, arreglen el parpadeo sin tocar el diseño»).
+
+**Problema:** con servidor, mientras llegaban los alquileres (o la información de reputación de `lk_reputacion_de_mis_alquileres()`),
+«Mi perfil» contaba 0 alquileres y mostraba un momento «Todavía no tienes alquileres cerrados.» (y «Nuevo en Lockumi · 0 alquileres
+cerrados») antes del conteo real.
+
+**Arreglo:** «Mi perfil» espera la respuesta antes de mostrar el conteo. Mientras carga, o si la carga falla, no se muestra nada en esos
+lugares (ni la frase de «Solo tú ves esto», ni la nota 15.3, ni la línea del puntaje, el anillo o la Llave); el resto de la pantalla queda igual.
+Sin cambios de diseño, estilos, textos, datos, `src/legal/**` ni `ContratoDoc.tsx`.
+
+- `repositorio.estado()` (`src/servidor/repositorio.ts`): «cargando» hasta la primera respuesta, «error» si esa carga falló, «listo» con datos.
+- `estadoAlquileres()` / `useEstadoAlquileres()` (`src/store.ts`): sin servidor, siempre «listo».
+- `estadoInfoReputacion(todos)` (`src/reputacion/perfilesServidor.ts`): sin alquileres cerrados, «listo»; si no, «cargando» hasta la respuesta
+  para ese conjunto de alquileres cerrados, o «error» si falló (se reintenta en la próxima carga, como antes).
+- Los avisos de «Tu puntaje cambió» (REP-12) tampoco comparan mientras carga o si falló: el 0 de la carga no se guarda como «visto»
+  ni produce un aviso (o correo) de cambio falso.
+- Con datos, t = 0 sigue mostrando «Todavía no tienes alquileres cerrados.» y t ≥ 1 la frase de siempre.
+
+Pruebas: `src/reputacion/__tests__/parpadeo-carga.test.tsx` (cargando, error, sin aviso falso, t = 0 y t ≥ 1; y los estados de la información del servidor).

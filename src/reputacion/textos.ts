@@ -201,6 +201,8 @@ export const VITRINA = {
   vacio: 'Todavía no hay suficientes personas en esta zona para mostrar una lista.',
 }
 
+const SIN_CERRADOS = 'Todavía no tienes alquileres cerrados.', REPARTO = 'un reparto del depósito (reclamo aceptado o mediación)'
+
 // LEGAL: revisado (25/10) · textos de pantalla nuevos, redactados para este paso (no salen de Legal).
 export const UI = {
   entradaTitulo: ENTRADA.titulo,
@@ -215,8 +217,20 @@ export const UI = {
   insignias: 'Insignias',
   sinInsignias: 'Las insignias aparecen cuando firmas un contrato, guardas un depósito o subes fotos en la app.',
   soloTu: 'Solo tú ves esto',
-  devolvioDe: (d: number, t: number) => `Devolvió ${d} de ${t} depósitos completos`,
-  recibioDe: (d: number, t: number) => `Recibió su depósito completo en ${d} de ${t} alquileres`,
+  // LEGAL: Katherine, 27/10/2026 4:52 p. m. CR · frase corta (opción B de Legal); casos de Legal aprobados 27/10/2026 5:03 p. m. CR.
+  // c = depósito completo (fraccionDescontada === 0); r = t − c, con reparto. Textos literales por caso.
+  devolvioDe: (c: number, t: number) => t <= 0 ? SIN_CERRADOS
+    : t === 1 ? (c === 1 ? 'Tu único alquiler cerrado terminó con el depósito devuelto completo al inquilino.' : `Tu único alquiler cerrado terminó con ${REPARTO}.`)
+    : c === t ? `Tus ${t} alquileres cerrados terminaron con el depósito devuelto completo.`
+    : c === 0 ? `Tus ${t} alquileres cerrados terminaron con ${REPARTO}.`
+    : `De tus ${t} alquileres cerrados: ${c} con el depósito devuelto completo y ${t - c} con ${REPARTO}.`,
+  recibioDe: (c: number, t: number) => t <= 0 ? SIN_CERRADOS
+    : t === 1 ? (c === 1 ? 'En tu único alquiler cerrado recibiste tu depósito completo.' : `En tu único alquiler cerrado hubo ${REPARTO}.`)
+    : c === t ? `En tus ${t} alquileres cerrados recibiste tu depósito completo.`
+    : c === 0 ? `En tus ${t} alquileres cerrados hubo ${REPARTO}.`
+    : `De tus ${t} alquileres cerrados: en ${c} recibiste tu depósito completo y en ${t - c} hubo ${REPARTO}.`,
+  /** Solo para el dueño y solo con al menos 1 reparto (r ≥ 1). */
+  notaReparto: 'Un reparto no baja tu puntaje, salvo que se haya devuelto al inquilino el 90 % o más de lo que reclamaste (cláusula 15.3).',
   pasoDe: (i: number, n: number) => `Paso ${i} de ${n}`,
   datosTitulo: '¿Cómo te verán?',
   nombreVisible: 'Nombre visible',

@@ -8,7 +8,7 @@
 //   * el build de producción falla (guardaCorreos en vite.config.ts, VERCEL_ENV=production).
 // Para aprobar un texto: Legal lo confirma, se cambia `legal: 'revisar'` por `legal: 'revisado'` y el comentario por «LEGAL: revisado (fecha)».
 import { fechaHoraCR, fechaCR, horaCR } from './plazos.js'
-import { repartoCentimos, cuatroDecimales } from './centimos.js'
+import { repartoCentimos, exacto, netoTW } from './centimos.js'
 
 // LEGAL: revisado (25/10, lista de Legal) · nota de demo arriba del texto
 export const DEMO = 'Demo en la red de prueba: sin dinero real.'
@@ -35,12 +35,11 @@ export const textoInvitacion = (nombre: string, rol: 'dueno' | 'inquilino') =>
 export const BOTON_INVITACION = 'Abrir la demo de Lockumi'
 
 // ── Formatos (iguales a la app: montoPrueba de src/prueba/dosPersonas.ts y fechaHoraCR de plazos.ts) ──
-const COMISION = 0.003
 // Legal 25/10 5:09 p. m. (punto 8): los montos siempre con 2 decimales («0,50»).
 const fmt = (n: number) => n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const r7 = (n: number) => Math.round(n * 1e7) / 1e7
 export const usdc = (n: number) => `${fmt(n)} USDC de prueba`
-export const llega = (n: number) => r7(n * (1 - COMISION))
+/** Lo que llega de un monto: exacto, con la comisión real de Trustless Work (api/_lib/centimos.ts). */
+export const llega = (n: number) => netoTW(n)
 export const fechaHora = (t: number) => `${fechaHoraCR(t)}, hora de Costa Rica`
 export { horaCR }
 
@@ -66,10 +65,10 @@ const f = (t?: number) => fechaHora(t ?? 0)
 // En céntimos: las partes mostradas suman exactamente el depósito (api/_lib/centimos.ts)
 const rc = (d: DatosCorreo) => repartoCentimos(d.dueno ?? 0, d.inquilino ?? 0)
 const reparto = (d: DatosCorreo) => `${m(rc(d).dueno)} al dueño y ${m(rc(d).inquilino)} al inquilino`
-// Lo que llega y la comisión, con 4 decimales exactos (Legal 25/10, 6:10 p. m.: con 2 la comisión salía 0,00)
-const m4 = (n: number) => `${cuatroDecimales(n)} USDC de prueba`
-const llegan = (d: DatosCorreo) => `Llegan ${m4(rc(d).llegaDueno)} al dueño y ${m4(rc(d).llegaInquilino)} al inquilino`
+// Lo que llega y la comisión: exactos, sin redondear ni ceros de más (Katherine 27/10/2026, 1:05 p. m. CR; antes 4 decimales fijos)
+const m4 = (n: number) => `${exacto(n)} USDC de prueba`
 const comision = (d: DatosCorreo) => m4(rc(d).comision)
+const repartoAcordado = (d: DatosCorreo, inicio = 'Reparto acordado') => `${inicio}: ${reparto(d)}. Trustless Work descuenta el 0,3 % de cada monto (${comision(d)} en total), así que llegan ${m4(rc(d).llegaDueno)} al dueño y ${m4(rc(d).llegaInquilino)} al inquilino. Lockumi no recibe nada.`   // Katherine 27/10/2026, 4:00 p. m. CR: brutos como antes; comisión y netos exactos
 const REVISAR_Y_RECLAMAR = [{ texto: 'Revisar y reclamar', destino: 'alquiler' as const }, { texto: 'Todo bien, devolver', destino: 'devolver' as const }]
 
 /** Plantillas de C por clave «COR-C-0x/variante». Cada una con su marca de Legal en el comentario de arriba. */
@@ -121,7 +120,7 @@ export const TEXTOS: Record<string, Plantilla> = {
   // LEGAL: revisado (25/10, 5:31 p. m., OK para publicar C) · COR-C-06 resultado de la mediación (incluye la frase del borrado a los 30 días; P-09: frase completa de la Privacidad, Legal 25/10 5:09 p. m.)
   'COR-C-06/partes': { id: 'COR-C-06', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el resultado', destino: 'alquiler' }],
     asunto: () => 'Se registró el acuerdo de la Mediación Lockumi (demo)',
-    cuerpo: d => `Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de ${m(d.deposito)}, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. Reparto: ${reparto(d)}, cada monto menos el 0,3 % de comisión de Trustless Work. ${llegan(d)}; Trustless Work descuenta ${comision(d)}, y Lockumi no recibe nada. El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.` },
+    cuerpo: d => `Las dos partes aceptaron en la app el mismo reparto del depósito de prueba de ${m(d.deposito)}, y la persona mediadora lo registró. La persona mediadora no decidió el reparto: solo lo registró con las dos aceptaciones. ${repartoAcordado(d)} El reparto se paga en la red de prueba en cuanto la red lo confirme. Esto no es una sentencia ni una decisión de Lockumi, y no tiene efecto legal: es lo que las dos partes aceptaron dentro de la demo, según las reglas de los Términos (cláusulas 2.2 b y 6.8 e). Cualquiera de las dos partes puede acudir a los tribunales de Costa Rica. Borramos los datos de la mediación 30 días después de cerrar el caso, salvo que una de las partes nos pida guardarlos para un reclamo fuera de la app.` },
   // LEGAL: revisado (25/10) · COR-C-06 «sin acuerdo» (P-06, texto provisional de Producto): venció el plazo de la mediación
   'COR-C-06/vencida': { id: 'COR-C-06', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el caso', destino: 'alquiler' }],
     asunto: () => 'Venció el plazo de la Mediación Lockumi (demo) sin acuerdo',
@@ -133,15 +132,15 @@ export const TEXTOS: Record<string, Plantilla> = {
   // LEGAL: revisado (25/10) · COR-C-07 a) el dueño aprobó
   'COR-C-07/devuelto': { id: 'COR-C-07', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el alquiler', destino: 'alquiler' }],
     asunto: () => 'Se devolvió todo el depósito de prueba al inquilino',
-    cuerpo: d => `El dueño tocó «Todo bien, devolver». Se devuelve al inquilino todo el depósito de prueba de ${m(d.deposito)}, menos el 0,3 % de comisión de Trustless Work: llegan ${m(llega(d.deposito ?? 0))}. El dueño y Lockumi no reciben nada. Se entrega en cuanto la red de prueba lo confirme. El dueño ya no puede reclamar en la app.` },
+    cuerpo: d => `El dueño tocó «Todo bien, devolver». Se devuelve al inquilino todo el depósito de prueba de ${m(d.deposito)}, menos el 0,3 % de comisión de Trustless Work: llegan ${m4(llega(d.deposito ?? 0))}. El dueño y Lockumi no reciben nada. Se entrega en cuanto la red de prueba lo confirme. El dueño ya no puede reclamar en la app.` },
   // LEGAL: revisado (25/10) · COR-C-07 b) el dueño no aprobó ni reclamó
   'COR-C-07/automatico': { id: 'COR-C-07', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el alquiler', destino: 'alquiler' }],
     asunto: () => 'Venció el plazo sin reclamo: se devolvió el 100 % del depósito de prueba al inquilino',
-    cuerpo: d => `El dueño no aprobó ni reclamó dentro de su plazo. El sistema de Lockumi abrió una disputa en la red de prueba solo para poder devolver el depósito de prueba, y otra cuenta de Lockumi, la que resuelve disputas, entregó el 100 % al inquilino: ${m(d.deposito)}, menos el 0,3 % de comisión de Trustless Work. Llegan ${m(llega(d.deposito ?? 0))}. El dueño y Lockumi no reciben nada. Ninguna persona decidió este reparto.` },
+    cuerpo: d => `El dueño no aprobó ni reclamó dentro de su plazo. El sistema de Lockumi abrió una disputa en la red de prueba solo para poder devolver el depósito de prueba, y otra cuenta de Lockumi, la que resuelve disputas, entregó el 100 % al inquilino: ${m(d.deposito)}, menos el 0,3 % de comisión de Trustless Work. Llegan ${m4(llega(d.deposito ?? 0))}. El dueño y Lockumi no reciben nada. Ninguna persona decidió este reparto.` },
   // LEGAL: revisado (25/10) · COR-C-07 c) el inquilino aceptó el reclamo (P-07)
   'COR-C-07/acuerdo': { id: 'COR-C-07', legal: 'revisado', baja: true, nota: 'uno', botones: [{ texto: 'Ver el alquiler', destino: 'alquiler' }],
     asunto: () => 'El inquilino aceptó el reclamo: se repartió el depósito de prueba',
-    cuerpo: d => `El inquilino aceptó el reclamo de ${m(d.dueno)}. Reparto del depósito de prueba de ${m(d.deposito)}: ${reparto(d)}, cada monto menos el 0,3 % de comisión de Trustless Work. ${llegan(d)}. Lockumi no recibe nada. Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.` },
+    cuerpo: d => `El inquilino aceptó el reclamo de ${m(d.dueno)}. ${repartoAcordado(d, `Reparto del depósito de prueba de ${m(d.deposito)}`)} Se paga en la red de prueba en cuanto la red lo confirme. Es lo que las dos partes aceptaron en la app; no tiene efecto legal, y cualquiera de las dos puede acudir a los tribunales de Costa Rica.` },
   // LEGAL: revisado (25/10) · COR-C-08 variante A (sin alquiler abierto). Correo de servicio: no depende de la casilla.
   'COR-C-08/A': { id: 'COR-C-08', legal: 'revisado', baja: false, nota: null, botones: [],
     asunto: () => 'Recibimos tu pedido para eliminar tu cuenta de Lockumi',

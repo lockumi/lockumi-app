@@ -18,7 +18,7 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
   it('borra los correos de invitaciones vencidas, las fotos del bucket lk-fotos y marca la mediación como borrada', async () => {
     const f = falso({ '/rpc/lk_vencimientos': { automatico: 1, mediacion: 1 }, '/rpc/lk_borrar_invitaciones_vencidas': 2, '/rpc/lk_mediacion_por_borrar': [{ contrato_id: 'c1', rutas: ['c1/reclamo/a.jpg', 'c1/reclamo/b.jpg'] }, { contrato_id: 'c2', rutas: [] }], '/rpc/lk_marcar_mediacion_borrada': true, '/storage/v1/object/lk-fotos': [] })
     const r = await ejecutarBorrados(ENV, f)
-    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, mediacion: 1 }, vencidas: 0, devoluciones: { error: expect.stringMatching(/^Falta configurar en el servidor: TRUSTLESS_WORK_API_KEY/) } })   // paso 22: sin llaves de TW no paga y lo dice
+    expect(r).toEqual({ invitaciones: 2, mediaciones: 2, fallidos: [], vencimientos: { automatico: 1, mediacion: 1 }, vencidas: 0, devoluciones: { error: expect.stringMatching(/^Falta configurar en el servidor: TRUSTLESS_WORK_API_KEY/) }, repartos: { error: expect.stringMatching(/^Falta configurar en el servidor: TRUSTLESS_WORK_API_KEY/) } })   // paso 22 y 27/10: sin llaves de TW no paga y lo dice
     const llamadas = f.mock.calls.map(([u, i]) => [u.replace(URL_SB, ''), i.method, i.body ? JSON.parse(String(i.body)) : null])
     expect(llamadas).toEqual([
       ['/rest/v1/rpc/lk_vencimientos', 'POST', {}],
@@ -39,7 +39,7 @@ describe('api/borrados.ts · borrados de la Privacidad 1.7-demo en Supabase (arr
   })
   it('B2 · si lk_vencimientos falla (migración del escenario C sin aplicar), los borrados siguen y se informa vencimientos: null', async () => {
     const f = falso({ '/rpc/lk_borrar_invitaciones_vencidas': 1, '/rpc/lk_mediacion_por_borrar': [] }, ['/rpc/lk_vencimientos'])
-    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null, vencidas: 0, devoluciones: { error: expect.any(String) } })
+    expect(await ejecutarBorrados(ENV, f)).toEqual({ invitaciones: 1, mediaciones: 0, fallidos: [], vencimientos: null, vencidas: 0, devoluciones: { error: expect.any(String) }, repartos: { error: expect.any(String) } })
   })
   it('B2 · paso 22: vercel.json programa /api/borrados cada hora y el bloqueo del pago dura más que la función', async () => {
     const fs = await import(['node', 'fs'].join(':')) as { readFileSync(p: string, c: 'utf8'): string }

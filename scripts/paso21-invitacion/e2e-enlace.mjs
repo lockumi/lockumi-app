@@ -131,7 +131,7 @@ try {
   if (!enInvitacion) { await g.goto(abrir); await g.waitForTimeout(3000) }   // antes (master): se abre el link otra vez a mano
   await entendido(g)
   if (!ANTES) {   // plegable de las reglas cerrado; casilla, enlaces y botón a la vista
-    const b = g.locator('.plegable .cp-abrir'); const exp = await b.getAttribute('aria-expanded'), txt = (await b.innerText()).trim()
+    const b = g.locator('.plegable .cp-abrir').filter({ hasText: 'Reglas del alquiler' }); const exp = await b.getAttribute('aria-expanded'), txt = (await b.innerText()).trim()
     const vis = async l => (await l.count()) > 0 && await l.first().isVisible()
     const todo = { cerrado: exp === 'false', titulo: txt === 'Reglas del alquiler', reglasOcultas: !(await g.getByText('No fumar dentro de la casa').isVisible()),
       casilla: await vis(g.locator('#inv-terminos')), terminos: await vis(g.locator('a[href="/terminos"]')), privacidad: await vis(g.locator('a[href="/privacidad"]')), boton: await vis(g.getByRole('button', { name: 'Aceptar invitación' })) }

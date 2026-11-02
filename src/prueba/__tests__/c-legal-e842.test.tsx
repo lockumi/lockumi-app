@@ -24,7 +24,7 @@ describe('Legal 25/10, 4:33 a. m.', () => {
     expect(p).toContain('{{correos: y que acepta recibir el correo de invitación de Lockumi}}')
   })
   it('6) «liberar» en el historial: USDC de prueba', async () => {
-    expect(await raw('../../../api/_lib/tw.ts')).toContain('Se liberó el depósito al inquilino desde Trustless Work (${k.monto} USDC de prueba menos la comisión de 0,3 % de Trustless Work)')
+    expect(await raw('../../../api/_lib/tw.ts')).toContain('Se liberó el depósito al inquilino desde Trustless Work (${exacto(netoTW(Number(k.monto)))} USDC de prueba menos la comisión de 0,3 % de Trustless Work)')
   })
   it('5) el rechazo por plazo vencido está en la lista de errores de Legal (revisado a las 4:56 a. m.)', async () => {
     const m = await raw('../../../supabase/migrations/20261025070000_c_reclamo_vencido.sql')

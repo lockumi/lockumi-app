@@ -91,6 +91,7 @@ Las claves de la plataforma solo viven en el servidor.
 ## 5. Preparar a cada persona (dueño e inquilino)
 
 1. Entrar en la app y abrir "Tu cuenta para el depósito" → "Activar cuenta de prueba" (la tesorería de la plataforma crea la cuenta con 5 XLM de prueba; antes era Friendbot).
+   - Desde el 27/10/2026 la tarjeta dice «Lista ✓» solo cuando la cuenta ya existe en Horizon (y, con Trustless Work, tiene el USDC habilitado); antes muestra «Preparando tu cuenta…» (`docs/firma-cavos.md`).
 2. "Habilitar USDC de prueba" (trustline; el vault de Cavos pide confirmar). **Los dos lo necesitan**, porque TW lo valida.
 3. Solo el inquilino: abrir https://faucet.circle.com → Stellar Testnet → pegar su dirección G… (20 USDC cada 2 h).
 

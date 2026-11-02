@@ -50,3 +50,54 @@ su propia transacción y pagan su fee**, así que necesitan XLM; las de dos pers
 
 ## Falta para la prueba con datos reales (leído el 26/10, 9:20 p. m. CR)
 Ver la lista al final de `docs/firma-cavos.md`.
+
+## La cuenta de la persona se guarda al pagar si faltaba (27/10/2026)
+- **Qué pasó (prueba real en producción, 27/10, 9:59 a. m. CR):** el inquilino tenía la sesión de Cavos caducada en su navegador (perfil que volvía horas después) y **aceptó la invitación sin billetera conectada**: el
+  alquiler quedó con `lk_participantes.direccion_stellar` vacía. Después entró de nuevo, firmó y tocó «Pagar»; `activar-cuenta` (paso `estado`) contestó 409 «Falta la cuenta Stellar del inquilino.» y el pago no avanzó.
+  `lk_actualizar_direccion` existía pero ninguna pantalla la llamaba.
+- **Arreglo (`src/services/trustless.ts`, `activarCuenta`):** si el alquiler no trae la cuenta de esa persona (`esperada` vacío), antes de preguntar al servidor se guarda la de la billetera conectada con `servidor.actualizarCuenta`
+  (RPC `lk_actualizar_direccion`: solo su propia fila y solo mientras no exista la cuenta segura). Si guardar falla, no se corta el pago: sigue y decide el servidor. Alquileres con la cuenta ya guardada o con cuenta del servidor (PR #54): sin cambios.
+- **Pruebas:** `src/services/__tests__/deposito-trustline.test.ts` (3 casos nuevos: guarda antes de consultar y paga; si guardar falla sigue; con cuenta ya guardada no vuelve a guardar).
+- Sin cambios de diseño, de flujo ni de base de datos.
+
+## La cuenta del dueño se guarda al firmar si faltaba (U4, 27/10/2026)
+- **Qué pasó (prueba real en producción, alquiler `d475db0a…`, 27/10, 11:36 a. m. CR):** el dueño entró solo con su llave de acceso (sin token de Cavos en la pestaña), creó el alquiler y firmó el contrato.
+  El alquiler quedó con la `direccion_stellar` del dueño vacía (`repositorio.ts`, `p_direccion_stellar: cuenta ?? null`). El inquilino firmó y tocó «Pagar»: `activar-cuenta` dio 200 `listo` para él y
+  después el servidor contestó 409 «Falta la cuenta Stellar del dueño.» (`cuenta()` en `api/_lib/tw.ts`). No se movió dinero. La firma del dueño no pasa por `ConSesion` (solo la del inquilino y el pago),
+  y el único arreglo posterior (`prepararDueno` → `activarCuenta`) corre al abrir un reclamo, después del pago.
+- **Arreglo (`src/services/trustless.ts`, `guardarCuentaSiFalta`; `src/acciones.ts`, `firmar`):** al firmar el contrato con Trustless Work, si el alquiler no trae la cuenta de quien firma,
+  antes de firmar se guarda la de la billetera conectada con `servidor.actualizarCuenta` (RPC `lk_actualizar_direccion`, igual que #62). Si no hay billetera o guardar falla, la firma sigue igual (no se corta nada).
+- **Respaldo para quien ya firmó (`src/screens/Detalle.tsx`, `Pago`):** cuando el dueño abre el alquiler en «pendiente de pago» y su cuenta falta, la app la guarda en segundo plano (sin textos ni pantallas nuevas).
+- **Límite (resuelto después con el PR #65, ver abajo):** ambos caminos necesitan la sesión de Cavos del dueño. Sin token no hay dirección de billetera, así que un dueño que entra **solo con la llave de acceso** y no vuelve a entrar
+  sigue dejando la cuenta vacía. El pago del inquilino **no** puede guardar la cuenta del dueño: la dirección solo vive en `lk_participantes` (por alquiler) y `lk_actualizar_direccion` solo cambia la fila de quien llama.
+  El arreglo completo sería pedir sesión (`ConSesion`, componente y textos ya existentes) a la firma del dueño cuando falta su cuenta; es un cambio de flujo y necesita aprobación.
+- **Pruebas:** `src/services/__tests__/cuenta-dueno-firma.test.ts` (guarda y luego firma; sin sesión firma igual; con cuenta no guarda; respaldo en `Pago`) y
+  `src/servidor/__tests__/ciclo-dos-personas-sql.test.ts` («U4»: sin la cuenta del dueño, 409 «Falta la cuenta Stellar del dueño.»; con `lk_actualizar_direccion` del dueño, sigue).
+- Sin cambios de diseño, de textos visibles ni de base de datos.
+- **Arreglo del límite (rama `firma-dueno-con-sesion`, PR #65; aprobado por Katherine el 27/10/2026, 12:54 p. m. CR):** si al dueño le falta su cuenta Stellar, su firma del contrato pide antes
+  «Entrar de nuevo» con el mismo `ConSesion` y los mismos textos que ya ve el inquilino (`src/screens/sesionFirma.ts`, `pideSesionAntesDeFirmar`). Con la cuenta ya guardada el dueño firma como antes.
+  Es un cambio de flujo (un paso más solo para el dueño sin sesión), aprobado por Katherine. Pruebas: `src/screens/__tests__/sesion-firma-dueno.test.ts`.
+
+## Reparto por pagar: cierre sin pago (27/10/2026, alquiler `b10557f9…`)
+- **Qué pasó (producción, 27/10, 12:45 p. m. CR):** el inquilino tocó «Aceptar reclamo» (4 USDC al dueño, 6 al inquilino). La base cerró el caso (`lk_responder_reclamo` → `cerrado`, acuerdo) a las 12:45:25 y
+  después `/api/tw` «repartir» contestó **401 «No pudimos confirmar tu firma»**: no se abrió la disputa ni hubo transacción y los 10 USDC siguieron en el escrow `CCYB…VLCQ`, con `liquidacion_tx` vacío.
+- **Causa del 401:** la pestaña del inquilino volvió con la llave de acceso, sin token de Cavos (vive en `sessionStorage`, por pestaña). `conectarBilletera` falló con `sin-token`
+  (`src/services/billetera.ts:103`), `conPrueba` mandó «repartir» **sin prueba** (`src/services/trustless.ts:29-30`) y el servidor la exigió (`api/_lib/tw.ts`, `exigirPrueba` → 401 `SIN_PRUEBA`). No fue `EDAD_MAXIMA`
+  (`api/_lib/cavos-token.ts`), que solo vale para `/api/verificar-correo`.
+- **Por qué quedó `cerrado` sin pago:** `src/acciones.ts` (`responder`) cerraba en la base y recién después pedía el pago; si fallaba, nada lo reintentaba (la corrida solo pagaba `automatico`/`devuelto` y
+  la pantalla no tiene botón para acuerdo/mediación). Lo mismo en la **mediación**: `lk_decidir_mediacion` cierra y la persona mediadora, que no es parte del alquiler, recibía siempre 403 «No participas en este contrato.».
+- **Arreglo (sin cambios visibles ni textos nuevos):**
+  1. `src/acciones.ts` + `trustless.pruebaReparto`: la prueba de billetera se firma **antes** de cerrar. Sin sesión de Cavos sale el texto de siempre (`SIN_SESION`, «Entrar de nuevo») y el reclamo **sigue abierto**.
+  2. `api/_lib/tw.ts`, `pagarReparto`: un solo camino idempotente para el reparto aceptado, el mismo del paso 22 (`lk_tomar_pago` con vencimiento, estado del escrow en Trustless Work, hash guardado antes de enviar,
+     confirmación en Horizon si la respuesta se perdió, «revisar» si el escrow no cuadra). Reemplaza el bloqueo `liquidacion_tx = 'en-curso'`, que si la función se cortaba dejaba el caso trabado para siempre.
+  3. La persona mediadora (`lk_mediadores`, validada en el servidor) puede pedir «repartir» de un caso cerrado por la mediación con las dos aceptaciones; paga la llave mediadora del servidor.
+  4. **Reintento:** `cerrado` + acuerdo/mediación (`dos_aceptan`) + escrow + sin `liquidacion_tx` = «por pagar». Lo paga la corrida de cada hora (`/api/borrados` → `pagarRepartos`, después de las devoluciones;
+     se apaga con `REPARTOS_CRON=0`), la app («repartir») o la persona mediadora. La devolución a los 7 días ya se reintentaba (paso 22).
+- **Operación (solo con `CRON_SECRET`, sin imprimirlo):** `GET /api/borrados?reparto=pendientes` lista los casos por pagar (no paga nada); `GET /api/borrados?reparto=<id>` paga ese caso por el mismo camino.
+  Un caso marcado para revisar (`pago_revisar`) no se paga solo: una persona mira el escrow y lo limpia. Un `liquidacion_tx = 'en-curso'` del código anterior contesta «en curso»; en producción no hay ninguno (27/10).
+- **Migración** `20261027120000_reparto_reintentable.sql` (`lk_cierre_por_pagar`, `lk_tomar_pago` ampliada, `lk_repartos_pendientes`; solo `service_role`). Orden al publicar: **primero la migración, después el código**.
+  Rollback de la migración: volver a ejecutar `lk_tomar_pago` de `20261026000000` y `drop function public.lk_repartos_pendientes(int), public.lk_cierre_por_pagar(public.lk_contratos)`.
+- **Propuestas (cambian pantalla, no están en este PR):** pedir sesión (`ConSesion`) antes de «Aceptar reclamo» y de «Registrar el acuerdo»; en `EscrowReal`, botón de reintento y estado «por pagar» para acuerdo/mediación
+  sin transacción (hoy «Cerrado» puede decir «Depósito devuelto» aunque falte el pago).
+- **Pruebas:** `reparto-dos-personas.test.ts` (bloqueo nuevo, mediadora, 401 sin prueba), `devoluciones-cron.test.ts` («repartos aceptados que quedaron sin pagar»: corrida, operación, doble pago, cortes, revisar),
+  `devoluciones-sql.test.ts` (migración en PGlite), `reparto-servidor-app.test.ts` (firma antes de cerrar), `borrados-api.test.ts`.

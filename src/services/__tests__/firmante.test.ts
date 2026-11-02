@@ -23,7 +23,7 @@ describe('puerta al entrar: firma de prueba', () => {
   it('firma «lockumi-login» una vez y deja entrar', async () => {
     expect(await probarFirma()).toBe('puede')
     expect(h.sign).toHaveBeenCalledWith(MENSAJE_PRUEBA); expect(MENSAJE_PRUEBA).toBe('lockumi-login')
-    expect(h.connect).toHaveBeenCalledTimes(1); expect(h.connect.mock.calls[0][0]).not.toHaveProperty('passkeyPrf') // la llave no se pide sola
+    expect(h.connect).toHaveBeenCalledTimes(1); expect(h.connect.mock.calls[0][0]).toHaveProperty('passkeyPrf') // como Meteorito: una sola conexión, ya con passkeyPrf
   })
   it('cuenta sin desplegar también puede (la firma es gratis)', async () => { h.estado = 'undeployed'; expect(await probarFirma()).toBe('puede') })
   it('needs-device-approval: no entra, sin intentar firmar', async () => {
@@ -35,7 +35,7 @@ describe('puerta al entrar: firma de prueba', () => {
     h.sign.mockRejectedValue(new Error('network down')); olvidarBilletera()
     expect(await probarFirma()).toBe('error')
     expect(h.connect).toHaveBeenCalledTimes(2); expect(h.sign).toHaveBeenCalledTimes(2)
-    for (const c of h.connect.mock.calls) expect(c[0]).not.toHaveProperty('passkeyPrf')
+    for (const c of h.connect.mock.calls) expect(c[0]).toHaveProperty('passkeyPrf')
   })
   it('sin token en esta pestaña: pide volver a entrar, sin conectar', async () => {
     h.token = null; expect(await probarFirma()).toBe('sin-sesion'); expect(h.connect).not.toHaveBeenCalled()
