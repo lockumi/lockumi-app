@@ -89,7 +89,7 @@ describe('1.15-demo sin volver a aceptar', () => {
   })
   it('la guarda del build: producción con la reputación y sin fecha de la 1.15-demo falla; con fecha o en preview, pasa', async () => {
     const { revisarFechaV115 } = await import('../encendido'), { FECHA_V115 } = await import('../fecha-v115')
-    expect(FECHA_V115).toBe('26 de octubre de 2026')   // escrita con scripts/fecha-1-15.mjs el día de la publicación
+    expect(FECHA_V115).toBe('1 de noviembre de 2026')   // escrita con scripts/fecha-1-15.mjs el día de la publicación
     expect(revisarFechaV115({ VITE_REPUTACION: '1', VERCEL_ENV: 'production' }, '[fecha de publicación]')).toMatch(/fecha-1-15\.mjs/)
     expect(revisarFechaV115({ VITE_REPUTACION: '1', VERCEL_ENV: 'preview' }, '[fecha de publicación]')).toBeNull()
     expect(revisarFechaV115({ VITE_REPUTACION: '1', VERCEL_ENV: 'production' }, '27 de octubre de 2026')).toBeNull()

@@ -49,7 +49,7 @@ Pasos en https://app.lockumi.com:
    - **Lugar.** Se queda en tu navegador; a la red solo va una huella de las fotos.
    - **USDC de prueba.** Elige de dónde salen:
      - **«USDC de prueba de Lockumi»** (opción por defecto): USDC de prueba que te da Lockumi, sin valor, **hasta 20**. Quedan en una cuenta de inquilino de prueba de Lockumi, no en tu billetera.
-     - **«Usar mi propio USDC de prueba»**: depositas USDC de prueba que ya tienes, con tu billetera de Lockumi (Cavos) o con Freighter. El formulario muestra tu saldo real (leído en Horizon testnet); el límite es ese saldo, con un máximo de **50 000 USDC de prueba**.
+     - **«Usar mi propio USDC de prueba»**: depositas USDC de prueba que ya tienes, con tu billetera de Lockumi (Cavos) o con Freighter. El formulario muestra tu saldo real (leído en Horizon testnet); el límite es ese saldo, con un máximo de **50 000 USDC de prueba**. Los Términos 1.15-demo (5.5 b) y la hoja ⓘ lo dicen así: con Cavos, Lockumi te envía hasta 20 USDC de prueba de su propia cuenta; con Freighter, usas el que ya tengas.
    - **Depósito.** Botones − y + (de 1 en 1) o escribe el monto; no pasa el tope de la opción elegida.
    - **Fechas.** Dos tarjetas, **Entrada** y **Salida**, una al lado de la otra (también en celular, con la etiqueta arriba y la fecha abajo). Cada una abre un calendario: en celular, como hoja desde abajo; en escritorio, como ventanita junto a la tarjeta. Formato dd/mm/aa. La entrada va de hoy a 1 año; la duración, de 1 mes a 5 años; los días que no se pueden elegir salen en gris. Si cambias la entrada y la salida deja de servir, la salida se borra y la app te avisa.
    - **Reglas.** Son del dueño: el inquilino las lee y las acepta al firmar (en la demo de una persona, las escribes tú en nombre del dueño de prueba).
@@ -284,6 +284,9 @@ Cambios en desarrollo que **todavía no están** en app.lockumi.com ni en `maste
 ## Cambios publicados
 
 Cada cambio publicado en app.lockumi.com queda en `master` con esta documentación al día (README, guía para jueces, [CONTRIBUTING](CONTRIBUTING.md), [PLAN](PLAN.md) y `docs/`).
+
+**1 de noviembre de 2026 (PR #59, Legal 1.15-demo; aprobado por Katherine a las 9:21 p. m., solo textos)**
+- Términos y Aviso de privacidad pasan a la 1.15-demo (1 de noviembre de 2026), sin volver a aceptar: 5.3 (al entrar tu billetera firma un mensaje de prueba; con otra persona, también en cada acción que mueve el depósito), 5.5 b) (con Cavos, Lockumi te envía hasta 20 USDC de prueba de su cuenta; con Freighter usas el tuyo), 9.3 y Privacidad sin el exchange. La hoja ⓘ «USDC de prueba» de «Nuevo alquiler» dice lo mismo que 5.5 b). La 1.14-demo queda en `/terminos-1-14` y `/privacidad-1-14`. Sin cambios de diseño, montos ni flujo.
 
 **26 de octubre de 2026 (el dueño no puede aceptar su propia invitación; aprobado por Katherine a las 3:07 p. m.)**
 - Si el link de invitación se abre con la sesión del dueño (la misma cuenta o un correo del dueño, también el correo real de Apple), la invitación muestra «Este link es para la otra persona. Cierra sesión o ábrelo en otro dispositivo.» y el botón «Cerrar sesión», que vuelve al mismo link al entrar. La base lo rechaza también (migración `20261026100000_invitacion_no_dueno.sql`, aplicada en producción el 26/10). Las filas que ya existían no se tocan. Ver [docs/invitacion-enlace.md](docs/invitacion-enlace.md#el-dueño-no-acepta-su-propia-invitación-26102026).
