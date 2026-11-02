@@ -3,6 +3,7 @@ import { FECHA_V111 } from './fecha-v111'
 import { FECHA_V112 } from './fecha-v112'
 import { FECHA_V113 } from './fecha-v113'
 import { FECHA_V114 } from './fecha-v114'
+import { FECHA_V115 } from './fecha-v115'
 // paso16-unido · Una sola fecha para la 1.7-demo (Legal, 25/10, arreglo 4): los Términos, el Aviso de privacidad, el registro de
 // cada aceptación y el contrato dicen «1.7-demo · 25 de octubre de 2026» y lo sacan de aquí. Los .md usan {{edicion}}.
 export const V17 = '1.7-demo'
@@ -40,10 +41,18 @@ export const EDICION_V113 = `${V113} · ${FECHA_V113}`
 // Legal (26/10/2026, 9:43 p. m.): la edición de la cuenta pasa a la 1.14-demo (la plataforma activa la cuenta y paga la reserva, llave de
 // acceso obligatoria, el depósito de dos personas lo pone Lockumi con USDC de prueba; Términos 4.1, 5.3, 5.4, 5.5 y 5.5.1; Privacidad
 // «Firmas de prueba»), con la fecha del día de la publicación (fecha-v114.ts). Sin volver a aceptar; la casilla de los Términos nombra la 1.14-demo.
-export const V_REPUTACION = '1.14-demo'
+// La 1.14-demo ya está publicada (master 4736c0f, 26/10/2026): queda archivada tal cual en /terminos-1-14 y /privacidad-1-14
+// (documentos.ts, textos de src/legal/archivo/4736c0f/).
+export const V114 = '1.14-demo'
 export { FECHA_V114 }
-export const EDICION_REPUTACION = `${V_REPUTACION} · ${FECHA_V114}`
-/** La edición que dicen los Términos y el Aviso: la 1.14-demo con la reputación encendida. */
+export const EDICION_V114 = `${V114} · ${FECHA_V114}`
+// Legal (26/10/2026, 10:05 p. m., revisión de 89779b8): la edición de la cuenta pasa a la 1.15-demo (Términos 5.3: la firma al entrar y, en los
+// alquileres con otra persona, en cada acción; 5.5 b): el USDC de prueba de Lockumi para Cavos; 9.3 y Privacidad sin el exchange), con la fecha
+// del día de la publicación (fecha-v115.ts). Sin volver a aceptar; la casilla de los Términos nombra la 1.15-demo.
+export const V_REPUTACION = '1.15-demo'
+export { FECHA_V115 }
+export const EDICION_REPUTACION = `${V_REPUTACION} · ${FECHA_V115}`
+/** La edición que dicen los Términos y el Aviso: la 1.15-demo con la reputación encendida. */
 export const edicionVigente = () => import.meta.env.VITE_REPUTACION === '1' ? EDICION_REPUTACION : EDICION_V17
 
 // Legal (revisión de 6e9210a, bloqueo 2), hasta la 1.12-demo: la edición de la cuenta solo la guardaba quien aceptó la pantalla previa (REP-01).
@@ -54,7 +63,7 @@ export const edicionVigente = () => import.meta.env.VITE_REPUTACION === '1' ? ED
 export const claveReputacion = (email: string) => 'lockumi.reputacion.v1.' + email.trim().toLowerCase()
 const leerJson = (s: () => Storage, k: string) => { try { const x = s().getItem(k); return x ? JSON.parse(x) : null } catch { return null } }
 const reputacionEncendida = () => import.meta.env.VITE_REPUTACION === '1'
-/** Al aceptar en la pantalla de inicio (base: la edición de la versión aceptada; desde C, la 1.9-demo): con la reputación, la 1.14-demo. */
+/** Al aceptar en la pantalla de inicio (base: la edición de la versión aceptada; desde C, la 1.9-demo): con la reputación, la 1.15-demo. */
 export const edicionAlAceptar = (base = EDICION_V17) => reputacionEncendida() ? EDICION_REPUTACION : base
-/** Para los registros de una cuenta (p. ej. la Regla, 6.5.1): la edición de la cuenta (1.14-demo) solo si esa cuenta aceptó su perfil (REP-01). */
+/** Para los registros de una cuenta (p. ej. la Regla, 6.5.1): la edición de la cuenta (1.15-demo) solo si esa cuenta aceptó su perfil (REP-01). */
 export const edicionDeCuenta = (email?: string, base = EDICION_V17) => reputacionEncendida() && email && leerJson(() => localStorage, claveReputacion(email))?.rep01 ? EDICION_REPUTACION : base

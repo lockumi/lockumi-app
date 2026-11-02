@@ -20,12 +20,12 @@ describe('(1) la casilla dice la versión que abre su enlace (y la que se guarda
     const h = await casilla(), { docs, terminosActual, rutaLegal } = await import('../documentos'), { versionActual } = await import('../../prueba/version')
     expect(sinEtiquetas(h)).toContain('Acepto los Términos 1.9-demo y el Aviso de privacidad')
     expect(versionActual()).toBe('1.9-demo')                                   // lo que se guarda (Invitacion.tsx: aceptarConCorreo)
-    expect(terminosActual().version).toBe('1.14-demo')                         // /terminos es la edición de la cuenta (PR #33: 1.11-demo; c97585b: 1.12-demo; 26/10: 1.13-demo; 26/10 9:43 p. m.: 1.14-demo)
+    expect(terminosActual().version).toBe('1.15-demo')                         // /terminos es la edición de la cuenta (PR #33: 1.11-demo; c97585b: 1.12-demo; 26/10: 1.13-demo; 9:43 p. m.: 1.14-demo; 10:05 p. m.: 1.15-demo)
     const t = href(h, /^Términos/)!, p = href(h, /^Aviso de privacidad$/)!
     expect([t, p]).toEqual(['/terminos-1-9', '/privacidad-1-9'])
     const d = docs()
     for (const r of [t, p]) { const doc = d[rutaLegal(r)!]; expect(doc.version).toBe('1.9-demo'); expect(doc.html).not.toContain('Perfil de reputación') }
-    expect(d['privacidad'].version).toBe('1.14-demo'); expect(d['privacidad'].html).toContain('Perfil de reputación')
+    expect(d['privacidad'].version).toBe('1.15-demo'); expect(d['privacidad'].html).toContain('Perfil de reputación')
   })
   it('con la reputación apagada, todo sigue en /terminos y /privacidad (1.9-demo)', async () => {
     const h = await casilla(), { docs } = await import('../documentos')
@@ -43,10 +43,10 @@ describe('(1) la casilla dice la versión que abre su enlace (y la que se guarda
 })
 
 describe('(2) Privacidad (ronda 1.10)', () => {
-  it('nombre visible, código de 6 números y «cierre del alquiler», desde la 1.11-demo (también en la 1.12-demo, la 1.13-demo y la 1.14-demo); sigue «Pendiente de revisión por abogado»', async () => {
+  it('nombre visible, código de 6 números y «cierre del alquiler», desde la 1.11-demo (también en la 1.12-demo, la 1.13-demo, la 1.14-demo y la 1.15-demo); sigue «Pendiente de revisión por abogado»', async () => {
     vi.stubEnv('VITE_REPUTACION', '1')
     const ds = (await import('../documentos')).docs(), d = ds.privacidad, t = sinEtiquetas(d.html)
-    expect(d.version).toBe('1.14-demo'); expect(sinEtiquetas(ds['privacidad-1-13'].html)).toContain('mediación y cierre del alquiler)'); expect(sinEtiquetas(ds['privacidad-1-12'].html)).toContain('mediación y cierre del alquiler)'); expect(sinEtiquetas(ds['privacidad-1-11'].html)).toContain('mediación y cierre del alquiler)')
+    expect(d.version).toBe('1.15-demo'); expect(sinEtiquetas(ds['privacidad-1-14'].html)).toContain('mediación y cierre del alquiler)'); expect(sinEtiquetas(ds['privacidad-1-13'].html)).toContain('mediación y cierre del alquiler)'); expect(sinEtiquetas(ds['privacidad-1-12'].html)).toContain('mediación y cierre del alquiler)'); expect(sinEtiquetas(ds['privacidad-1-11'].html)).toContain('mediación y cierre del alquiler)')
     // PR #33: la 1.9-demo y la 1.10-demo no cambian (siguen con «mediación y cierre)», sin el código de 6 números).
     for (const k of ['privacidad-1-9', 'privacidad-1-10']) { const x = sinEtiquetas(ds[k].html); expect(x).toContain('mediación y cierre)'); expect(x).not.toContain('código de 6 números') }
     expect(t).toContain('Datos que se publican: tu nombre visible (tu nombre y la inicial de tu apellido), tu papel')

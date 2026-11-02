@@ -37,7 +37,8 @@ su propia transacción y pagan su fee**, así que necesitan XLM; las de dos pers
 - **Scripts de desarrollo:** `scripts/crear-cuenta-testnet.mjs` (`crearCuenta(g, xlm)`, lee `LOCKUMI_TW_PLATAFORMA_SECRET` del entorno, nunca lo imprime) lo usan
   `e2e-solo`, `e2e-testnet-tw`, `e2e-c`, `preparar-testnet`, `probar-trustline-cavos` y `probar-firma-cavos` (no se corrieron en vivo en esta fase).
 - **Costo:** ~5,5 XLM por cuenta; la tesorería tiene 9 234 XLM. USDC: ~43 USDC al 26/10 (el tope por pedido es 20).
-- **Textos legales:** Términos y Privacidad 1.14-demo (sin Friendbot); la 1.13-demo y la 1.9-demo archivadas conservan lo que se publicó.
+- **Solo Cavos:** la creación/reserva de la cuenta y el USDC de la tesorería son solo para la billetera de Cavos; con Freighter no se crea ni se patrocina nada y no se envía USDC (se usa el saldo que ya tenga). Así lo dicen Términos 5.5 b) y la hoja ⓘ de «Crear».
+- **Textos legales:** Términos y Privacidad 1.15-demo (sin Friendbot; la 1.14-demo queda en `/terminos-1-14`, `src/legal/archivo/4736c0f/`); la 1.14-demo, la 1.13-demo y la 1.9-demo archivadas conservan lo que se publicó.
 
 ## Solo testnet y límites
 - `activar-cuenta` se niega fuera de testnet (`soloTestnet` → `exigirRampTestnet`) y la red y los servicios están fijos en `api/_lib/red.ts`.

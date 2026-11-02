@@ -6,6 +6,7 @@ import { FECHA_V111 } from './fecha-v111.ts'
 import { FECHA_V112 } from './fecha-v112.ts'
 import { FECHA_V113 } from './fecha-v113.ts'
 import { FECHA_V114 } from './fecha-v114.ts'
+import { FECHA_V115 } from './fecha-v115.ts'
 
 type Entorno = Record<string, string | undefined>
 /** null si se puede construir; si no, el error que explica cómo arreglarlo. */
@@ -40,13 +41,19 @@ export function revisarFechaV114(env: Entorno, fecha: string = FECHA_V114): stri
   return `VITE_REPUTACION=1 pero FECHA_V114 todavía dice «${fecha}». Antes del merge, corre «node scripts/fecha-1-14.mjs» ` +
     '(escribe la fecha de hoy en src/legal/fecha-v114.ts) y súbelo en el mismo PR.'
 }
+/** Legal (26/10/2026): la 1.15-demo, igual que la 1.14-demo (src/legal/fecha-v115.ts, la escribe scripts/fecha-1-15.mjs). */
+export function revisarFechaV115(env: Entorno, fecha: string = FECHA_V115): string | null {
+  if (env.VITE_REPUTACION !== '1' || !fecha.includes('[') || env.VERCEL_ENV !== 'production') return null
+  return `VITE_REPUTACION=1 pero FECHA_V115 todavía dice «${fecha}». Antes del merge, corre «node scripts/fecha-1-15.mjs» ` +
+    '(escribe la fecha de hoy en src/legal/fecha-v115.ts) y súbelo en el mismo PR.'
+}
 /** Plugin de Vite: revisa al empezar el build (no en el servidor de desarrollo). */
 export function guardaEncendido(env: Entorno) {
   return {
     name: 'lockumi-guarda-encendido',
     configResolved(c: { command: string }) {
       if (c.command !== 'build') return
-      const error = revisarEncendido(env) ?? revisarFechaV111(env) ?? revisarFechaV112(env) ?? revisarFechaV113(env) ?? revisarFechaV114(env); if (error) throw new Error(error)
+      const error = revisarEncendido(env) ?? revisarFechaV111(env) ?? revisarFechaV112(env) ?? revisarFechaV113(env) ?? revisarFechaV114(env) ?? revisarFechaV115(env); if (error) throw new Error(error)
     },
   }
 }
