@@ -907,6 +907,8 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .ini-vacio__t{margin:0;font:800 28px/34px var(--f-titulo)}
 .ini-vacio__b{margin:0;font:500 16px/22px var(--f-texto);color:var(--cafe-suave)}
 .cuarto__par{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.cuarto__par>div{display:flex;flex-direction:column}
+.cuarto__par .mini{min-height:2.6em;line-height:1.3}
 .cuarto__par .fotos{grid-template-columns:1fr}
 .cuarto__par .fotos img{aspect-ratio:4/3;min-height:200px;object-fit:contain;background:var(--protegido)}
 .fotos:has(>li:only-child){grid-template-columns:minmax(0,360px)}
