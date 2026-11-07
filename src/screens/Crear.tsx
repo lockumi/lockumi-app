@@ -13,6 +13,7 @@ import { modoSolo, modoPrueba, escrowReal as escrowRealApp, dosPersonas } from '
 import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { declaracionInvitacion, enviarInvitacionUnaVez, nombreInvitacion, tokenDeLink } from '../prueba/invitacion'
+import { EsperaVista } from './EsperaVista'
 import { SuscripcionB8, RendimientoB13 } from '../prueba/SuscripcionPC'
 import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
 import { store, activarServidor } from '../store'
@@ -139,10 +140,21 @@ function CampoCalendario({ id, etiqueta, valor, min, max, error, contexto, alDer
 
 type InfoClave = 'red' | 'usdc' | 'fechas'
 
+const BORRADOR_CREAR = 'lockumi.borrador.crear'
+function leerBorrador(): { direccion: string; monto: string; email: string; inicio: string; fin: string; reglas: string[] } | null {
+  try {
+    const s = sessionStorage.getItem(BORRADOR_CREAR); if (!s) return null
+    const v = JSON.parse(s) as { direccion?: string; monto?: string; email?: string; inicio?: string; fin?: string; reglas?: string[] }
+    if (!v || typeof v.direccion !== 'string') return null
+    return { direccion: v.direccion, monto: v.monto ?? '', email: v.email ?? '', inicio: v.inicio ?? '', fin: v.fin ?? '', reglas: Array.isArray(v.reglas) ? v.reglas.filter(x => typeof x === 'string') : ['No se permiten mascotas'] }
+  } catch { return null }
+}
+
 export function Crear({ u }: { u: Usuario }) {
-  const [f, setF] = useState({ direccion: '', monto: '', email: '', inicio: '', fin: '' })
+  const guardado = leerBorrador()
+  const [f, setF] = useState({ direccion: guardado?.direccion ?? '', monto: guardado?.monto ?? '', email: guardado?.email ?? '', inicio: guardado?.inicio ?? '', fin: guardado?.fin ?? '' })
   const [tocado, setTocado] = useState<Partial<Record<Campo, boolean>>>({}); const [enviado, setEnviado] = useState(false)
-  const [reglas, setReglas] = useState<string[]>(['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState('')
+  const [reglas, setReglas] = useState<string[]>(guardado?.reglas?.length ? guardado.reglas : ['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState('')
   // Red de prueba: tú eres el inquilino y el dueño es una cuenta de prueba de Lockumi.
   // Origen de los USDC de prueba: «USDC de prueba de Lockumi» (sin valor, tope de 20) o tu propia cuenta (el límite es tu saldo real, máximo 50 000).
   const [origen, setOrigen] = useState<'lockumi' | 'propia'>('lockumi')
@@ -189,6 +201,7 @@ export function Crear({ u }: { u: Usuario }) {
     const primero = (['direccion', 'monto', 'inicio', 'fin', 'email'] as Campo[]).find(k => errores[k])
     if (primero) { document.getElementById('f-' + primero + (primero === 'inicio' || primero === 'fin' ? '-boton' : ''))?.focus(); return }
     setOcupado(true)
+    try { sessionStorage.setItem(BORRADOR_CREAR, JSON.stringify({ ...f, reglas })) } catch { /* sin almacenamiento: el formulario sigue en memoria */ }
     const m = montoNumero(f.monto)
     try {
       const r = invitar
@@ -199,6 +212,7 @@ export function Crear({ u }: { u: Usuario }) {
       // Prueba completa: registro del Anexo 6-A aceptado al crear (fecha y reparaciones de uso marcadas).
       if (invitar) { activarServidor(); void enviarInvitacionUnaVez(r.id, f.email.trim(), nombreInvitacion(u.nombre), tokenDeLink(r.link)) }
       if (pruebaCompleta() && !modoServidor && !invitar) store.cambiar(r.id, x => { x.anexo = registroAnexo(reparacionesDe(anexo)) }, 'Anexo 6-A aceptado')
+      try { sessionStorage.removeItem(BORRADOR_CREAR) } catch { /* igual se abre el alquiler */ }
       avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))
       ir('/alquiler/' + r.id)
     } catch (e) { setOcupado(false); setErrSrv(e instanceof Error ? e.message : 'No pudimos crear el alquiler. Intenta de nuevo.') }
@@ -225,7 +239,8 @@ export function Crear({ u }: { u: Usuario }) {
       <ModoOpciones dosPersonas={dosPersonas} invitar={invitar} setInvitar={setInvitar} />
     </section>}
 
-    <form className="glass glass--fuerte na-form" noValidate onSubmit={e => { e.preventDefault(); crear() }}>
+    {ocupado && <EsperaVista titulo="Creando…" texto="Preparando tu alquiler…" />}
+    <form className="glass glass--fuerte na-form" hidden={ocupado} noValidate onSubmit={e => { e.preventDefault(); crear() }}>
       <section className="na-sec" data-recorrido="datos">
         <label htmlFor="f-direccion" className="na-et"><Ico n="lugar" />Lugar</label>
         <div className={'na-input' + (ver('direccion') ? ' na-input--error' : '')}><input id="f-direccion" value={f.direccion} onChange={e => poner('direccion', e.target.value)} onBlur={tocar('direccion')} placeholder="Ej.: Apartamento 3B, Escazú" autoComplete="off" maxLength={140}
@@ -279,13 +294,13 @@ export function Crear({ u }: { u: Usuario }) {
       </section>
       </div>
 
-      <section className="na-sec" data-recorrido="reglas">
-        <div className="na-et" id="et-reglas"><Ico n="reglas" />Reglas</div>
+      <details className="na-sec na-pliegue" data-recorrido="reglas">
+        <summary className="na-et" id="et-reglas"><Ico n="reglas" />Reglas</summary>
         <ul className="na-reglas" aria-labelledby="et-reglas">{reglas.map((r, i) => <li key={i}><span className="na-reglas__ico"><Ico n={/mascota/i.test(r) ? 'pata' : 'check'} /></span><span className="na-reglas__txt">{r}</span>
           <button type="button" className="na-quitar" aria-label={'Quitar regla: ' + r} onClick={() => setReglas(reglas.filter((_, j) => j !== i))}><Ico n="x" /></button></li>)}</ul>
         <div className="na-agregar"><div className="na-input"><input aria-label="Nueva regla" value={regla} onChange={e => setRegla(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregar() } }} placeholder="Agregar una regla" /></div>
           <button type="button" className="na-mas" aria-label="Agregar regla" onClick={agregar}><Ico n="mas" /></button></div>
-      </section>
+      </details>
 
       {!prueba1 && <section className={'na-sec' + (invitar ? ' pila' : '')}><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
         <input id="f-email" type="email" value={f.email} onChange={e => poner('email', e.target.value)} onBlur={tocar('email')} placeholder="inquilino@correo.com" autoComplete="off" aria-invalid={!!ver('email')} aria-describedby={ver('email') ? 'f-email-err' : undefined} />

@@ -18,7 +18,7 @@ export const PASOS_RECORRIDO: PasoRecorrido[] = [
     texto: 'El lugar, las fechas y el monto del depósito. Toca una opción: casi no hay que escribir.' },
   { ruta: '/crear', el: '[data-recorrido="reglas"]', titulo: 'Las reglas del dueño',
     texto: 'Toca las reglas del lugar. Quedan escritas en el contrato que firman los dos.' },
-  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '.detalle__principal .cuarto .tomar', titulo: 'Fotos y lista de entrada',
+  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', titulo: 'Fotos y lista de entrada',
     texto: 'Al entrar, una foto de cada espacio y una lista para marcar. Al salir se repite. Así los dos ven cómo estaba el lugar.' },
   // LEGAL: revisado (24/10)
   { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito',

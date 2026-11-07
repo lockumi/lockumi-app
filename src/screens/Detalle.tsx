@@ -47,6 +47,25 @@ import { esTextoSinSesion } from '../services/firmante'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
+const ROLES_FIRMA: Rol[] = ['dueno', 'inquilino']
+
+/** Tarjeta del contrato en firmas: datos del alquiler. El texto íntegro sigue en ContratoDoc. */
+function TarjetaContrato({ a }: { a: Alquiler }) {
+  const f = a.contrato.firmas
+  const n = ROLES_FIRMA.filter(r => f[r]).length
+  const abrir = () => document.getElementById('ct-firma')?.querySelector<HTMLButtonElement>('.cp-abrir')?.click()
+  return <section className="ct-resumen" aria-label="Resumen del contrato">
+    <p className="ct-resumen__monto">{usd(a.monto)}</p>
+    <dl>
+      <div><dt>Fechas</dt><dd>{fecha(a.inicio)} → {fecha(a.fin)}</dd></div>
+      <div><dt>Plazo para reclamar</dt><dd>{textoPlazo(a)}</dd></div>
+      <div><dt>Mediación</dt><dd>Una persona mediadora ayuda. No decide por ustedes.</dd></div>
+      <div><dt>Firmas</dt><dd>{n} de 2</dd></div>
+    </dl>
+    <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span>{NOMBRE_ROL[r]}</span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--neutro">Pendiente</span>}</li>)}</ul>
+    <button type="button" className="boton boton--secundario boton--ancho" onClick={abrir}>Ver contrato completo</button>
+  </section>
+}
 // LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
 export const ESPERA_MEDIACION_C = 'Ahora cada parte elige cómo repartir el depósito. Cuando las dos acepten el mismo reparto, la persona mediadora lo registra y liberamos los USDC de prueba, cada monto menos el 0,3 % de comisión de Trustless Work. La persona mediadora puede ayudarles a llegar a un acuerdo, pero no decide por ustedes.'
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
@@ -60,7 +79,8 @@ export function Contrato({ a, rol }: P) {
   return <div className="pila">
     {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
-    <ContratoDoc a={a} />
+    <TarjetaContrato a={a} />
+    <div id="ct-firma"><ContratoDoc a={a} /></div>
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
     {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
         U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
@@ -95,21 +115,22 @@ function PagoSimulado({ a, rol }: P) {
     })
   }
   const dos = esDosPersonas(a)   // PR #22 (a): en C el depósito va a la red de prueba de Trustless Work; nada de «simulado»
-  return <section className="pila"><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
+  return <section className={'pila' + (etapa > 0 ? ' pago-espera' : '')}>{etapa > 0 && <IlustracionPendiente />}
+    {etapa === 0 && <><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
     <div className="monto">{usd(a.monto)}</div>
-    <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p>
+    <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p></>}
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
       {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
-      {dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
+      {etapa === 0 && <>{dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
-        : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
+        : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}</>}
       {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
       {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
       <ConSesion activo={modoDe(a).trustless && etapa === 0}>
       <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} /></ConSesion>
-    </> : <Espera texto="Esperando que el inquilino pague el depósito." />}
+    </> : etapa === 0 && <Espera texto="Esperando que el inquilino pague el depósito." />}
   </section>
 }
 
@@ -130,38 +151,49 @@ function DiasPlazo({ a, ahora, fin }: { a: Alquiler; ahora: number; fin: number 
   </ol>
 }
 
-/** Fotos de entrada o salida: un espacio por pantalla y al final la confirmación. */
+/** Cuántos espacios ya tienen foto y lista. No fija un total: sale de los cuartos del alquiler. */
+export function progresoCuartos(cuartos: { fotos: unknown[]; items: { estado?: string | null }[] }[]) {
+  const listos = cuartos.filter(c => c.fotos.length > 0 && c.items.every(i => i.estado)).length
+  return { listos, total: cuartos.length, puedeConfirmar: cuartos.length > 0 && listos === cuartos.length }
+}
+
+/** Fotos de entrada o salida: la lista de espacios reales y, al entrar a uno, su captura. */
 function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
   const acta = a[cual]!; const n = acta.cuartos.length
-  const falta = acta.cuartos.findIndex(c => !cuartoListo(c))
-  const [i, setI] = useState(acta.firmas[rol] || falta === -1 ? n : falta); const [err, setErr] = useState('')
+  const { listos, puedeConfirmar } = progresoCuartos(acta.cuartos)
+  const [i, setI] = useState<number | 'fin' | null>(acta.firmas[rol] ? 'fin' : null); const [err, setErr] = useState('')
   useEffect(() => { window.scrollTo(0, 0) }, [i])
-  const firmaCuarto = JSON.stringify(acta.cuartos[i] ?? null)
+  const firmaCuarto = JSON.stringify(typeof i === 'number' ? acta.cuartos[i] : null)
   useEffect(() => { setErr('') }, [firmaCuarto])
-  const siguiente = () => {
+  const guardar = () => {
+    if (typeof i !== 'number') return
     const c = acta.cuartos[i]
     if (!c.fotos.length) return setErr('Falta una foto de este espacio. Toca "Tomar foto".')
     if (c.items.some(x => !x.estado)) return setErr('Marca "Bien" o "Con detalle" en cada punto de la lista.')
-    setErr(''); setI(i + 1)
+    setErr(''); setI(null)
   }
   const titulo = cual === 'entrada' ? 'Fotos de entrada' : 'Fotos de salida'
-  return <div className="pila">
-    <div className="subpasos" aria-label={`${titulo}: parte ${Math.min(i + 1, n + 1)} de ${n + 1}`}>
-      {Array.from({ length: n + 1 }, (_, k) => <span key={k} className={k < i ? 'hecho' : k === i ? 'actual' : ''} />)}</div>
-    {i < n ? <>
-      <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
-      <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
-      {err && <p className="error" role="alert">{err}</p>}
-      <div className="pie-paso">
-        {i > 0 && <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(i - 1) }}>Atrás</button>}
-        <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={siguiente}>{i + 1 < n ? 'Siguiente espacio' : 'Revisar y confirmar'}</button>
-      </div>
-    </> : <>
-      <Firma key={cual + '-' + rol} a={a} que={cual} rol={rol} titulo={'Confirmar ' + titulo.toLowerCase()}
-        texto={cual === 'entrada' ? 'Revisa que las fotos muestren cómo está el lugar hoy.' : 'Revisa que las fotos muestren cómo quedó el lugar.'}
-        casilla={cual === 'entrada' ? 'Las fotos muestran cómo está el lugar al entrar.' : 'Las fotos muestran cómo quedó el lugar al salir.'} />
-      <button type="button" className="enlace" onClick={() => setI(0)}>Ver o cambiar las fotos</button>
-    </>}
+  if (i === 'fin') return <div className="pila">
+    <Firma key={cual + '-' + rol} a={a} que={cual} rol={rol} titulo={'Confirmar ' + titulo.toLowerCase()}
+      texto={cual === 'entrada' ? 'Revisa que las fotos muestren cómo está el lugar hoy.' : 'Revisa que las fotos muestren cómo quedó el lugar.'}
+      casilla={cual === 'entrada' ? 'Las fotos muestran cómo está el lugar al entrar.' : 'Las fotos muestran cómo quedó el lugar al salir.'} />
+    <button type="button" className="enlace" onClick={() => setI(null)}>Ver o cambiar las fotos</button>
+  </div>
+  if (typeof i === 'number') return <div className="pila">
+    <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
+    <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
+    {err && <p className="error" role="alert">{err}</p>}
+    <div className="pie-paso">
+      <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(null) }}>Volver a los espacios</button>
+      <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={guardar}>Guardar este espacio</button>
+    </div>
+  </div>
+  return <div className="pila" data-recorrido="fotos">
+    <p className="mini">{titulo}</p>
+    <p className="espacios__cuenta">{listos} de {n} {n === 1 ? 'espacio listo' : 'espacios listos'}</p>
+    <div className="espacios__barra" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={listos} aria-label="Espacios listos"><span style={{ width: n ? `${(listos / n) * 100}%` : 0 }} /></div>
+    <ul className="espacios">{acta.cuartos.map((c, k) => <li key={k}><button type="button" className="espacios__fila" onClick={() => setI(k)}><span>{c.nombre}</span>{cuartoListo(c) ? <span className="chip chip--exito">Listo</span> : <span className="chip chip--neutro">Pendiente</span>}</button></li>)}</ul>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={!puedeConfirmar} onClick={() => setI('fin')}>Revisar y confirmar</button>
   </div>
 }
 
@@ -183,8 +215,8 @@ export function AnilloDias({ a }: { a: Alquiler }) {
 }
 
 export function EnCurso({ a }: P) {
-  return <section className="pila"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
-    <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div>
+  return <section className="pila espera-vista espera-vista--confirma"><IlustracionPendiente /><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
+    <h2>Depósito protegido</h2><div className="monto">{usd(a.monto)}</div>
     {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
     <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
     <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
@@ -304,6 +336,7 @@ function Mediacion({ a, rol }: P) {
   const vence = modoServidor ? venceMediacionC(a) : null
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
   return <section className="pila"><IlustracionPendiente /><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
+    <div className="ct-resumen" aria-label="Resumen de la mediación"><p className="ct-resumen__monto">{usd(r.monto)}</p><p>Reclamo de {usd(r.monto)}. Una persona mediadora revisa las fotos y ayuda a buscar un acuerdo. No decide por ustedes. No hay un costo configurado en este alquiler.</p></div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
     {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)». El reparto que elijas sí se hace de verdad en la red de prueba.</p>}

@@ -1129,3 +1129,29 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .ct__version{margin:6px 0 0;font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
 .ct__version a{color:inherit;text-decoration:underline}
 
+/* Presentación de la optimización: tarjeta, espacios, espera y aviso. Sin un porcentaje inventado. */
+.ct-resumen{display:grid;gap:10px;padding:4px 0 8px}
+.ct-resumen__monto{margin:0;font:800 clamp(32px,8vw,44px)/1.1 var(--f-titulo);color:var(--cafe)}
+.ct-resumen dl{display:grid;gap:8px;margin:0}
+.ct-resumen dt{font:600 14px/18px var(--f-texto);letter-spacing:.04em;text-transform:uppercase;color:var(--cafe-suave)}
+.ct-resumen dd{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
+.ct-resumen__firmas{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ct-resumen__firmas li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
+.espacios{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.espacios__cuenta{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
+.espacios__fila{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:52px;padding:0 14px;border:0;border-radius:16px;background:var(--mint);color:var(--cafe);font:600 16px/20px var(--f-texto);cursor:pointer;text-align:left}
+.espacios__barra{height:6px;border-radius:var(--r-pildora);background:rgba(61,42,34,.1);overflow:hidden}
+.espacios__barra>span{display:block;height:100%;background:var(--exito)}
+.espera-vista{display:grid;justify-items:center;gap:12px;text-align:center;padding:12px 0 8px}
+.espera-vista h2{margin:0}
+.espera-vista p{margin:0;max-width:36ch}
+.espera-vista__barra{width:min(240px,80%);height:6px;border-radius:var(--r-pildora);background:rgba(61,42,34,.1);overflow:hidden}
+.espera-vista__barra>span{display:block;height:100%;width:40%;background:var(--exito);animation:envio-barra-va 1.6s ease-in-out infinite}
+.espera-vista--confirma{justify-items:stretch;text-align:left}
+.espera-vista--confirma .ilustracion-pendiente,.espera-vista--confirma .chip{justify-self:start}
+@media (prefers-reduced-motion:reduce){.espera-vista__barra>span{animation:none;width:40%;margin-left:30%}}
+.na-pliegue{border:0;background:none;padding:0}
+.na-pliegue summary{cursor:pointer}
+.na-pliegue summary::-webkit-details-marker{display:none}
+.aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
+
