@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { LogoAnimado } from '../LogoAnimado'
 import { store, useAlquileres, obtener, ahoraDe, DIA, vistaDe, rolDe, fijarVista } from '../store'
 import { acciones, plazoMs, textoPlazo } from '../acciones'
 import { modoDe } from '../servidor/config'
@@ -350,7 +349,7 @@ export function Cerrado({ a, rol }: P) {
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
     simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisado (25/10, lista de Legal) · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
-  return <section className="pila cerrado"><LogoAnimado estatico className="logo-pieza logo-pieza--esquina" />
+  return <section className="pila cerrado">
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>

@@ -3,7 +3,6 @@ import { auth, formatoCodigo as F, modoReal } from '../services/auth'
 import type { Usuario } from '../types'
 import { Demo, Icono } from '../ui'
 import { alertaIngresoFallo } from '../alertas'
-import { WORDMARK_SVG } from '../wordmark'
 import { CasillaLegal } from '../legal/CasillaLegal'
 import { consentimientoPrivacidad, casillaTerminos, terminosActual, privacidadActual } from '../legal/documentos'
 import { aceptoVersion, borrarAceptacion, guardarAceptacion, validarAceptaciones, erroresTrasCambio, ERRORES_INICIALES, type ClaveLegal } from '../legal/aceptacion'
@@ -119,7 +118,7 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     { ico: 'i-balanza', t: 'Reclamos claros', d: 'La mayoría se resuelve en la app.' },
   ]
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
-    <h1 className="marca-c" aria-label="Lockumi"><span dangerouslySetInnerHTML={{ __html: WORDMARK_SVG }} /></h1>
+    <h1 className="marca-c marca-c--texto">Lockumi</h1>
     <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
     {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}

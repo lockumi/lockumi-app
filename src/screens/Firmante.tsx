@@ -2,7 +2,6 @@
 // volver a entrar cuando la sesión se perdió (pestaña nueva o vencida). Reusa la entrada (Entrando), la tarjeta y los botones.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Entrando, Hoja } from './Login'
-import { LogoAnimado } from '../LogoAnimado'
 import { TEXTOS_FIRMANTE as T, esTextoSinSesion, detalleFallo, type EstadoFirmante } from '../services/firmante'
 import { TEXTOS_LLAVE as L, asegurarLlave, recuperarConLlave } from '../services/llave'
 import { haySesionFirma, olvidarBilletera } from '../services/billetera'
@@ -18,7 +17,7 @@ export function PuertaFirmante({ x, estado, reintentar, otraCuenta }: { x: Usuar
   if (estado === 'sin-llave') return <LlaveAutomatica email={x.email} alListo={reintentar} otraCuenta={otraCuenta} />
   const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
-    <LogoAnimado estatico className="entrada-app__arte marca-c__arte" />
+    <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <h2 className="entrada-app__titulo">{titulo}</h2>
     <section className="glass tarjeta pila" aria-live="polite">
       {estado === 'no-firmante' && <><p>{L.conLlave}</p><BotonLlave email={x.email} alListo={reintentar} /></>}
@@ -44,7 +43,7 @@ export function LlaveAutomatica({ email, alListo, otraCuenta }: { email: string;
   }
   useEffect(() => { if (lanzada.current) return; lanzada.current = true; void crear() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app ingreso-cargando" aria-busy={ocupado}>
-    <LogoAnimado estatico className="entrada-app__arte marca-c__arte" />
+    <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <p className="entrada-app__titulo" role="status">Entrando a tu cuenta…</p>
     <p className="nota">{L.auto}</p>
     {error && <p className="error" role="alert">{error}</p>}
