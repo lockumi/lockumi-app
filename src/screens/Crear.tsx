@@ -257,6 +257,7 @@ export function Crear({ u }: { u: Usuario }) {
         {errCuenta && <p className="error" role="alert">{errCuenta}</p>}
       </section>}
 
+      <div className="na-par">
       <section className="na-sec">
         <label htmlFor="f-monto" className="na-et"><Ico n="candado" />Depósito<span className="na-et__der">{etMonto}</span></label>
         <div className={'na-paso' + (errMonto ? ' na-paso--error' : '')}>
@@ -277,6 +278,7 @@ export function Crear({ u }: { u: Usuario }) {
             contexto={f.inicio && <div className="na-hoja__ctx"><span className="na-ctx"><Ico n="cal" />Entrada <strong>{ddmmaa(f.inicio)}</strong></span>{f.fin && <span className="na-ctx na-ctx--sel">Salida <strong>{ddmmaa(f.fin)}</strong></span>}</div>} />
         </div>
       </section>
+      </div>
 
       <section className="na-sec" data-recorrido="reglas">
         <div className="na-et" id="et-reglas"><Ico n="reglas" />Reglas</div>

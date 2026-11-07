@@ -118,6 +118,7 @@ function MiPerfil({ u, rol }: { u: Usuario; rol: Rol }) {
   const vitrina = opcionVitrina(p.cerrados), opciones: [Opcion, string][] = [[vitrina, vitrina === 'destacados' ? (rol === 'dueno' ? UI.vitrinaDuenos : UI.vitrinaInquilinos) : UI.opcion.nuevos]]
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver />
+    <p className="ilustracion-pendiente">Ilustración pendiente de aprobación</p>
     <h1>{UI.entradaTitulo}</h1>
     <nav className="rp-papeles" aria-label="Tu papel">{(['dueno', 'inquilino'] as Rol[]).map(r =>
       <a key={r} href={`#/perfil/${r}`} className={`rp-rol rp-rol--${r}`} aria-current={r === rol ? 'page' : undefined}><Icono n={r === 'dueno' ? 'casallave' : 'maleta'} />{NOMBRE_PAPEL[r]}</a>)}</nav>

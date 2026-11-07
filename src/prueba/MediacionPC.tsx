@@ -10,6 +10,7 @@ import { escrowReal } from '../servidor/config'
 import { fechaHoraCR } from '../../api/_lib/plazos'
 import { useProceso, NOTA_TIEMPO } from '../proceso'
 import { Simulado } from '../ui'
+import { IlustracionPendiente } from '../screens/ilustracion'
 import { esHash } from '../services/comprobantes'
 import { VerTx } from '../screens/Real'
 import { pedirMediacion, noUsarMediacion, plazoMediacion, repartoValido, textoConfirmar, textoResultado, textoNoReclamado } from './mediacion'
@@ -84,6 +85,7 @@ function B14({ a }: { a: Alquiler }) {
 export function MediacionPC({ a, rol }: { a: Alquiler; rol: Rol }) {
   const rec = a.reclamo!
   return <section className="pila mediacion-pc">
+    <IlustracionPendiente />
     {/* LEGAL: revisado (25/10, lista de Legal) · título y resumen (texto propio) */}
     <div className="cab"><h2>Sin acuerdo: reclamo de {u(rec.monto)}</h2><Simulado texto="Mediación y reparto simulados" /></div>
     {rec.propuesta && <p className="nota">Propuesta automática (simulación): dueño {u(rec.propuesta.alDueno)} · inquilino {u(r2(a.monto - rec.propuesta.alDueno))}. No hubo acuerdo.</p>}

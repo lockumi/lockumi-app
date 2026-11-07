@@ -19,6 +19,7 @@ import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
 import { TomarFoto } from '../Camara'
 import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba } from '../flujo'
+import { IlustracionPendiente } from './ilustracion'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { repartoCentimos } from '../../api/_lib/centimos'
 import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alertas'
@@ -267,7 +268,7 @@ function Mediacion({ a, rol }: P) {
   const est = estadoAceptaciones(rol, filas, a.monto)
   const vence = modoServidor ? venceMediacionC(a) : null
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
-  return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
+  return <section className="pila"><IlustracionPendiente /><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
     {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)». El reparto que elijas sí se hace de verdad en la red de prueba.</p>}
@@ -350,6 +351,7 @@ export function Cerrado({ a, rol }: P) {
     simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisado (25/10, lista de Legal) · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
   return <section className="pila cerrado">
+    <IlustracionPendiente />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
@@ -393,7 +395,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     const x = antes.current; antes.current = a ? instantanea(a) : null
     if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))
   })
-  if (!a) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta">No encontramos ese alquiler. <a href="#/">Volver a tus alquileres</a></div></main>
+  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta"><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/">Volver a tus alquileres</a></div></main>
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
@@ -413,7 +415,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
       {modoSolo && <Cuentas a={a} />}</div>}
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}
     <div className="paso-cab"><p className="paso-cab__n">{a.estado === 'cerrado' ? 'Terminado' : pasoTexto(a)}</p><p className="paso-cab__t">{ETAPAS[etapa]}</p>
-      <div className="barra-paso" aria-hidden="true"><span style={{ width: `${((etapa + (a.estado === 'cerrado' ? 1 : 0.5)) / ETAPAS.length) * 100}%` }} /></div></div>
+      <div className="barra-paso" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={a.estado === 'cerrado' || n < etapa ? 'hecho' : n === etapa ? 'actual' : ''} />)}</div></div>
     {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
     <div className="detalle" inert={!!ejemplo}>
       <div className="detalle__principal pila">

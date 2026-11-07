@@ -12,6 +12,7 @@ import { usd, fecha } from '../ui'
 import { TEXTO_OTRO_CORREO, TITULO_INVITACION, TITULO_PLEGABLE_REGLAS, TEXTO_LINK_DEL_DUENO, BOTON_CERRAR_SESION, esLinkDelDueno } from '../prueba/invitacion'
 import { guardarRegreso } from '../regreso'
 import { Plegable } from './Plegable'
+import { IlustracionPendiente } from './ilustracion'
 
 type Datos = Awaited<ReturnType<typeof servidor.verInvitacion>>
 // 26/10/2026 (Katherine): con otra cuenta (p. ej. Apple), el código de 6 números al correo invitado (src/reputacion/InvitacionCodigo.tsx).
@@ -71,7 +72,7 @@ export function Invitacion({ id, token, u, salir }: { id: string; token: string;
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
   const [codigo, setCodigo] = useState<Abierto | null>(null)   // la pantalla del código (otra cuenta)
   useEffect(() => { if (modoServidor) servidor.verInvitacion(id, token).then(setD).catch(e => abrirSiYaEsMio(id).then(mio => { if (!mio) setErr(e.message) })) }, [id, token])
-  if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
+  if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont cont--form"><IlustracionPendiente /><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')
     try { await aceptarConCorreo(id, token, u.email); activarServidor(); ir('/alquiler/' + id) }
@@ -84,6 +85,7 @@ export function Invitacion({ id, token, u, salir }: { id: string; token: string;
   const otroCorreo = d?.email_inquilino && PedirCodigo
     ? <Suspense fallback={null}><PedirCodigo id={id} token={token} correo={d.email_inquilino} casilla={dosPersonas} acepta={acepta} setAcepta={setAcepta} abrir={setCodigo} /></Suspense> : undefined
   return <main id="contenido" tabIndex={-1} className="cont cont--form" style={{ paddingBottom: 48 }}>
+    <IlustracionPendiente />
     <h1 className="inv-titulo">{TITULO_INVITACION}</h1>
     <div className="glass glass--fuerte tarjeta pila">
       {!d && !err && <p className="nota">Cargando la invitación…</p>}

@@ -12,7 +12,7 @@ export const RUTA_EJEMPLO = '/ejemplo'
 export interface PasoRecorrido { ruta: string; estado?: Estado; el: string; /** En el teléfono (menos de 720 px), si el bloque es muy alto para el globo. */ elMovil?: string; titulo: string; texto: string; lado?: 'top' | 'bottom' | 'left' | 'right' }
 // LEGAL: revisado el 23/10 (textos exactos de la maqueta aprobada; pasos 5 y 6 con las correcciones de Legal).
 export const PASOS_RECORRIDO: PasoRecorrido[] = [
-  { ruta: '/', el: '[data-recorrido="nuevo"]', titulo: 'Te damos la bienvenida a Lockumi',
+  { ruta: '/', el: '[data-recorrido="nuevo"]', lado: 'bottom', titulo: 'Te damos la bienvenida a Lockumi',
     texto: 'Lockumi guarda el depósito del alquiler en una cuenta de la red de prueba, con USDC de prueba. Empecemos por crear un alquiler.' },
   { ruta: '/crear', el: '[data-recorrido="datos"]', titulo: 'Los datos del alquiler',
     texto: 'El lugar, las fechas y el monto del depósito. Toca una opción: casi no hay que escribir.' },
