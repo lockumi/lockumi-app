@@ -89,10 +89,12 @@ export default function App() {
   return <Fondo comision={!!(inv || m)}>{skip}
     <Alertas />
     <div className="app-sesion">
+    <div className="app-cuerpo">
     <Barra u={u} onSalir={salir} r={r} />
     {/* Paso 19: con VITE_REPUTACION=1 todas las pantallas pasan por la puerta obligatoria de la reputación. Apagado, este código no existe en el build. */}
     {Reputacion ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir}>{pantalla}</Reputacion></Suspense> : pantalla}
     <Pie />
+    </div>
     <Navegacion r={r} />
     </div>
   </Fondo>

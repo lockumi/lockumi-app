@@ -31,6 +31,7 @@ describe('navegación de perfil, avisos y ayuda', () => {
     expect(h).toContain('aria-current="page"')
     expect(h).toContain('aria-label="¿Cómo funciona?"')
     expect(h).toContain('aria-label="Salir"')
+    expect(app).toContain('className="app-cuerpo"')
     expect(app).toContain('<Navegacion r={r} />')
     expect(app).toContain("r === '/perfil'")
     expect(app).toContain("r === '/avisos'")

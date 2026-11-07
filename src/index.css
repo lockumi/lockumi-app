@@ -815,15 +815,18 @@ html.sin-scroll{overflow:hidden}
 .ayuda__lista{display:grid;gap:8px}
 .ayuda__item summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font:700 16px/22px var(--f-titulo)}
 .ayuda__item p{margin:8px 0 0}
-.app-sesion{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-.nav-app{position:fixed;z-index:40;left:0;right:0;bottom:0;display:flex;justify-content:space-around;gap:4px;background:var(--tarjeta);border-top:1px solid var(--borde);padding:4px 8px calc(4px + env(safe-area-inset-bottom))}
+/* La barra va debajo del contenido, no encima: el cuerpo se desplaza y la barra queda a la vista. */
+#root:has(.nav-app){height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.app-sesion{flex:1;min-height:0;display:flex;flex-direction:column}
+.app-cuerpo{flex:1;min-height:0;overflow:auto}
+.nav-app{position:relative;z-index:40;flex:none;display:flex;justify-content:space-around;gap:4px;background:var(--tarjeta);border-top:1px solid var(--borde);padding:4px 8px calc(4px + env(safe-area-inset-bottom))}
 .nav-app a{min-width:44px;min-height:44px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--cafe-suave);text-decoration:none;font:700 12px/16px var(--f-texto);border-radius:12px}
 .nav-app a[aria-current="page"]{color:var(--accion)}
 .nav-app .ico{width:22px;height:22px}
 .nav-campana{min-width:44px;min-height:44px}
 body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 @media (min-width:720px){
-  .nav-app{left:50%;right:auto;width:min(720px,100%);transform:translateX(-50%);border-left:1px solid var(--borde);border-right:1px solid var(--borde)}
+  .nav-app{width:min(720px,100%);margin-inline:auto;border-left:1px solid var(--borde);border-right:1px solid var(--borde)}
   body:has(.nav-app) .tostadas{right:24px;left:auto;transform:none;bottom:calc(92px + env(safe-area-inset-bottom))}
 }
 @media (max-width:719px){.barra__usuario{max-width:22vw}}
