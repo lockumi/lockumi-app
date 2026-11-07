@@ -14,11 +14,15 @@ export const Icono = ({ id, className = '' }: { id: string; className?: string }
 export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: number; className?: string }) =>
   <svg className={'deco ' + className} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href={'#' + id} /></svg>
 
-export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
+export function Barra({ u, onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
+  const enAvisos = r === '/avisos' || r.startsWith('/avisos/')
   return <header className="cont barra">
     <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <div className="barra__der">
       <span className="barra__usuario cortar" title={u.email}>{u.email}</span>
+      <a href="#/avisos" className="boton-icono nav-campana" aria-label="Avisos" aria-current={enAvisos ? 'page' : undefined} title="Avisos">
+        <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
+      </a>
       <button type="button" className="boton-ayuda" aria-label="¿Cómo funciona?" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>
         <span className="boton-ayuda__i" aria-hidden="true">?</span><span className="boton-ayuda__t" aria-hidden="true">¿Cómo funciona?</span></button>
       <button type="button" className="boton-icono" onClick={onSalir} aria-label="Salir" title="Salir">

@@ -19,6 +19,7 @@ import { Inicio } from './screens/Inicio'
 import { Perfil } from './screens/Perfil'
 import { Avisos } from './screens/Avisos'
 import { Ayuda } from './screens/Ayuda'
+import { Navegacion } from './screens/Navegacion'
 import { Crear } from './screens/Crear'
 import { Detalle } from './screens/Detalle'
 import { ConfirmarAlquiler, ConfirmarReinicio } from './prueba/Eliminar'
@@ -87,10 +88,13 @@ export default function App() {
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   return <Fondo comision={!!(inv || m)}>{skip}
     <Alertas />
-    <Barra u={u} onSalir={salir} />
+    <div className="app-sesion">
+    <Barra u={u} onSalir={salir} r={r} />
     {/* Paso 19: con VITE_REPUTACION=1 todas las pantallas pasan por la puerta obligatoria de la reputación. Apagado, este código no existe en el build. */}
     {Reputacion ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir}>{pantalla}</Reputacion></Suspense> : pantalla}
     <Pie />
+    <Navegacion r={r} />
+    </div>
   </Fondo>
 }
 
