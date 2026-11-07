@@ -968,3 +968,11 @@ html.sin-scroll{overflow:hidden}
 .avisos-centro__item span,.avisos-centro__item time{font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
 .avisos-centro__item--salida{background:var(--estado-pendiente-fondo)}
 
+/* Ayuda: recorrido existente y preguntas con textos ya publicados. */
+.ayuda{display:grid;gap:16px;padding-bottom:32px}
+.ayuda h1{margin:0;font:800 clamp(28px,6vw,36px)/1.1 var(--f-titulo)}
+.ayuda__temas{display:flex;flex-wrap:wrap;gap:8px}
+.ayuda__lista{display:grid;gap:8px}
+.ayuda__item summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font:700 16px/22px var(--f-titulo)}
+.ayuda__item p{margin:8px 0 0}
+
