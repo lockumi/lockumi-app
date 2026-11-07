@@ -34,9 +34,11 @@ describe('recorrido: primera vez y volver a verlo', () => {
     expect(rec).toMatch(/const cerrar = \(\) => \{ void marcarVisto\(u\)/); expect(rec).toMatch(/onDestroyStarted: \(\) => \{ void marcarVisto\(u\)/)
     expect(rec).toContain("saltar.textContent = 'Saltar'"); expect(rec).toContain("'¡Listo!'"); expect(rec).toContain("prevBtnText: 'Atrás'")
   })
-  it('«¿Cómo funciona?» en la cabecera (solo el ícono en el teléfono, con aria-label) y «Ver el recorrido» en Ayuda', () => {
-    expect(ui).toContain('aria-label="¿Cómo funciona?"'); expect(ui).toContain('abrirRecorrido(u')
-    expect(ayuda).toContain('Ver el recorrido'); expect(inicio).toContain('data-recorrido="nuevo"')
+  it('Ayuda sigue en la cabecera, sin texto visible, y «Ver el recorrido» abre el mismo recorrido', () => {
+    expect(ui).toContain('aria-label="Ayuda"'); expect(ui).toContain('href="#/ayuda"')
+    expect(ui).not.toContain('¿Cómo funciona?'); expect(ui).not.toContain('abrirRecorrido')
+    expect(ayuda).toContain('Ver el recorrido'); expect(ayuda).toContain('abrirRecorrido(u')
+    expect(inicio).toContain('data-recorrido="nuevo"')
   })
 })
 
