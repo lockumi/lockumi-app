@@ -15,7 +15,7 @@ import { estadoFirma, otro, NOMBRE, ErrorFirma, type Firmas } from '../flujo'
 export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: Foto[]; vacio?: string }) {
   if (!fotos.length) return <p className="nota">{vacio}</p>
   return <ul className="fotos">{fotos.map((f, i) => <li key={i}>
-    <img src={f.src} alt={`Foto ${i + 1}, de ${NOMBRE_ROL[f.por].toLowerCase()}`} loading="lazy" />
+    <img className={f.origen === 'ejemplo' ? 'foto--ejemplo' : undefined} src={f.src} alt={`Foto ${i + 1}, de ${NOMBRE_ROL[f.por].toLowerCase()}`} loading="lazy" />
     {pruebaCompleta() && <span className="foto__sello" aria-hidden="true">{selloFoto(f)}</span>}{/* solo con la prueba completa (6.4.2) */}
     <span className="foto__pie">{pruebaCompleta() ? textoFotoPC(f) : textoFoto(f)} · {NOMBRE_ROL[f.por]}</span>
     {f.posibleGaleria && <span className="chip chip--coral chip--mini" title="La foto no se tomó ahora con la cámara de la app">Posible foto de galería</span>}

@@ -113,6 +113,23 @@ function PagoSimulado({ a, rol }: P) {
   </section>
 }
 
+/** Fila D1–Dn del plazo que ya tiene el alquiler. No cambia la fecha ni el texto legal. */
+function DiasPlazo({ a, ahora, fin }: { a: Alquiler; ahora: number; fin: number }) {
+  const ms = plazoMs(a)
+  if (!a.ventanaInicio || ms % DIA !== 0) return null
+  const n = ms / DIA
+  if (n < 2 || n > 14) return null
+  const inicio = +new Date(a.ventanaInicio)
+  const actual = ahora >= fin ? n + 1 : Math.min(n, Math.floor(Math.max(0, ahora - inicio) / DIA) + 1)
+  return <ol className="dias-plazo" aria-label={`Días del plazo: van ${Math.min(actual, n)} de ${n}`}>
+    {Array.from({ length: n }, (_, i) => {
+      const k = i + 1
+      const cls = k < actual ? 'hecho' : k === actual ? 'actual' : 'falta'
+      return <li key={k} className={cls} aria-current={cls === 'actual' ? 'step' : undefined}><span>D{k}</span></li>
+    })}
+  </ol>
+}
+
 /** Fotos de entrada o salida: un espacio por pantalla y al final la confirmación. */
 function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
   const acta = a[cual]!; const n = acta.cuartos.length
@@ -187,6 +204,7 @@ export function Ventana({ a, rol }: P) {
   useEffect(() => { if (!modoSolo && resta === 0 && !a.reclamo) void devolver() }, [resta, a.id, a.reclamo]) // eslint-disable-line
   return <section className="pila"><h2>{textoPlazo(a)} para reclamos</h2>
     <div className="cuenta" role="timer"><span className="cuenta__n">{dias}</span> días <span className="cuenta__n">{horas}</span> horas{a.diasSimulados > 0 && <span className="reloj-adelantado">{RELOJ_ADELANTADO}</span>}</div>
+    <DiasPlazo a={a} ahora={ahoraDe(a)} fin={fin} />
     {modoSolo ? <p className="nota">En esta prueba no hay que esperar el plazo: si todo está bien, el dueño de prueba aprueba y el depósito vuelve al inquilino en la red de prueba.</p>
       // LEGAL: revisado (24/10) · ronda 6: «Si no hay reclamo, después de {plazo}…». La devolución la dispara la app abierta (efecto de arriba) y la firma el servidor de Lockumi
       : escrowReal ? <p className="nota">Termina el {conPunto(fechaHora(fin))} {auto ? FIN_CONTADOR_AUTO : FIN_CONTADOR_SIN_CORRIDA}</p>
@@ -369,7 +387,7 @@ export function Cerrado({ a, rol }: P) {
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
   return <section className="pila cerrado">
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
-    <h2>Depósito devuelto</h2>
+    <h2>¡Depósito devuelto!</h2>
     {auto2 && <span className="pill-auto">Devolución automática</span>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>

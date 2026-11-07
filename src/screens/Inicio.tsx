@@ -46,7 +46,7 @@ export function Inicio({ u }: { u: Usuario }) {
     {aviso && <AvisoLista texto={aviso} cerrar={() => setAviso(null)} />}
     {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera />}
     {import.meta.env.VITE_REPUTACION === '1' && <EntradaReputacion email={u.email} />}
-    {todos.length === 0 && <div className="ini-vacio"><div className="glass tarjeta vacio"><IlustracionPendiente /></div><div className="ini-vacio__lado"><p className="ini-vacio__t">Todavía no hay alquileres.</p><a className="boton boton--primario boton--ancho ini-seguir" href="#/crear">Nuevo alquiler</a></div></div>}
+    {todos.length === 0 && <div className="ini-vacio"><div className="glass tarjeta vacio"><IlustracionPendiente /></div><div className="ini-vacio__lado"><p className="ini-vacio__t">Aún sin alquileres</p><p className="ini-vacio__b">Crea el primero o acepta una invitación.</p><a className="boton boton--primario boton--ancho ini-seguir" href="#/crear">Nuevo alquiler</a></div></div>}
     {principal && <div className="ini-lista">
       <a className="glass ini-principal" href={'#/alquiler/' + principal.id}>
         <div className="ini-principal__top"><h2 className="h3">{principal.direccion}</h2><ChipRol rol={rolDe(principal, u.email)} /></div>

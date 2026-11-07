@@ -77,14 +77,14 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
   const cerrar = () => { void marcarVisto(u); d.destroy() }
   const pasos: DriveStep[] = PASOS_RECORRIDO.map((p, i) => ({
     element: () => document.querySelector(selectorDe(p)) ?? document.body,
-    popover: { title: p.titulo, description: p.texto, side: p.lado, align: 'start',
+    popover: { title: p.titulo, description: p.texto, side: p.lado, align: p.el === '[data-recorrido="nuevo"]' ? 'end' : 'start',
       showButtons: i === 0 ? ['next'] : ['next', 'previous'], nextBtnText: i === PASOS_RECORRIDO.length - 1 ? '¡Listo!' : 'Siguiente', prevBtnText: 'Atrás',
       onNextClick: () => { if (i === PASOS_RECORRIDO.length - 1) cerrar(); else void ir(i + 1) },
       onPrevClick: () => { if (i > 0) void ir(i - 1) } },
   }))
   const d = driver({
     steps: pasos, animate: !reducir(), smoothScroll: !reducir(), overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
-    popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 12,
+    popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 16,
     onPopoverRender: (pop, { state }) => {
       const i = state.activeIndex ?? 0, n = PASOS_RECORRIDO.length
       pop.wrapper.setAttribute('aria-modal', 'true')
@@ -103,7 +103,14 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
       pop.footer.prepend(saltar)
       pop.footer.insertBefore(puntos, pop.footerButtons)
       for (const b of [pop.previousButton, pop.nextButton]) b.type = 'button'
-      requestAnimationFrame(() => pop.nextButton.focus({ preventScroll: true }))
+      const margen = () => {
+        const r = pop.wrapper.getBoundingClientRect(), m = 16
+        let left = r.left
+        if (r.right > innerWidth - m) left -= r.right - (innerWidth - m)
+        if (left < m) left = m
+        if (Math.abs(left - r.left) > 0.5) pop.wrapper.style.left = `${Math.round(left)}px`
+      }
+      requestAnimationFrame(() => { margen(); pop.nextButton.focus({ preventScroll: true }) })
     },
     onCloseClick: () => cerrar(),
     onDestroyStarted: () => { void marcarVisto(u); d.destroy() },   // Esc = Saltar
