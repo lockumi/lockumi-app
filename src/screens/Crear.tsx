@@ -154,7 +154,7 @@ export function Crear({ u }: { u: Usuario }) {
   const guardado = leerBorrador()
   const [f, setF] = useState({ direccion: guardado?.direccion ?? '', monto: guardado?.monto ?? '', email: guardado?.email ?? '', inicio: guardado?.inicio ?? '', fin: guardado?.fin ?? '' })
   const [tocado, setTocado] = useState<Partial<Record<Campo, boolean>>>({}); const [enviado, setEnviado] = useState(false)
-  const [reglas, setReglas] = useState<string[]>(guardado?.reglas?.length ? guardado.reglas : ['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState('')
+  const [reglas, setReglas] = useState<string[]>(guardado?.reglas?.length ? guardado.reglas : ['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState(''); const enviando = useRef(false)
   // Red de prueba: tú eres el inquilino y el dueño es una cuenta de prueba de Lockumi.
   // Origen de los USDC de prueba: «USDC de prueba de Lockumi» (sin valor, tope de 20) o tu propia cuenta (el límite es tu saldo real, máximo 50 000).
   const [origen, setOrigen] = useState<'lockumi' | 'propia'>('lockumi')
@@ -200,6 +200,8 @@ export function Crear({ u }: { u: Usuario }) {
     setEnviado(true)
     const primero = (['direccion', 'monto', 'inicio', 'fin', 'email'] as Campo[]).find(k => errores[k])
     if (primero) { document.getElementById('f-' + primero + (primero === 'inicio' || primero === 'fin' ? '-boton' : ''))?.focus(); return }
+    if (enviando.current) return
+    enviando.current = true
     setOcupado(true)
     try { sessionStorage.setItem(BORRADOR_CREAR, JSON.stringify({ ...f, reglas })) } catch { /* sin almacenamiento: el formulario sigue en memoria */ }
     const m = montoNumero(f.monto)
@@ -215,7 +217,7 @@ export function Crear({ u }: { u: Usuario }) {
       try { sessionStorage.removeItem(BORRADOR_CREAR) } catch { /* igual se abre el alquiler */ }
       avisar(alertaCreado({ direccion: f.direccion.trim(), monto: m }))
       ir('/alquiler/' + r.id)
-    } catch (e) { setOcupado(false); setErrSrv(e instanceof Error ? e.message : 'No pudimos crear el alquiler. Intenta de nuevo.') }
+    } catch (e) { enviando.current = false; setOcupado(false); setErrSrv(e instanceof Error ? e.message : 'No pudimos crear el alquiler. Intenta de nuevo.') }
   }
   // Monto: botones − y + de 1 en 1 (sin pasar el tope de cada origen); también se puede escribir.
   const tope = !escrowReal ? MONTO_MAX : origen === 'lockumi' ? TOPE_USDC : Math.min(propia?.saldo ?? MONTO_MAX_USDC, MONTO_MAX_USDC)

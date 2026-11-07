@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { actaCompleta, ahoraDe } from '../store'
 import { acciones } from '../acciones'
 import { modoDe } from '../servidor/config'
@@ -69,12 +69,15 @@ export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar, breve 
   const [ok, setOk] = useState(false); const [err, setErr] = useState('')
   const est = estadoFirma(f, rol)
   const [ocupado, setOcupado] = useState(false)
+  const enviando = useRef(false)
   const hacer = async () => {
     if (!ok) return setErr('Marca la casilla para confirmar que estás de acuerdo.')
+    if (enviando.current) return
+    enviando.current = true
     setOcupado(true)
     try { await acciones.firmar(a, que, rol); alCompletar?.() }
     catch (e) { setErr(e instanceof ErrorFirma || e instanceof Error ? e.message : 'No pudimos guardar tu firma. Intenta de nuevo.') }
-    finally { setOcupado(false) }
+    finally { enviando.current = false; setOcupado(false) }
   }
   return <section className={'pila' + (breve ? ' firma-breve' : '')} aria-labelledby={breve ? undefined : 'firma-' + que} aria-label={breve ? titulo : undefined}>
     {!breve && <h2 id={'firma-' + que}>{titulo}</h2>}
