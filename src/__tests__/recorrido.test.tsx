@@ -50,7 +50,7 @@ describe('recorrido: accesibilidad y estilo', () => {
     expect(css).toMatch(/prefers-reduced-motion:reduce\)\{\.driver-popover\.recorrido\{animation:aviso-fade 120ms/)
   })
   it('velo café al 55 %, globo crema, botones de 44 px, sin colores hex nuevos', () => {
-    expect(rec).toContain("overlayColor: 'rgb(61, 42, 34)', overlayOpacity: 0.55")
+    expect(rec).toContain("overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55")
     const b = css.slice(css.indexOf('/* Recorrido guiado (driver.js)'), css.indexOf('/* ── Estado de espera v2 del pago')); expect(b).toContain('background:var(--fondo)'); expect(b).toContain('min-height:44px'); expect(b).not.toMatch(/#[0-9a-f]{3,6}\b/i)
   })
   it('driver.js fijo en 1.x', () => { expect(pkg.dependencies['driver.js']).toMatch(/^1\./) })

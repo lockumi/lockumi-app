@@ -18,7 +18,7 @@ export function PuertaFirmante({ x, estado, reintentar, otraCuenta }: { x: Usuar
   if (estado === 'sin-llave') return <LlaveAutomatica email={x.email} alListo={reintentar} otraCuenta={otraCuenta} />
   const titulo = estado === 'no-firmante' ? T.titulo : estado === 'sin-sesion' ? T.sesionTitulo : T.errorTitulo
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
-    <LogoAnimado className="entrada-app__arte marca-c__arte" />
+    <LogoAnimado estatico className="entrada-app__arte marca-c__arte" />
     <h2 className="entrada-app__titulo">{titulo}</h2>
     <section className="glass tarjeta pila" aria-live="polite">
       {estado === 'no-firmante' && <><p>{L.conLlave}</p><BotonLlave email={x.email} alListo={reintentar} /></>}
@@ -44,7 +44,7 @@ export function LlaveAutomatica({ email, alListo, otraCuenta }: { email: string;
   }
   useEffect(() => { if (lanzada.current) return; lanzada.current = true; void crear() }, [])   // eslint-disable-line react-hooks/exhaustive-deps
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app ingreso-cargando" aria-busy={ocupado}>
-    <LogoAnimado className="entrada-app__arte marca-c__arte" />
+    <LogoAnimado estatico className="entrada-app__arte marca-c__arte" />
     <p className="entrada-app__titulo" role="status">Entrando a tu cuenta…</p>
     <p className="nota">{L.auto}</p>
     {error && <p className="error" role="alert">{error}</p>}

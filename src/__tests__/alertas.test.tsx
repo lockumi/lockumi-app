@@ -87,8 +87,9 @@ describe('Aviso v2: toast (componente)', () => {
     expect(leer('../logoLandingMarkup.ts')).toContain('viewBox=\\"419.5 65.25 420.25 408.25\\"')
   })
   it('CSS: vidrio crema al 92 % con desenfoque de 18 px y fondo sólido sin soporte; 358 px en celular, 360 px en computadora; abajo', () => {
-    expect(css).toMatch(/\.tostada\{[^}]*background:rgba\(255,245,238,\.92\);-webkit-backdrop-filter:blur\(18px\) saturate\(1\.5\);backdrop-filter:blur\(18px\)/)
-    expect(css).toContain('@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.tostada{background:var(--fondo)}}')
+    expect(css).toMatch(/\.tostada\{[^}]*background:#FFFEFA;border:1px solid #E5E6DE/)
+    expect(css).toContain('.tostada--paso .tostada__accion{background:#6B5E8A;color:#fff}')
+    expect(css).toContain('.tostada--error .tostada__accion{background:#C45C5C;color:#fff}')
     expect(css).toMatch(/\.tostadas\{position:fixed;[^}]*bottom:calc\(16px \+ env\(safe-area-inset-bottom\)\);width:min\(358px,calc\(100vw - 32px\)\)/)
     expect(css).toContain('@media (min-width:720px){.tostadas{left:auto;right:24px;bottom:24px;width:360px;transform:none}}')
     expect(css).toContain('.tostada--logro .aviso-logo__llave{animation:aviso-llave 2s var(--ease) 250ms both}'); expect(css).not.toMatch(/aviso-llave[^;}]*infinite/)

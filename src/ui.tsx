@@ -16,7 +16,7 @@ export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: num
 
 export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
   return <header className="cont barra">
-    <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-lockumi.svg" alt="" /></a>
+    <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <div className="barra__der">
       <span className="barra__usuario cortar" title={u.email}>{u.email}</span>
       <button type="button" className="boton-ayuda" aria-label="¿Cómo funciona?" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>

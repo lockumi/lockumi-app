@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { auth, formatoCodigo as F, modoReal } from '../services/auth'
 import type { Usuario } from '../types'
 import { Demo, Icono } from '../ui'
-import { LogoAnimado } from '../LogoAnimado'
 import { alertaIngresoFallo } from '../alertas'
 import { WORDMARK_SVG } from '../wordmark'
 import { CasillaLegal } from '../legal/CasillaLegal'
@@ -81,7 +80,7 @@ export function Hoja({ onCerrar, onOk, correo }: { onCerrar: () => void; onOk: (
  *  `aria-busy` y un `role="status"`; con «reducir movimiento» la casita queda quieta (regla global de index.css). */
 export function Entrando() {
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app ingreso-cargando" aria-busy="true">
-    <LogoAnimado className="entrada-app__arte marca-c__arte" />
+    <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <p className="entrada-app__titulo" role="status">Entrando a tu cuenta…</p>
   </main>
 }
@@ -121,7 +120,7 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
   ]
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <h1 className="marca-c" aria-label="Lockumi"><span dangerouslySetInnerHTML={{ __html: WORDMARK_SVG }} /></h1>
-    <LogoAnimado className="entrada-app__arte marca-c__arte" />
+    <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
     {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
     <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>

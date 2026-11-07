@@ -83,7 +83,7 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
       onPrevClick: () => { if (i > 0) void ir(i - 1) } },
   }))
   const d = driver({
-    steps: pasos, animate: !reducir(), smoothScroll: !reducir(), overlayColor: 'rgb(61, 42, 34)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
+    steps: pasos, animate: !reducir(), smoothScroll: !reducir(), overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
     popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 12,
     onPopoverRender: (pop, { state }) => {
       const i = state.activeIndex ?? 0, n = PASOS_RECORRIDO.length

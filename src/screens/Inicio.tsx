@@ -1,6 +1,5 @@
 import { useAlquileres, store, rolDe } from '../store'
 import { abrirRecorrido } from '../recorrido'
-import { LogoAnimado } from '../LogoAnimado'
 import { NOMBRE_ROL } from '../types'
 import { ETIQUETA_ESTADO, type Usuario } from '../types'
 import { Demo, Simulado, usd, fecha } from '../ui'
@@ -36,11 +35,9 @@ export function Inicio({ u }: { u: Usuario }) {
       <div><p className="etiqueta">Hola, {u.nombre}</p><h1>Tus alquileres</h1>
         <p className="nota">Prueba real en la red de prueba de Stellar, sin dinero real: creas un alquiler, depositas USDC de prueba como inquilino y un dueño de prueba de Lockumi aprueba la devolución.</p></div>
       <a className="boton boton--primario" href="#/crear" data-recorrido="nuevo">+ Nuevo alquiler</a>
-      <LogoAnimado className="logo-pieza logo-pieza--hero" />
     </div> : <div className="hero glass ta-hero">
       <div className="ta-hero__txt"><div className="ta-cab"><p className="etiqueta">Hola, {u.nombre}</p><h1>Tus alquileres</h1></div></div>
       <a className="boton boton--primario" href="#/crear" data-recorrido="nuevo">+ Nuevo alquiler</a>
-      <LogoAnimado className="logo-pieza logo-pieza--hero" />
       <ol className="ta-pasos" aria-label="Cómo funciona">{PASOS.map(p => <li key={p.t}><span className="ta-pasos__ico"><Dibujo n={p.ico} /></span><strong>{p.t}</strong><span>{p.s}</span></li>)}</ol>
     </div>}
     {aviso && <AvisoLista texto={aviso} cerrar={() => setAviso(null)} />}{/* PROTOTIPO eliminar-alquiler: resultado, arriba para que se vea */}
@@ -61,7 +58,7 @@ export function Inicio({ u }: { u: Usuario }) {
           <p className="ta-turno">{turno(a, rol).tu}</p>
           <div className="ta-datos"><div><small>Depósito</small><strong>{usd(a.monto)}</strong></div>
             <div><small>Fechas</small><span className="ta-fechas"><Dibujo n="cal" />{fecha(a.inicio)} → {fecha(a.fin)}</span></div></div>
-          <p className="nota ta-rol">{verOcultos && oculto(a, u.email) && <span className="chip chip--neutro chip--mini">{TE.chipOculto}</span>}<span className="chip chip--neutro chip--mini"><Dibujo n="persona" />Eres {NOMBRE_ROL[rol].toLowerCase()}</span><span>{rol === 'dueno' ? 'Inquilino: ' + a.inquilinoEmail : 'Dueño: ' + a.duenoEmail}</span></p>
+          <p className="nota ta-rol">{verOcultos && oculto(a, u.email) && <span className="chip chip--neutro chip--mini">{TE.chipOculto}</span>}<span className={'chip chip--mini ' + (rol === 'dueno' ? 'chip--dueno' : 'chip--inquilino')}><Dibujo n="persona" />Eres {NOMBRE_ROL[rol].toLowerCase()}</span><span>{rol === 'dueno' ? 'Inquilino: ' + a.inquilinoEmail : 'Dueño: ' + a.duenoEmail}</span></p>
         </a></li> })}
     </ul>
     {ocultos.length > 0 && <p className="ea-ocultos"><button type="button" className="boton boton--secundario boton--chico" aria-pressed={verOcultos} onClick={() => setVerOcultos(v => !v)}>{verOcultos ? TE.esconderOcultos : TE.verOcultos(ocultos.length)}</button></p>}
