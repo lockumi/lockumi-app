@@ -96,7 +96,10 @@ describe('pantallas', () => {
     expect(html).toContain('id="acepto-terminos"'); expect(html).toContain('href="/terminos"'); expect(html).toContain('>Entrar</button>')
     expect(html).toContain('Con Google, Apple o tu correo. Sin contraseñas.')
     const normal = renderToStaticMarkup(<Login onOk={() => {}} />)
-    expect(normal).toContain('El depósito de tu alquiler, protegido'); expect(normal).toContain('class="beneficios"'); expect(normal).not.toContain('entrada-app__sub')
+    expect(normal).toContain('El depósito de tu alquiler, protegido'); expect(normal).not.toContain('class="beneficios"'); expect(normal).toContain('id="acepto-terminos"'); expect(normal).not.toContain('entrada-app__sub')
+    expect(normal).toContain('Ni el dueño ni el inquilino pueden liberarlo solos.')
+    const papeles = normal.match(/<ul class="entrada-papeles"[^>]*>[\s\S]*?<\/ul>/)?.[0] ?? ''
+    expect(papeles).toContain('Dueño'); expect(papeles).toContain('Inquilino'); expect(papeles).not.toContain('<button'); expect(papeles).not.toContain('href=')
   })
   it('App: sin sesión en #/invitacion/… muestra ese texto y guarda la ruta; al entrar vuelve ahí (nunca a Inicio)', async () => {
     const app = (await import('../../App.tsx?raw')).default

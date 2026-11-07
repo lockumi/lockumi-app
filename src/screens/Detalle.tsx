@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { LogoAnimado } from '../LogoAnimado'
 import { store, useAlquileres, obtener, ahoraDe, DIA, vistaDe, rolDe, fijarVista } from '../store'
 import { acciones, plazoMs, textoPlazo } from '../acciones'
 import { modoDe } from '../servidor/config'
@@ -19,7 +18,8 @@ import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
 import { TomarFoto } from '../Camara'
-import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba } from '../flujo'
+import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba, diasQueQuedan, hoyCostaRica } from '../flujo'
+import { IlustracionPendiente } from './ilustracion'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { repartoCentimos } from '../../api/_lib/centimos'
 import { avisar, alertaPorCambio, instantanea, type Instantanea } from '../alertas'
@@ -47,12 +47,37 @@ import { esTextoSinSesion } from '../services/firmante'
 
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
+const ROLES_FIRMA: Rol[] = ['dueno', 'inquilino']
+
+/** Tarjeta del contrato en firmas. El texto íntegro no se dibuja hasta «Ver contrato completo». */
+function TarjetaContrato({ a, integro, onAlternar }: { a: Alquiler; integro: boolean; onAlternar: () => void }) {
+  const f = a.contrato.firmas
+  const n = ROLES_FIRMA.filter(r => f[r]).length
+  return <section className="ct-resumen" aria-label="Resumen del contrato">
+    <div className="ct-resumen__cab">
+      <p className="ct-resumen__lugar">{a.direccion}</p>
+      <span className={'chip ' + (n === 2 ? 'chip--exito' : 'chip--neutro')}>{n === 2 ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
+    </div>
+    <p className="ct-resumen__monto">{usd(a.monto)}</p>
+    <p className="ct-resumen__sub">Depósito</p>
+    <p className="ct-resumen__fechas">{fecha(a.inicio)} → {fecha(a.fin)}</p>
+    <div className="ct-resumen__bloques">
+      <p><span>Reclamos</span><strong>{textoPlazo(a)}</strong></p>
+      <p><span>Mediación</span><strong>No decide por ustedes.</strong></p>
+    </div>
+    <p className="ct-resumen__cuenta">Firmas {n} de 2</p>
+    <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span>{NOMBRE_ROL[r]}</span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--neutro">Pendiente</span>}</li>)}</ul>
+    <button type="button" className="boton boton--secundario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
+  </section>
+}
 // LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
 export const ESPERA_MEDIACION_C = 'Ahora cada parte elige cómo repartir el depósito. Cuando las dos acepten el mismo reparto, la persona mediadora lo registra y liberamos los USDC de prueba, cada monto menos el 0,3 % de comisión de Trustless Work. La persona mediadora puede ayudarles a llegar a un acuerdo, pero no decide por ustedes.'
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 export function Contrato({ a, rol }: P) {
+  const [integro, setIntegro] = useState(false)
   const { prueba: modoPrueba } = modoDe(a)
+  useEffect(() => { if (integro) document.getElementById('ct-firma')?.scrollIntoView({ block: 'nearest' }) }, [integro])
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
   // C (Legal, 25/10, 2:53 a. m.; Términos 1.9-demo, 6.5.1 d): en dos personas la regla no se ofrece ni se guarda; solo una nota sin casilla.
   if (reglas17(a) && !esDosPersonas(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
@@ -60,13 +85,15 @@ export function Contrato({ a, rol }: P) {
   return <div className="pila">
     {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
-    <ContratoDoc a={a} />
+    <TarjetaContrato a={a} integro={integro} onAlternar={() => setIntegro(v => !v)} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
     {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
         U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
     <ConSesion activo={pideSesionAntesDeFirmar(a, rol)}>
-    <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
+    <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato" breve
       texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." /></ConSesion>
+    {/* El documento sigue en el HTML, cerrado, y no se pinta hasta el botón. Ahí se abre el texto íntegro. */}
+    <div id="ct-firma" hidden={!integro}><ContratoDoc a={a} completo={integro} /></div>
   </div>
 }
 
@@ -95,57 +122,128 @@ function PagoSimulado({ a, rol }: P) {
     })
   }
   const dos = esDosPersonas(a)   // PR #22 (a): en C el depósito va a la red de prueba de Trustless Work; nada de «simulado»
-  return <section className="pila"><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
+  return <section className={'pila' + (etapa > 0 ? ' pago-espera' : '')}>{etapa > 0 && <IlustracionPendiente />}
+    {etapa === 0 && <><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
     <div className="monto">{usd(a.monto)}</div>
-    <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p>
+    <p>El dinero queda guardado. El dueño no lo recibe ahora: se decide al final del alquiler.</p></>}
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
       {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
-      {dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
+      {etapa === 0 && <>{dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
         : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
-        : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}
+        : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}</>}
       {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
       {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
       <ConSesion activo={modoDe(a).trustless && etapa === 0}>
       <EsperaPago etapa={etapa} fallo={fallo} etiqueta={`Pagar ${usd(a.monto)}`} onPagar={() => void pagar()} /></ConSesion>
-    </> : <Espera texto="Esperando que el inquilino pague el depósito." />}
+    </> : etapa === 0 && <Espera texto="Esperando que el inquilino pague el depósito." />}
   </section>
 }
 
-/** Fotos de entrada o salida: un espacio por pantalla y al final la confirmación. */
+/** Fila D1–Dn del plazo que ya tiene el alquiler. No cambia la fecha ni el texto legal. */
+function DiasPlazo({ a, ahora, fin }: { a: Alquiler; ahora: number; fin: number }) {
+  const ms = plazoMs(a)
+  if (!a.ventanaInicio || ms % DIA !== 0) return null
+  const n = ms / DIA
+  if (n < 2 || n > 14) return null
+  const inicio = +new Date(a.ventanaInicio)
+  const actual = ahora >= fin ? n + 1 : Math.min(n, Math.floor(Math.max(0, ahora - inicio) / DIA) + 1)
+  return <ol className="dias-plazo" aria-label={`Días del plazo: van ${Math.min(actual, n)} de ${n}`}>
+    {Array.from({ length: n }, (_, i) => {
+      const k = i + 1
+      const cls = k < actual ? 'hecho' : k === actual ? 'actual' : 'falta'
+      return <li key={k} className={cls} aria-current={cls === 'actual' ? 'step' : undefined}><span>D{k}</span></li>
+    })}
+  </ol>
+}
+
+/** Cuántos espacios ya tienen foto y lista. No fija un total: sale de los cuartos del alquiler. */
+export function progresoCuartos(cuartos: { fotos: unknown[]; items: { estado?: string | null }[] }[]) {
+  const listos = cuartos.filter(c => c.fotos.length > 0 && c.items.every(i => i.estado)).length
+  return { listos, total: cuartos.length, puedeConfirmar: cuartos.length > 0 && listos === cuartos.length }
+}
+
+/** Fotos de entrada o salida: la lista de espacios reales y, al entrar a uno, su captura. */
 function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
   const acta = a[cual]!; const n = acta.cuartos.length
-  const falta = acta.cuartos.findIndex(c => !cuartoListo(c))
-  const [i, setI] = useState(acta.firmas[rol] || falta === -1 ? n : falta); const [err, setErr] = useState('')
+  const { listos, puedeConfirmar } = progresoCuartos(acta.cuartos)
+  const [i, setI] = useState<number | 'fin' | null>(acta.firmas[rol] ? 'fin' : null); const [err, setErr] = useState('')
   useEffect(() => { window.scrollTo(0, 0) }, [i])
-  const firmaCuarto = JSON.stringify(acta.cuartos[i] ?? null)
+  const firmaCuarto = JSON.stringify(typeof i === 'number' ? acta.cuartos[i] : null)
   useEffect(() => { setErr('') }, [firmaCuarto])
-  const siguiente = () => {
+  const guardar = () => {
+    if (typeof i !== 'number') return
     const c = acta.cuartos[i]
     if (!c.fotos.length) return setErr('Falta una foto de este espacio. Toca "Tomar foto".')
     if (c.items.some(x => !x.estado)) return setErr('Marca "Bien" o "Con detalle" en cada punto de la lista.')
-    setErr(''); setI(i + 1)
+    setErr(''); setI(null)
   }
   const titulo = cual === 'entrada' ? 'Fotos de entrada' : 'Fotos de salida'
-  return <div className="pila">
-    <div className="subpasos" aria-label={`${titulo}: parte ${Math.min(i + 1, n + 1)} de ${n + 1}`}>
-      {Array.from({ length: n + 1 }, (_, k) => <span key={k} className={k < i ? 'hecho' : k === i ? 'actual' : ''} />)}</div>
-    {i < n ? <>
-      <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
-      <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
-      {err && <p className="error" role="alert">{err}</p>}
-      <div className="pie-paso">
-        {i > 0 && <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(i - 1) }}>Atrás</button>}
-        <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={siguiente}>{i + 1 < n ? 'Siguiente espacio' : 'Revisar y confirmar'}</button>
-      </div>
-    </> : <>
-      <Firma key={cual + '-' + rol} a={a} que={cual} rol={rol} titulo={'Confirmar ' + titulo.toLowerCase()}
-        texto={cual === 'entrada' ? 'Revisa que las fotos muestren cómo está el lugar hoy.' : 'Revisa que las fotos muestren cómo quedó el lugar.'}
-        casilla={cual === 'entrada' ? 'Las fotos muestran cómo está el lugar al entrar.' : 'Las fotos muestran cómo quedó el lugar al salir.'} />
-      <button type="button" className="enlace" onClick={() => setI(0)}>Ver o cambiar las fotos</button>
-    </>}
+  if (i === 'fin') return <div className="pila">
+    <Firma key={cual + '-' + rol} a={a} que={cual} rol={rol} titulo={'Confirmar ' + titulo.toLowerCase()}
+      texto={cual === 'entrada' ? 'Revisa que las fotos muestren cómo está el lugar hoy.' : 'Revisa que las fotos muestren cómo quedó el lugar.'}
+      casilla={cual === 'entrada' ? 'Las fotos muestran cómo está el lugar al entrar.' : 'Las fotos muestran cómo quedó el lugar al salir.'} />
+    <button type="button" className="enlace" onClick={() => setI(null)}>Ver o cambiar las fotos</button>
   </div>
+  if (typeof i === 'number') return <div className="pila">
+    <p className="mini">{titulo} · Espacio {i + 1} de {n}</p>
+    <CuartoEditor a={a} cual={cual} idx={i} rol={rol} />
+    {err && <p className="error" role="alert">{err}</p>}
+    <div className="pie-paso">
+      <button type="button" className="boton boton--secundario" onClick={() => { setErr(''); setI(null) }}>Volver a los espacios</button>
+      <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={guardar}>Guardar este espacio</button>
+    </div>
+  </div>
+  return <div className="pila">
+    <p className="mini">{titulo}</p>
+    <p className="espacios__cuenta">{listos} de {n} {n === 1 ? 'espacio listo' : 'espacios listos'}</p>
+    <div className="espacios__barra" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={listos} aria-label="Espacios listos"><span style={{ width: n ? `${(listos / n) * 100}%` : 0 }} /></div>
+    <ul className="espacios" data-recorrido="fotos">{acta.cuartos.map((c, k) => <li key={k}><button type="button" className="espacios__fila" onClick={() => setI(k)}><span>{c.nombre}</span>{cuartoListo(c) ? <span className="chip chip--exito">Listo</span> : <span className="chip chip--neutro">Pendiente</span>}</button></li>)}</ul>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={!puedeConfirmar} onClick={() => setI('fin')}>Revisar y confirmar</button>
+  </div>
+}
+
+export function AnilloDias({ a }: { a: Alquiler }) {
+  const { total, quedan } = diasQueQuedan(a.inicio, a.fin, hoyCostaRica(ahoraDe(a)))
+  const r = 58, c = 2 * Math.PI * r
+  const parte = total > 0 ? Math.min(1, quedan / total) : 0
+  return <figure className="anillo glass tarjeta">
+    <div className="anillo__aro">
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <circle cx="70" cy="70" r={r} fill="none" stroke="var(--mint)" strokeWidth="10" />
+        <circle cx="70" cy="70" r={r} fill="none" stroke="var(--accion)" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={`${(parte * c).toFixed(2)} ${c.toFixed(2)}`} transform="rotate(-90 70 70)" />
+      </svg>
+      <p className="anillo__c"><strong>{quedan}</strong><span>{quedan === 1 ? 'día' : 'días'}</span></p>
+    </div>
+    <figcaption><span className="anillo__lugar">{a.direccion}</span><span>Sale el {fecha(a.fin)}</span></figcaption>
+  </figure>
+}
+
+const CLAVE_CONFIRMACION = (id: string) => 'lockumi.confirmacion-deposito.' + id
+const confirmacionVista = (id: string) => { try { return localStorage.getItem(CLAVE_CONFIRMACION(id)) === '1' } catch { return false } }
+const marcarConfirmacion = (id: string) => { try { localStorage.setItem(CLAVE_CONFIRMACION(id), '1') } catch { /* el estado de esta visita igual sigue */ } }
+
+/** Después de un depósito que ya quedó registrado (`a.pago`), antes de las fotos de entrada. Continuar no cobra ni cambia el estado. */
+export function ConfirmacionDeposito({ a, onContinuar }: { a: Alquiler; onContinuar: () => void }) {
+  const etapa = etapaDe(a)
+  return <section className="pila confirmacion-deposito" aria-label="Depósito protegido">
+    <IlustracionPendiente />
+    <span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
+    <h2>Depósito protegido</h2>
+    <div className="monto">{usd(a.monto)}</div>
+    <p>El depósito quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.</p>
+    <p className="confirmacion-deposito__sigue"><span>Ahora: {ETAPAS[etapa].toLowerCase()}</span><span>{pasoTexto(a)}</span></p>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={onContinuar}>Continuar</button>
+  </section>
+}
+
+/** Fotos de entrada: la confirmación del depósito ya pagado, y al continuar la lista que ya existía. */
+function Entrada(p: P) {
+  const [lista, setLista] = useState(() => !p.a.pago || confirmacionVista(p.a.id))
+  if (!lista) return <ConfirmacionDeposito a={p.a} onContinuar={() => { marcarConfirmacion(p.a.id); setLista(true) }} />
+  return <Fotos {...p} cual="entrada" />
 }
 
 export function EnCurso({ a }: P) {
@@ -170,6 +268,7 @@ export function Ventana({ a, rol }: P) {
   useEffect(() => { if (!modoSolo && resta === 0 && !a.reclamo) void devolver() }, [resta, a.id, a.reclamo]) // eslint-disable-line
   return <section className="pila"><h2>{textoPlazo(a)} para reclamos</h2>
     <div className="cuenta" role="timer"><span className="cuenta__n">{dias}</span> días <span className="cuenta__n">{horas}</span> horas{a.diasSimulados > 0 && <span className="reloj-adelantado">{RELOJ_ADELANTADO}</span>}</div>
+    <DiasPlazo a={a} ahora={ahoraDe(a)} fin={fin} />
     {modoSolo ? <p className="nota">En esta prueba no hay que esperar el plazo: si todo está bien, el dueño de prueba aprueba y el depósito vuelve al inquilino en la red de prueba.</p>
       // LEGAL: revisado (24/10) · ronda 6: «Si no hay reclamo, después de {plazo}…». La devolución la dispara la app abierta (efecto de arriba) y la firma el servidor de Lockumi
       : escrowReal ? <p className="nota">Termina el {conPunto(fechaHora(fin))} {auto ? FIN_CONTADOR_AUTO : FIN_CONTADOR_SIN_CORRIDA}</p>
@@ -246,10 +345,10 @@ function Reclamo({ a, rol }: P) {
     {modoSolo && <p className="nota">En este ejemplo, el reclamo es simulado: no se registra en la red de prueba ni bloquea ningún depósito. La mediación también es simulada.</p>}
     {modoVideo && <p className="nota">El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.</p>}
     {rol === 'inquilino' ? <>
-      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {p.error}
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button>
       <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
+      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {escrowReal && p.ocupado && NOTA_TIEMPO}
     </> : <Espera texto="Esperando que el inquilino responda tu reclamo." />}
   </section>
@@ -268,7 +367,8 @@ function Mediacion({ a, rol }: P) {
   const est = estadoAceptaciones(rol, filas, a.monto)
   const vence = modoServidor ? venceMediacionC(a) : null
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
-  return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
+  return <section className="pila"><IlustracionPendiente /><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
+    <div className="ct-resumen" aria-label="Resumen de la mediación"><p className="ct-resumen__monto">{usd(r.monto)}</p><p>Reclamo de {usd(r.monto)}. Una persona mediadora revisa las fotos y ayuda a buscar un acuerdo. No decide por ustedes. No hay un costo configurado en este alquiler.</p></div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
     {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)». El reparto que elijas sí se hace de verdad en la red de prueba.</p>}
@@ -327,12 +427,12 @@ function EscrowReal({ a, rol }: P) {
   const err = error && <p className="error" role="alert">{error}</p>
   if (a.estado === 'ventana_reclamo') return rol === 'dueno' && !aprobado ? <div className="pila">
     {/* LEGAL: revisado (24/10) · ronda 8 (modo de dos personas, sin uso hoy: la billetera firma la aprobación, trustless.ts:28-30; la liberación la firma el servidor). BLOQUEO: antes de activarlo, Legal reescribe Términos 5.3 */}<p className="nota">Si todo está bien, aprueba ahora la devolución. Tu billetera te pedirá confirmar esta aprobación. La liberación del depósito la firma la cuenta de Lockumi.</p>
-    <button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>
+    <button type="button" className="boton boton--primario boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>
     : aprobado ? <p className="nota">El dueño ya aprobó la devolución. Al terminar el plazo se libera el depósito.</p> : null
   // PR #22 (C): «devuelto» = el dueño aprobó y el servidor liberó al instante; si la red falló, aquí se reintenta.
   if (a.estado === 'cerrado' && (a.resultado?.via === 'automatico' || (esDosPersonas(a) && a.resultado?.via === 'devuelto'))) return a.liquidacionTx
     ? <p className="nota">Transferencia en Stellar testnet: <a href={enlaceTx(a.liquidacionTx)} target="_blank" rel="noreferrer">ver la transacción</a></p>
-    : <div className="pila"><button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.cerrarSinReclamo(a))}>{ocupado ? 'Liberando…' : 'Liberar el depósito al inquilino'}</button>{err}</div>
+    : <div className="pila"><button type="button" className="boton boton--primario boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.cerrarSinReclamo(a))}>{ocupado ? 'Liberando…' : 'Liberar el depósito al inquilino'}</button>{err}</div>
   return null
 }
 
@@ -350,13 +450,16 @@ export function Cerrado({ a, rol }: P) {
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
     simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisado (25/10, lista de Legal) · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
-  return <section className="pila cerrado"><LogoAnimado className="logo-pieza logo-pieza--esquina" />
+  return <section className="pila cerrado">
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
-    {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
+    <h2>¡Depósito devuelto!</h2>
+    {auto2 && <span className="pill-auto">Devolución automática</span>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
       : esDosPersonas(a) ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : <ul className="lista"><li><span>Inquilino</span><strong>{usdExacto(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usdExacto(r.dueno)}</strong></li></ul>}{/* una persona: r ya es lo que llegó (escrow.ts) */}
+    <IlustracionPendiente />
+    <p>{auto2 ? TEXTO_CERRADO_AUTO : dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p>
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}
@@ -394,11 +497,11 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     const x = antes.current; antes.current = a ? instantanea(a) : null
     if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))
   })
-  if (!a) return <main id="contenido" tabIndex={-1} className="cont"><div className="glass tarjeta">No encontramos ese alquiler. <a href="#/">Volver a tus alquileres</a></div></main>
+  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta"><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/">Volver a tus alquileres</a></div></main>
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
-    firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
+    firmas: <Contrato key={a.id} {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Entrada key={a.id + rol} {...p} />,
     en_curso: reglas17(a) ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
     ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}>{!esDosPersonas(a) && <EscrowReal a={a} rol={rol} />}</PlazoDueno> : <Ventana {...p} />,
     reclamo: reglas17(a) && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
@@ -407,32 +510,28 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     <a href="#/" className="volver">← Tus alquileres</a>
     {ejemplo && <p className="ejemplo-cinta">Alquiler de ejemplo · solo para ver</p>}
     <h1 className="h-lugar">{a.direccion}</h1>
-    {!modoServidor && !ejemplo && <div className="vista-demo" role="group" aria-label="Demo: cambiar de persona">
-      <span>Estás viendo como <strong>{modoVideo && rol === 'dueno' ? 'dueño de prueba' : NOMBRE[rol]}</strong></span>
-      <button type="button" className="boton boton--secundario boton--chico" onClick={() => fijarVista(id, otro(rol))}>{modoVideo ? (rol === 'inquilino' ? 'Ver la pantalla del dueño de prueba' : 'Volver a mi pantalla (inquilino)') : `Ver como ${NOMBRE[otro(rol)]}`}</button>
-      <span className="demo">{modoSolo ? 'Una sola persona · red de prueba' : 'Demo en un solo aparato'}</span>
-      {modoSolo && <Cuentas a={a} />}</div>}
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}
     <div className="paso-cab"><p className="paso-cab__n">{a.estado === 'cerrado' ? 'Terminado' : pasoTexto(a)}</p><p className="paso-cab__t">{ETAPAS[etapa]}</p>
-      <div className="barra-paso" aria-hidden="true"><span style={{ width: `${((etapa + (a.estado === 'cerrado' ? 1 : 0.5)) / ETAPAS.length) * 100}%` }} /></div></div>
-    {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
+      <div className="barra-paso" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={a.estado === 'cerrado' || n < etapa ? 'hecho' : n === etapa ? 'actual' : ''} />)}</div></div>
+    {a.estado === 'en_curso' && <AnilloDias a={a} />}
     <div className="detalle" inert={!!ejemplo}>
       <div className="detalle__principal pila">
         {modoVideo && <p className="ahora" role="status" aria-live="polite">{ahoraPrueba(a)}</p>}
         {modoVideo && a.historial.slice(-3).filter(h => h.texto.startsWith('El dueño de prueba') && h.texto.endsWith('automáticamente')).slice(-1).map(h => <p key={h.fecha + h.texto} className="nota auto-dueno">✓ {h.texto}.</p>)}
+        {escrowReal && <UltimoComprobante a={a} />}
+        <div id="accion-actual" className="glass glass--fuerte tarjeta">{panel}</div>
         <section className="turno" aria-label="Qué toca ahora" hidden={modoVideo}>
           <p><span className="turno__et">Te toca</span>{t.tu}</p>
           <p><span className="turno__et">Al {NOMBRE[otro(rol)]}</span>{t.otra}</p>
           <p><span className="turno__et">Qué sigue</span>{t.sigue}</p>
         </section>
-        {escrowReal && <UltimoComprobante a={a} />}
-        <div className="glass glass--fuerte tarjeta">{panel}</div>
+        {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
         {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
+      <section className={'glass tarjeta pasos-lista' + (a.estado === 'firmas' ? ' pasos-lista--primero' : '')} aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} ancla="#accion-actual" /></section>
       <aside className="detalle__lado pila">
         {a.estado !== 'firmas' && escritorio && <ContratoCompacto a={a} como="tarjeta" />}
         {escrowReal && <Comprobantes a={a} />}
-        <section className="glass tarjeta" aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} /></section>
         <details className="glass tarjeta detalles"><summary>Detalles</summary>
           <ul className="lista"><li><span>Dueño</span><span className="cortar">{a.duenoEmail}</span></li><li><span>Inquilino</span><span className="cortar">{a.inquilinoEmail}</span></li>
             <li><span>Depósito</span><span>{usd(a.monto)}</span></li><li><span>Fechas</span><span>{fecha(a.inicio)} → {fecha(a.fin)}</span></li></ul>
@@ -443,5 +542,10 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
         {redDePrueba && !ejemplo && <MasOpciones a={a} u={u} />}{/* PROTOTIPO eliminar-alquiler (LEGAL: revisado 26/10) */}
       </aside>
     </div>
+    {!modoServidor && !ejemplo && <div className="vista-demo" role="group" aria-label="Demo: cambiar de persona">
+      <span>Estás viendo como <strong>{modoVideo && rol === 'dueno' ? 'dueño de prueba' : NOMBRE[rol]}</strong></span>
+      <button type="button" className="boton boton--secundario boton--chico" onClick={() => fijarVista(id, otro(rol))}>{modoVideo ? (rol === 'inquilino' ? 'Ver la pantalla del dueño de prueba' : 'Volver a mi pantalla (inquilino)') : `Ver como ${NOMBRE[otro(rol)]}`}</button>
+      <span className="demo">{modoSolo ? 'Una sola persona · red de prueba' : 'Demo en un solo aparato'}</span>
+      {modoSolo && <Cuentas a={a} />}</div>}
   </main>
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { actaCompleta, ahoraDe } from '../store'
 import { acciones } from '../acciones'
 import { modoDe } from '../servidor/config'
@@ -15,7 +15,7 @@ import { estadoFirma, otro, NOMBRE, ErrorFirma, type Firmas } from '../flujo'
 export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: Foto[]; vacio?: string }) {
   if (!fotos.length) return <p className="nota">{vacio}</p>
   return <ul className="fotos">{fotos.map((f, i) => <li key={i}>
-    <img src={f.src} alt={`Foto ${i + 1}, de ${NOMBRE_ROL[f.por].toLowerCase()}`} loading="lazy" />
+    <img className={f.origen === 'ejemplo' ? 'foto--ejemplo' : undefined} src={f.src} alt={`Foto ${i + 1}, de ${NOMBRE_ROL[f.por].toLowerCase()}`} loading="lazy" />
     {pruebaCompleta() && <span className="foto__sello" aria-hidden="true">{selloFoto(f)}</span>}{/* solo con la prueba completa (6.4.2) */}
     <span className="foto__pie">{pruebaCompleta() ? textoFotoPC(f) : textoFoto(f)} · {NOMBRE_ROL[f.por]}</span>
     {f.posibleGaleria && <span className="chip chip--coral chip--mini" title="La foto no se tomó ahora con la cámara de la app">Posible foto de galería</span>}
@@ -33,8 +33,10 @@ export function CuartoEditor({ a, cual, idx, rol }: { a: Alquiler; cual: 'entrad
   const ent = cual === 'salida' ? a.entrada.cuartos[idx] : null
   return <section className="pila cuarto" aria-labelledby={`c-${cual}-${idx}`}>
     <h2 id={`c-${cual}-${idx}`}>{c.nombre}</h2>
-    {ent && <div><p className="mini">Así estaba al entrar</p><FotoLista fotos={ent.fotos} /></div>}
-    <div><p className="mini">{ent ? 'Así está hoy' : 'Fotos'}</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>
+    {ent ? <div className="cuarto__par">
+      <div><p className="mini">Así estaba al entrar</p><FotoLista fotos={ent.fotos} /></div>
+      <div><p className="mini">Así está hoy</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>
+    </div> : <div><p className="mini">Fotos</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>}
     <TomarFoto por={rol} onFoto={agregar} etiqueta={c.fotos.length ? 'Tomar otra foto' : 'Tomar foto'} principal={!c.fotos.length} />
     {!modoServidor && <button type="button" className="enlace" onClick={() => agregar({ src: fotoEjemplo(c.nombre, cual, c.fotos.length + idx), por: rol, fecha: new Date(ahoraDe(a)).toISOString(), tomadaEn: ahoraDe(a), origen: 'ejemplo' })}>Demo: usar una foto de ejemplo</button>}
     <fieldset className="campo"><legend>¿Cómo está cada cosa?</legend>
@@ -56,8 +58,10 @@ export const cuartoListo = (c: Cuarto) => c.fotos.length > 0 && c.items.every(i 
 
 /** Firma o confirmación de una persona. Cada quien ve solo su botón; nadie puede firmar por la otra persona.
  *  Montar con key={rol} para que la casilla no pase de una persona a otra. */
-export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
+export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar, breve }: {
   a: Alquiler; que: 'contrato' | 'entrada' | 'salida'; rol: Rol; titulo: string; texto: string; casilla: string; alCompletar?: () => void
+  /** En la tarjeta del contrato la lista de firmas ya está arriba: aquí quedan el consentimiento y el botón. */
+  breve?: boolean
 }) {
   const { prueba: modoPrueba } = modoDe(a)
   const f: Firmas = (que === 'contrato' ? a.contrato : a[que]!).firmas
@@ -65,19 +69,22 @@ export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
   const [ok, setOk] = useState(false); const [err, setErr] = useState('')
   const est = estadoFirma(f, rol)
   const [ocupado, setOcupado] = useState(false)
+  const enviando = useRef(false)
   const hacer = async () => {
     if (!ok) return setErr('Marca la casilla para confirmar que estás de acuerdo.')
+    if (enviando.current) return
+    enviando.current = true
     setOcupado(true)
     try { await acciones.firmar(a, que, rol); alCompletar?.() }
     catch (e) { setErr(e instanceof ErrorFirma || e instanceof Error ? e.message : 'No pudimos guardar tu firma. Intenta de nuevo.') }
-    finally { setOcupado(false) }
+    finally { enviando.current = false; setOcupado(false) }
   }
-  return <section className="pila" aria-labelledby={'firma-' + que}>
-    <h2 id={'firma-' + que}>{titulo}</h2>
-    <ul className="lista firmas">{(['dueno', 'inquilino'] as Rol[]).map(r => <li key={r}>
+  return <section className={'pila' + (breve ? ' firma-breve' : '')} aria-labelledby={breve ? undefined : 'firma-' + que} aria-label={breve ? titulo : undefined}>
+    {!breve && <h2 id={'firma-' + que}>{titulo}</h2>}
+    {!breve && <ul className="lista firmas">{(['dueno', 'inquilino'] as Rol[]).map(r => <li key={r}>
       <span><strong>{modoPrueba && r === 'dueno' ? 'Dueño de prueba' : NOMBRE_ROL[r]}{r === rol ? ' (tú)' : ''}</strong></span>
       {f[r] ? <span className="chip chip--exito"><Icono id="i-check" /> Firmó</span> : <span className="chip chip--neutro">Falta</span>}
-    </li>)}</ul>
+    </li>)}</ul>}
     <p className={'estado-firma estado-firma--' + est.tipo} role="status">{est.texto}</p>
     {est.tipo === 'te-toca' && <>
       <p>{texto}</p>
