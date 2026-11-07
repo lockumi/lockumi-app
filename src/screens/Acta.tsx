@@ -85,13 +85,14 @@ export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar, breve 
       <span><strong>{modoPrueba && r === 'dueno' ? 'Dueño de prueba' : NOMBRE_ROL[r]}{r === rol ? ' (tú)' : ''}</strong></span>
       {f[r] ? <span className="chip chip--exito"><Icono id="i-check" /> Firmó</span> : <span className="chip chip--neutro">Falta</span>}
     </li>)}</ul>}
-    <p className={'estado-firma estado-firma--' + est.tipo} role="status">{est.texto}</p>
+    <p className={'estado-firma estado-firma--' + est.tipo} role="status">{est.tipo === 'te-toca' && <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5" /><path d="M12 16h.01" /></svg>}{est.texto}</p>
     {est.tipo === 'te-toca' && <>
       <p>{texto}</p>
       {!listoParaFirmar && <p className="error">Antes de confirmar, cada espacio necesita una foto y todo marcado. Vuelve atrás para completarlo.</p>}
       <label className="check check--grande"><input type="checkbox" checked={ok} disabled={!listoParaFirmar} onChange={e => { setOk(e.target.checked); setErr('') }} /> {casilla}</label>
       {err && <p className="error" role="alert">{err}</p>}
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={!listoParaFirmar || ocupado} onClick={hacer}>
+        {que === 'contrato' && <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
         {que === 'contrato' ? `Firma como ${NOMBRE[rol]}` : `Confirmar como ${NOMBRE[rol]}`}</button>
     </>}
     {est.tipo === 'esperando' && (modoPrueba && rol === 'inquilino'

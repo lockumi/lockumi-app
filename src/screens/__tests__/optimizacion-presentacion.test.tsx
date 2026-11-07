@@ -6,7 +6,7 @@ const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
 vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} })
 
-const { Contrato, EnCurso, ConfirmacionDeposito, progresoCuartos } = await import('../Detalle')
+const { Contrato, EnCurso, ConfirmacionDeposito, progresoCuartos, lugarContrato } = await import('../Detalle')
 const { EsperaVista } = await import('../EsperaVista')
 const { PASOS_RECORRIDO } = await import('../../recorrido')
 const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readFileSync(r: URL, c: 'utf8'): string }
@@ -28,6 +28,19 @@ describe('tarjeta del contrato', () => {
     expect(html).toContain('class="cp-abrir"')
     expect(html).toContain('Leí el contrato y estoy de acuerdo.')
     expect(html).not.toContain('USD XX')
+    expect(html).toContain('/img/casita-inmueble.png')
+    expect(html).not.toContain('logo-header')
+    expect(html).toMatch(/class="boton boton--primario boton--ancho"[^>]*>.*?Ver contrato completo/)
+    const alerta = html.indexOf('Te toca firmar')
+    expect(html.lastIndexOf('<p', alerta)).toBeGreaterThan(html.lastIndexOf('<button', alerta))
+  })
+  it('parte el lugar real y no inventa una ciudad si la dirección no trae separador', () => {
+    expect(lugarContrato('Casa ejemplo · Heredia centro')).toEqual({ etiqueta: 'Casa ejemplo', titulo: 'Heredia centro' })
+    expect(lugarContrato('Casa demo')).toEqual({ etiqueta: '', titulo: 'Casa demo' })
+    const partida = renderToStaticMarkup(<Contrato a={{ ...A, direccion: 'Casa ejemplo · Heredia centro' }} rol="dueno" />)
+    expect(partida).toContain('Casa ejemplo')
+    expect(partida).toContain('Heredia centro')
+    expect(partida).toContain('Pendiente de firmas')
   })
   it('la acción de firmar sigue en el componente de firma, no se dispara sola', () => {
     expect(html).toMatch(/Firma como/)

@@ -395,7 +395,7 @@ input[type=range]{width:100%;accent-color:var(--accion);min-height:32px}
 .tiempo__punto b{font-size:.75rem;font-weight:700}
 .foto__pie{display:block;font-size:.78rem;color:var(--cafe-suave);margin-top:4px;line-height:1.3}
 .enlace{background:none;border:0;color:var(--cafe-suave);text-decoration:underline;font:inherit;font-size:.9rem;padding:6px 0;cursor:pointer;align-self:flex-start}
-.estado-firma{margin:0;padding:12px 14px;border-radius:14px;font-weight:700}
+.estado-firma{display:flex;align-items:center;gap:8px;margin:0;padding:12px 14px;border:0;border-radius:14px;font-weight:700;cursor:default}
 .estado-firma--te-toca{background:var(--estado-reclamo-fondo);color:var(--estado-reclamo-texto)}
 .estado-firma--esperando{background:var(--estado-pendiente-fondo);color:var(--estado-pendiente-texto)}
 .estado-firma--listo{background:rgba(111,191,138,.18);color:#1F6B3A}
@@ -1141,25 +1141,31 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .ct__version a{color:inherit;text-decoration:underline}
 
 /* Presentación de la optimización: tarjeta, espacios, espera y aviso. Sin un porcentaje inventado. */
-.ct-resumen{display:grid;gap:8px;padding:0}
-@media (max-width:959px){.cont:has(.ct-resumen) .h-lugar{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}}
-.ct-resumen__cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.ct-resumen__lugar{margin:0;font:700 18px/24px var(--f-titulo);color:var(--cafe)}
+.chip--pendiente{background:var(--estado-pendiente-fondo);color:var(--estado-pendiente-texto)}
+.ct-resumen{display:grid;gap:12px;padding:0}
+.cont:has(.ct-resumen) .h-lugar{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ct-resumen__hero{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:8px;align-items:end}
+.ct-resumen__casita{width:112px;height:88px;object-fit:contain;justify-self:end}
+.ct-resumen__cab{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ct-resumen__etiqueta,.ct-resumen__fechas{display:flex;align-items:center;gap:6px}
+.ct-resumen__etiqueta{margin:0;min-width:0;font:600 14px/18px var(--f-texto);color:var(--cafe-suave)}
+.ct-resumen__titulo{margin:2px 0 0;font:800 28px/32px var(--f-titulo);color:var(--cafe);overflow-wrap:anywhere}
 .ct-resumen__monto{margin:0;font:800 clamp(32px,8vw,44px)/1.1 var(--f-titulo);color:var(--cafe)}
-.ct-resumen__sub,.ct-resumen__fechas,.ct-resumen__cuenta{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
-.ct-resumen__sub{color:var(--cafe-suave)}
+.ct-resumen__fechas,.ct-resumen__cuenta{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
 .ct-resumen__bloques{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ct-resumen__bloques p{margin:0;display:grid;gap:2px;min-height:64px;padding:10px 12px;border-radius:16px;background:var(--mint)}
-.ct-resumen__bloques span{font:600 14px/18px var(--f-texto);color:var(--cafe-suave)}
+.ct-resumen__bloques span{display:flex;align-items:center;gap:6px;font:600 14px/18px var(--f-texto);color:var(--cafe-suave)}
 .ct-resumen__bloques strong{font:700 16px/22px var(--f-texto);color:var(--cafe)}
-.ct-resumen__firmas{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.ct-resumen__firmas li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px}
+.ct-resumen__firmas-cab{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ct-resumen__firmas-t{margin:0;font:700 18px/24px var(--f-titulo)}
+.ct-resumen__firmas{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ct-resumen__firmas li{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:72px;padding:10px 12px;border-radius:16px;background:var(--mint)}
+.ct-resumen__quien{display:flex;align-items:center;gap:6px;font:700 16px/22px var(--f-texto);color:var(--cafe)}
 .firma-breve>*+*{margin-top:8px}
 .firma-breve .estado-firma{padding:8px 12px}
 @media (max-width:959px){
-  .ct-resumen__sub{display:none}
   .ct-resumen__bloques p{min-height:0;padding:8px 10px}
-  .ct-resumen__firmas{grid-template-columns:1fr 1fr}
+  .ct-resumen__titulo{font-size:26px;line-height:30px}
 }
 #ct-firma[hidden]{display:none}
 .confirmacion-deposito__sigue{display:flex;justify-content:space-between;gap:8px;align-items:center;min-height:52px;margin:0;padding:12px 14px;border-radius:16px;background:var(--mint);font:600 16px/22px var(--f-texto)}

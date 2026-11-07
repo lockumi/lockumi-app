@@ -48,26 +48,49 @@ import { esTextoSinSesion } from '../services/firmante'
 type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
 const ROLES_FIRMA: Rol[] = ['dueno', 'inquilino']
+const trazo = (d: string[]) => <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">{d.map(p => <path key={p} d={p} />)}</svg>
+const ICO_CASA = ['M4 11 12 4l8 7', 'M6 10v9h12v-9']
+const ICO_CAL = ['M4 5h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M8 3v4', 'M16 3v4', 'M3 10h18']
+const ICO_PERSONA = ['M12 12a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z', 'M6 19.5c1.2-2.4 3.2-3.5 6-3.5s4.8 1.1 6 3.5']
+const ICO_BALANZA = ['M12 3v18', 'M7 21h10', 'M3 7h18', 'm2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z', 'm16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z']
+const ICO_LAPIZ = ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z']
+const ICO_RELOJ = ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18', 'M12 7v5l3 2']
+
+/** Parte el lugar real en la etiqueta y el título solo si ya trae « · ». No inventa una ciudad. */
+export function lugarContrato(direccion: string): { etiqueta: string; titulo: string } {
+  const sep = ' · '
+  const i = direccion.indexOf(sep)
+  if (i <= 0) return { etiqueta: '', titulo: direccion.trim() }
+  const titulo = direccion.slice(i + sep.length).trim()
+  return { etiqueta: direccion.slice(0, i).trim(), titulo: titulo || direccion.trim() }
+}
 
 /** Tarjeta del contrato en firmas. El texto íntegro no se dibuja hasta «Ver contrato completo». */
 function TarjetaContrato({ a, integro, onAlternar }: { a: Alquiler; integro: boolean; onAlternar: () => void }) {
   const f = a.contrato.firmas
   const n = ROLES_FIRMA.filter(r => f[r]).length
+  const { etiqueta, titulo } = lugarContrato(a.direccion)
+  const listo = n === 2
   return <section className="ct-resumen" aria-label="Resumen del contrato">
-    <div className="ct-resumen__cab">
-      <p className="ct-resumen__lugar">{a.direccion}</p>
-      <span className={'chip ' + (n === 2 ? 'chip--exito' : 'chip--neutro')}>{n === 2 ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
+    <div className="ct-resumen__hero">
+      <div className="ct-resumen__datos">
+        <div className="ct-resumen__cab">
+          {etiqueta ? <p className="ct-resumen__etiqueta">{trazo(ICO_CASA)}{etiqueta}</p> : <span />}
+          <span className={'chip ' + (listo ? 'chip--exito' : 'chip--pendiente')}>{listo ? 'Firmado por los dos' : <>{trazo(ICO_RELOJ)}Pendiente de firmas</>}</span>
+        </div>
+        <p className="ct-resumen__titulo">{titulo}</p>
+        <p className="ct-resumen__monto">{usd(a.monto)}</p>
+        <p className="ct-resumen__fechas">{trazo(ICO_CAL)}<span>{fecha(a.inicio)} → {fecha(a.fin)}</span></p>
+      </div>
+      <img className="ct-resumen__casita" src="/img/casita-inmueble.png" alt="" />
     </div>
-    <p className="ct-resumen__monto">{usd(a.monto)}</p>
-    <p className="ct-resumen__sub">Depósito</p>
-    <p className="ct-resumen__fechas">{fecha(a.inicio)} → {fecha(a.fin)}</p>
     <div className="ct-resumen__bloques">
-      <p><span>Reclamos</span><strong>{textoPlazo(a)}</strong></p>
-      <p><span>Mediación</span><strong>No decide por ustedes.</strong></p>
+      <p><span>{trazo(ICO_PERSONA)}Reclamos</span><strong>{textoPlazo(a)}</strong></p>
+      <p><span>{trazo(ICO_BALANZA)}Mediación</span><strong>No decide por ustedes.</strong></p>
     </div>
-    <p className="ct-resumen__cuenta">Firmas {n} de 2</p>
-    <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span>{NOMBRE_ROL[r]}</span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--neutro">Pendiente</span>}</li>)}</ul>
-    <button type="button" className="boton boton--secundario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
+    <div className="ct-resumen__firmas-cab"><h2 className="ct-resumen__firmas-t">Firmas</h2><p className="ct-resumen__cuenta">{n} de 2</p></div>
+    <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span className="ct-resumen__quien">{trazo(ICO_PERSONA)}<span>{NOMBRE_ROL[r]}</span></span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--pendiente">Pendiente</span>}</li>)}</ul>
+    <button type="button" className="boton boton--primario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{trazo(ICO_LAPIZ)}{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
   </section>
 }
 // LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
