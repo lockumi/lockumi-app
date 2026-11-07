@@ -49,21 +49,25 @@ type P = { a: Alquiler; rol: Rol }
 const ahoraISO = (a: Alquiler) => new Date(ahoraDe(a)).toISOString()
 const ROLES_FIRMA: Rol[] = ['dueno', 'inquilino']
 
-/** Tarjeta del contrato en firmas: datos del alquiler. El texto íntegro sigue en ContratoDoc. */
-function TarjetaContrato({ a }: { a: Alquiler }) {
+/** Tarjeta del contrato en firmas. El texto íntegro no se dibuja hasta «Ver contrato completo». */
+function TarjetaContrato({ a, integro, onAlternar }: { a: Alquiler; integro: boolean; onAlternar: () => void }) {
   const f = a.contrato.firmas
   const n = ROLES_FIRMA.filter(r => f[r]).length
-  const abrir = () => document.getElementById('ct-firma')?.querySelector<HTMLButtonElement>('.cp-abrir')?.click()
   return <section className="ct-resumen" aria-label="Resumen del contrato">
+    <div className="ct-resumen__cab">
+      <p className="ct-resumen__lugar">{a.direccion}</p>
+      <span className={'chip ' + (n === 2 ? 'chip--exito' : 'chip--neutro')}>{n === 2 ? 'Firmado por los dos' : 'Pendiente de firmas'}</span>
+    </div>
     <p className="ct-resumen__monto">{usd(a.monto)}</p>
-    <dl>
-      <div><dt>Fechas</dt><dd>{fecha(a.inicio)} → {fecha(a.fin)}</dd></div>
-      <div><dt>Plazo para reclamar</dt><dd>{textoPlazo(a)}</dd></div>
-      <div><dt>Mediación</dt><dd>Una persona mediadora ayuda. No decide por ustedes.</dd></div>
-      <div><dt>Firmas</dt><dd>{n} de 2</dd></div>
-    </dl>
+    <p className="ct-resumen__sub">Depósito</p>
+    <p className="ct-resumen__fechas">{fecha(a.inicio)} → {fecha(a.fin)}</p>
+    <div className="ct-resumen__bloques">
+      <p><span>Reclamos</span><strong>{textoPlazo(a)}</strong></p>
+      <p><span>Mediación</span><strong>No decide por ustedes.</strong></p>
+    </div>
+    <p className="ct-resumen__cuenta">Firmas {n} de 2</p>
     <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span>{NOMBRE_ROL[r]}</span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--neutro">Pendiente</span>}</li>)}</ul>
-    <button type="button" className="boton boton--secundario boton--ancho" onClick={abrir}>Ver contrato completo</button>
+    <button type="button" className="boton boton--secundario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
   </section>
 }
 // LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
@@ -71,7 +75,9 @@ export const ESPERA_MEDIACION_C = 'Ahora cada parte elige cómo repartir el dep�
 const Espera = ({ texto }: { texto: string }) => <div className="espera" role="status"><span className="espera__reloj" aria-hidden="true">⏳</span><p>{texto}</p></div>
 
 export function Contrato({ a, rol }: P) {
+  const [integro, setIntegro] = useState(false)
   const { prueba: modoPrueba } = modoDe(a)
+  useEffect(() => { if (integro) document.getElementById('ct-firma')?.scrollIntoView({ block: 'nearest' }) }, [integro])
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
   // C (Legal, 25/10, 2:53 a. m.; Términos 1.9-demo, 6.5.1 d): en dos personas la regla no se ofrece ni se guarda; solo una nota sin casilla.
   if (reglas17(a) && !esDosPersonas(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
@@ -79,14 +85,15 @@ export function Contrato({ a, rol }: P) {
   return <div className="pila">
     {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
-    <TarjetaContrato a={a} />
-    <div id="ct-firma"><ContratoDoc a={a} /></div>
+    <TarjetaContrato a={a} integro={integro} onAlternar={() => setIntegro(v => !v)} />
     {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
     {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
         U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
     <ConSesion activo={pideSesionAntesDeFirmar(a, rol)}>
-    <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato"
+    <Firma key={'c-' + rol} a={a} que="contrato" rol={rol} titulo="Firmas del contrato" breve
       texto="Lee el contrato. Si estás de acuerdo, fírmalo." casilla="Leí el contrato y estoy de acuerdo." /></ConSesion>
+    {/* El documento sigue en el HTML, cerrado, y no se pinta hasta el botón. Ahí se abre el texto íntegro. */}
+    <div id="ct-firma" hidden={!integro}><ContratoDoc a={a} completo={integro} /></div>
   </div>
 }
 
@@ -188,11 +195,11 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
       <button type="button" className="boton boton--primario boton--grande pie-paso__principal" onClick={guardar}>Guardar este espacio</button>
     </div>
   </div>
-  return <div className="pila" data-recorrido="fotos">
+  return <div className="pila">
     <p className="mini">{titulo}</p>
     <p className="espacios__cuenta">{listos} de {n} {n === 1 ? 'espacio listo' : 'espacios listos'}</p>
     <div className="espacios__barra" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={listos} aria-label="Espacios listos"><span style={{ width: n ? `${(listos / n) * 100}%` : 0 }} /></div>
-    <ul className="espacios">{acta.cuartos.map((c, k) => <li key={k}><button type="button" className="espacios__fila" onClick={() => setI(k)}><span>{c.nombre}</span>{cuartoListo(c) ? <span className="chip chip--exito">Listo</span> : <span className="chip chip--neutro">Pendiente</span>}</button></li>)}</ul>
+    <ul className="espacios" data-recorrido="fotos">{acta.cuartos.map((c, k) => <li key={k}><button type="button" className="espacios__fila" onClick={() => setI(k)}><span>{c.nombre}</span>{cuartoListo(c) ? <span className="chip chip--exito">Listo</span> : <span className="chip chip--neutro">Pendiente</span>}</button></li>)}</ul>
     <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={!puedeConfirmar} onClick={() => setI('fin')}>Revisar y confirmar</button>
   </div>
 }
@@ -214,9 +221,34 @@ export function AnilloDias({ a }: { a: Alquiler }) {
   </figure>
 }
 
+const CLAVE_CONFIRMACION = (id: string) => 'lockumi.confirmacion-deposito.' + id
+const confirmacionVista = (id: string) => { try { return localStorage.getItem(CLAVE_CONFIRMACION(id)) === '1' } catch { return false } }
+const marcarConfirmacion = (id: string) => { try { localStorage.setItem(CLAVE_CONFIRMACION(id), '1') } catch { /* el estado de esta visita igual sigue */ } }
+
+/** Después de un depósito que ya quedó registrado (`a.pago`), antes de las fotos de entrada. Continuar no cobra ni cambia el estado. */
+export function ConfirmacionDeposito({ a, onContinuar }: { a: Alquiler; onContinuar: () => void }) {
+  const etapa = etapaDe(a)
+  return <section className="pila confirmacion-deposito" aria-label="Depósito protegido">
+    <IlustracionPendiente />
+    <span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
+    <h2>Depósito protegido</h2>
+    <div className="monto">{usd(a.monto)}</div>
+    <p>El depósito quedó guardado. Ni el dueño ni el inquilino pueden tomarlo solos.</p>
+    <p className="confirmacion-deposito__sigue"><span>Ahora: {ETAPAS[etapa].toLowerCase()}</span><span>{pasoTexto(a)}</span></p>
+    <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={onContinuar}>Continuar</button>
+  </section>
+}
+
+/** Fotos de entrada: la confirmación del depósito ya pagado, y al continuar la lista que ya existía. */
+function Entrada(p: P) {
+  const [lista, setLista] = useState(() => !p.a.pago || confirmacionVista(p.a.id))
+  if (!lista) return <ConfirmacionDeposito a={p.a} onContinuar={() => { marcarConfirmacion(p.a.id); setLista(true) }} />
+  return <Fotos {...p} cual="entrada" />
+}
+
 export function EnCurso({ a }: P) {
-  return <section className="pila espera-vista espera-vista--confirma"><IlustracionPendiente /><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
-    <h2>Depósito protegido</h2><div className="monto">{usd(a.monto)}</div>
+  return <section className="pila"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
+    <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div>
     {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
     <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
     <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
@@ -469,7 +501,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
-    firmas: <Contrato {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Fotos key={'e' + rol} {...p} cual="entrada" />,
+    firmas: <Contrato key={a.id} {...p} />, pendiente_pago: <Pago {...p} />, fotos_entrada: <Entrada key={a.id + rol} {...p} />,
     en_curso: reglas17(a) ? <><EnCurso {...p} /><AvisoSalida {...p} /></> : <EnCurso {...p} />, salida: <Fotos key={'s' + rol} {...p} cual="salida" />, // Prueba completa: «Recibí la casa», inicio a los 2 días, plazo con domingos y feriados, avisos 1/4/6 y simulador de días.
     ventana_reclamo: reglas17(a) ? <PlazoDueno a={a} rol={rol} reclamo={cerrar => modoServidor ? <FormReclamo a={a} onCancelar={cerrar} /> : <FormRubros a={a} onCancelar={cerrar} />}>{!esDosPersonas(a) && <EscrowReal a={a} rol={rol} />}</PlazoDueno> : <Ventana {...p} />,
     reclamo: reglas17(a) && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,

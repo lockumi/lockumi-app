@@ -58,8 +58,10 @@ export const cuartoListo = (c: Cuarto) => c.fotos.length > 0 && c.items.every(i 
 
 /** Firma o confirmación de una persona. Cada quien ve solo su botón; nadie puede firmar por la otra persona.
  *  Montar con key={rol} para que la casilla no pase de una persona a otra. */
-export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
+export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar, breve }: {
   a: Alquiler; que: 'contrato' | 'entrada' | 'salida'; rol: Rol; titulo: string; texto: string; casilla: string; alCompletar?: () => void
+  /** En la tarjeta del contrato la lista de firmas ya está arriba: aquí quedan el consentimiento y el botón. */
+  breve?: boolean
 }) {
   const { prueba: modoPrueba } = modoDe(a)
   const f: Firmas = (que === 'contrato' ? a.contrato : a[que]!).firmas
@@ -74,12 +76,12 @@ export function Firma({ a, que, rol, titulo, texto, casilla, alCompletar }: {
     catch (e) { setErr(e instanceof ErrorFirma || e instanceof Error ? e.message : 'No pudimos guardar tu firma. Intenta de nuevo.') }
     finally { setOcupado(false) }
   }
-  return <section className="pila" aria-labelledby={'firma-' + que}>
-    <h2 id={'firma-' + que}>{titulo}</h2>
-    <ul className="lista firmas">{(['dueno', 'inquilino'] as Rol[]).map(r => <li key={r}>
+  return <section className={'pila' + (breve ? ' firma-breve' : '')} aria-labelledby={breve ? undefined : 'firma-' + que} aria-label={breve ? titulo : undefined}>
+    {!breve && <h2 id={'firma-' + que}>{titulo}</h2>}
+    {!breve && <ul className="lista firmas">{(['dueno', 'inquilino'] as Rol[]).map(r => <li key={r}>
       <span><strong>{modoPrueba && r === 'dueno' ? 'Dueño de prueba' : NOMBRE_ROL[r]}{r === rol ? ' (tú)' : ''}</strong></span>
       {f[r] ? <span className="chip chip--exito"><Icono id="i-check" /> Firmó</span> : <span className="chip chip--neutro">Falta</span>}
-    </li>)}</ul>
+    </li>)}</ul>}
     <p className={'estado-firma estado-firma--' + est.tipo} role="status">{est.texto}</p>
     {est.tipo === 'te-toca' && <>
       <p>{texto}</p>

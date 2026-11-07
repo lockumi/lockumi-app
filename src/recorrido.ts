@@ -18,7 +18,7 @@ export const PASOS_RECORRIDO: PasoRecorrido[] = [
     texto: 'El lugar, las fechas y el monto del depósito. Toca una opción: casi no hay que escribir.' },
   { ruta: '/crear', el: '[data-recorrido="reglas"]', titulo: 'Las reglas del dueño',
     texto: 'Toca las reglas del lugar. Quedan escritas en el contrato que firman los dos.' },
-  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', titulo: 'Fotos y lista de entrada',
+  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', lado: 'right', titulo: 'Fotos y lista de entrada',
     texto: 'Al entrar, una foto de cada espacio y una lista para marcar. Al salir se repite. Así los dos ven cómo estaba el lugar.' },
   // LEGAL: revisado (24/10)
   { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito',
@@ -83,7 +83,7 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
       onPrevClick: () => { if (i > 0) void ir(i - 1) } },
   }))
   const d = driver({
-    steps: pasos, animate: !reducir(), smoothScroll: !reducir(), overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
+    steps: pasos, animate: !reducir(), smoothScroll: !reducir() && innerWidth >= 960, overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
     popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 16,
     onPopoverRender: (pop, { state }) => {
       const i = state.activeIndex ?? 0, n = PASOS_RECORRIDO.length
@@ -103,14 +103,25 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
       pop.footer.prepend(saltar)
       pop.footer.insertBefore(puntos, pop.footerButtons)
       for (const b of [pop.previousButton, pop.nextButton]) b.type = 'button'
-      const margen = () => {
+      const fotosMovil = innerWidth < 960 && i === 3
+      pop.wrapper.classList.toggle('recorrido--fotos', fotosMovil)
+      const colocar = () => {
         const r = pop.wrapper.getBoundingClientRect(), m = 16
         let left = r.left
         if (r.right > innerWidth - m) left -= r.right - (innerWidth - m)
         if (left < m) left = m
         if (Math.abs(left - r.left) > 0.5) pop.wrapper.style.left = `${Math.round(left)}px`
+        if (!fotosMovil) return
+        pop.wrapper.style.top = 'auto'
+        pop.wrapper.style.height = 'auto'
+        const el = document.querySelector('[data-recorrido="fotos"]')
+        const cuerpo = document.querySelector('.app-cuerpo')
+        if (el && cuerpo) {
+          const ahora = el.getBoundingClientRect().top
+          cuerpo.scrollBy(0, ahora - 88)
+        }
       }
-      requestAnimationFrame(() => { margen(); pop.nextButton.focus({ preventScroll: true }) })
+      requestAnimationFrame(() => { colocar(); requestAnimationFrame(() => { colocar(); pop.nextButton.focus({ preventScroll: true }) }) })
     },
     onCloseClick: () => cerrar(),
     onDestroyStarted: () => { void marcarVisto(u); d.destroy() },   // Esc = Saltar

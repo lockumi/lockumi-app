@@ -295,7 +295,7 @@ export function Crear({ u }: { u: Usuario }) {
       </div>
 
       <details className="na-sec na-pliegue" data-recorrido="reglas">
-        <summary className="na-et" id="et-reglas"><Ico n="reglas" />Reglas</summary>
+        <summary className="na-pliegue__sum" id="et-reglas"><span className="na-et"><Ico n="reglas" />Reglas</span><span className="na-pliegue__n">{reglas.length}</span><Ico n="der" c="na-pliegue__flecha" /></summary>
         <ul className="na-reglas" aria-labelledby="et-reglas">{reglas.map((r, i) => <li key={i}><span className="na-reglas__ico"><Ico n={/mascota/i.test(r) ? 'pata' : 'check'} /></span><span className="na-reglas__txt">{r}</span>
           <button type="button" className="na-quitar" aria-label={'Quitar regla: ' + r} onClick={() => setReglas(reglas.filter((_, j) => j !== i))}><Ico n="x" /></button></li>)}</ul>
         <div className="na-agregar"><div className="na-input"><input aria-label="Nueva regla" value={regla} onChange={e => setRegla(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregar() } }} placeholder="Agregar una regla" /></div>

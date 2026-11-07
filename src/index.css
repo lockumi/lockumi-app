@@ -155,7 +155,7 @@ fieldset.campo legend{font-weight:600;font-size:14px;margin-bottom:6px;padding:0
 /* Detalle */
 .detalle{display:grid;gap:var(--s4);margin-top:var(--s4);align-items:start}
 .detalle>*{min-width:0}
-.pasos-lista--primero{order:-1}
+/* En el teléfono la tarea (contrato, fotos) va primero. La lista de pasos sigue en la página, debajo. En escritorio queda a la izquierda. */
 .tiempo__paso a{color:inherit;text-decoration:none;font-weight:700}
 @media (min-width:960px){.detalle{grid-template-columns:minmax(0,1fr) 320px}.cont{max-width:1140px}.detalle__lado{position:sticky;top:16px}
   .detalle__principal{grid-column:1;grid-row:1 / span 4}.pasos-lista{order:0;grid-column:2;grid-row:1}.detalle__lado{grid-column:2;grid-row:2}
@@ -989,6 +989,17 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .driver-popover.recorrido .driver-popover-footer button,.driver-popover.recorrido .recorrido__saltar{min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;font:700 15px/1 Inter,system-ui,sans-serif;text-shadow:none;cursor:pointer;border:0;background:var(--mint);color:var(--ink)}
 .driver-popover.recorrido .recorrido__saltar{text-decoration:none;padding:0 16px}
 .driver-popover.recorrido .driver-popover-navigation-btns{display:flex;gap:8px;flex:none}
+@media (max-width:719px){
+  .driver-popover.recorrido .driver-popover-footer{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .driver-popover.recorrido .recorrido__saltar{flex:none;width:auto}
+  .driver-popover.recorrido .recorrido__puntos{flex:1;margin:0;justify-content:flex-end}
+  .driver-popover.recorrido .driver-popover-navigation-btns{flex:1 0 100%;display:flex;gap:8px}
+  .driver-popover.recorrido .driver-popover-navigation-btns button{flex:1;width:auto}
+}
+@media (max-width:959px){
+  .driver-popover.recorrido.recorrido--fotos{top:auto!important;bottom:72px!important;height:auto!important}
+  .driver-popover.recorrido.recorrido--fotos .driver-popover-arrow{display:none}
+}
 .driver-popover.recorrido .driver-popover-footer button.driver-popover-next-btn{background:var(--tarjeta);color:var(--exito)}
 .driver-popover.recorrido button:focus-visible{outline:3px solid var(--accion);outline-offset:2px}
 .driver-popover.recorrido .driver-popover-arrow-side-top{border-top-color:var(--exito)}
@@ -1130,13 +1141,28 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .ct__version a{color:inherit;text-decoration:underline}
 
 /* Presentación de la optimización: tarjeta, espacios, espera y aviso. Sin un porcentaje inventado. */
-.ct-resumen{display:grid;gap:10px;padding:4px 0 8px}
+.ct-resumen{display:grid;gap:8px;padding:0}
+@media (max-width:959px){.cont:has(.ct-resumen) .h-lugar{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}}
+.ct-resumen__cab{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ct-resumen__lugar{margin:0;font:700 18px/24px var(--f-titulo);color:var(--cafe)}
 .ct-resumen__monto{margin:0;font:800 clamp(32px,8vw,44px)/1.1 var(--f-titulo);color:var(--cafe)}
-.ct-resumen dl{display:grid;gap:8px;margin:0}
-.ct-resumen dt{font:600 14px/18px var(--f-texto);letter-spacing:.04em;text-transform:uppercase;color:var(--cafe-suave)}
-.ct-resumen dd{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
+.ct-resumen__sub,.ct-resumen__fechas,.ct-resumen__cuenta{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
+.ct-resumen__sub{color:var(--cafe-suave)}
+.ct-resumen__bloques{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ct-resumen__bloques p{margin:0;display:grid;gap:2px;min-height:64px;padding:10px 12px;border-radius:16px;background:var(--mint)}
+.ct-resumen__bloques span{font:600 14px/18px var(--f-texto);color:var(--cafe-suave)}
+.ct-resumen__bloques strong{font:700 16px/22px var(--f-texto);color:var(--cafe)}
 .ct-resumen__firmas{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.ct-resumen__firmas li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
+.ct-resumen__firmas li{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px}
+.firma-breve>*+*{margin-top:8px}
+.firma-breve .estado-firma{padding:8px 12px}
+@media (max-width:959px){
+  .ct-resumen__sub{display:none}
+  .ct-resumen__bloques p{min-height:0;padding:8px 10px}
+  .ct-resumen__firmas{grid-template-columns:1fr 1fr}
+}
+#ct-firma[hidden]{display:none}
+.confirmacion-deposito__sigue{display:flex;justify-content:space-between;gap:8px;align-items:center;min-height:52px;margin:0;padding:12px 14px;border-radius:16px;background:var(--mint);font:600 16px/22px var(--f-texto)}
 .espacios{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .espacios__cuenta{margin:0;font:600 16px/22px var(--f-texto);color:var(--cafe)}
 .espacios__fila{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:52px;padding:0 14px;border:0;border-radius:16px;background:var(--mint);color:var(--cafe);font:600 16px/20px var(--f-texto);cursor:pointer;text-align:left}
@@ -1150,8 +1176,14 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .espera-vista--confirma{justify-items:stretch;text-align:left}
 .espera-vista--confirma .ilustracion-pendiente,.espera-vista--confirma .chip{justify-self:start}
 @media (prefers-reduced-motion:reduce){.espera-vista__barra>span{animation:none;width:40%;margin-left:30%}}
-.na-pliegue{border:0;background:none;padding:0}
-.na-pliegue summary{cursor:pointer}
-.na-pliegue summary::-webkit-details-marker{display:none}
+.na-pliegue{border:0;background:var(--mint);border-radius:16px;padding:0 12px}
+.na-pliegue__sum{display:flex;align-items:center;gap:8px;min-height:52px;cursor:pointer;list-style:none}
+.na-pliegue__sum::-webkit-details-marker{display:none}
+.na-pliegue__sum .na-et{margin:0;flex:1}
+.na-pliegue__n{min-width:28px;height:28px;padding:0 8px;border-radius:999px;display:grid;place-items:center;background:var(--tarjeta);font:700 14px/1 var(--f-texto);color:var(--cafe)}
+.na-pliegue__flecha{width:18px;height:18px;color:var(--cafe);transition:transform var(--t-ui) var(--ease)}
+.na-pliegue[open] .na-pliegue__flecha{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.na-pliegue__flecha{transition:none}}
+@media (max-width:959px){.na-form>.na-pie{background:transparent;box-shadow:none}}
 .aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
 

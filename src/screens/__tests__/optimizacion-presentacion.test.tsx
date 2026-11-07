@@ -6,7 +6,7 @@ const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear() })
 vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} })
 
-const { Contrato, EnCurso, progresoCuartos } = await import('../Detalle')
+const { Contrato, EnCurso, ConfirmacionDeposito, progresoCuartos } = await import('../Detalle')
 const { EsperaVista } = await import('../EsperaVista')
 const { PASOS_RECORRIDO } = await import('../../recorrido')
 const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readFileSync(r: URL, c: 'utf8'): string }
@@ -18,15 +18,16 @@ const A = { id: '3f2a9c1b-0000-4000-8000-000000000000', direccion: 'Casa demo', 
 describe('tarjeta del contrato', () => {
   const html = renderToStaticMarkup(<Contrato a={A} rol="dueno" />)
   it('muestra monto, plazo y firmas reales, y deja el texto íntegro detrás del botón', () => {
+    expect(html).toContain('Casa demo')
     expect(html).toContain('Ver contrato completo')
     expect(html).toContain('7 días')
     expect(html).toContain('1 de 2')
     expect(html).toContain('Firmó')
     expect(html).toContain('Pendiente')
+    expect(html).toContain('id="ct-firma" hidden=""')
     expect(html).toContain('class="cp-abrir"')
     expect(html).toContain('Leí el contrato y estoy de acuerdo.')
     expect(html).not.toContain('USD XX')
-    expect(html).toContain('hidden=""')
   })
   it('la acción de firmar sigue en el componente de firma, no se dispara sola', () => {
     expect(html).toMatch(/Firma como/)
@@ -54,12 +55,23 @@ describe('esperas de presentación', () => {
     expect(h).toContain('role="status"')
     expect(h).not.toMatch(/éxito|listo|55 %/)
   })
-  it('el depósito protegido conserva la frase legal y no cobra', () => {
-    const h = renderToStaticMarkup(<EnCurso a={{ ...A, estado: 'en_curso' }} rol="inquilino" />)
+  it('el depósito protegido es el paso de las fotos, no el anillo del alquiler en curso', () => {
+    const pagado = { ...A, estado: 'fotos_entrada' as const, pago: '2026-11-02T12:00:00.000Z' }
+    const h = renderToStaticMarkup(<ConfirmacionDeposito a={pagado} onContinuar={() => {}} />)
     expect(h).toContain('Depósito protegido')
-    expect(h).toContain('El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.')
-    expect(h).toContain('Empezar fotos de salida')
+    expect(h).toContain('Ahora: fotos de entrada')
+    expect(h).toContain('Paso 4 de 8')
+    expect(h).toContain('Continuar')
+    expect(h).not.toContain('anillo')
     expect(h).not.toContain('USD 12')
+    const curso = renderToStaticMarkup(<EnCurso a={{ ...A, estado: 'en_curso' }} rol="inquilino" />)
+    expect(curso).toContain('Alquiler en curso')
+    expect(curso).toContain('El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.')
+    expect(curso).toContain('Empezar fotos de salida')
+    expect(curso).not.toContain('Depósito protegido')
+    const src = fs.readFileSync(new URL('../Detalle.tsx', import.meta.url), 'utf8')
+    expect(src).toContain('lockumi.confirmacion-deposito.')
+    expect(src).toContain('!p.a.pago || confirmacionVista')
   })
 })
 
