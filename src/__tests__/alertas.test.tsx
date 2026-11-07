@@ -331,7 +331,9 @@ describe('líneas cortas del aviso v2 (Legal, 24/10)', () => {
     const src = leer('../alertas.ts'); expect(src).not.toContain('Reparto decidido'); expect(src).toContain('${llego(llegadas(ahora, r).dueno)} al dueño y ${llego(llegadas(ahora, r).inquilino)} al inquilino')
     expect(src.match(/LEGAL: revisado \(24\/10\)/g)!.length).toBeGreaterThanOrEqual(8)
   })
-  it('tarjeta de Inicio: «Pagar el depósito · Luego, fotos de entrada» (sin «Depósito protegido»)', () => {
-    const ini = leer('../screens/Inicio.tsx'); expect(ini).toContain("t: 'Pagar el depósito', s: 'Luego, fotos de entrada' },   // LEGAL: revisado (24/10)"); expect(ini).not.toContain('Depósito protegido')
+  it('Inicio ya no muestra el banner de tres pasos; «Depósito protegido» sigue ausente', () => {
+    // El texto «Pagar el depósito · Luego, fotos de entrada» (LEGAL: revisado 24/10) vivía en el banner global.
+    // La referencia 03 no tiene ese banner; la frase de pago permanece en alertas.ts.
+    const ini = leer('../screens/Inicio.tsx'); expect(ini).not.toContain('Pagar el depósito'); expect(ini).not.toContain('Depósito protegido')
   })
 })

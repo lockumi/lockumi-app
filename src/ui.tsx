@@ -7,6 +7,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Plegable } from './screens/Plegable'
 import type { Usuario, Alquiler } from './types'
 import { ETAPAS, etapaDe } from './flujo'
+import { Navegacion } from './screens/Navegacion'
+import { iniciales } from './screens/perfil-datos'
 
 export const Demo = ({ t = 'Demo: simulado' }: { t?: string }) => modoReal ? null : <span className="demo" title="Integración simulada para la demo">{t}</span>
 export const Icono = ({ id, className = '' }: { id: string; className?: string }) =>
@@ -16,15 +18,17 @@ export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: num
 
 export function Barra({ u, onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
   const enAvisos = r === '/avisos' || r.startsWith('/avisos/')
+  const enPerfil = r === '/perfil' || r.startsWith('/perfil/')
   return <header className="cont barra">
     <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
+    <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
-      <span className="barra__usuario cortar" title={u.email}>{u.email}</span>
       <a href="#/avisos" className="boton-icono nav-campana" aria-label="Avisos" aria-current={enAvisos ? 'page' : undefined} title="Avisos">
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9"/><path d="M10 18a2 2 0 0 0 4 0"/></svg>
       </a>
       <button type="button" className="boton-ayuda" aria-label="¿Cómo funciona?" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>
         <span className="boton-ayuda__i" aria-hidden="true">?</span><span className="boton-ayuda__t" aria-hidden="true">¿Cómo funciona?</span></button>
+      <a href="#/perfil" className="barra__avatar" aria-label={`Perfil, ${u.email}`} title={u.email} aria-current={enPerfil ? 'page' : undefined}>{iniciales(u.nombre)}</a>
       <button type="button" className="boton-icono" onClick={onSalir} aria-label="Salir" title="Salir">
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10"/></svg>
       </button>

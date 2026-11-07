@@ -32,7 +32,7 @@ describe('navegación de perfil, avisos y ayuda', () => {
     expect(h).toContain('aria-label="¿Cómo funciona?"')
     expect(h).toContain('aria-label="Salir"')
     expect(app).toContain('className="app-cuerpo"')
-    expect(app).toContain('<Navegacion r={r} />')
+    expect(app).toContain('<Navegacion r={r} className="nav-app--pie" />')
     expect(app).toContain("r === '/perfil'")
     expect(app).toContain("r === '/avisos'")
     expect(app).toContain("r === '/ayuda'")

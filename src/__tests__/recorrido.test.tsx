@@ -4,7 +4,7 @@ import { PASOS_RECORRIDO, claveRecorrido, alquilerEjemplo, RUTA_EJEMPLO, VERSION
 
 const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readFileSync(r: URL, c: 'utf8'): string }
 const leer = (r: string) => fs.readFileSync(new URL(r, import.meta.url), 'utf8')
-const css = leer('../index.css'), ui = leer('../ui.tsx'), inicio = leer('../screens/Inicio.tsx'), crear = leer('../screens/Crear.tsx'), detalle = leer('../screens/Detalle.tsx'), rec = leer('../recorrido.ts'), pkg = JSON.parse(leer('../../package.json'))
+const css = leer('../index.css'), ui = leer('../ui.tsx'), inicio = leer('../screens/Inicio.tsx'), ayuda = leer('../screens/Ayuda.tsx'), crear = leer('../screens/Crear.tsx'), detalle = leer('../screens/Detalle.tsx'), rec = leer('../recorrido.ts'), pkg = JSON.parse(leer('../../package.json'))
 
 describe('recorrido: textos aprobados', () => {
   it('6 pasos con los títulos de la maqueta, en orden', () => {
@@ -34,9 +34,9 @@ describe('recorrido: primera vez y volver a verlo', () => {
     expect(rec).toMatch(/const cerrar = \(\) => \{ void marcarVisto\(u\)/); expect(rec).toMatch(/onDestroyStarted: \(\) => \{ void marcarVisto\(u\)/)
     expect(rec).toContain("saltar.textContent = 'Saltar'"); expect(rec).toContain("'¡Listo!'"); expect(rec).toContain("prevBtnText: 'Atrás'")
   })
-  it('«¿Cómo funciona?» en la cabecera (solo el ícono en el teléfono, con aria-label) y «Ver el recorrido» en Inicio', () => {
+  it('«¿Cómo funciona?» en la cabecera (solo el ícono en el teléfono, con aria-label) y «Ver el recorrido» en Ayuda', () => {
     expect(ui).toContain('aria-label="¿Cómo funciona?"'); expect(ui).toContain('abrirRecorrido(u')
-    expect(inicio).toContain('¿Primera vez?'); expect(inicio).toContain('Mira cómo funciona en 1 minuto.'); expect(inicio).toContain('Ver el recorrido')
+    expect(ayuda).toContain('Ver el recorrido'); expect(inicio).toContain('data-recorrido="nuevo"')
   })
 })
 

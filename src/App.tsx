@@ -95,7 +95,7 @@ export default function App() {
     {Reputacion ? <Suspense fallback={<main id="contenido" tabIndex={-1} className="cont"><p className="nota">Cargando…</p></main>}><Reputacion u={u} r={r} salir={salir}>{pantalla}</Reputacion></Suspense> : pantalla}
     <Pie />
     </div>
-    <Navegacion r={r} />
+    <Navegacion r={r} className="nav-app--pie" />
     </div>
   </Fondo>
 }
