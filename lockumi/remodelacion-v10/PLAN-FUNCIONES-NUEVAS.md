@@ -1,6 +1,6 @@
 # Plan mínimo — perfil, avisos y ayuda
 
-> No implementado. Katherine autorizó agregar estas tres funciones (06/11/2026, 19:48–19:56 CR) solo después de revisar este comportamiento. La adaptación visual del resto sigue aparte.
+> Katherine aprobó este mínimo el 06/11/2026, 20:38 CR («ok entonces dale»). Implementado en `#/perfil`, `#/avisos` y `#/ayuda`, con campana y barra inferior. Sigue fuera: cédula, edición, cuenta de pago, correos nuevos, avisos inventados y un buzón de toasts.
 > Rama `cursor/diseno-estatico-v10-c688`. No borra ni reemplaza lo que ya existe.
 
 Los mocks 24, 26 y 27 muestran además una barra inferior (Inicio, Avisos, Ayuda, Perfil) y una campana en la cabecera. Esas entradas solo se conectarían cuando cada destino exista de verdad. Hasta entonces no se agregan botones que no lleven a ningún lado.

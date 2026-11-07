@@ -1,177 +1,42 @@
-# Cobertura Mock → Componentes Reales
+# Cobertura por nombre de archivo
 
-> Documento de mapeo entre los 33 mockups PNG aprobados y los componentes/pantallas existentes en el repositorio.
-> Generado: 2026-11-07 · Rama: `cursor/diseno-estatico-v10-c688` · Base: `cef6c70`
+Los nombres salen de `pantallas/`. La tabla de `resumen.md` usa el mismo archivo. La matriz anterior se corrige aquí: `05-creando.png` no es el calendario, y `17-aviso5.png` no es una pantalla de rendimiento.
 
-## Resumen de Cobertura
-
-| Estado | Cantidad | Descripción |
-|--------|----------|-------------|
-| ✅ Existe | 26 | Pantalla/componente real identificado |
-| ⚠️ Parcial | 4 | Existe pero con diferencias estructurales |
-| ❌ No existe | 3 | Requiere nueva pantalla o es decorativo |
-
----
-
-## Pantallas Principales (01–31)
-
-### Flujo de Entrada (01–02)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 01-bienvenida | `src/screens/Login.tsx` | `Login` | ✅ | Hero con `LogoAnimado`, título, beneficios, casillas legales, botón "Entrar" |
-| 02-login | `src/screens/Login.tsx` | `Hoja` | ✅ | Modal de opciones: Google, Apple, correo |
-
-### Flujo de Alquiler - Dueño (03–06)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 03-inicio | `src/screens/Inicio.tsx` | `Inicio` | ✅ | Dashboard con lista de alquileres, hero, botón nuevo |
-| 04-crear | `src/screens/Crear.tsx` | `Crear` | ✅ | Formulario completo con campos, reglas, opciones |
-| 05-creando | `src/screens/Crear.tsx` | Estado de carga | ✅ | Spinner/barra durante creación |
-| 06-invitar | `src/screens/Crear.tsx` | Sección invitación | ✅ | Campo email, enlace WhatsApp |
-
-### Flujo de Inquilino (07)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 07-aceptar | `src/screens/Invitacion.tsx` | `Invitacion`, `CuerpoInvitacion` | ✅ | Resumen del alquiler, reglas plegables, aceptar |
-
-### Flujo Compartido - Contrato y Depósito (08–13)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 08-pasos | `src/screens/Detalle.tsx` | Barra de progreso + `LineaTiempo` | ✅ | `src/ui.tsx` tiene `LineaTiempo` |
-| 09-contrato | `src/screens/ContratoDoc.tsx` / `ContratoCompacto.tsx` | `ContratoDoc` | ✅ | Documento visual del contrato |
-| 10-firmas | `src/screens/Detalle.tsx` | Sección firmas en `Contrato` | ✅ | Casilla + botón firmar |
-| 11-pagar | `src/screens/Detalle.tsx` | `Pago`, `PagoSimulado` | ✅ | Monto, notas, botón pagar |
-| 12-guardando | `src/EsperaPago.tsx` | `EsperaPago` | ✅ | Estados de progreso del pago |
-| 13-protegido | `src/screens/Detalle.tsx` | Estado `deposito_guardado` | ✅ | Chip "Depósito guardado", hero ilustrativo |
-
-### Fotos de Entrada (14–15)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 14-checklist | `src/screens/Detalle.tsx` | `Fotos` + `src/screens/Acta.tsx` | ✅ | Cuartos con checklist, cámara |
-| 15-foto | `src/Camara.tsx` | `TomarFoto` | ✅ | Cámara en vivo, disparo |
-
-### Durante el Alquiler (16–17)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 16-encurso | `src/screens/Detalle.tsx` | `EnCurso` | ✅ | Chip protegido, fechas, botón salida |
-| 17-aviso5 | `src/screens/Detalle.tsx` + `src/prueba/AvisoSalida.tsx` | Aviso de plazo | ✅ | Aviso amarillo con días restantes |
-
-### Salida y Devolución (18–20)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 18-fotosalida | `src/screens/Detalle.tsx` | `Fotos` (cual='salida') | ✅ | Misma estructura que entrada + checkbox daños |
-| 19-plazo7 | `src/screens/Detalle.tsx` | `Ventana` | ✅ | Contador de días/horas, texto plazo |
-| 20-devuelto | `src/screens/Detalle.tsx` | Estado `cerrado` | ✅ | Hero ilustrativo de devolución |
-
-### Reclamos y Mediación (21–23)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 21-reclamo | `src/prueba/ReclamoPC.tsx` | `FormReclamo`, `FormRubros` | ✅ | Formulario de rubros con fotos |
-| 22-respuesta | `src/prueba/ReclamoPC.tsx` | Sección respuesta | ✅ | Vista del reclamo para inquilino |
-| 23-mediacion | `src/prueba/MediacionPC.tsx` | `MediacionPC` | ✅ | Reparto, mediador, resolución |
-
-### Extras y Perfil (24–28)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 24-perfil | N/A | — | ❌ | No hay ruta de perfil. Plan mínimo en `PLAN-FUNCIONES-NUEVAS.md`. No implementado en este lote |
-| 25-puntaje | `src/reputacion/Pantallas.tsx` | Pantallas de reputación | ⚠️ | Solo con `VITE_REPUTACION=1`, estructura diferente al mock |
-| 26-notif | `src/prueba/AvisosApp.tsx` | avisos dentro del alquiler | ❌ | No hay centro de avisos. Los toasts siguen aparte. Plan en `PLAN-FUNCIONES-NUEVAS.md` |
-| 27-ayuda | `src/recorrido.ts` | recorrido guiado | ⚠️ | No hay FAQ. El recorrido sí existe. Plan en `PLAN-FUNCIONES-NUEVAS.md` |
-| 28-terminos | `src/legal/PaginaLegal.tsx` | `PaginaLegal` | ✅ | Texto legal con estilos |
-
-### Estados Globales (29–31)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 29-vacio | `src/screens/Inicio.tsx` | Estado sin alquileres | ✅ | Tarjeta "Todavía no hay alquileres" |
-| 30-error | `src/Alertas.tsx` + estilos | Toast de error | ✅ | Aviso con tipo='error' |
-| 31-cargando | Varios | Estados de carga | ✅ | Spinner/texto "Cargando..." distribuido |
-
----
-
-## Recorrido Guiado (32–33)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 32-recorrido-paso1 | `src/recorrido.ts` | driver.js overlay | ✅ | Globo Sage Teal, puntos, botones |
-| 33-recorrido-saltar | `src/recorrido.ts` | driver.js overlay | ✅ | Mismo sistema con Saltar |
-
----
-
-## Alertas/Modales (34–36)
-
-| Mock | Archivo | Componente | Estado | Notas |
-|------|---------|------------|--------|-------|
-| 34-alerta-exito | `src/Alertas.tsx`, `src/Aviso.tsx` | `Tostada` | ✅ | Toast verde con casita animada |
-| 35-alerta-aviso | `src/Alertas.tsx`, `src/Aviso.tsx` | `Tostada` | ✅ | Toast miel/paso |
-| 36-alerta-error | `src/Alertas.tsx`, `src/Aviso.tsx` | `Tostada` | ✅ | Toast terracota/error |
-
-**Nota importante:** Las alertas en el código actual son toasts tipo Sonner (píldoras emergentes abajo), no modales centrados. Los mocks 34–36 muestran modales compactos. Según instrucciones, implementar como **pop-ups/modales COMPACTOS sobre flujo**, no pantallas completas.
-
----
-
-## Componentes que NO corresponden a mocks
-
-Algunos componentes existentes no tienen mock directo porque son internos o de infraestructura:
-
-- `src/screens/Firmante.tsx` - Pantalla de firma con llave de acceso
-- `src/screens/Billetera.tsx` - Billetera Stellar (solo modo real)
-- `src/screens/Real.tsx` - Componentes de escrow real
-- `src/screens/Ejemplo.tsx` - Alquiler de ejemplo del recorrido
-- `src/reputacion/` - Sistema de reputación (parcialmente activo)
-
----
-
-## Perfil, avisos y ayuda
-
-Katherine autorizó poder agregarlos, pero pidió el comportamiento antes de programarlos. El detalle está en `PLAN-FUNCIONES-NUEVAS.md`. En este lote no hay rutas nuevas ni botones que apunten a pantallas inexistentes.
-
-## Bienvenida y el enlace de cuenta
-
-El mock 01 muestra «Ya tengo cuenta» subrayado bajo «Empezar». La app real no tiene ese enlace: la acción existente es el botón «Entrar», que abre la misma hoja para cuenta nueva o existente (Google, Apple o correo). No se inventó un segundo botón ni se cambió el texto. Los secundarios que sí existen (incluido «Continuar con tu correo» y «Saltar» / «Atrás» del recorrido) quedan rellenos en Mint Mist, sin contorno.
-
----
-
-## Tokens de Diseño a Implementar
-
-### Paleta Sage Teal (reemplaza Terracota viva)
-
-```css
-/* Actual (Terracota viva) → Nuevo (Sage Teal) */
---coral:#FF6B35         → --sage-teal:#527C78      /* primario */
---salvia:#6FBF8A        → --soft-sage:#A8C9B8      /* acento suave */
---fondo:#FFF5EE         → --warm-cream:#F6F2EA    /* fondo */
---tarjeta:#FFFFFF       → --card-white:#FFFEFA    /* tarjetas */
---cafe:#3D2A22          → --deep-charcoal:#293332 /* texto */
-/* Nuevos tokens */
---mint-mist:#DCEAE5     /* secundario / botones rellenos */
---soft-lavender:#D8D3E8 /* Inquilino / mediación */
---borde:#E5E6DE         /* bordes */
-```
-
-### Tipografía
-
-```css
-/* Actual → Nuevo */
---f-titulo:"Nunito"     → --f-titulo:"Plus Jakarta Sans"
---f-texto:"Inter"       → --f-texto:"Inter" (sin cambio)
-```
-
----
-
-## Plan de Implementación
-
-1. **Fase 1: Tokens** - Variables CSS en `src/index.css`
-2. **Fase 2: Componentes base** - Botones, campos, tarjetas
-3. **Fase 3: Pantallas con mock** - Aplicar estilos por pantalla
-4. **Fase 4: Alertas compactas** - Convertir toasts a modales si requerido
-5. **Fase 5: QA visual** - Capturas comparativas
+| Archivo | Qué muestra el PNG | Dónde está en la app | Diferencia que sigue |
+|---|---|---|---|
+| `01-bienvenida.png` | Bienvenida | `Login` | Siguen las casillas y los beneficios reales. El botón dice «Entrar». No hay «Ya tengo cuenta». |
+| `02-login.png` | Entrar con correo | Hoja de `Login` | El código simulado es un solo campo. |
+| `03-inicio.png` | Inicio con barra | `Inicio` + `Navegacion` | La barra ya lleva a Inicio, Avisos, Ayuda y Perfil. El monto sale de los datos, no del 800 del dibujo. |
+| `04-crear.png` | Crear alquiler | `Crear` | El depósito empieza en 0. |
+| `05-creando.png` | «Creando…» / «Preparando tu alquiler…» | No hay esa espera | Crear guarda y sigue. No se agregó una pausa artificial. |
+| `06-invitar.png` | Invitar | Sección de `Crear` | No es una ruta aparte. |
+| `07-aceptar.png` | Aceptar invitación | `Invitacion` | Hace falta un token de `#/invitacion/:id/:token`. No se fabricó. |
+| `08-pasos.png` | Pasos con avance | `Detalle` / `LineaTiempo` | La semilla `a2` muestra el paso de firmas. |
+| `09-contrato.png` | Contrato visual | `ContratoCompacto` / `ContratoDoc` | Se abre desde el detalle. |
+| `10-firmas.png` | Firmas de ambos | Firmas en `Detalle` | La captura de firmas no avanza la semilla. |
+| `11-pagar.png` | Pagar depósito | Pago en `Detalle` | En la demo no se cobra. |
+| `12-guardando.png` | Guardando | `EsperaPago` | Solo se ve mientras corre el pago. No se disparó. |
+| `13-protegido.png` | Depósito protegido, con escena | Estado `en_curso` | La escena de hito no está aprobada como asset. No se dibujó otra casa. |
+| `14-checklist.png` | Checklist de entrada | `Fotos` + `Acta` | Sin la ilustración del mock. |
+| `15-foto.png` | Subir foto | `TomarFoto` | La foto del mock es un recurso de diseño, no del alquiler. |
+| `16-encurso.png` | En curso | `EnCurso` | Sin escena de hito. |
+| `17-aviso5.png` | Aviso de 5 días | `#/avisos` y, con la prueba completa, `AvisoSalida` | El PNG dice «Quedan 5 días» y «Depósito protegido». Esos textos no se inventan. Si el alquiler ya tiene el aviso `reparacion-5`, se muestra su asunto real. La semilla no trae ese aviso. |
+| `18-fotosalida.png` | Fotos de salida | `Fotos` cual salida | Sin ilustración nueva. |
+| `19-plazo7.png` | Plazo de 7 días | `Ventana` | El texto del plazo no se reescribió. |
+| `20-devuelto.png` | Devolución | Estado `cerrado` | Se quitó el hero terracota. La escena de hito sigue sin asset aprobado. |
+| `21-reclamo.png` | Reclamo con pruebas | Formulario de reclamo | No se envió. |
+| `22-respuesta.png` | Responder | Vista del inquilino | No se aceptó ni se rechazó. |
+| `23-mediacion.png` | Mediación | `MediacionPC` | No se registró un acuerdo. La escena de hito no se sustituyó. |
+| `24-perfil.png` | Perfil | `#/perfil` | Muestra la sesión y los roles reales. No hay cédula, cuenta de pago ni «Editar perfil». |
+| `25-puntaje.png` | Llave Lockumi | Solo con `VITE_REPUTACION=1` | Este build lo tiene apagado. Desde perfil, esa fila no se dibuja. |
+| `26-notif.png` | Notificaciones | `#/avisos` | Lista vacía si no hay avisos guardados. No se copian «Firmas listas» ni «Hace 7 meses». |
+| `27-ayuda.png` | Ayuda | `#/ayuda` | Preguntas con textos ya publicados. El conjunto queda pendiente de revisión legal antes de producción. |
+| `28-terminos.png` | Términos | `/terminos` y `/privacidad` | El cuerpo legal no se reescribió. |
+| `29-vacio.png` | Vacío | Lista sin alquileres | Texto real y la escena aprobada de bienvenida. |
+| `30-error.png` | Error | `#/alquiler/no-existe` | Es «no encontrado». El error de red no se forzó. |
+| `31-cargando.png` | Cargando | `Entrando` | Dura lo que tarda el acceso simulado. |
+| `32-recorrido-paso1.png` | Primer paso del recorrido | Recorrido real | Globo sage y «Saltar» menta. |
+| `33-recorrido-saltar.png` | Saltar | El mismo recorrido | El botón cierra el recorrido. |
+| `34-alerta-exito.png` | Aviso compacto de éxito | Toast `logro` | No es un diálogo. El botón, si existe, es la acción que ya tenía el aviso. |
+| `35-alerta-aviso.png` | Aviso compacto con dos botones | Toast `paso` | No se agregó «Cancelar». |
+| `36-alerta-error.png` | Aviso compacto de error | Toast `error` | No se esconde solo. No se cambió a un modal. |
