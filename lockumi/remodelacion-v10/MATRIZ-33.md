@@ -4,7 +4,7 @@ Las capturas de esta matriz están solo en el artifact `v10-vigente`, a 390×844
 
 Demo local `http://127.0.0.1:4174` (`npm run dev`), sin `VITE_CAVOS_APP_ID` y sin `VITE_PRUEBA_COMPLETA`. Correo de ejemplo. Los estados 11, 14 y 18–23 se abrieron escribiendo un alquiler solo en el `localStorage` de ese navegador y recargando. No se tocó la semilla de `src/store.ts`, no se cobró, no se firmó, no se abrió la cámara y no se encendió ningún flag. El anillo de la 16 sale de `diasQueQuedan`. En esta corrida, con el día de Costa Rica en 2026-11-07, dio **358 días** hasta el 31 oct 2027. No es 212 y no se escribió a mano.
 
-`npm test` sobre el ajuste de «Volver»: 1552 pasaron, 1 omitida (182 archivos). `npm run build` compiló en esta máquina y no se publicó. Eso no equivale a fidelidad visual ni a un cierre. La revisión estática no volvió a capturar 06, 07, 12, 15, 17, 23, 25 ni 31, no encendió flags y no creó rutas ni servicios. La 18 de `6144e0b` quedó como está. Esta matriz no certifica 33 de 33 ni el funcionamiento en remoto.
+El botón «Volver» es `95adc07` (`95adc074dc813073592d9ce0a67b4a74ebccedaa`). `npm test` sobre ese ajuste: 1552 pasaron, 1 omitida (182 archivos). `npm run build` compiló en esta máquina y no se publicó. Eso no equivale a fidelidad visual ni a un cierre. La revisión estática no volvió a capturar 06, 07, 12, 15, 17, 23, 25 ni 31, no encendió flags y no creó rutas ni servicios. La 18 de `6144e0b` quedó como está. Esta matriz no certifica 33 de 33 ni el funcionamiento en remoto.
 
 `https://app.lockumi.com` sigue con `last-modified: Thu, 05 Nov 2026 23:12:51 GMT`. No se publicó ni se hizo merge.
 
