@@ -72,18 +72,18 @@ function TarjetaContrato({ a, integro, onAlternar }: { a: Alquiler; integro: boo
   const { etiqueta, titulo } = lugarContrato(a.direccion)
   const listo = n === 2
   return <section className="ct-resumen" aria-label="Resumen del contrato">
+    <div className="ct-resumen__cab">
+      {etiqueta ? <p className="ct-resumen__etiqueta">{trazo(ICO_CASA)}{etiqueta}</p> : <span />}
+      <span className={'chip ' + (listo ? 'chip--exito' : 'chip--pendiente')}>{listo ? 'Firmado por los dos' : <>{trazo(ICO_RELOJ)}Pendiente de firmas</>}</span>
+    </div>
     <div className="ct-resumen__hero">
       <div className="ct-resumen__datos">
-        <div className="ct-resumen__cab">
-          {etiqueta ? <p className="ct-resumen__etiqueta">{trazo(ICO_CASA)}{etiqueta}</p> : <span />}
-          <span className={'chip ' + (listo ? 'chip--exito' : 'chip--pendiente')}>{listo ? 'Firmado por los dos' : <>{trazo(ICO_RELOJ)}Pendiente de firmas</>}</span>
-        </div>
         <p className="ct-resumen__titulo">{titulo}</p>
         <p className="ct-resumen__monto">{usd(a.monto)}</p>
-        <p className="ct-resumen__fechas">{trazo(ICO_CAL)}<span>{fecha(a.inicio)} → {fecha(a.fin)}</span></p>
       </div>
       <img className="ct-resumen__casita" src="/img/casita-inmueble.png" alt="" />
     </div>
+    <p className="ct-resumen__fechas">{trazo(ICO_CAL)}<span>{fecha(a.inicio)} → {fecha(a.fin)}</span></p>
     <div className="ct-resumen__bloques">
       <p><span>{trazo(ICO_PERSONA)}Reclamos</span><strong>{textoPlazo(a)}</strong></p>
       <p><span>{trazo(ICO_BALANZA)}Mediación</span><strong>No decide por ustedes.</strong></p>
