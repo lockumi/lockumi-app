@@ -958,3 +958,13 @@ html.sin-scroll{overflow:hidden}
 .perfil__enlaces a,.perfil__enlaces button{min-height:44px;display:flex;align-items:center;padding:0 4px;color:inherit;text-decoration:none;font:700 16px/22px var(--f-texto)}
 .perfil__enlaces button{justify-content:center}
 
+/* Centro de avisos: lista de los que el alquiler ya guardó. */
+.avisos-centro{display:grid;gap:16px;padding-bottom:32px}
+.avisos-centro h1{margin:0;font:800 clamp(28px,6vw,36px)/1.1 var(--f-titulo)}
+.avisos-centro__vacio{margin:0}
+.avisos-centro__lista{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.avisos-centro__item{display:grid;gap:2px;min-height:44px;color:inherit;text-decoration:none}
+.avisos-centro__item strong{font:800 16px/22px var(--f-titulo)}
+.avisos-centro__item span,.avisos-centro__item time{font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
+.avisos-centro__item--salida{background:var(--estado-pendiente-fondo)}
+
