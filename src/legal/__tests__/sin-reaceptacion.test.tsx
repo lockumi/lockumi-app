@@ -21,7 +21,7 @@ describe('sin pantalla de volver a aceptar', () => {
     mem.set('lockumi.usuario', JSON.stringify({ email: 'demo@lockumi.com', nombre: 'demo', metodo: 'correo', terminos: v15, privacidad: v15 }))
     const html = renderToStaticMarkup(<App />)
     expect(html).not.toContain(TITULO_REACEPTACION); expect(html).not.toContain('Aceptar y seguir')
-    expect(html).toContain('INICIO-DE-LA-APP'); expect(html).toContain('demo@lockumi.com')
+    expect(html).toContain('INICIO-DE-LA-APP'); expect(html).toContain('aria-label="Salir"')
     expect(JSON.parse(mem.get(K_ACEPTACION.terminos)!).version).toBe('1.5-demo')   // no se cambia la aceptación guardada
   })
   it('App.tsx ya no usa la pantalla', () => {

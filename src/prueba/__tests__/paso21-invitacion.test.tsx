@@ -170,7 +170,7 @@ describe('plegables (Katherine/Legal 25/10, 10:15 p. m.): cerrados al entrar, t�
     const vista = aLaVista(html)
     expect(vista).not.toContain('No fumar dentro de la casa')   // reglas dentro del plegable cerrado
     expect(vista).toContain('Leí el contrato y estoy de acuerdo.'); expect(vista).toMatch(/<input[^>]*type="checkbox"/)
-    expect(vista).toMatch(/<button[^>]*>[^<]*Firma/)
+    expect(vista).toMatch(/<button[^>]*>[\s\S]*?Firma/)
     expect(vista).toContain('<dt>Depósito</dt><dd>20,00 USDC de prueba</dd>'); expect(vista).toContain('sin dinero real')
   })
 })
