@@ -21,6 +21,22 @@ const ETAPA_DE: Record<Estado, number> = { firmas: 1, pendiente_pago: 2, fotos_e
 export const etapaDe = (a: Pick<Alquiler, 'estado'>) => ETAPA_DE[a.estado]
 export const pasoTexto = (a: Pick<Alquiler, 'estado'>) => `Paso ${etapaDe(a) + 1} de ${ETAPAS.length}`
 
+const diaUtc = (iso: string) => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return Date.UTC(y, (m || 1) - 1, d || 1)
+}
+/** Días de calendario entre la entrada, la salida y un «hoy» aaaa-mm-dd. El anillo lo usa; no hay un número fijo. */
+export function diasQueQuedan(inicio: string, fin: string, hoy: string) {
+  const dia = 86_400_000
+  const total = Math.max(0, Math.round((diaUtc(fin) - diaUtc(inicio)) / dia))
+  const quedan = Math.max(0, Math.round((diaUtc(fin) - diaUtc(hoy)) / dia))
+  return { total, quedan }
+}
+/** Fecha de calendario en Costa Rica para el reloj de la app. */
+export function hoyCostaRica(ms: number) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Costa_Rica', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms)
+}
+
 export type Firmas = Partial<Record<Rol, string>>
 export class ErrorFirma extends Error {}
 /** Firma de `actor`. Nadie puede firmar por la otra persona ni firmar dos veces. */

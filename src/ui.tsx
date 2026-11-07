@@ -119,14 +119,16 @@ export function CampoFecha({ etiqueta, valor, onCambio, onSalir, id, error, ayud
 }
 
 /** Línea de tiempo simple, igual para las dos personas. */
-export function LineaTiempo({ a }: { a: Alquiler }) {
+/** `ancla` solo en el paso actual: abre lo que la ficha ya muestra. Los pasos de adelante no son enlaces. */
+export function LineaTiempo({ a, ancla }: { a: Alquiler; ancla?: string }) {
   const actual = etapaDe(a); const fin = a.estado === 'cerrado'
   return <ol className="tiempo" aria-label="Cómo va el alquiler">
     {ETAPAS.map((t, i) => {
       const estado = i < actual || (fin && i === actual) ? 'hecho' : i === actual ? 'actual' : 'futuro'
+      const nombre = <>{t}{estado === 'actual' && <em className="nota"> · ahora</em>}</>
       return <li key={t} className={'tiempo__paso tiempo__paso--' + estado} aria-current={estado === 'actual' ? 'step' : undefined}>
         <span className="tiempo__punto">{estado === 'hecho' ? <Icono id="i-check" /> : <b>{i + 1}</b>}</span>
-        <span>{t}{estado === 'actual' && <em className="nota"> · ahora</em>}</span>
+        {estado === 'actual' && ancla ? <a href={ancla}>{nombre}</a> : <span>{nombre}</span>}
         <span className="sr">{estado === 'hecho' ? ' (listo)' : estado === 'actual' ? ' (paso actual)' : ' (pendiente)'}</span>
       </li>
     })}

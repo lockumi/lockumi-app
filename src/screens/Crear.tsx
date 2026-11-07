@@ -259,6 +259,15 @@ export function Crear({ u }: { u: Usuario }) {
 
       <div className="na-par">
       <section className="na-sec">
+        <div className="na-et"><Ico n="cal" />Fechas<span className="na-et__der"><Info et="Reglas de las fechas" onClick={() => setInfo('fechas')} /></span></div>
+        <div className="na-fechas2">
+          <CampoCalendario id="f-inicio" etiqueta="Entrada" valor={f.inicio} min={le.min} max={le.max} error={ver('inicio')} onElegir={elegirInicio} onCerrar={tocar('inicio')} />
+          <CampoCalendario id="f-fin" etiqueta="Salida" valor={f.fin} min={ls?.min ?? le.min} max={ls?.max ?? le.max} error={errFin} alDerecha onElegir={elegirFin} onCerrar={tocar('fin')}
+            onAbrir={() => { if (f.inicio) return true; setAvisoFin('Primero elige la fecha de entrada.'); return false }}
+            contexto={f.inicio && <div className="na-hoja__ctx"><span className="na-ctx"><Ico n="cal" />Entrada <strong>{ddmmaa(f.inicio)}</strong></span>{f.fin && <span className="na-ctx na-ctx--sel">Salida <strong>{ddmmaa(f.fin)}</strong></span>}</div>} />
+        </div>
+      </section>
+      <section className="na-sec">
         <label htmlFor="f-monto" className="na-et"><Ico n="candado" />Depósito<span className="na-et__der">{etMonto}</span></label>
         <div className={'na-paso' + (errMonto ? ' na-paso--error' : '')}>
           <button type="button" aria-label="Restar 1" disabled={mActual <= 1} onClick={() => paso(-1)}><Ico n="menos" /></button>
@@ -267,16 +276,6 @@ export function Crear({ u }: { u: Usuario }) {
           <button type="button" aria-label="Sumar 1" disabled={mActual >= tope} onClick={() => paso(1)}><Ico n="mas" /></button>
         </div>
         {errMonto && <small id="f-monto-err" className="campo__error" role="alert">{errMonto}</small>}
-      </section>
-
-      <section className="na-sec">
-        <div className="na-et"><Ico n="cal" />Fechas<span className="na-et__der"><Info et="Reglas de las fechas" onClick={() => setInfo('fechas')} /></span></div>
-        <div className="na-fechas2">
-          <CampoCalendario id="f-inicio" etiqueta="Entrada" valor={f.inicio} min={le.min} max={le.max} error={ver('inicio')} onElegir={elegirInicio} onCerrar={tocar('inicio')} />
-          <CampoCalendario id="f-fin" etiqueta="Salida" valor={f.fin} min={ls?.min ?? le.min} max={ls?.max ?? le.max} error={errFin} alDerecha onElegir={elegirFin} onCerrar={tocar('fin')}
-            onAbrir={() => { if (f.inicio) return true; setAvisoFin('Primero elige la fecha de entrada.'); return false }}
-            contexto={f.inicio && <div className="na-hoja__ctx"><span className="na-ctx"><Ico n="cal" />Entrada <strong>{ddmmaa(f.inicio)}</strong></span>{f.fin && <span className="na-ctx na-ctx--sel">Salida <strong>{ddmmaa(f.fin)}</strong></span>}</div>} />
-        </div>
       </section>
       </div>
 

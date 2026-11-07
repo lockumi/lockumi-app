@@ -112,19 +112,13 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     setMarcas(m => ({ ...m, [c]: v })); setErrores(e => erroresTrasCambio(e, c, v))
     if (v) guardarAceptacion(c, VERSION[c]); else borrarAceptacion(c)
   }
-  const beneficios = [
-    { ico: 'i-candado', t: 'Tu depósito queda guardado', d: 'Ni el dueño ni el inquilino pueden liberarlo solos.' },   // LEGAL: revisado (24/10)
-    { ico: 'i-camara', t: 'Actas con fotos', d: 'Entrada y salida, firmadas por ambos.' },
-    { ico: 'i-balanza', t: 'Reclamos claros', d: 'La mayoría se resuelve en la app.' },
-  ]
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
     <h1 className="marca-c marca-c--texto">Lockumi</h1>
     <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
     {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
     <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
-    {!invitacion && <ul className="beneficios">{beneficios.map(b => <li key={b.t} className="glass">
-      <span className="beneficios__ico"><Icono id={b.ico} /></span><span><strong>{b.t}</strong><br /><span className="nota">{b.d}</span></span></li>)}</ul>}
+    {!invitacion && <p className="nota centro">Ni el dueño ni el inquilino pueden liberarlo solos.</p>}
     <div className="casillas-legales">
       {/* Legal (26/10/2026): con la reputación, la casilla nombra la 1.13-demo y el perfil, con la línea de Legal debajo. Solo cambia el texto. */}
       <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos} nota={casillaTerminos().linea}>

@@ -1,47 +1,53 @@
-# Matriz 33/33 — segundo bloque (07/11/2026, madrugada UTC)
+# Matriz 33 — evidencia vigente
 
-Parte desde `0f90950`. Las capturas nuevas están en el demo local `http://127.0.0.1:4174` (`npm run dev`), sin `VITE_CAVOS_APP_ID`, con correo de ejemplo. No hay dinero ni personas reales. No se abrió el JavaScript de Vercel.
+Las capturas de esta matriz están en el artifact `v10-vigente`. Las carpetas `v10-barra`, `v10-cierre`, `v10-cuenta`, `v10-inicio`, `v10-preview`, `v10-qa` y `v10-resto` son pasadas anteriores. No se usan para decir que la pantalla ya coincide.
 
-No hay captura «antes» de estas pantallas en esta máquina: la comparación es contra los PNG de `pantallas/` y `desktop-revision/png/`. Lo que no se abrió queda marcado.
+Demo local `http://127.0.0.1:4174` (`npm run dev`), sin `VITE_CAVOS_APP_ID`. Correo de ejemplo. Los estados 11, 14 y 18–23 se abrieron escribiendo un alquiler solo en el `localStorage` de ese navegador y recargando. No se tocó `src/store.ts`, no se cobró y no se encendió ningún flag. El anillo de la 16 sale de `diasQueQuedan` (entrada, salida y el día en Costa Rica). En esta corrida dio **359 días** hasta el 31 oct 2027, no 212.
 
-| # | Referencia | Ruta | Estado | Evidencia | Diferencia que queda |
-|---|---|---|---|---|---|
-| 01 | Bienvenida | `Login` | Capturado 390, 1280 y 1440 | `01-bienvenida-*.png`. En escritorio la escena queda a la izquierda y las acciones a la derecha. Siguen las dos casillas y el botón «Entrar». | El dibujo dice «Empezar», «Ya tengo cuenta» y dos tarjetas Dueño/Inquilino. Eso no existe: el acceso real pide las casillas legales. No se quitó la nota de la red de prueba ni los tres beneficios. |
-| 02 | Login | Hoja de `Login` | Capturado 390 y 1440 | `02-login-390.png`, `02-login-1440.png`. La hoja mide 680 px a 1440. | El código sigue en un solo campo. No se partió en casillas por dígito. |
-| 03 | Inicio | `#/` | Hecho en `0f90950` | Capturas de ese bloque. | La semilla no copia el dibujo: grande es Heredia, paso 2, Dueño. |
-| 04 | Crear | `#/crear` | Capturado 390, 1280 y 1440 | `04-crear-*.png`. A 1440 el lugar va ancho y fechas/depósito van en dos columnas. El botón ya no ocupa todo el ancho. | Siguen reglas, correo del inquilino y el texto legal. El depósito arranca en 0, no en 800. El botón dice «Crear alquiler e invitar». |
-| 05 | Creando | No hay ruta | No verificado | El botón pasa a «Creando…» y sigue a la ficha. | No se inventó una pantalla de espera. |
-| 06 | Invitar | Bloque dentro de crear o de la ficha | No verificado como pantalla propia | No hay ruta `#/invitar`. | Copiar y el correo siguen en el componente de invitación del alquiler. No se abrió con un link real. |
-| 07 | Aceptar | `#/invitacion/:id/:token` | Capturado el bloqueo, 390 | `07-invitacion-390.png`. Lleva el rótulo «Ilustración pendiente de aprobación». | Sin servidor compartido la pantalla dice que las invitaciones no están disponibles. No se fabricó un token ni el resumen Dueño/Inquilino. |
-| 08 | Pasos | `#/alquiler/a2` | Capturado 390, 1280 y 1440 | `08-detalle-*.png`. Barra de 8 segmentos y lista de 8 pasos, derivadas de `etapaDe`. | No es la lista sola del dibujo. Siguen el turno, el contrato y «Ver como inquilino». El paso real es 2, Firmas. |
-| 09 | Contrato | Dentro de la ficha | Parcial en la captura 08 | El contrato de la semilla se ve en `08-detalle-1440.png`. | No se comparó campo a campo con el PNG ni se forzó el reparto en dos columnas del dibujo. |
-| 10 | Firmas | Dentro de la ficha | Parcial en la captura 08 | La ficha `a2` está en firmas. | No se firmó. La captura de firmas no se aisló. |
-| 11 | Pagar | Estado `pendiente_pago` | No verificado | La semilla no está en ese estado. | No se cobró ni se cambió `usd()`. |
-| 12 | Guardando | `EsperaPago` | No verificado | Solo aparece mientras corre un pago. | No se disparó. |
-| 13 | Protegido | No hay ruta aparte | No verificado | El estado `en_curso` es la pantalla 16. | No se puso el rótulo de ilustración encima del alquiler en curso, para no mezclarlo con 16. |
-| 14 | Checklist | `Fotos` | No verificado | Hace falta un alquiler en `fotos_entrada`. | No se inventaron espacios. |
-| 15 | Foto | `TomarFoto` | No verificado | La cámara no se abrió. | La foto del PNG no es un archivo del alquiler. |
-| 16 | En curso | `#/alquiler/a1` | Capturado 390, 1280 y 1440 | `16-encurso-*.png`. Título real y «Alquiler en curso». | Fechas y monto de la semilla. Sin escena de hito. |
-| 17 | Aviso 5 días | `#/avisos` | No verificado contra ese PNG | La semilla no trae ese aviso. | No se escribió «Quedan 5 días». |
-| 18 | Fotos de salida | `Fotos` de salida | No verificado | Hace falta el estado `salida`. | Sin ilustración nueva. |
-| 19 | Plazo 7 | `Ventana` | No verificado | Hace falta `ventana_reclamo`. | El texto legal del plazo no se tocó. |
-| 20 | Devuelto | `Cerrado` | Código con rótulo, sin captura | `IlustracionPendiente` está en `Cerrado`. | Ningún alquiler de la semilla está cerrado. Importes y «Listo» no se vieron. |
-| 21 | Reclamo | Formulario | No verificado | No se envió un reclamo. | Sin fotos inventadas. |
-| 22 | Respuesta | Vista del inquilino | No verificado | No se aceptó ni se rechazó. | El botón secundario ya es sólido en el CSS común. |
-| 23 | Mediación | `Mediacion` y `MediacionPC` | Código con rótulo, sin captura | El rótulo está en las dos variantes. | No hay un alquiler en mediación. El costo y los textos legales no se reescribieron. |
-| 24 | Perfil | `#/perfil` | Capturado 390 y 1440 | `24-perfil-*.png`. A 1440 la identidad queda a la izquierda y los datos a la derecha. | No hay cédula, cuenta de pago ni «Editar perfil». El nombre y el rol salen de la sesión y de los alquileres. «Mi Llave» solo con `VITE_REPUTACION=1`. |
-| 25 | Puntaje | `#/perfil/dueno` con el flag | No verificado | El dev lo tiene apagado. El rótulo está en `MiPerfil`. | El anillo de puntaje sigue siendo el dato, no una ilustración nueva. No se encendió el flag para la captura. |
-| 26 | Avisos | `#/avisos` | Capturado 390 y 1440 | `26-avisos-*.png`. | La lista está vacía. No se copiaron «Firmas listas» ni «Hace 7 meses». |
-| 27 | Ayuda | `#/ayuda` | Capturado 390 y 1440 | `27-ayuda-*.png`. Cuatro temas reales. A 1440 las preguntas van en dos columnas. | Las respuestas siguen siendo textos ya publicados. Pendiente de revisión legal antes de producción. |
-| 28 | Términos | `/terminos` | No verificado con captura | El CSS limita la columna a 720 px desde 960. | El cuerpo legal no se reescribió. |
-| 29 | Vacío | `#/` sin alquileres | Capturado 390 y 1440 | `29-vacio-*.png`. Rótulo «Ilustración pendiente de aprobación» y «Nuevo alquiler». | Se vació `localStorage` solo en esa captura. Siguen la nota de demo y Reiniciar. |
-| 30 | Error | `#/alquiler/no-existe` | Capturado 390 y 1440 | `30-error-*.png`. | Es «no encontrado», con el botón real de volver. No se forzó un error de red. |
-| 31 | Cargando | `Entrando` | No verificado | Dura lo que tarda el regreso de Google o Apple. | No se congeló ni se agregó una animación. |
-| 32 | Recorrido, foco en «+» | Primer paso del recorrido | Capturado 1440 | `32-recorrido-1440.png`. El globo queda debajo del «+» y no lo tapa (`solapa: false`). | El velo oscurece el resto, incluido un borde de la tarjeta compacta. Textos del recorrido intactos. |
-| 33 | Recorrido sobre la tarjeta | No hay ese paso | No verificado | El recorrido aprobado tiene 6 pasos y el primero apunta al «+». | No se inventó un paso que enfoque la tarjeta principal. |
+`npm test` de este código: 1552 pasaron, 1 omitida. Eso no equivale a fidelidad visual.
 
-Cromo de `0f90950` se mantiene: barra abajo a 390 y en el encabezado desde 960.
+| # | Qué se ve ahora | Evidencia vigente | Diferencia que queda |
+|---|---|---|---|
+| 01 | Escena aprobada, título real, nota legal, la frase «Ni el dueño ni el inquilino pueden liberarlo solos.», dos casillas y «Entrar». Sin las tres tarjetas de beneficios. | `01-bienvenida-390.png`, `01-bienvenida-1280.png`, `01-bienvenida-1440.png` | No hay «Empezar» ni «Ya tengo cuenta». Esas acciones no existen. |
+| 02 | Hoja de correo, 680 px a 1440. | Pasada `v10-resto` (no se rehizo el formulario). | El código sigue en un solo campo. No se volvió a capturar en `v10-vigente`. |
+| 03 | Inicio con tarjeta grande y compacta. | Pasada `v10-inicio`. El recorrido de esta pasada (`32-recorrido-390.png`) muestra el mismo Inicio. | La semilla no copia el dibujo: grande es Heredia, paso 2, Dueño. |
+| 04 | Orden: lugar, fechas, depósito. En escritorio fechas y depósito van en la misma fila. Siguen reglas, correo y «Crear alquiler e invitar». | `04-crear-390.png`, `04-crear-1280.png`, `04-crear-1440.png`. A 390 fechasY 243 y montoY 371. | No es el formulario de tres campos. Esos campos extra son los que la app ya pide. |
+| 05 | El botón pasa a «Creando…» y abre la ficha. | No hay pantalla aparte. | No se inventó una espera. |
+| 06 | La invitación con link solo se monta con servidor (`modoServidor`). | No se capturó. | Bloqueo: no hay servidor en este demo y no se fabricó un token. |
+| 07 | Rótulo «Ilustración pendiente de aprobación» y el texto de que hace falta el servidor. | Pasada `v10-resto/07-invitacion-390.png`. | Sigue sin token. No es la pantalla de aceptar. |
+| 08 | En el móvil la lista de 8 pasos queda antes del contrato. El paso actual enlaza a `#accion-actual`. Los pasos de adelante no son enlaces. En escritorio la lista sigue en la columna derecha. | `08-pasos-390.png`, `08-pasos-1280.png`, `08-pasos-1440.png`. A 390 la lista está en y=361 y el panel en y=1177. | En 390 se ven 6 de los 8 sin bajar: arriba está el cambio de persona de la demo. No se reemplazó el contrato por un botón «Abrir contrato». |
+| 09 | El contrato real, debajo de la lista en firmas. | `09-contrato-390.png`, `09-contrato-1280.png`, `09-contrato-1440.png` | No es la tarjeta resumen «USD 800 / Firmar» del dibujo. Quitar el documento habría borrado el contrato. |
+| 10 | «Firmas del contrato» dentro del mismo panel, con la casilla de leerlo. | `10-firmas-390.png`, `10-firmas-1280.png`, `10-firmas-1440.png` | No hay «Firmado por los dos» ni «Ir al depósito»: en la semilla nadie ha firmado. No se firmó en esta pasada. |
+| 11 | Depósito del inquilino, monto de la ficha, «Pagar USD 800,00». No se pulsó. | `11-pagar-390.png`, `11-pagar-1440.png`. Fixture local. | No se agregó comisión ni un total 812. El dibujo trae un ejemplo de comisión que esta pantalla no calcula. |
+| 12 | La espera de tres pasos solo aparece mientras corre el pago. | No se capturó. | Bloqueo: mostrarla exige pulsar Pagar. No se hizo. |
+| 13 | No hay una ruta distinta del alquiler en curso. | La 16 es ese estado. | Bloqueo: no existe la pantalla de celebración aparte. No se le puso el rótulo encima del anillo. |
+| 14 | Un espacio a la vez: foto, «Bien» / «Con detalle» y «Tomar foto». Paso 4 de 8. | `14-checklist-390.png`, `14-checklist-1440.png`. Fixture local. | No es la lista de cinco espacios del dibujo. Esa lista saltaría el recorrido de cada espacio. |
+| 15 | El botón «Tomar foto» abre la cámara. | Se ve en la 14. | Bloqueo: no se abrió la cámara. No hay foto de un archivo real. |
+| 16 | Anillo con los días que faltan y «Sale el 31 oct 2027». El botón «Empezar fotos de salida» sigue. | `16-encurso-390.png`, `16-encurso-1280.png`, `16-encurso-1440.png`. Medido: «359 días», no 212. | El cambio de persona y «Te toca» siguen arriba del botón. |
+| 17 | El aviso de 5 días lo arma la prueba completa. | No se capturó. | Bloqueo: `VITE_PRUEBA_COMPLETA` sigue apagado en `npm run dev`. No se escribió un aviso falso. |
+| 18 | Fotos de salida, espacio 1, comparando con la entrada. | `18-salida-390.png`, `18-salida-1440.png`. Fixture local. | Sin fotos cargadas. No se usó la cámara. |
+| 19 | Contador del plazo y «Reclamar un daño». El texto legal del plazo no se reescribió. | `19-plazo-390.png`, `19-plazo-1440.png`. Fixture local. | El plazo parte de la hora en que se armó el fixture, no de un «quedan 7» dibujado. |
+| 20 | «Depósito devuelto» y el rótulo de ilustración. | `20-devuelto-390.png`, `20-devuelto-1440.png`. Fixture local, vía `automatico`. | Los montos salen de ese objeto local, no de un cierre real. |
+| 21 | Formulario abierto: monto, motivo, foto y «Enviar reclamo». No se envió. | `21-reclamo-390.png`, `21-reclamo-1440.png` | No se inventaron fotos del daño. |
+| 22 | Vista del inquilino: «Aceptar reclamo» y «No estoy de acuerdo». No se pulsó. | `22-respuesta-390.png`, `22-respuesta-1440.png` | Los botones quedan debajo de «Te toca» en 390. |
+| 23 | «Con una persona mediadora» y el rótulo de ilustración. | `23-mediacion-390.png`, `23-mediacion-1440.png` | El costo y los textos legales no se reescribieron. |
+| 24 | Identidad a la izquierda en escritorio. Lista: Datos, Avisos, Términos, Privacidad y Salir. | `24-perfil-390.png`, `24-perfil-1280.png`, `24-perfil-1440.png` | No hay cédula, cuenta de pago, «Editar perfil» ni Llave. Esas pantallas no existen con el flag apagado. |
+| 25 | Puntaje solo con `VITE_REPUTACION=1`. El rótulo está en el código de `MiPerfil`. | No se capturó. | Bloqueo: el flag sigue apagado. |
+| 26 | Avisos vacío. | Pasada `v10-resto/26-avisos-*.png`. | No se copiaron avisos de ejemplo. |
+| 27 | Ayuda con cuatro temas. | Pasada `v10-resto/27-ayuda-*.png`. | Textos ya publicados. Pendiente de revisión legal antes de producción. |
+| 28 | Columna de lectura. A 1440 el documento mide 680 px. El texto legal no se tocó. | `28-terminos-390.png`, `28-terminos-1440.png` | No hay captura a 1280. El ancho lo fija la misma regla desde 960 px. |
+| 29 | Rótulo dentro de la tarjeta. «Nuevo alquiler» queda fuera, debajo. | `29-vacio-390.png`, `29-vacio-1280.png`, `29-vacio-1440.png`. El botón no está dentro de `.vacio`. | El título de la página sigue siendo «Tus alquileres». Siguen la nota de demo y Reiniciar. |
+| 30 | «No encontramos ese alquiler» y volver. | Pasada `v10-resto/30-error-*.png`. | No es un error de red. |
+| 31 | «Entrando a tu cuenta…» solo en el regreso de Google o Apple con Cavos. | No se capturó. | Bloqueo: hace falta `modoReal`. No se dibujó un spinner nuevo. |
+| 32 | Primer paso del recorrido aprobado, con Saltar, debajo del «+» y sin taparlo. | `32-recorrido-390.png` (título «Te damos la bienvenida a Lockumi», solapa false). El de 1440 está en `v10-resto` y es el mismo paso. | El velo oscurece el resto de Inicio. |
+| 33 | El dibujo enfoca la tarjeta y dice «Todo en un solo lugar». | No existe ese paso. | Bloqueo: el recorrido aprobado tiene 6 pasos y textos fijos. No se agregó una copia nueva. Saltar sí está en el paso 1 (captura 32). |
 
-`npm test` después de este bloque: 1551 pasaron, 1 omitida, 182 archivos. `npm run build` compiló. El `dist` local no contiene `cav_`.
+## Bloqueos, juntos
 
-Sigue sin comprobar: interiores 09–15 y 17–23 con un alquiler en ese estado, 05, 06 como pantalla, 07 con token, 13, 25 con el flag, 28 en captura, 31 y 33. Alertas 34–36 no entraron en este bloque.
+- Servidor o token: 06 y 07.
+- Pulsar Pagar: 12.
+- No hay pantalla distinta: 05 y 13.
+- Cámara: 15.
+- Flag apagado a propósito: 17 y 25.
+- Regreso real de Google o Apple: 31.
+- Texto que no está en el recorrido aprobado: 33.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { firmar, estadoFirma, ambos, etapaDe, pasoTexto, turno, ahoraPrueba, ErrorFirma } from '../../flujo'
+import { firmar, estadoFirma, ambos, etapaDe, pasoTexto, turno, ahoraPrueba, ErrorFirma, diasQueQuedan } from '../../flujo'
 import type { Alquiler } from '../../types'
 const T = '2026-10-16T20:00:00Z'
 describe('firmas', () => {
@@ -64,5 +64,13 @@ describe('mediación: la persona mediadora ayuda, no decide', () => {
   it('ningún texto dice que la persona mediadora decide', () => {
     const todo = [...(['reclamo', 'mediacion'] as const).flatMap(e => (['dueno', 'inquilino'] as const).map(r => turno(a(e), r).sigue))].join(' ')
     expect(todo).not.toMatch(/decide|decidir/)
+  })
+})
+
+describe('días hasta la salida', () => {
+  it('sale de las tres fechas, no de un número escrito', () => {
+    expect(diasQueQuedan('2026-11-01', '2027-10-31', '2026-11-07')).toEqual({ total: 364, quedan: 358 })
+    expect(diasQueQuedan('2026-11-01', '2027-10-31', '2027-10-31').quedan).toBe(0)
+    expect(diasQueQuedan('2026-11-01', '2026-11-02', '2026-11-01')).toEqual({ total: 1, quedan: 1 })
   })
 })

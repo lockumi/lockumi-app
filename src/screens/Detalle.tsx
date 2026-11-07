@@ -18,7 +18,7 @@ import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
 import { TomarFoto } from '../Camara'
-import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba } from '../flujo'
+import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba, diasQueQuedan, hoyCostaRica } from '../flujo'
 import { IlustracionPendiente } from './ilustracion'
 import { adelantoPermitido } from '../../api/_lib/red'
 import { repartoCentimos } from '../../api/_lib/centimos'
@@ -146,6 +146,23 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
       <button type="button" className="enlace" onClick={() => setI(0)}>Ver o cambiar las fotos</button>
     </>}
   </div>
+}
+
+export function AnilloDias({ a }: { a: Alquiler }) {
+  const { total, quedan } = diasQueQuedan(a.inicio, a.fin, hoyCostaRica(ahoraDe(a)))
+  const r = 58, c = 2 * Math.PI * r
+  const parte = total > 0 ? Math.min(1, quedan / total) : 0
+  return <figure className="anillo">
+    <div className="anillo__aro">
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <circle cx="70" cy="70" r={r} fill="none" stroke="var(--mint)" strokeWidth="10" />
+        <circle cx="70" cy="70" r={r} fill="none" stroke="var(--accion)" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={`${(parte * c).toFixed(2)} ${c.toFixed(2)}`} transform="rotate(-90 70 70)" />
+      </svg>
+      <p className="anillo__c"><strong>{quedan}</strong><span>{quedan === 1 ? 'día' : 'días'}</span></p>
+    </div>
+    <figcaption>Sale el {fecha(a.fin)}</figcaption>
+  </figure>
 }
 
 export function EnCurso({ a }: P) {
@@ -416,6 +433,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}
     <div className="paso-cab"><p className="paso-cab__n">{a.estado === 'cerrado' ? 'Terminado' : pasoTexto(a)}</p><p className="paso-cab__t">{ETAPAS[etapa]}</p>
       <div className="barra-paso" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={a.estado === 'cerrado' || n < etapa ? 'hecho' : n === etapa ? 'actual' : ''} />)}</div></div>
+    {a.estado === 'en_curso' && <AnilloDias a={a} />}
     {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
     <div className="detalle" inert={!!ejemplo}>
       <div className="detalle__principal pila">
@@ -427,13 +445,13 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
           <p><span className="turno__et">Qué sigue</span>{t.sigue}</p>
         </section>
         {escrowReal && <UltimoComprobante a={a} />}
-        <div className="glass glass--fuerte tarjeta">{panel}</div>
+        <div id="accion-actual" className="glass glass--fuerte tarjeta">{panel}</div>
         {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
+      <section className={'glass tarjeta pasos-lista' + (a.estado === 'firmas' ? ' pasos-lista--primero' : '')} aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} ancla="#accion-actual" /></section>
       <aside className="detalle__lado pila">
         {a.estado !== 'firmas' && escritorio && <ContratoCompacto a={a} como="tarjeta" />}
         {escrowReal && <Comprobantes a={a} />}
-        <section className="glass tarjeta" aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} /></section>
         <details className="glass tarjeta detalles"><summary>Detalles</summary>
           <ul className="lista"><li><span>Dueño</span><span className="cortar">{a.duenoEmail}</span></li><li><span>Inquilino</span><span className="cortar">{a.inquilinoEmail}</span></li>
             <li><span>Depósito</span><span>{usd(a.monto)}</span></li><li><span>Fechas</span><span>{fecha(a.inicio)} → {fecha(a.fin)}</span></li></ul>
