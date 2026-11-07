@@ -4,7 +4,7 @@ Las capturas de esta matriz están solo en el artifact `v10-vigente`, a 390×844
 
 Demo local `http://127.0.0.1:4174` (`npm run dev`), sin `VITE_CAVOS_APP_ID` y sin `VITE_PRUEBA_COMPLETA`. Correo de ejemplo. Los estados 11, 14 y 18–23 se abrieron escribiendo un alquiler solo en el `localStorage` de ese navegador y recargando. No se tocó la semilla de `src/store.ts`, no se cobró, no se firmó, no se abrió la cámara y no se encendió ningún flag. El anillo de la 16 sale de `diasQueQuedan`. En esta corrida, con el día de Costa Rica en 2026-11-07, dio **358 días** hasta el 31 oct 2027. No es 212 y no se escribió a mano.
 
-`npm test`: 1552 pasaron, 1 omitida. Eso no equivale a fidelidad visual.
+`npm test` sobre el ajuste de «Volver»: 1552 pasaron, 1 omitida (182 archivos). `npm run build` compiló en esta máquina y no se publicó. Eso no equivale a fidelidad visual ni a un cierre. La revisión estática no volvió a capturar 06, 07, 12, 15, 17, 23, 25 ni 31, no encendió flags y no creó rutas ni servicios. La 18 de `6144e0b` quedó como está. Esta matriz no certifica 33 de 33 ni el funcionamiento en remoto.
 
 `https://app.lockumi.com` sigue con `last-modified: Thu, 05 Nov 2026 23:12:51 GMT`. No se publicó ni se hizo merge.
 
@@ -49,18 +49,37 @@ Estas pantallas se ven y conservan su función. No se declara que copien la maqu
 
 ## Bloqueo funcional y estilo, por separado
 
-No tener captura no significa que el estilo del componente que ya existe esté pendiente. Tampoco autoriza a crear una ruta ni a encender un flag.
+No tener captura no cierra la pantalla. El 7 de noviembre, 00:44, Katherine recordó que la optimización cambia la presentación y no elimina la función. No existe una ruta aparte no es motivo para descartar el contrato resumido, los pasos, las fotos ni las esperas. Lo dudoso no se implementa hasta tener la fuente. Lo que sí se tocó en esta pasada, porque no depende de esa fuente, es el «Volver» de la invitación sin servidor: pasa a botón sólido y sigue yendo a `#/`.
 
 | # | Bloqueo funcional | Estilo del componente que ya existe |
 |---|---|---|
-| 05 | No hay pantalla de espera. El único estado es el texto «Creando…» en el botón de crear. No se inventó una ruta. | Pendiente: no hay un componente de pantalla completa al que aplicarle estilo. |
-| 06 | El link de invitación solo se monta con `modoServidor`. No hay servidor ni se fabricó un token. | El componente `Invitacion` existe y no se capturó. |
-| 07 | Aceptar una invitación exige el servidor. Esta pasada no lo capturó. | La pantalla sin servidor ya tiene el rótulo «Ilustración pendiente de aprobación» y «Las invitaciones funcionan solo con el servidor compartido.» |
-| 12 | `EsperaPago` solo aparece mientras corre el pago. Mostrarlo exige pulsar Pagar. No se pulsó. | Implementado: botón relleno, barra y tres pasos. Captura pendiente por el bloqueo. |
-| 13 | No hay una ruta distinta del alquiler en curso. La 16 es ese estado. No se inventó una celebración. | Pendiente: no hay un componente de celebración. |
-| 15 | El visor abre la cámara. No se abrió. | El botón «Tomar foto» relleno se ve en la 14. El visor (Cancelar y disparo) está en `Camara.tsx` y su CSS. Captura del visor pendiente. |
-| 17 | `AvisoSalida` solo se monta con `VITE_PRUEBA_COMPLETA`. El flag sigue apagado. | El panel `<details>` y las fotos de entrada están en el código. Captura pendiente. |
-| 23 | «Pedir mediación» vive en `MediacionPC` (B.7, con otra persona) y solo entra con el mismo flag. No se encendió y no se pulsó. La tarjeta del dibujo «Solicitar mediación / Costo USD XX» no está en el código y no se creó. | La B.7 ya tiene botón relleno, casilla e ilustración. La captura de esta pasada es la mediación sin flag, sin enviar el acuerdo. |
-| 25 | El puntaje solo entra con `VITE_REPUTACION=1`. Sigue apagado. | `MiPerfil` ya lleva el rótulo de ilustración. No se redibujó el producto de reputación. |
-| 31 | `Entrando` solo corre al volver de Google o Apple con `modoReal`. No se inventó ese regreso. | Implementado: la escena aprobada y «Entrando a tu cuenta…», sin botón. Captura pendiente. |
-| 33 | El paso «Todo en un solo lugar» no está en los 6 textos aprobados. No se agregó. | El globo es el mismo de la 32: opaco, con Saltar. El contenido queda pendiente de conciliar las fuentes. |
+| 05 | No hay pantalla de espera. El único estado es el texto «Creando…» en el botón de crear. No se inventó una ruta. | Equivalencia: `Crear.tsx` ya usa `boton--primario` (sólido, `border:0` en `.boton`). Mientras guarda, el mismo botón dice «Creando…» y queda desactivado. Brecha: no existe un componente de pantalla completa. No se creó. |
+| 06 | El link de invitación solo se monta con `modoServidor`. No hay servidor ni se fabricó un token. | Ya estilizado, sin captura. `Invitacion` en `Detalle.tsx`: «Copiar link» es `boton--primario` y WhatsApp es `boton--secundario`. El fallo sigue en `<p className="error" role="alert">`. «Crear un link nuevo» sigue siendo un enlace de texto: es la acción secundaria. |
+| 07 | Aceptar una invitación exige el servidor. Esta pasada no lo capturó. | Sin servidor, `screens/Invitacion.tsx` ya muestra el rótulo y «Las invitaciones funcionan solo con el servidor compartido.» «Volver» ahora es `boton--primario` y sigue yendo a `#/`. Con servidor, «Aceptar invitación» ya era `boton--primario`. El camino con token no se capturó. |
+| 12 | `EsperaPago` solo aparece mientras corre el pago. Mostrarlo exige pulsar Pagar. No se pulsó. | Ya estilizado. `EsperaPago.tsx` y el bloque «Estado de espera v2» de `index.css`: botón sólido, barra y tres pasos. `espera-pago.test.tsx` fija esos textos y el CSS. No hay captura nueva. |
+| 13 | No hay una ruta distinta del alquiler en curso. La 16 es ese estado. No se inventó una celebración. | Equivalencia: la pantalla en curso es la 16 (`EnCurso` y `AnilloDias` en `Detalle.tsx`). Brecha: no hay componente de celebración. No se creó. |
+| 15 | El visor abre la cámara. No se abrió. | Ya estilizado, sin captura del visor. `TomarFoto` es `boton--primario` o `boton--secundario` (se ve en la 14). En `Camara.tsx`, Cancelar es `boton--secundario` y el aviso de fallo es `.aviso-campo`. El disparo es el control de la cámara (anillo blanco, centro coral), no un botón de la interfaz. |
+| 17 | `AvisoSalida` solo se monta con `VITE_PRUEBA_COMPLETA`. El flag sigue apagado. | Ya estilizado, sin captura. `AvisoSalida.tsx`: `<details className="aviso-app">` (regla `.aviso-app` en `prueba.css`) y las fotos de entrada. El simulador, si entra, usa `boton--secundario`. |
+| 23 | «Pedir mediación» vive en `MediacionPC` (B.7, con otra persona) y solo entra con el mismo flag. No se encendió y no se pulsó. La tarjeta del dibujo «Solicitar mediación / Costo USD XX» no está en el código y no se creó. | Ya estilizado. `MediacionPC.tsx`: `boton--pc` es relleno (`prueba.css`, gradiente coral, sin borde) y «Prefiero no usarla» es `boton--secundario`. Siguen la casilla y `IlustracionPendiente`. La captura vigente es la mediación sin flag. |
+| 25 | El puntaje solo entra con `VITE_REPUTACION=1`. Sigue apagado. | Ya estilizado, sin captura. `MiPerfil` en `reputacion/Pantallas.tsx` usa la clase `ilustracion-pendiente` y `boton--secundario`. No se redibujó el producto. |
+| 31 | `Entrando` solo corre al volver de Google o Apple con `modoReal`. No se inventó ese regreso. | Ya estilizado, sin captura. `Login.tsx` `Entrando`: escena aprobada y «Entrando a tu cuenta…», clase `ingreso-cargando`, sin botón. |
+| 33 | El paso «Todo en un solo lugar» no está en los 6 textos. No se agregó en esta pasada. | El globo es el de la 32. `PASOS_RECORRIDO` sigue en 6 títulos y `recorrido.test.tsx` los fija. Si la optimización cambia el recorrido, queda abierto: los textos del 23/10 no se reescribieron a ciegas. |
+
+## Decisiones tomadas por «no función nueva»
+
+Estas no son un cierre. Se tomaron mientras el límite se leía como «no cambiar el flujo». La capacidad de debajo (documento, firma, pago, evidencia) sigue. La presentación puede cambiar cuando la fuente lo diga. No se hizo ninguna en esta pasada.
+
+| Decisión | Qué se conservó | Qué no se transformó | Por qué no se hace ahora |
+|---|---|---|---|
+| Contrato en firmas (08, 09, 10) | `Documento` y la casilla de firma. `ContratoCompacto` (aprobado el 24/10, «Ver contrato») ya existe y se usa cuando el estado no es `firmas`. | En `firmas` el documento sigue abierto en la columna. No se aplicó ahí la tarjeta o la barra que ya abre el mismo documento. | La fuente aún no dice si firmas debe usar esa presentación. El texto legal no se resume. |
+| Pasos (08) | La lista de 8 pasos y el contrato, los dos visibles. | La lista no reemplazó al contrato. | Misma fuente. |
+| Espera al crear (05) | El mismo envío. El botón sólido dice «Creando…» y se desactiva. | No hay espera a pantalla completa. No se agregó una pausa. | El PNG existe; el componente no. Hasta la fuente, no se inventa la pantalla ni un temporizador. |
+| Espera al pagar (12) | `EsperaPago`: botón, barra y tres pasos, con `onPagar` igual. `espera-pago.test.tsx` lo fija. | Nada. El estilo ya estaba. | Capturarlo exige pulsar Pagar. No es una transacción de esta pasada. |
+| Fotos (14, 15, 18) | `TomarFoto` y `onFoto`. La 18 compara el espacio actual, con los rótulos alineados. | No hay grilla de toda la casa ni un paso «Usar esta foto» distinto del disparo. | El visor abre la cámara. No se abre. El paso extra queda a la fuente. |
+| Depósito protegido (13) | El estado `en_curso` es la 16, con el anillo de las fechas reales. | No hay una celebración distinta ni una escena nueva. El rótulo de ilustración sigue. | No hay asset aprobado. No se dibuja otra casa mientras Producto concilia si 13 es otro momento. |
+| Recorrido (32, 33) | Los 6 textos y `abrirRecorrido`. | No hay recorrido de 3 pasos ni una ruta 33. | Los textos están revisados el 23/10. Cambiarlos sin la fuente nueva los reescribiría. |
+| Entrar (01) | Las dos casillas, Entrar y la frase legal. | No hay «Empezar», «Ya tengo cuenta» ni tarjetas que elijan el papel. Los chips no eligen. | Quitar el consentimiento sería borrar la función, no cambiarla. |
+| Pagar (11) | `Pagar` con `usd(monto)`. | No se dibujó comisión ni un total 812. | Un monto que la app no calcula sería un importe inventado. |
+| Devuelto (20) | El estado `cerrado` y el reparto. | No se agregó «Listo». | Un botón nuevo sin destino acordado no se inventa. |
+| Perfil (24) y reputación (25) | Sesión, roles visibles, Términos, privacidad y Salir. | No hay cédula, «Editar perfil», cuenta de pago ni Llave con el flag apagado. | No hay campo ni API. El plan del 6/11 los deja fuera. No es solo presentación. |
+| Mediación (23) | `Mediacion` sin flag y `MediacionPC` con el flag apagado. | No se creó «Solicitar mediación / Costo USD XX». | El costo no está en el código. Inventarlo sería un precio. |

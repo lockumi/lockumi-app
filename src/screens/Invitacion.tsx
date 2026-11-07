@@ -72,7 +72,7 @@ export function Invitacion({ id, token, u, salir }: { id: string; token: string;
   const [acepta, setAcepta] = useState(false)   // escenario C: Términos vigentes y Aviso de privacidad
   const [codigo, setCodigo] = useState<Abierto | null>(null)   // la pantalla del código (otra cuenta)
   useEffect(() => { if (modoServidor) servidor.verInvitacion(id, token).then(setD).catch(e => abrirSiYaEsMio(id).then(mio => { if (!mio) setErr(e.message) })) }, [id, token])
-  if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont cont--form"><IlustracionPendiente /><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a href="#/">Volver</a></div></main>
+  if (!modoServidor) return <main id="contenido" tabIndex={-1} className="cont cont--form"><IlustracionPendiente /><div className="glass tarjeta"><p>Las invitaciones funcionan solo con el servidor compartido.</p><a className="boton boton--primario" href="#/">Volver</a></div></main>
   const aceptar = async () => {
     setOcupado(true); setErr('')
     try { await aceptarConCorreo(id, token, u.email); activarServidor(); ir('/alquiler/' + id) }
