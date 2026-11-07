@@ -298,10 +298,12 @@ export function Crear({ u }: { u: Usuario }) {
       {errSrv && <p className="error na-error" role="alert">{errSrv}</p>}
       {pruebaCompleta() && <><SuscripcionB8 /><RendimientoB13 /></>}
       {pruebaCompleta() && <Anexo6A valor={anexo} onCambio={setAnexo} />}
+      <div className="na-pie">
       <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta) || (invitar && (!declara || !aceptaVersion))}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
       {prueba1 ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
         : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}
+      </div>
     </form>
 
     <Hoja id="info" titulo={info === 'red' ? 'Red de prueba' : info === 'usdc' ? 'USDC de prueba' : 'Fechas'} abierta={!!info} onCerrar={() => setInfo(null)}>

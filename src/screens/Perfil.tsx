@@ -15,14 +15,14 @@ export function Perfil({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
       </ul>}
     </header>
     <div className="perfil__menu">
-      <section className="glass tarjeta perfil__datos" aria-labelledby="perfil-datos">
-        <h2 id="perfil-datos" className="h3">Datos</h2>
+      <details className="glass tarjeta perfil__datos">
+        <summary id="perfil-datos">Datos</summary>
         <dl>
           <div><dt>Nombre</dt><dd>{u.nombre}</dd></div>
           <div><dt>Correo</dt><dd>{u.email}</dd></div>
           <div><dt>Acceso</dt><dd>{METODO[u.metodo]}</dd></div>
         </dl>
-      </section>
+      </details>
       <nav className="glass tarjeta perfil__opciones" aria-label="Documentos y sesión">
         <a href="#/avisos">Avisos</a>
         <a href="/terminos">Términos y condiciones</a>

@@ -152,7 +152,7 @@ export function AnilloDias({ a }: { a: Alquiler }) {
   const { total, quedan } = diasQueQuedan(a.inicio, a.fin, hoyCostaRica(ahoraDe(a)))
   const r = 58, c = 2 * Math.PI * r
   const parte = total > 0 ? Math.min(1, quedan / total) : 0
-  return <figure className="anillo">
+  return <figure className="anillo glass tarjeta">
     <div className="anillo__aro">
       <svg viewBox="0 0 140 140" aria-hidden="true">
         <circle cx="70" cy="70" r={r} fill="none" stroke="var(--mint)" strokeWidth="10" />
@@ -161,7 +161,7 @@ export function AnilloDias({ a }: { a: Alquiler }) {
       </svg>
       <p className="anillo__c"><strong>{quedan}</strong><span>{quedan === 1 ? 'día' : 'días'}</span></p>
     </div>
-    <figcaption>Sale el {fecha(a.fin)}</figcaption>
+    <figcaption><span className="anillo__lugar">{a.direccion}</span><span>Sale el {fecha(a.fin)}</span></figcaption>
   </figure>
 }
 
@@ -263,10 +263,10 @@ function Reclamo({ a, rol }: P) {
     {modoSolo && <p className="nota">En este ejemplo, el reclamo es simulado: no se registra en la red de prueba ni bloquea ningún depósito. La mediación también es simulada.</p>}
     {modoVideo && <p className="nota">El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.</p>}
     {rol === 'inquilino' ? <>
-      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {p.error}
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button>
       <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
+      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {escrowReal && p.ocupado && NOTA_TIEMPO}
     </> : <Espera texto="Esperando que el inquilino responda tu reclamo." />}
   </section>
@@ -344,12 +344,12 @@ function EscrowReal({ a, rol }: P) {
   const err = error && <p className="error" role="alert">{error}</p>
   if (a.estado === 'ventana_reclamo') return rol === 'dueno' && !aprobado ? <div className="pila">
     {/* LEGAL: revisado (24/10) · ronda 8 (modo de dos personas, sin uso hoy: la billetera firma la aprobación, trustless.ts:28-30; la liberación la firma el servidor). BLOQUEO: antes de activarlo, Legal reescribe Términos 5.3 */}<p className="nota">Si todo está bien, aprueba ahora la devolución. Tu billetera te pedirá confirmar esta aprobación. La liberación del depósito la firma la cuenta de Lockumi.</p>
-    <button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>
+    <button type="button" className="boton boton--primario boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.aprobarDevolucion!(a))}>{ocupado ? 'Firmando…' : 'Todo está bien: aprobar la devolución'}</button>{err}</div>
     : aprobado ? <p className="nota">El dueño ya aprobó la devolución. Al terminar el plazo se libera el depósito.</p> : null
   // PR #22 (C): «devuelto» = el dueño aprobó y el servidor liberó al instante; si la red falló, aquí se reintenta.
   if (a.estado === 'cerrado' && (a.resultado?.via === 'automatico' || (esDosPersonas(a) && a.resultado?.via === 'devuelto'))) return a.liquidacionTx
     ? <p className="nota">Transferencia en Stellar testnet: <a href={enlaceTx(a.liquidacionTx)} target="_blank" rel="noreferrer">ver la transacción</a></p>
-    : <div className="pila"><button type="button" className="boton boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.cerrarSinReclamo(a))}>{ocupado ? 'Liberando…' : 'Liberar el depósito al inquilino'}</button>{err}</div>
+    : <div className="pila"><button type="button" className="boton boton--primario boton--ancho" disabled={ocupado} onClick={() => void correr(() => acciones.cerrarSinReclamo(a))}>{ocupado ? 'Liberando…' : 'Liberar el depósito al inquilino'}</button>{err}</div>
   return null
 }
 
@@ -368,13 +368,15 @@ export function Cerrado({ a, rol }: P) {
     simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisado (25/10, lista de Legal) · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
   return <section className="pila cerrado">
-    <IlustracionPendiente />
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
-    {auto2 ? <><h2>Depósito devuelto</h2><span className="pill-auto">Devolución automática</span><p>{TEXTO_CERRADO_AUTO}</p></> : <><h2>Depósito devuelto</h2><p>{dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></>}
+    <h2>Depósito devuelto</h2>
+    {auto2 && <span className="pill-auto">Devolución automática</span>}
     {dosAceptan ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
       : esDosPersonas(a) ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : <ul className="lista"><li><span>Inquilino</span><strong>{usdExacto(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usdExacto(r.dueno)}</strong></li></ul>}{/* una persona: r ya es lo que llegó (escrow.ts) */}
+    <IlustracionPendiente />
+    <p>{auto2 ? TEXTO_CERRADO_AUTO : dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p>
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}
@@ -425,27 +427,22 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     <a href="#/" className="volver">← Tus alquileres</a>
     {ejemplo && <p className="ejemplo-cinta">Alquiler de ejemplo · solo para ver</p>}
     <h1 className="h-lugar">{a.direccion}</h1>
-    {!modoServidor && !ejemplo && <div className="vista-demo" role="group" aria-label="Demo: cambiar de persona">
-      <span>Estás viendo como <strong>{modoVideo && rol === 'dueno' ? 'dueño de prueba' : NOMBRE[rol]}</strong></span>
-      <button type="button" className="boton boton--secundario boton--chico" onClick={() => fijarVista(id, otro(rol))}>{modoVideo ? (rol === 'inquilino' ? 'Ver la pantalla del dueño de prueba' : 'Volver a mi pantalla (inquilino)') : `Ver como ${NOMBRE[otro(rol)]}`}</button>
-      <span className="demo">{modoSolo ? 'Una sola persona · red de prueba' : 'Demo en un solo aparato'}</span>
-      {modoSolo && <Cuentas a={a} />}</div>}
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}
     <div className="paso-cab"><p className="paso-cab__n">{a.estado === 'cerrado' ? 'Terminado' : pasoTexto(a)}</p><p className="paso-cab__t">{ETAPAS[etapa]}</p>
       <div className="barra-paso" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={a.estado === 'cerrado' || n < etapa ? 'hecho' : n === etapa ? 'actual' : ''} />)}</div></div>
     {a.estado === 'en_curso' && <AnilloDias a={a} />}
-    {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
     <div className="detalle" inert={!!ejemplo}>
       <div className="detalle__principal pila">
         {modoVideo && <p className="ahora" role="status" aria-live="polite">{ahoraPrueba(a)}</p>}
         {modoVideo && a.historial.slice(-3).filter(h => h.texto.startsWith('El dueño de prueba') && h.texto.endsWith('automáticamente')).slice(-1).map(h => <p key={h.fecha + h.texto} className="nota auto-dueno">✓ {h.texto}.</p>)}
+        {escrowReal && <UltimoComprobante a={a} />}
+        <div id="accion-actual" className="glass glass--fuerte tarjeta">{panel}</div>
         <section className="turno" aria-label="Qué toca ahora" hidden={modoVideo}>
           <p><span className="turno__et">Te toca</span>{t.tu}</p>
           <p><span className="turno__et">Al {NOMBRE[otro(rol)]}</span>{t.otra}</p>
           <p><span className="turno__et">Qué sigue</span>{t.sigue}</p>
         </section>
-        {escrowReal && <UltimoComprobante a={a} />}
-        <div id="accion-actual" className="glass glass--fuerte tarjeta">{panel}</div>
+        {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
         {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
       <section className={'glass tarjeta pasos-lista' + (a.estado === 'firmas' ? ' pasos-lista--primero' : '')} aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} ancla="#accion-actual" /></section>
@@ -462,5 +459,10 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
         {redDePrueba && !ejemplo && <MasOpciones a={a} u={u} />}{/* PROTOTIPO eliminar-alquiler (LEGAL: revisado 26/10) */}
       </aside>
     </div>
+    {!modoServidor && !ejemplo && <div className="vista-demo" role="group" aria-label="Demo: cambiar de persona">
+      <span>Estás viendo como <strong>{modoVideo && rol === 'dueno' ? 'dueño de prueba' : NOMBRE[rol]}</strong></span>
+      <button type="button" className="boton boton--secundario boton--chico" onClick={() => fijarVista(id, otro(rol))}>{modoVideo ? (rol === 'inquilino' ? 'Ver la pantalla del dueño de prueba' : 'Volver a mi pantalla (inquilino)') : `Ver como ${NOMBRE[otro(rol)]}`}</button>
+      <span className="demo">{modoSolo ? 'Una sola persona · red de prueba' : 'Demo en un solo aparato'}</span>
+      {modoSolo && <Cuentas a={a} />}</div>}
   </main>
 }

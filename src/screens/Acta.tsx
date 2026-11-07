@@ -33,8 +33,10 @@ export function CuartoEditor({ a, cual, idx, rol }: { a: Alquiler; cual: 'entrad
   const ent = cual === 'salida' ? a.entrada.cuartos[idx] : null
   return <section className="pila cuarto" aria-labelledby={`c-${cual}-${idx}`}>
     <h2 id={`c-${cual}-${idx}`}>{c.nombre}</h2>
-    {ent && <div><p className="mini">Así estaba al entrar</p><FotoLista fotos={ent.fotos} /></div>}
-    <div><p className="mini">{ent ? 'Así está hoy' : 'Fotos'}</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>
+    {ent ? <div className="cuarto__par">
+      <div><p className="mini">Así estaba al entrar</p><FotoLista fotos={ent.fotos} /></div>
+      <div><p className="mini">Así está hoy</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>
+    </div> : <div><p className="mini">Fotos</p><FotoLista fotos={c.fotos} vacio="Toma al menos una foto de este espacio." /></div>}
     <TomarFoto por={rol} onFoto={agregar} etiqueta={c.fotos.length ? 'Tomar otra foto' : 'Tomar foto'} principal={!c.fotos.length} />
     {!modoServidor && <button type="button" className="enlace" onClick={() => agregar({ src: fotoEjemplo(c.nombre, cual, c.fotos.length + idx), por: rol, fecha: new Date(ahoraDe(a)).toISOString(), tomadaEn: ahoraDe(a), origen: 'ejemplo' })}>Demo: usar una foto de ejemplo</button>}
     <fieldset className="campo"><legend>¿Cómo está cada cosa?</legend>

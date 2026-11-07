@@ -117,8 +117,13 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
     <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
     {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
+    {!invitacion && <p className="entrada-bajada">Custodia neutral · reglas claras · devolución automática</p>}
     <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
     {!invitacion && <p className="nota centro">Ni el dueño ni el inquilino pueden liberarlo solos.</p>}
+    {!invitacion && <ul className="entrada-papeles" aria-label="Los dos papeles. Esta lista no elige ninguno.">
+      <li><strong>Dueño</strong><span>Evidencia ordenada</span></li>
+      <li><strong>Inquilino</strong><span>Depósito seguro</span></li>
+    </ul>}
     <div className="casillas-legales">
       {/* Legal (26/10/2026): con la reputación, la casilla nombra la 1.13-demo y el perfil, con la línea de Legal debajo. Solo cambia el texto. */}
       <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos} nota={casillaTerminos().linea}>

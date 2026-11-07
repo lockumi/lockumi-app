@@ -116,6 +116,12 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
   activo = d; ponerEnCurso(true)
   const p = PASOS_RECORRIDO[desde]; if (p.estado) ponerEjemplo(p.estado)
   if ((location.hash.slice(1) || '/') !== p.ruta) location.hash = p.ruta
-  void esperar(selectorDe(p)).then(() => d.drive(desde))
+  // El aviso de ingreso sigue: el globo espera a que se cierre solo (o 9 s) para no taparlo.
+  const sinTostada = () => new Promise<void>(listo => {
+    const fin = Date.now() + 9000
+    const mirar = () => { if (!document.querySelector('.tostada') || Date.now() > fin) listo(); else setTimeout(mirar, 200) }
+    mirar()
+  })
+  void Promise.all([esperar(selectorDe(p)), sinTostada()]).then(() => { if (activo === d) d.drive(desde) })
   return d
 }
