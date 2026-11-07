@@ -82,10 +82,10 @@
 
 | Mock | Archivo | Componente | Estado | Notas |
 |------|---------|------------|--------|-------|
-| 24-perfil | N/A | — | ❌ | **No existe pantalla de perfil dedicada**. El correo se muestra en la barra superior |
+| 24-perfil | N/A | — | ❌ | No hay ruta de perfil. Plan mínimo en `PLAN-FUNCIONES-NUEVAS.md`. No implementado en este lote |
 | 25-puntaje | `src/reputacion/Pantallas.tsx` | Pantallas de reputación | ⚠️ | Solo con `VITE_REPUTACION=1`, estructura diferente al mock |
-| 26-notif | N/A | — | ❌ | **No existe pantalla de notificaciones**. Los avisos son toast emergentes |
-| 27-ayuda | N/A | — | ⚠️ | **No existe pantalla de ayuda dedicada**. Solo el recorrido guiado |
+| 26-notif | `src/prueba/AvisosApp.tsx` | avisos dentro del alquiler | ❌ | No hay centro de avisos. Los toasts siguen aparte. Plan en `PLAN-FUNCIONES-NUEVAS.md` |
+| 27-ayuda | `src/recorrido.ts` | recorrido guiado | ⚠️ | No hay FAQ. El recorrido sí existe. Plan en `PLAN-FUNCIONES-NUEVAS.md` |
 | 28-terminos | `src/legal/PaginaLegal.tsx` | `PaginaLegal` | ✅ | Texto legal con estilos |
 
 ### Estados Globales (29–31)
@@ -131,22 +131,13 @@ Algunos componentes existentes no tienen mock directo porque son internos o de i
 
 ---
 
-## Pantallas/Funcionalidad fuera de scope
+## Perfil, avisos y ayuda
 
-Los siguientes mocks representan funcionalidad que **no existe en el código** y **no debe agregarse** según las instrucciones:
+Katherine autorizó poder agregarlos, pero pidió el comportamiento antes de programarlos. El detalle está en `PLAN-FUNCIONES-NUEVAS.md`. En este lote no hay rutas nuevas ni botones que apunten a pantallas inexistentes.
 
-1. **24-perfil.png** - Pantalla de perfil con avatar y datos
-   - El código muestra el email en la barra; no hay edición de perfil
-   - **Acción:** Documentar como pendiente, no implementar
+## Bienvenida y el enlace de cuenta
 
-2. **26-notif.png** - Centro de notificaciones
-   - Las notificaciones son toasts efímeros, no persistentes
-   - **Acción:** Documentar como pendiente, no implementar
-
-3. **27-ayuda.png** - Pantalla de ayuda/FAQ
-   - Solo existe el recorrido guiado (driver.js)
-   - El botón "¿Cómo funciona?" abre el recorrido, no una pantalla
-   - **Acción:** Documentar como pendiente, no implementar
+El mock 01 muestra «Ya tengo cuenta» subrayado bajo «Empezar». La app real no tiene ese enlace: la acción existente es el botón «Entrar», que abre la misma hoja para cuenta nueva o existente (Google, Apple o correo). No se inventó un segundo botón ni se cambió el texto. Los secundarios que sí existen (incluido «Continuar con tu correo» y «Saltar» / «Atrás» del recorrido) quedan rellenos en Mint Mist, sin contorno.
 
 ---
 
