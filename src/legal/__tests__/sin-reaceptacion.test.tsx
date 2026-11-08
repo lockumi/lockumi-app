@@ -6,8 +6,9 @@ const mem = new Map<string, string>()
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, String(v)), removeItem: (k: string) => void mem.delete(k), clear: () => mem.clear(), key: () => null, length: 0 })
 vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} })
 vi.stubGlobal('location', { hash: '#/', pathname: '/', search: '', href: 'http://localhost/' })
-// Inicio usa el almacén del navegador (sin render en servidor): aquí basta saber que se llega a Inicio.
+// El resumen y el listado leen el almacén del navegador (sin render en servidor): aquí basta saber que se entra a la app.
 vi.mock('../../screens/Inicio', () => ({ Inicio: () => <main>INICIO-DE-LA-APP</main> }))
+vi.mock('../../screens/ResumenInicio', () => ({ ResumenInicio: () => <main>INICIO-DE-LA-APP</main> }))
 const { guardarAceptacion, K_ACEPTACION } = await import('../aceptacion')
 const { TITULO_REACEPTACION } = await import('../Reaceptacion')
 const { TERMINOS } = await import('../documentos')
