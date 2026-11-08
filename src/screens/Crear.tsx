@@ -230,7 +230,7 @@ export function Crear({ u }: { u: Usuario }) {
   const errFin = avisoFin || ver('fin')
 
   return <main id="contenido" tabIndex={-1} className="cont cont--form na" style={{ paddingBottom: 48 }}>
-    <a href="#/" className="volver">← Tus alquileres</a>
+    <a href="#/alquileres" className="volver">← Tus alquileres</a>
     <div className="cab titulo"><h1>Nuevo alquiler</h1></div>
     {/* LEGAL: revisado (25/10, lista de Legal). Resumen corto de «Prueba en la red de prueba de Stellar, sin dinero real»; el texto completo está en la hoja ⓘ. */}
     {modoPrueba && <div className="na-meta"><button type="button" className="na-red" aria-haspopup="dialog" onClick={() => setInfo('red')}><Ico n="matraz" />Red de prueba · sin dinero real<span className="na-red__i" aria-hidden="true"><Ico n="i" /></span><span className="sr">. Ver detalles</span></button></div>}

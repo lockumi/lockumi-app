@@ -93,7 +93,7 @@ export function Invitacion({ id, token, u, salir }: { id: string; token: string;
       {err && !delDueno && <p className="error" role="alert">{err}</p>}
       {!d && delDueno && <LinkDelDueno id={id} token={token} salir={salir} />}
       {d && CorreoReal && esRelay(u.email) && <Suspense fallback={null}><CorreoReal email={u.email} /></Suspense>}
-      <a href="#/" className="enlace">Ir a tus alquileres</a>
+      <a href="#/alquileres" className="enlace">Ir a tus alquileres</a>
     </div>
   </main>
 }

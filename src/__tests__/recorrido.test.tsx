@@ -19,7 +19,7 @@ describe('recorrido: textos aprobados', () => {
     expect(todo).not.toMatch(/garantiz|100 ?%|protegid|dos veces|decide/i)
   })
   it('cada paso tiene su lugar (Inicio, Crear o el ejemplo) y el elemento existe en la pantalla', () => {
-    expect(PASOS_RECORRIDO.map(p => p.ruta)).toEqual(['/', '/crear', '/crear', RUTA_EJEMPLO, RUTA_EJEMPLO, RUTA_EJEMPLO])
+    expect(PASOS_RECORRIDO.map(p => p.ruta)).toEqual(['/alquileres', '/crear', '/crear', RUTA_EJEMPLO, RUTA_EJEMPLO, RUTA_EJEMPLO])
     expect(inicio).toContain('data-recorrido="nuevo"'); expect(crear).toContain('data-recorrido="datos"'); expect(crear).toContain('data-recorrido="reglas"'); expect(detalle).toContain('data-recorrido="pasos"')
   })
 })

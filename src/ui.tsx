@@ -17,7 +17,7 @@ export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: num
 export function Barra({ onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
   const enAyuda = r === '/ayuda' || r.startsWith('/ayuda/')
   return <header className="cont barra">
-    <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
+    <a href="#/" className="logo" aria-label="Lockumi, ir a Inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
       <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>

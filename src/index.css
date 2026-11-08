@@ -904,6 +904,37 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 
 .ilustracion-pendiente{margin:0 0 12px;min-height:140px;display:grid;place-items:center;text-align:center;padding:28px 16px;border-radius:24px;background:var(--tarjeta);color:var(--cafe-suave);font:600 16px/22px var(--f-texto)}
 .ini-vacio{display:grid;gap:16px}
+.res{display:flex;flex-direction:column;gap:12px;max-width:560px;margin-inline:auto}
+.res h1{font:800 clamp(32px,7vw,40px)/1.1 var(--f-titulo)}
+.res-sub{margin:0;color:var(--cafe-suave);font:500 16px/22px var(--f-texto)}
+.res-saldos{display:grid;gap:8px;padding:16px}
+.res-saldos__et{margin:0;color:var(--cafe-suave);font:600 14px/20px var(--f-texto)}
+.res-saldos__n{margin:0;font:800 clamp(36px,8vw,44px)/1.05 var(--f-titulo)}
+.res-saldos__par{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.res-caja{margin:0;display:grid;gap:4px;padding:14px;border-radius:16px}
+.res-caja span{font:600 14px/18px var(--f-texto)}
+.res-caja strong{font:800 20px/24px var(--f-titulo)}
+.res-caja--custodia{background:var(--mint)}
+.res-caja--pendiente{background:var(--estado-pendiente-fondo)}
+.res-saldos__nota,.res-pie,.res-curso{margin:0;color:var(--cafe-suave);font:500 14px/20px var(--f-texto)}
+.res-pie{text-align:center}
+.res-bloque{display:grid;gap:10px}
+.res-bloque h2{margin:0;font:800 22px/26px var(--f-titulo)}
+.res-tarjeta h3{margin:0;font:800 22px/26px var(--f-titulo)}
+.res-bloque__cab{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.res-tarjeta{display:grid;gap:8px;padding:14px 16px}
+.res-tarjeta p{margin:0;font:500 16px/22px var(--f-texto)}
+.res-tarjeta__top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.res-paso{color:var(--cafe-suave);font:600 14px/20px var(--f-texto)}
+.res-titulo{font:800 24px/30px var(--f-titulo)!important}
+.res-barras{margin:4px 0}
+.res-lista{margin-top:2px}
+.res-esperas{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:10px}
+.res-esperas li{display:flex;gap:10px;align-items:flex-start;text-align:left}
+.res-esperas strong,.res-esperas span span{display:block}
+.res-esperas span span{color:var(--cafe-suave);font:500 14px/20px var(--f-texto)}
+.res-casa{flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--mint);color:var(--cafe)}
+.res-curso{text-align:left}
 .ini-vacio__t{margin:0;font:800 28px/34px var(--f-titulo)}
 .ini-vacio__b{margin:0;font:500 16px/22px var(--f-texto);color:var(--cafe-suave)}
 .cuarto__par{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}

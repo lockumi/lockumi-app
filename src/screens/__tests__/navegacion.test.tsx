@@ -31,11 +31,15 @@ describe('navegación de perfil, avisos y ayuda', () => {
     expect(renderToStaticMarkup(<Navegacion r="/perfil/llave" />)).toContain('href="#/perfil" aria-current="page"')
     expect(renderToStaticMarkup(<Navegacion r="/avisos" />)).toContain('href="#/avisos" aria-current="page"')
   })
-  it('Alquileres abre el listado que ya existe, el mismo destino que Inicio', () => {
+  it('Inicio y Alquileres abren rutas distintas y el listado sigue siendo el de siempre', () => {
     const html = renderToStaticMarkup(<Navegacion r="/" />)
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => m[1])
-    expect(hrefs.filter(h => h === '#/')).toHaveLength(2)
-    expect(hrefs).toEqual(['#/', '#/avisos', '#/', '#/perfil'])
+    expect(hrefs).toEqual(['#/', '#/avisos', '#/alquileres', '#/perfil'])
+    const enLista = renderToStaticMarkup(<Navegacion r="/alquileres" />)
+    expect(enLista).toContain('href="#/alquileres" aria-current="page"')
+    expect(enLista).not.toContain('href="#/" aria-current="page"')
+    expect(app).toContain("r === '/alquileres' ? <Inicio")
+    expect(app).toContain('<ResumenInicio')
   })
   it('la cabecera abre Ayuda con un icono vectorial, sin campana ni texto visible', () => {
     const h = renderToStaticMarkup(<Barra u={U} onSalir={() => {}} r="/ayuda" />)

@@ -520,7 +520,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     const x = antes.current; antes.current = a ? instantanea(a) : null
     if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))
   })
-  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta"><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/">Volver a tus alquileres</a></div></main>
+  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta"><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/alquileres">Volver a tus alquileres</a></div></main>
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
@@ -530,7 +530,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     reclamo: reglas17(a) && !modoServidor ? <ReclamoPC {...p} /> : <Reclamo {...p} />, mediacion: reglas17(a) && !modoServidor ? <MediacionPC {...p} /> : <Mediacion {...p} />, cerrado: <Cerrado {...p} />,
   }[a.estado]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
-    <a href="#/" className="volver">← Tus alquileres</a>
+    <a href="#/alquileres" className="volver">← Tus alquileres</a>
     {ejemplo && <p className="ejemplo-cinta">Alquiler de ejemplo · solo para ver</p>}
     <h1 className="h-lugar">{a.direccion}</h1>
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}

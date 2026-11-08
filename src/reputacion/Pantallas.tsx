@@ -81,7 +81,7 @@ const Papel = ({ rol }: { rol: Rol }) => <span className={`rp-rol rp-rol--${rol}
 export function Md({ t }: { t: string }) {
   return <>{t.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((x, i) => x.startsWith('**') ? <strong key={i}>{x.slice(2, -2)}</strong> : x.startsWith('*') && x.length > 2 ? <em key={i}>{x.slice(1, -1)}</em> : x)}</>
 }
-const Volver = ({ a = '#/', t = '← Tus alquileres' }: { a?: string; t?: string }) => <a href={a} className="volver">{t}</a>
+const Volver = ({ a = '#/alquileres', t = '← Tus alquileres' }: { a?: string; t?: string }) => <a href={a} className="volver">{t}</a>
 const fechaLarga = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Costa_Rica' })
 const mesAnio = (iso: string) => new Date(iso).toLocaleDateString('es-CR', { month: 'long', year: 'numeric', timeZone: 'America/Costa_Rica' })
 const usd = (n: number) => `${n.toLocaleString('es-CR')} USDC de prueba`   // Legal (revisión del PR #26, regla 5)
@@ -202,7 +202,7 @@ function TextoCalculo() {
 /** Al intentar crear o unirse a un alquiler nuevo con un pedido de borrado pendiente (texto literal; estilos de siempre: glass tarjeta). */
 export function BloqueoBorrado() {
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
-    <a href="#/" className="volver">← Tus alquileres</a>
+    <a href="#/alquileres" className="volver">← Tus alquileres</a>
     <section className="glass tarjeta" role="status"><p>{BLOQUEO_BORRADO}</p></section>
   </main>
 }
@@ -485,7 +485,7 @@ function BorradoEnCurso({ s }: { s: Solicitud }) {
   return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <Volver />
     <section className="glass tarjeta" role="status"><h1 className="h2">{ELIMINAR_UI.enCurso}</h1><PlazoBorrado s={s} />
-      <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/">{ELIMINAR_UI.inicio}</a></div></section></main>
+      <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/alquileres">{ELIMINAR_UI.inicio}</a></div></section></main>
 }
 function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => void }) {
   const todos = useAlquileres(), s = solicitudBorrado(u.email), abiertos = abiertosDe(todos, u.email).length > 0
@@ -510,7 +510,7 @@ function Eliminar({ u, paso, salir }: { u: Usuario; paso?: string; salir: () => 
         <div className="rp-acciones"><button type="button" className="rp-boton rp-boton--ancho" onClick={() => { location.hash = '/'; salir() }}>{ELIMINAR_UI.salir}</button></div></section></main>
     return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
       <section className="glass tarjeta" role="status"><h1 className="h2">{ELIMINAR_UI.listoAbierto}</h1><PlazoBorrado s={s} />
-        <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/">{ELIMINAR_UI.inicio}</a></div></section></main>
+        <div className="rp-acciones"><a className="rp-boton rp-boton--ancho" href="#/alquileres">{ELIMINAR_UI.inicio}</a></div></section></main>
   }
   if (paso === 'confirmar' && abiertos && !s) return <main id="contenido" tabIndex={-1} className="cont rp" style={{ paddingBottom: 48 }}>
     <section className="glass tarjeta rp-texto" role="alertdialog" aria-labelledby="rp-conf"><h1 id="rp-conf" className="h2">{ELIMINAR.titulo}</h1><p>{ELIMINAR.confirmarAbierto}</p>

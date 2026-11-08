@@ -16,6 +16,7 @@ import { Barra, Fondo } from './ui'
 import { Login, Entrando } from './screens/Login'
 import { PuertaFirmante } from './screens/Firmante'
 import { Inicio } from './screens/Inicio'
+import { ResumenInicio } from './screens/ResumenInicio'
 import { Perfil } from './screens/Perfil'
 import { Avisos } from './screens/Avisos'
 import { Ayuda } from './screens/Ayuda'
@@ -84,7 +85,7 @@ export default function App() {
   const m = conf ? null : r.match(/^\/alquiler\/(.+)$/)
   const inv = r.match(/^\/invitacion\/([0-9a-f-]{36})\/([0-9a-f]{64})$/)
   const salir = () => { auth.salir(); olvidarBilletera(); if (conServidor) void salirDeCuenta(); setU(null) }
-  const pantalla = conf ? <ConfirmarAlquiler id={conf[1]} u={u} que={conf[2] as 'eliminar' | 'ocultar'} /> : modoPrueba && r === '/reiniciar' ? <ConfirmarReinicio u={u} /> : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} salir={salir} /> : m ? <Detalle id={m[1]} u={u} /> : r === '/perfil' ? <Perfil u={u} onSalir={salir} /> : r === '/avisos' ? <Avisos u={u} /> : r === '/ayuda' ? <Ayuda u={u} /> : <Inicio u={u} />
+  const pantalla = conf ? <ConfirmarAlquiler id={conf[1]} u={u} que={conf[2] as 'eliminar' | 'ocultar'} /> : modoPrueba && r === '/reiniciar' ? <ConfirmarReinicio u={u} /> : r === '/crear' ? <Crear u={u} /> : r === RUTA_EJEMPLO ? <Ejemplo u={u} /> : inv ? <Invitacion id={inv[1]} token={inv[2]} u={u} salir={salir} /> : m ? <Detalle id={m[1]} u={u} /> : r === '/perfil' ? <Perfil u={u} onSalir={salir} /> : r === '/avisos' ? <Avisos u={u} /> : r === '/ayuda' ? <Ayuda u={u} /> : r === '/alquileres' ? <Inicio u={u} /> : <ResumenInicio u={u} />
   // El aviso va justo después de «Saltar al contenido»: es la 2.ª parada de Tab (sin robar el foco).
   return <Fondo comision={!!(inv || m)}>{skip}
     <Alertas />
