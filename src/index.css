@@ -838,8 +838,30 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa-lado{position:sticky;top:16px;padding:16px;border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 1px 2px rgba(41,51,50,.04)}
   .casa-cuerpo .casa-como{display:inline-flex;justify-content:center}
 }
-@media (min-width:768px) and (max-width:1100px){
-  .casa-hero .casa-escena{width:33vw;height:calc(33vw * 269 / 475)}
+/* Tablet: los mismos px que a 1280. 390, 1280 y 1440 no entran en esta consulta. */
+@media (min-width:768px) and (max-width:1279px){
+  .app-cuerpo:has(.casa)>.barra{padding:14px calc(2.4 * 1280 / 100 * 1px)}
+  .app-cuerpo:has(.casa) .logo img{height:calc(46.51 * 1280 / 1440 * 1px)}
+  .app-cuerpo:has(.casa) .logo{font-size:calc(27.2 * 1280 / 1440 * 1px);gap:calc(15.5 * 1280 / 1440 * 1px)}
+  .app-cuerpo:has(.casa) .boton-icono,.app-cuerpo:has(.casa) .casa-campana{width:calc(46.51 * 1280 / 1440 * 1px);height:calc(46.51 * 1280 / 1440 * 1px)}
+  .app-cuerpo:has(.casa) .boton-icono .ico,.app-cuerpo:has(.casa) .casa-campana .ico{width:calc(19.5 * 1280 / 1440 * 1px);height:calc(19.5 * 1280 / 1440 * 1px)}
+  .app-sesion:has(.casa) .nav-app--cabecera a{font-size:14px;line-height:1;height:calc(41.34 * 1280 / 1440 * 1px);padding:0 calc(16 * 1280 / 1440 * 1px);gap:calc(8 * 1280 / 1440 * 1px)}
+  .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * 1280 / 1440 * 1px);height:calc(16.5 * 1280 / 1440 * 1px)}
+  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{padding:0 calc(24.25 * 1280 / 1440 * 1px)}
+  .casa-hero .casa-escena{width:calc(33 * 1280 / 100 * 1px);height:calc(28 * 960 / 100 * 1px)}
+  .casa-hero h1{font-size:calc(42.49 * 1280 / 1440 * 1px)}
+  .casa-hero p{font-size:calc(20.05 * 1280 / 1440 * 1px)}
+  .casa-hero__acciones{flex-wrap:nowrap;gap:calc(16 * 1280 / 1440 * 1px)}
+  .casa-hero__acciones .boton{width:calc(296.27 * 1280 / 1440 * 1px);height:calc(56.84 * 1280 / 1440 * 1px);padding:0 calc(20 * 1280 / 1440 * 1px);font-size:calc(18.88 * 1280 / 1440 * 1px)}
+  .casa-hero__acciones .boton .ico{width:calc(27.56 * 1280 / 1440 * 1px);height:calc(27.56 * 1280 / 1440 * 1px)}
+  .casa-hero__sep img{width:calc(33.59 * 1280 / 1440 * 1px);height:calc(30.14 * 1280 / 1440 * 1px)}
+  .casa-hero__beneficios{flex-wrap:nowrap;font-size:calc(14 * 1280 / 1440 * 1px)}
+  .casa-hero__beneficios li{gap:calc(8 * 1280 / 1440 * 1px);padding:0 calc(18 * 1280 / 1440 * 1px)}
+  .casa-hero__beneficios li+li::before{height:calc(11.2 * 1280 / 1440 * 1px)}
+  .casa-hero__beneficios .ico{width:calc(34.3 * 1280 / 1440 * 1px);height:calc(34.3 * 1280 / 1440 * 1px)}
+  .casa-hoja{width:100px;height:130px}
+  .casa-hoja--izq{left:-52px}
+  .casa-hoja--der{right:-52px}
 }
 
 /* ===== Tus alquileres: un color por estado =====
@@ -994,6 +1016,9 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
   .app-cuerpo:has(.casa)>.barra{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
   .app-sesion:has(.casa) .nav-app--cabecera{display:flex;position:static;width:auto;margin:0;border:0;background:transparent;justify-content:center;gap:4px;padding:0}
   .app-sesion:has(.casa) .nav-app--cabecera a{flex:none;flex-direction:row;gap:calc(8 * 100vw / 1440);height:calc(41.34 * 100vw / 1440);min-height:0;padding:0 calc(16 * 100vw / 1440)}
+}
+@media (min-width:768px) and (max-width:1279px){
+  .app-sesion:has(.casa) .nav-app--cabecera a{gap:calc(8 * 1280 / 1440 * 1px);height:calc(41.34 * 1280 / 1440 * 1px);min-height:0;padding:0 calc(16 * 1280 / 1440 * 1px)}
 }
 .ini{flex:1 0 auto;display:flex;flex-direction:column}
 .ini-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}
