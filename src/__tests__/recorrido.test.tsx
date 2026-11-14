@@ -4,7 +4,7 @@ import { PASOS_RECORRIDO, claveRecorrido, alquilerEjemplo, RUTA_EJEMPLO, VERSION
 
 const fs = await import(/* @vite-ignore */ ['node', 'fs'].join(':')) as { readFileSync(r: URL, c: 'utf8'): string }
 const leer = (r: string) => fs.readFileSync(new URL(r, import.meta.url), 'utf8')
-const css = leer('../index.css'), ui = leer('../ui.tsx'), inicio = leer('../screens/Inicio.tsx'), crear = leer('../screens/Crear.tsx'), detalle = leer('../screens/Detalle.tsx'), rec = leer('../recorrido.ts'), pkg = JSON.parse(leer('../../package.json'))
+const css = leer('../index.css'), ui = leer('../ui.tsx'), inicio = leer('../screens/Inicio.tsx'), ayuda = leer('../screens/Ayuda.tsx'), crear = leer('../screens/Crear.tsx'), detalle = leer('../screens/Detalle.tsx'), rec = leer('../recorrido.ts'), pkg = JSON.parse(leer('../../package.json'))
 
 describe('recorrido: textos aprobados', () => {
   it('6 pasos con los títulos de la maqueta, en orden', () => {
@@ -19,7 +19,7 @@ describe('recorrido: textos aprobados', () => {
     expect(todo).not.toMatch(/garantiz|100 ?%|protegid|dos veces|decide/i)
   })
   it('cada paso tiene su lugar (Inicio, Crear o el ejemplo) y el elemento existe en la pantalla', () => {
-    expect(PASOS_RECORRIDO.map(p => p.ruta)).toEqual(['/', '/crear', '/crear', RUTA_EJEMPLO, RUTA_EJEMPLO, RUTA_EJEMPLO])
+    expect(PASOS_RECORRIDO.map(p => p.ruta)).toEqual(['/alquileres', '/crear', '/crear', RUTA_EJEMPLO, RUTA_EJEMPLO, RUTA_EJEMPLO])
     expect(inicio).toContain('data-recorrido="nuevo"'); expect(crear).toContain('data-recorrido="datos"'); expect(crear).toContain('data-recorrido="reglas"'); expect(detalle).toContain('data-recorrido="pasos"')
   })
 })
@@ -34,9 +34,11 @@ describe('recorrido: primera vez y volver a verlo', () => {
     expect(rec).toMatch(/const cerrar = \(\) => \{ void marcarVisto\(u\)/); expect(rec).toMatch(/onDestroyStarted: \(\) => \{ void marcarVisto\(u\)/)
     expect(rec).toContain("saltar.textContent = 'Saltar'"); expect(rec).toContain("'¡Listo!'"); expect(rec).toContain("prevBtnText: 'Atrás'")
   })
-  it('«¿Cómo funciona?» en la cabecera (solo el ícono en el teléfono, con aria-label) y «Ver el recorrido» en Inicio', () => {
-    expect(ui).toContain('aria-label="¿Cómo funciona?"'); expect(ui).toContain('abrirRecorrido(u')
-    expect(inicio).toContain('¿Primera vez?'); expect(inicio).toContain('Mira cómo funciona en 1 minuto.'); expect(inicio).toContain('Ver el recorrido')
+  it('Ayuda sigue en la cabecera, sin texto visible, y «Ver el recorrido» abre el mismo recorrido', () => {
+    expect(ui).toContain('aria-label="Ayuda"'); expect(ui).toContain('href="#/ayuda"')
+    expect(ui).not.toContain('¿Cómo funciona?'); expect(ui).not.toContain('abrirRecorrido')
+    expect(ayuda).toContain('Ver el recorrido'); expect(ayuda).toContain('abrirRecorrido(u')
+    expect(inicio).toContain('data-recorrido="nuevo"')
   })
 })
 
@@ -50,7 +52,7 @@ describe('recorrido: accesibilidad y estilo', () => {
     expect(css).toMatch(/prefers-reduced-motion:reduce\)\{\.driver-popover\.recorrido\{animation:aviso-fade 120ms/)
   })
   it('velo café al 55 %, globo crema, botones de 44 px, sin colores hex nuevos', () => {
-    expect(rec).toContain("overlayColor: 'rgb(61, 42, 34)', overlayOpacity: 0.55")
+    expect(rec).toContain("overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55")
     const b = css.slice(css.indexOf('/* Recorrido guiado (driver.js)'), css.indexOf('/* ── Estado de espera v2 del pago')); expect(b).toContain('background:var(--fondo)'); expect(b).toContain('min-height:44px'); expect(b).not.toMatch(/#[0-9a-f]{3,6}\b/i)
   })
   it('driver.js fijo en 1.x', () => { expect(pkg.dependencies['driver.js']).toMatch(/^1\./) })

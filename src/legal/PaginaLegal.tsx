@@ -9,7 +9,7 @@ export function PaginaLegal({ slug }: { slug: string }) {
   const f = fechaLegible(d.fecha)
   return <main id="contenido" tabIndex={-1} className="cont legal">
     <header className="legal__cab">
-      <a href="/" className="logo" aria-label="Lockumi, ir al inicio"><img src="/img/logo-lockumi.svg" alt="" /></a>
+      <a href="/" className="logo" aria-label="Lockumi, ir al inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
       <a href="/" className="legal__volver">Volver a la app</a>
     </header>
     <article className="legal__doc">

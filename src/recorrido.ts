@@ -12,13 +12,13 @@ export const RUTA_EJEMPLO = '/ejemplo'
 export interface PasoRecorrido { ruta: string; estado?: Estado; el: string; /** En el teléfono (menos de 720 px), si el bloque es muy alto para el globo. */ elMovil?: string; titulo: string; texto: string; lado?: 'top' | 'bottom' | 'left' | 'right' }
 // LEGAL: revisado el 23/10 (textos exactos de la maqueta aprobada; pasos 5 y 6 con las correcciones de Legal).
 export const PASOS_RECORRIDO: PasoRecorrido[] = [
-  { ruta: '/', el: '[data-recorrido="nuevo"]', titulo: 'Te damos la bienvenida a Lockumi',
+  { ruta: '/alquileres', el: '[data-recorrido="nuevo"]', lado: 'bottom', titulo: 'Te damos la bienvenida a Lockumi',
     texto: 'Lockumi guarda el depósito del alquiler en una cuenta de la red de prueba, con USDC de prueba. Empecemos por crear un alquiler.' },
   { ruta: '/crear', el: '[data-recorrido="datos"]', titulo: 'Los datos del alquiler',
     texto: 'El lugar, las fechas y el monto del depósito. Toca una opción: casi no hay que escribir.' },
   { ruta: '/crear', el: '[data-recorrido="reglas"]', titulo: 'Las reglas del dueño',
     texto: 'Toca las reglas del lugar. Quedan escritas en el contrato que firman los dos.' },
-  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '.detalle__principal .cuarto .tomar', titulo: 'Fotos y lista de entrada',
+  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', lado: 'right', titulo: 'Fotos y lista de entrada',
     texto: 'Al entrar, una foto de cada espacio y una lista para marcar. Al salir se repite. Así los dos ven cómo estaba el lugar.' },
   // LEGAL: revisado (24/10)
   { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito',
@@ -77,14 +77,14 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
   const cerrar = () => { void marcarVisto(u); d.destroy() }
   const pasos: DriveStep[] = PASOS_RECORRIDO.map((p, i) => ({
     element: () => document.querySelector(selectorDe(p)) ?? document.body,
-    popover: { title: p.titulo, description: p.texto, side: p.lado, align: 'start',
+    popover: { title: p.titulo, description: p.texto, side: p.lado, align: p.el === '[data-recorrido="nuevo"]' ? 'end' : 'start',
       showButtons: i === 0 ? ['next'] : ['next', 'previous'], nextBtnText: i === PASOS_RECORRIDO.length - 1 ? '¡Listo!' : 'Siguiente', prevBtnText: 'Atrás',
       onNextClick: () => { if (i === PASOS_RECORRIDO.length - 1) cerrar(); else void ir(i + 1) },
       onPrevClick: () => { if (i > 0) void ir(i - 1) } },
   }))
   const d = driver({
-    steps: pasos, animate: !reducir(), smoothScroll: !reducir(), overlayColor: 'rgb(61, 42, 34)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
-    popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 12,
+    steps: pasos, animate: !reducir(), smoothScroll: !reducir() && innerWidth >= 960, overlayColor: 'rgb(41, 51, 50)', overlayOpacity: 0.55, stagePadding: 6, stageRadius: 18,
+    popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 16,
     onPopoverRender: (pop, { state }) => {
       const i = state.activeIndex ?? 0, n = PASOS_RECORRIDO.length
       pop.wrapper.setAttribute('aria-modal', 'true')
@@ -103,7 +103,25 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
       pop.footer.prepend(saltar)
       pop.footer.insertBefore(puntos, pop.footerButtons)
       for (const b of [pop.previousButton, pop.nextButton]) b.type = 'button'
-      requestAnimationFrame(() => pop.nextButton.focus({ preventScroll: true }))
+      const fotosMovil = innerWidth < 960 && i === 3
+      pop.wrapper.classList.toggle('recorrido--fotos', fotosMovil)
+      const colocar = () => {
+        const r = pop.wrapper.getBoundingClientRect(), m = 16
+        let left = r.left
+        if (r.right > innerWidth - m) left -= r.right - (innerWidth - m)
+        if (left < m) left = m
+        if (Math.abs(left - r.left) > 0.5) pop.wrapper.style.left = `${Math.round(left)}px`
+        if (!fotosMovil) return
+        pop.wrapper.style.top = 'auto'
+        pop.wrapper.style.height = 'auto'
+        const el = document.querySelector('[data-recorrido="fotos"]')
+        const cuerpo = document.querySelector('.app-cuerpo')
+        if (el && cuerpo) {
+          const ahora = el.getBoundingClientRect().top
+          cuerpo.scrollBy(0, ahora - 88)
+        }
+      }
+      requestAnimationFrame(() => { colocar(); requestAnimationFrame(() => { colocar(); pop.nextButton.focus({ preventScroll: true }) }) })
     },
     onCloseClick: () => cerrar(),
     onDestroyStarted: () => { void marcarVisto(u); d.destroy() },   // Esc = Saltar
@@ -116,6 +134,12 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
   activo = d; ponerEnCurso(true)
   const p = PASOS_RECORRIDO[desde]; if (p.estado) ponerEjemplo(p.estado)
   if ((location.hash.slice(1) || '/') !== p.ruta) location.hash = p.ruta
-  void esperar(selectorDe(p)).then(() => d.drive(desde))
+  // El aviso de ingreso sigue: el globo espera a que se cierre solo (o 9 s) para no taparlo.
+  const sinTostada = () => new Promise<void>(listo => {
+    const fin = Date.now() + 9000
+    const mirar = () => { if (!document.querySelector('.tostada') || Date.now() > fin) listo(); else setTimeout(mirar, 200) }
+    mirar()
+  })
+  void Promise.all([esperar(selectorDe(p)), sinTostada()]).then(() => { if (activo === d) d.drive(desde) })
   return d
 }

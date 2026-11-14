@@ -36,6 +36,6 @@ describe('Tus alquileres: un color por estado', () => {
     const usados = hex(css.slice(corte)), previos = hex(css.slice(0, corte))
     expect(corte).toBeGreaterThan(0)
     for (const h of usados) expect(previos.has(h), h).toBe(true)
-    expect([...usados].sort()).toEqual(['#2E7347', '#5C4A00', '#6FBF8A', '#7A5446', '#9A7B00', '#9E2E00', '#A88A7D', '#DB3B00', '#E3F2E8', '#FF6B35', '#FFE8DA', '#FFF1B8'])
+    expect([...usados].sort()).toEqual(['#2F5E56', '#527C78', '#555C58', '#5C4A00', '#8A3030', '#A8C9B8', '#C45C5C', '#C4B48A', '#E0EEE3', '#E5E6DE', '#EEF0EA', '#F3EBD6', '#F6E4E1'])
   })
 })
