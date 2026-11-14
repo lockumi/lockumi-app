@@ -720,6 +720,91 @@ html.sin-scroll{overflow:hidden}
   @page{margin:18mm 16mm}
 }
 
+/* Inicio (solo esta pantalla). Paleta ya definida: teal del botón y de la barra, crema, chip suave. */
+.casa.cont{position:relative;max-width:1180px;display:flex;flex-direction:column;gap:16px;padding-top:8px;padding-bottom:28px}
+.casa-overline{margin:0;font:700 12px/16px var(--f-texto);letter-spacing:.08em;text-transform:uppercase;color:var(--accion)}
+.casa-hola{margin:2px 0 0;font:800 clamp(28px,6vw,40px)/1.12 var(--f-titulo);color:var(--cafe)}
+.casa-saludo{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(112px,38%);gap:8px;align-items:center}
+.casa-saludo__sub{margin:6px 0 0;color:var(--cafe-suave);font:500 16px/22px var(--f-texto)}
+.casa-escena{position:relative;height:148px;min-width:0;overflow:hidden}
+.casa-escena img{position:absolute;object-fit:contain;pointer-events:none;user-select:none}
+.casa-escena__paisaje{left:6%;right:4%;top:22%;width:90%;height:58%;object-fit:cover;opacity:.45;border-radius:28px}
+.casa-escena__hojas{width:42%;right:0;top:0;opacity:.8}
+.casa-escena__arbol{width:40%;left:0;bottom:0}
+.casa-escena__casa{width:74%;right:2%;bottom:0;max-height:88%}
+.casa-sec{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.casa-sec h2{margin:0;font:800 22px/28px var(--f-titulo)}
+.casa-todos{display:inline-flex;align-items:center;gap:2px;min-height:44px;color:var(--cafe-suave);font:600 15px/20px var(--f-texto);text-decoration:none;white-space:nowrap}
+.casa-todos .ico{width:16px;height:16px}
+.casa-cuerpo{display:flex;flex-direction:column;gap:12px}
+.casa-card{display:grid;gap:14px;padding:16px}
+.casa-card__top{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start}
+.casa-card__foto{width:72px;height:72px;border-radius:16px;object-fit:cover;background:var(--mint)}
+.casa-card__datos{display:grid;gap:4px;min-width:0}
+.casa-card__titulo-fila{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.casa-card__titulo{margin:0;font:800 18px/24px var(--f-titulo);min-width:0;overflow-wrap:anywhere}
+.casa-estado{display:inline-flex;align-items:center;gap:6px;flex:none;max-width:100%;padding:4px 10px;border-radius:var(--r-pildora);background:var(--ef);color:var(--et);font:700 13px/18px var(--f-texto);white-space:nowrap}
+.casa-estado i{width:8px;height:8px;border-radius:50%;background:var(--es);flex:none}
+.casa-meta{display:flex;align-items:center;gap:6px;margin:0;min-width:0;color:var(--cafe-suave);font:600 14px/20px var(--f-texto)}
+.casa-fechas{white-space:nowrap}
+.casa-deposito{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding-top:12px;border-top:1px solid var(--borde)}
+.casa-deposito__et{margin:0;color:var(--cafe-suave);font:600 14px/20px var(--f-texto)}
+.casa-monto{margin:0;font:800 20px/1.2 var(--f-titulo);white-space:nowrap;letter-spacing:-.02em}
+.casa-escudo{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:var(--protegido);color:var(--accion)}
+.casa-escudo .ico{width:22px;height:22px}
+.casa-pasos{display:grid;gap:8px}
+.casa-pasos__txt{display:flex;justify-content:space-between;gap:12px;margin:0;font:700 14px/20px var(--f-texto)}
+.casa-pasos__etapa{color:var(--cafe-suave);font-weight:600;text-align:right}
+.casa-card .ini-barra span{height:8px;background:var(--linea)}
+.casa-card .ini-barra span.hecho,.casa-card .ini-barra span.actual{background:var(--accion)}
+.casa-lado{display:flex;flex-direction:column;gap:4px}
+.casa-nuevo{width:100%}
+.casa-como{display:none}
+.casa-vacio{display:grid;justify-items:center;text-align:center;gap:8px;padding:12px 0 4px}
+.casa-vacio .casa-escena{width:min(100%,280px);height:210px}
+.casa-vacio h1{margin:8px 0 0;font:800 clamp(26px,6vw,34px)/1.15 var(--f-titulo)}
+.casa-vacio p{margin:0;max-width:36ch;color:var(--cafe-suave);font:500 16px/24px var(--f-texto)}
+.casa-vacio__acciones{display:grid;gap:4px;width:100%;margin-top:8px}
+.casa-vacio .casa-como{display:inline-flex}
+.casa-como{align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 8px;color:var(--accion);font:700 16px/20px var(--f-texto);text-decoration:none}
+.casa-campana{position:absolute;z-index:36;top:-52px;right:0;width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:var(--tarjeta);color:var(--cafe);border:1px solid var(--borde);box-shadow:0 4px 12px rgba(41,51,50,.06);text-decoration:none}
+.casa-campana .ico{width:22px;height:22px}
+.casa-campana__punto{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--accion);box-shadow:0 0 0 2px var(--tarjeta)}
+@media (max-width:959px){
+  .app-cuerpo:has(.casa) .barra__der>.boton-icono{display:none}
+  .app-sesion:has(.casa) .nav-app--pie{margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 8px 24px rgba(41,51,50,.06);padding:6px 8px}
+  .app-sesion:has(.casa) .nav-app--pie a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:20px}
+}
+@media (max-width:420px){
+  .casa-saludo{grid-template-columns:minmax(0,1fr) 104px;gap:4px}
+  .casa-hola{font-size:22px;line-height:1.2}
+  .casa-escena{height:116px}
+}
+@media (min-width:960px){
+  .casa-campana{position:fixed;top:16px;right:calc(max(0px, (100vw - 1140px) / 2) + 114px);left:auto}
+}
+@media (min-width:768px){
+  .casa-saludo{grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:24px;min-height:200px}
+  .casa-escena{height:220px}
+  .casa-hola{font-size:40px}
+  .casa-cuerpo{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.72fr);gap:20px;align-items:start}
+  .casa-card{padding:20px}
+  .casa-card__foto{width:88px;height:88px}
+  .casa-card__top{grid-template-columns:88px minmax(0,1fr)}
+  .casa-card__titulo{font-size:22px;line-height:28px}
+  .casa-monto{font-size:24px}
+  .casa-lado{position:sticky;top:16px;padding:20px;border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 1px 2px rgba(41,51,50,.04)}
+  .casa-cuerpo .casa-como{display:inline-flex;justify-content:center}
+  .casa-vacio{grid-template-columns:minmax(240px,.85fr) minmax(280px,1fr);justify-items:stretch;text-align:left;align-items:center;gap:32px;padding:28px 8px 8px}
+  .casa-vacio .casa-escena{width:100%;height:280px}
+  .casa-vacio__acciones{width:min(100%,420px);justify-items:stretch}
+}
+@media (min-width:1280px){
+  .casa-saludo{min-height:240px}
+  .casa-escena{height:250px}
+  .casa-card__titulo{font-size:24px}
+}
+
 /* ===== Tus alquileres: un color por estado =====
    Chips de estado del diseño Sage Teal. No son el botón primario.
    Los mismos hex ya están en el :root de arriba (services/__tests__/estados.test.ts). */
@@ -1227,4 +1312,3 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.na-pliegue__flecha{transition:none}}
 @media (max-width:959px){.na-form>.na-pie{background:transparent;box-shadow:none}}
 .aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
-

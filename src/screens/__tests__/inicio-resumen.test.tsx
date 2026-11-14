@@ -59,66 +59,113 @@ describe('saldos del inicio', () => {
   })
 })
 
+const montoDe = (h: string) => h.match(/class="casa-monto">([^<]*)</)?.[1]
+
 describe('pantalla de inicio', () => {
-  it('muestra la firma, el enlace al contrato y no el listado', () => {
+  it('muestra el alquiler que toca continuar, con sus datos y sus enlaces', () => {
     bolsa.estado = 'listo'; bolsa.lista = [curso, firma]
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
-    expect(h).toContain('Inicio')
-    expect(h).toContain(usd(1400))
-    expect(h).toContain(usd(800))
-    expect(h).toContain(usd(600))
+    expect(h).toContain('Hola, Katherine')
+    expect(h).toContain('Casa ejemplo · Heredia centro')
+    expect(h).toContain('Dueño')
+    expect(h).toContain('Firmas')
+    expect(h).toContain('Paso 2 de 8')
+    expect(montoDe(h)).toBe(usd(600))
+    expect(montoDe(h)).not.toContain('\n')
+    expect(h).not.toContain(usd(1400))
     expect(h).not.toContain('USD 1,400.00')
-    expect(h).toContain('Importe previsto')
-    expect(h).toContain('En custodia')
-    expect(h).toContain('Por depositar')
-    expect(h).toContain('Lo pendiente aún no está en custodia.')
-    expect(h).toContain('Tu firma está pendiente')
-    expect(h).toContain('Heredia centro')
     expect(h).toContain('href="#/alquiler/a2"')
-    expect(h).toContain('Ver contrato y firmar')
+    expect(h).toContain('Continuar proceso')
     expect(h).toContain('href="#/alquileres"')
+    expect(h).toContain('Ver todos')
+    expect(h).toContain('href="#/crear"')
+    expect(h).toContain('Nuevo alquiler')
+    expect(h).toContain('data-recorrido="nuevo"')
+    expect(h).toContain('href="#/ayuda"')
+    expect(h).toContain('Cómo funciona')
+    expect(h).toContain('class="casa-campana"')
+    expect(h).toContain('href="#/avisos"')
+    expect(h).toContain('aria-label="Avisos"')
     expect(h).not.toContain('Tus alquileres')
+    expect(h).toContain('/img/katherine/02-edificio-moderno.png')
   })
 
-  it('el inquilino revisa el depósito en la pantalla del alquiler', () => {
-    const pago = base({ id: 'p', direccion: 'Apto. Escazú', monto: 800, estado: 'pendiente_pago', duenoEmail: 'dueno@ejemplo.cr', inquilinoEmail: U.email, contrato: { firmas: { dueno: 't', inquilino: 't' } } })
+  it('el inquilino sigue en la pantalla del alquiler cuyo depósito toca revisar', () => {
+    const pago = base({ id: 'p', direccion: 'Apto. Escazú', monto: 800, estado: 'pendiente_pago', duenoEmail: 'dueno@ejemplo.cr', inquilinoEmail: U.email, contrato: { firmas: { dueno: 't', inquilino: 't' } }, inicio: '2026-11-01', fin: '2027-10-31' })
     const guardado = base({ id: 'g', monto: 600, estado: 'en_curso', pago: 't', duenoEmail: 'dueno@ejemplo.cr', inquilinoEmail: U.email, contrato: { firmas: { dueno: 't', inquilino: 't' } } })
     bolsa.estado = 'listo'; bolsa.lista = [pago, guardado]
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
-    expect(h).toContain('El depósito está pendiente')
-    expect(h).toContain('Revisar depósito')
+    expect(h).toContain('Apto. Escazú')
+    expect(h).toContain('Inquilino')
+    expect(h).toContain('Paso 3 de 8')
+    expect(h).toContain('Depósito')
+    expect(montoDe(h)).toBe(usd(800))
     expect(h).toContain('href="#/alquiler/p"')
-    expect(h).toContain(usd(600))
+    expect(h).toContain('Continuar proceso')
+    expect(h).not.toContain('href="#/pagar')
     expect(h).not.toContain('Tu firma está pendiente')
   })
 
-  it('sin tarea propia muestra la espera y no un botón de pago', () => {
-    const esperaFirma = base({ id: 'e', contrato: { firmas: { dueno: 't' } } })
+  it('sin tarea propia abre el alquiler activo y no un pago', () => {
+    const esperaFirma = base({ id: 'e', direccion: 'Casa en espera', contrato: { firmas: { dueno: 't' } } })
     bolsa.estado = 'listo'; bolsa.lista = [esperaFirma, curso]
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
-    expect(h).toContain('Estás al día')
-    expect(h).toContain('Sin tareas')
-    expect(h).toContain('A la espera de la firma del inquilino.')
-    expect(h).toContain('1 alquiler en curso, sin tarea para ti.')
+    expect(h).toContain('Casa en espera')
+    expect(h).toContain('href="#/alquiler/e"')
+    expect(h).toContain('Continuar proceso')
     expect(h).not.toContain('Revisar depósito')
     expect(h).toContain('href="#/alquileres"')
+    expect(h).toContain('href="#/crear"')
   })
 
-  it('sin alquileres ofrece crear con el formulario que ya existe', () => {
+  it('sin alquileres ofrece crear y cómo funciona, sin montos', () => {
     bolsa.estado = 'listo'; bolsa.lista = []
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
-    expect(h).toContain('Todavía sin alquileres')
+    expect(h).toContain('Sin alquileres aún')
+    expect(h).toContain('Inicia tu primer alquiler y gestiona todo de forma segura.')
     expect(h).toContain('href="#/crear"')
-    expect(h).toContain('Crear alquiler')
-    expect(h).toContain('El listado estará en Alquileres.')
+    expect(h).toContain('Nuevo alquiler')
+    expect(h).toContain('data-recorrido="nuevo"')
+    expect(h).toContain('href="#/ayuda"')
+    expect(h).toContain('Cómo funciona')
+    expect(h).toContain('href="#/avisos"')
+    expect(h).not.toContain('casa-monto')
+    expect(h).not.toContain('Ver todos')
     expect(h).not.toContain('Ver mis alquileres')
+  })
+
+  it('la campana marca el aviso que todavía no se abrió', () => {
+    const conAviso = base({ id: 'av', avisos: [{ id: '1', para: 'dueno', dia: 1, asunto: 'Plazo', texto: 't', entregado: '2026-10-01T00:00:00Z', entregadoReal: '2026-10-01T00:00:00Z' }] })
+    bolsa.estado = 'listo'; bolsa.lista = [conAviso]
+    const h = renderToStaticMarkup(<ResumenInicio u={U} />)
+    expect(h).toContain('casa-campana__punto')
+    expect(h).toContain('Hay avisos sin leer.')
+    const leido = base({ id: 'av2', avisos: [{ id: '2', para: 'dueno', dia: 1, asunto: 'Plazo', texto: 't', entregado: '2026-10-02T00:00:00Z', entregadoReal: '2026-10-02T00:00:00Z', abierto: '2026-10-03T00:00:00Z' }] })
+    bolsa.lista = [leido]
+    expect(renderToStaticMarkup(<ResumenInicio u={U} />)).not.toContain('casa-campana__punto')
+  })
+
+  it('usa la foto real del lugar cuando no es de ejemplo', () => {
+    const conFoto = base({ id: 'f', estado: 'en_curso', pago: 't', contrato: { firmas: { dueno: 't', inquilino: 't' } }, entrada: { cuartos: [{ nombre: 'Sala', nota: '', items: [], fotos: [{ src: 'foto-real.jpg', por: 'dueno', fecha: '2026-10-01', origen: 'camara' }] }], firmas: {} } })
+    bolsa.estado = 'listo'; bolsa.lista = [conFoto]
+    expect(renderToStaticMarkup(<ResumenInicio u={U} />)).toContain('src="foto-real.jpg"')
   })
 
   it('si la lista no cargó, no pinta ceros', () => {
     bolsa.estado = 'error'; bolsa.lista = []
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
     expect(h).toContain('No hay importes para mostrar')
+    expect(h).toContain('Hola, Katherine')
+    expect(h).not.toContain('casa-monto')
     expect(h).not.toContain('Importe previsto')
+  })
+
+  it('mientras carga no inventa un alquiler', () => {
+    bolsa.estado = 'cargando'; bolsa.lista = []
+    const h = renderToStaticMarkup(<ResumenInicio u={U} />)
+    expect(h).toContain('Cargando tus alquileres…')
+    expect(h).not.toContain('casa-monto')
+    expect(h).not.toContain('Sin alquileres aún')
   })
 
   it('la barra marca Inicio en / y Alquileres en el listado y en un alquiler', () => {

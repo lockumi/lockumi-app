@@ -1,98 +1,163 @@
 import { useAlquileres, useEstadoAlquileres, rolDe } from '../store'
 import { modoPrueba } from '../servidor/config'
 import { esMio, oculto } from '../prueba/eliminar'
-import { NOMBRE_ROL, type Usuario, type Alquiler, type Rol } from '../types'
-import { usd } from '../ui'
-import { ETAPAS, etapaDe, pasoTexto } from '../flujo'
-import { lugarContrato } from './Detalle'
-import { copiaTarea, enCursoSinTarea, esperas, saldosDe, tareasPropias, textoEnCurso, textoEspera, textoPendientes } from './inicio-resumen'
+import { ETIQUETA_ESTADO, NOMBRE_ROL, type Usuario, type Alquiler, type Foto } from '../types'
+import { usd, fecha } from '../ui'
+import { ETAPAS, etapaDe } from '../flujo'
+import { claseEstado } from '../estados'
+import { activos, tareasPropias } from './inicio-resumen'
+import { ordenarInicio } from './inicio-lista'
+import { avisosVisibles } from './avisos-datos'
+
+const CASA = '/img/katherine/01-casa-simple-arbol.png'
+const ARBOL = '/img/katherine/04-arbol.png'
+const HOJAS = '/img/katherine/11-hojas.png'
+const PAISAJE = '/img/katherine/12-paisaje.png'
+const EDIFICIO = '/img/katherine/02-edificio-moderno.png'
+const ICO_CAL = ['M4 5h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M8 3v4', 'M16 3v4', 'M3 10h18']
+const ICO_PERSONA = ['M12 12a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z', 'M6 19.5c1.2-2.4 3.2-3.5 6-3.5s4.8 1.1 6 3.5']
+const ICO_ESCUDO = ['M12 3 5 6v6c0 4.2 2.8 6.8 7 8.5 4.2-1.7 7-4.3 7-8.5V6l-7-3z']
+const ICO_CHEV = ['m9 6 6 6-6 6']
 
 function visiblesDe(lista: Alquiler[], email: string) {
   const mios = modoPrueba ? lista.filter(a => esMio(a, email)) : lista
   return mios.filter(a => !oculto(a, email))
 }
 
-function Barras({ a }: { a: Alquiler }) {
+/** La misma tarjeta que ya tocaba continuar: la tarea propia, si hay; si no, el activo más urgente. */
+function destacado(lista: Alquiler[], email: string): Alquiler | null {
+  const tarea = tareasPropias(lista, email)[0]
+  if (tarea) return tarea
+  const vivos = activos(lista)
+  return ordenarInicio(vivos.length ? vivos : lista, email).principal
+}
+
+function fotoReal(a: Alquiler): string | null {
+  const fotos: Foto[] = []
+  for (const c of a.entrada?.cuartos ?? []) fotos.push(...c.fotos)
+  for (const c of a.salida?.cuartos ?? []) fotos.push(...c.fotos)
+  const real = fotos.find(f => f.src && f.origen !== 'ejemplo')
+  return real?.src ?? null
+}
+
+function Ico({ d }: { d: string[] }) {
+  return <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">{d.map(p => <path key={p} d={p} />)}</svg>
+}
+
+function Escena() {
+  return <div className="casa-escena" aria-hidden="true">
+    <img className="casa-escena__paisaje" src={PAISAJE} alt="" />
+    <img className="casa-escena__hojas" src={HOJAS} alt="" />
+    <img className="casa-escena__arbol" src={ARBOL} alt="" />
+    <img className="casa-escena__casa" src={CASA} alt="" />
+  </div>
+}
+
+function Saludo({ nombre }: { nombre: string }) {
+  return <header className="casa-saludo">
+    <div className="casa-saludo__texto">
+      <p className="casa-overline">Tu espacio</p>
+      <h1 className="casa-hola">Hola, {nombre} <span aria-hidden="true">👋</span></h1>
+      <p className="casa-saludo__sub">Todo en orden por aquí.</p>
+    </div>
+    <Escena />
+  </header>
+}
+
+function Pasos({ a }: { a: Alquiler }) {
   const i = etapaDe(a)
-  return <div className="ini-barra res-barras" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={n < i ? 'hecho' : n === i ? 'actual' : ''} />)}</div>
+  return <div className="casa-pasos">
+    <p className="casa-pasos__txt"><span>Paso {i + 1} de {ETAPAS.length}</span><span className="casa-pasos__etapa">{ETAPAS[i]}</span></p>
+    <div className="ini-barra" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={n < i ? 'hecho' : n === i ? 'actual' : ''} />)}</div>
+  </div>
+}
+
+function Tarjeta({ a, email }: { a: Alquiler; email: string }) {
+  const rol = rolDe(a, email)
+  const foto = fotoReal(a)
+  return <article className="glass casa-card">
+    <div className="casa-card__top">
+      <img className="casa-card__foto" src={foto ?? EDIFICIO} alt="" />
+      <div className="casa-card__datos">
+        <div className="casa-card__titulo-fila">
+          <h3 className="casa-card__titulo">{a.direccion}</h3>
+          <span className={'casa-estado ' + claseEstado(a.estado)}><i />{ETIQUETA_ESTADO[a.estado]}</span>
+        </div>
+        <p className="casa-meta"><Ico d={ICO_PERSONA} />{NOMBRE_ROL[rol]}</p>
+        <p className="casa-meta casa-fechas"><Ico d={ICO_CAL} /><span>{fecha(a.inicio)} – {fecha(a.fin)}</span></p>
+      </div>
+    </div>
+    <div className="casa-deposito">
+      <div>
+        <p className="casa-deposito__et">Depósito protegido</p>
+        <p className="casa-monto">{usd(a.monto)}</p>
+      </div>
+      <span className="casa-escudo" aria-hidden="true"><Ico d={ICO_ESCUDO} /></span>
+    </div>
+    <Pasos a={a} />
+    <a className="boton boton--primario boton--ancho" href={'#/alquiler/' + a.id}>Continuar proceso <Ico d={ICO_CHEV} /></a>
+  </article>
+}
+
+function Nuevo({ ancho = false }: { ancho?: boolean }) {
+  return <a className={'boton boton--secundario casa-nuevo' + (ancho ? ' boton--ancho' : '')} href="#/crear" data-recorrido="nuevo">+ Nuevo alquiler</a>
+}
+
+function Campana({ sinLeer }: { sinLeer: boolean }) {
+  return <a href="#/avisos" className="casa-campana" aria-label="Avisos">
+    <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9" /><path d="M10 18a2 2 0 0 0 4 0" /></svg>
+    {sinLeer && <span className="casa-campana__punto" />}
+    {sinLeer && <span className="sr">Hay avisos sin leer.</span>}
+  </a>
+}
+
+function ComoFunciona() {
+  return <a className="casa-como" href="#/ayuda">
+    <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4z" /></svg>
+    Cómo funciona
+  </a>
+}
+
+function Vacio() {
+  return <section className="casa-vacio">
+    <Escena />
+    <div className="casa-vacio__texto">
+      <h1>Sin alquileres aún</h1>
+      <p>Inicia tu primer alquiler y gestiona todo de forma segura.</p>
+      <div className="casa-vacio__acciones">
+        <a className="boton boton--primario boton--ancho" href="#/crear" data-recorrido="nuevo">+ Nuevo alquiler</a>
+        <ComoFunciona />
+      </div>
+    </div>
+  </section>
 }
 
 export function ResumenInicio({ u }: { u: Usuario }) {
   const estado = useEstadoAlquileres()
-  const lista = visiblesDe(useAlquileres(), u.email)
-  if (estado === 'cargando') return <main id="contenido" tabIndex={-1} className="cont res"><h1>Inicio</h1><p className="res-sub">Tus depósitos y próximos pasos</p><p role="status">Cargando tus alquileres…</p></main>
-  if (estado === 'error') return <main id="contenido" tabIndex={-1} className="cont res"><h1>Inicio</h1><p className="res-sub">Tus depósitos y próximos pasos</p><p role="alert">No se pudieron leer los alquileres. No hay importes para mostrar.</p></main>
-  const saldos = saldosDe(lista)
-  const tareas = tareasPropias(lista, u.email)
-  const espera = esperas(lista, u.email)
-  const curso = enCursoSinTarea(lista, u.email)
-  const vacio = lista.length === 0
-  const tarea = tareas[0]
-  return <main id="contenido" tabIndex={-1} className="cont res">
-    <h1>Inicio</h1>
-    <p className="res-sub">Tus depósitos y próximos pasos</p>
-    <section className="glass res-saldos" aria-label="Depósitos">
-      <p className="res-saldos__et">Importe previsto</p>
-      <p className="res-saldos__n">{usd(saldos.previsto)}</p>
-      <div className="res-saldos__par">
-        <p className="res-caja res-caja--custodia"><span>En custodia</span><strong>{usd(saldos.custodia)}</strong></p>
-        <p className="res-caja res-caja--pendiente"><span>Por depositar</span><strong>{usd(saldos.porDepositar)}</strong></p>
+  const todos = useAlquileres()
+  const lista = visiblesDe(todos, u.email)
+  const sinLeer = avisosVisibles(todos, u.email).some(x => !x.aviso.abierto)
+  const listo = estado === 'listo'
+  const vacio = listo && lista.length === 0
+  const a = listo && !vacio ? destacado(lista, u.email) : null
+  return <main id="contenido" tabIndex={-1} className="cont casa">
+    <Campana sinLeer={sinLeer} />
+    {!vacio && <Saludo nombre={u.nombre} />}
+    {estado === 'cargando' && <p role="status">Cargando tus alquileres…</p>}
+    {estado === 'error' && <p role="alert">No se pudieron leer los alquileres. No hay importes para mostrar.</p>}
+    {vacio && <Vacio />}
+    {a && <div className="casa-bloque">
+      <div className="casa-sec">
+        <h2>Mis alquileres</h2>
+        <a className="casa-todos" href="#/alquileres">Ver todos <Ico d={ICO_CHEV} /></a>
       </div>
-      {saldos.porDepositar > 0 && <p className="res-saldos__nota">Lo pendiente aún no está en custodia.</p>}
-      {saldos.sinImporte > 0 && <p className="res-saldos__nota">Falta el importe de {saldos.sinImporte === 1 ? 'un alquiler' : `${saldos.sinImporte} alquileres`}. No entra en estas sumas.</p>}
-    </section>
-    {vacio ? <Vacio /> : tarea ? <Siguiente tarea={tarea} n={tareas.length} email={u.email} /> : <Actividad espera={espera} curso={curso} email={u.email} />}
-    {!vacio && <a className="boton boton--secundario boton--ancho res-lista" href="#/alquileres">Ver mis alquileres</a>}
-    <p className="res-pie">{vacio ? 'El listado estará en Alquileres.' : 'El listado completo está en Alquileres.'}</p>
+      <div className="casa-cuerpo">
+        <Tarjeta a={a} email={u.email} />
+        <aside className="casa-lado">
+          <Nuevo ancho />
+          <ComoFunciona />
+        </aside>
+      </div>
+    </div>}
   </main>
-}
-
-function Vacio() {
-  return <section className="res-bloque">
-    <h2>Para empezar</h2>
-    <div className="glass res-tarjeta">
-      <h3>Todavía sin alquileres</h3>
-      <p>Cuando crees uno o aceptes una invitación, aquí verás tus depósitos y próximos pasos.</p>
-      <a className="boton boton--primario boton--ancho" href="#/crear" data-recorrido="nuevo">Crear alquiler</a>
-    </div>
-  </section>
-}
-
-function Siguiente({ tarea, n, email }: { tarea: Alquiler; n: number; email: string }) {
-  const rol = rolDe(tarea, email)
-  const copia = copiaTarea(tarea, email)
-  const { titulo } = lugarContrato(tarea.direccion)
-  return <section className="res-bloque">
-    <div className="res-bloque__cab"><h2>Tu siguiente paso</h2><span className="chip chip--coral">{textoPendientes(n)}</span></div>
-    <div className="glass res-tarjeta">
-      <div className="res-tarjeta__top"><span className={'chip ' + (rol === 'dueno' ? 'chip--dueno' : 'chip--inquilino')}>{NOMBRE_ROL[rol]}</span><span className="res-paso">{pasoTexto(tarea)}</span></div>
-      <h3>{titulo}</h3>
-      <p className="res-titulo">{copia.titulo}</p>
-      <p>{copia.texto}</p>
-      <Barras a={tarea} />
-      <a className="boton boton--primario boton--ancho" href={'#/alquiler/' + tarea.id}>{copia.boton}</a>
-    </div>
-  </section>
-}
-
-function Actividad({ espera, curso, email }: { espera: Alquiler[]; curso: number; email: string }) {
-  const linea = textoEnCurso(curso)
-  return <section className="res-bloque">
-    <div className="res-bloque__cab"><h2>Tu actividad</h2><span className="chip chip--neutro">Sin tareas</span></div>
-    <div className="glass res-tarjeta">
-      <h3>Estás al día</h3>
-      <p>No tienes acciones pendientes para ti.</p>
-      {espera.length > 0 && <ul className="res-esperas">{espera.map(a => <Espera key={a.id} a={a} email={email} />)}</ul>}
-      {linea && <p className="res-curso">{linea}</p>}
-    </div>
-  </section>
-}
-
-function Espera({ a, email }: { a: Alquiler; email: string }) {
-  const rol: Rol = rolDe(a, email)
-  const { titulo } = lugarContrato(a.direccion)
-  return <li>
-    <span className="res-casa" aria-hidden="true"><svg className="ico" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7" /><path d="M6 10v9h12v-9" /></svg></span>
-    <span><strong>{titulo} · {NOMBRE_ROL[rol]}</strong><span>{textoEspera(a, email)}</span></span>
-  </li>
 }
