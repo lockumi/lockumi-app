@@ -790,12 +790,14 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 }
 @media (min-width:768px){
   .app-cuerpo:has(.casa)>.barra{max-width:none;width:100%;background:var(--fondo);padding:14px clamp(20px,2.4vw,40px)}
-  .app-cuerpo:has(.casa) .logo img{height:clamp(42px,3.4vw,52px)}
-  .app-cuerpo:has(.casa) .logo{font-size:clamp(20px,1.5vw,24px);gap:10px}
-  .app-cuerpo:has(.casa) .boton-icono,.app-cuerpo:has(.casa) .casa-campana{width:clamp(44px,3.4vw,52px);height:clamp(44px,3.4vw,52px);background:var(--tarjeta);border:1px solid var(--borde)}
-  .app-sesion:has(.casa) .nav-app--cabecera a{font-size:clamp(14px,1.15vw,16px);line-height:20px;min-height:44px;padding:8px 16px;gap:8px}
-  .app-sesion:has(.casa) .nav-app--cabecera .ico{width:20px;height:20px}
-  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:999px;padding:8px 18px}
+  /* Medidas del PNG (1672 px de ancho) llevadas a 1440: valor × 1440/1672. A 1280 bajan con el ancho. */
+  .app-cuerpo:has(.casa) .logo img{height:calc(46.51 * 100vw / 1440)}
+  .app-cuerpo:has(.casa) .logo{font-size:calc(27.2 * 100vw / 1440);gap:calc(15.5 * 100vw / 1440)}
+  .app-cuerpo:has(.casa) .boton-icono,.app-cuerpo:has(.casa) .casa-campana{width:calc(46.51 * 100vw / 1440);height:calc(46.51 * 100vw / 1440);background:var(--tarjeta);border:1px solid var(--borde)}
+  .app-cuerpo:has(.casa) .boton-icono .ico,.app-cuerpo:has(.casa) .casa-campana .ico{width:calc(19.5 * 100vw / 1440);height:calc(19.5 * 100vw / 1440)}
+  .app-sesion:has(.casa) .nav-app--cabecera a{font-size:calc(14.1 * 100vw / 1440);line-height:1;min-height:0;height:calc(41.34 * 100vw / 1440);padding:0 calc(16 * 100vw / 1440);gap:calc(8 * 100vw / 1440)}
+  .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * 100vw / 1440);height:calc(16.5 * 100vw / 1440)}
+  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:999px;padding:0 calc(24.25 * 100vw / 1440)}
   .casa-vacio{display:none}
   .app-cuerpo:has(.casa--vacio){overflow:hidden}
   .casa.casa--vacio{max-width:none;width:100%;flex:1;justify-content:center;padding-top:0;padding-bottom:0;background:var(--fondo)}
@@ -806,19 +808,21 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa-hero .casa-escena{width:min(33vw,480px);height:min(28vh,270px);margin:0}
   .casa-hero .casa-escena__casa{width:86%;max-height:100%}
   .casa-hero .casa-escena__arbol{width:50%}
-  .casa-hero h1{margin:0;max-width:20em;font:800 clamp(34px,3.8vw,56px)/1.12 var(--f-titulo);color:var(--cafe);text-wrap:wrap}
-  .casa-hero p{margin:0;max-width:46ch;color:var(--cafe-suave);font:500 clamp(17px,1.35vw,20px)/1.4 var(--f-texto)}
-  .casa-hero__acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-top:4px}
-  .casa-hero__acciones .boton{min-width:clamp(230px,24vw,360px);min-height:clamp(60px,7.2vh,72px);padding:0 32px;font-size:clamp(16px,1.2vw,18px)}
+  .casa-hero h1{margin:0;max-width:none;font:800 calc(42.49 * 100vw / 1440)/1.15 var(--f-titulo);color:var(--cafe);text-wrap:wrap;white-space:nowrap}
+  .casa-hero p{margin:0;max-width:none;color:var(--cafe-suave);font:500 calc(20.05 * 100vw / 1440)/1.4 var(--f-texto)}
+  .casa-hero__acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:calc(16 * 100vw / 1440);margin-top:4px}
+  .casa-hero__acciones .boton{width:calc(296.27 * 100vw / 1440);min-width:0;height:calc(56.84 * 100vw / 1440);min-height:0;padding:0 calc(20 * 100vw / 1440);font-size:calc(18.88 * 100vw / 1440);line-height:1}
+  .casa-hero__acciones .boton .ico{width:calc(27.56 * 100vw / 1440);height:calc(27.56 * 100vw / 1440)}
   .casa-invitar{background:transparent;color:var(--cafe);border:1.5px solid var(--borde);box-shadow:none}
   .casa-invitar[disabled]{opacity:1;cursor:default}
   .casa-hero__sep{display:flex;align-items:center;gap:16px;width:min(560px,62%);margin-top:clamp(2px,1vh,10px)}
   .casa-hero__sep span{flex:1;height:1px;background:var(--borde)}
-  .casa-hero__sep img{width:clamp(30px,2.2vw,36px);height:clamp(30px,2.2vw,36px);object-fit:contain}
-  .casa-hero__beneficios{display:flex;flex-wrap:wrap;justify-content:center;gap:0;margin:0;padding:0;list-style:none;color:var(--cafe-suave);font:600 clamp(14px,1.15vw,17px)/22px var(--f-texto)}
-  .casa-hero__beneficios li{display:inline-flex;align-items:center;gap:8px;padding:0 18px}
-  .casa-hero__beneficios li+li{border-left:1px solid var(--borde)}
-  .casa-hero__beneficios .ico{width:20px;height:20px;color:var(--accion)}
+  .casa-hero__sep img{width:calc(33.59 * 100vw / 1440);height:calc(30.14 * 100vw / 1440);object-fit:contain}
+  .casa-hero__beneficios{display:flex;flex-wrap:wrap;justify-content:center;gap:0;margin:0;padding:0;list-style:none;color:var(--cafe-suave);font:600 calc(14 * 100vw / 1440)/1.2 var(--f-texto)}
+  .casa-hero__beneficios li{display:inline-flex;align-items:center;gap:calc(8 * 100vw / 1440);padding:0 calc(18 * 100vw / 1440)}
+  .casa-hero__beneficios li+li{border:0}
+  .casa-hero__beneficios li+li::before{content:"";width:1px;height:calc(11.2 * 100vw / 1440);background:var(--borde);align-self:center}
+  .casa-hero__beneficios .ico{width:calc(34.3 * 100vw / 1440);height:calc(34.3 * 100vw / 1440);color:var(--accion)}
   .casa-hoja{position:fixed;bottom:-4vh;width:min(16vw,210px);height:min(20vh,180px);object-fit:cover;pointer-events:none;user-select:none;z-index:1}
   .casa-hoja--izq{left:-3vw;object-position:left bottom}
   .casa-hoja--der{right:-3vw;object-position:right bottom;transform:scaleX(-1)}
@@ -835,10 +839,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa-cuerpo .casa-como{display:inline-flex;justify-content:center}
 }
 @media (min-width:768px) and (max-width:1100px){
-  .casa-hero .casa-escena{width:min(56vw,460px);height:min(34vh,300px)}
-  .casa-hero h1{font-size:clamp(32px,4.2vw,44px)}
-  .casa-hero__acciones .boton{min-width:min(250px,42vw);min-height:64px}
-  .casa-hoja{width:min(18vw,170px);height:min(16vh,140px)}
+  .casa-hero .casa-escena{width:33vw;height:calc(33vw * 269 / 475)}
 }
 
 /* ===== Tus alquileres: un color por estado =====
@@ -992,7 +993,7 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
   .app-sesion:has(.casa) .nav-app--pie{display:none}
   .app-cuerpo:has(.casa)>.barra{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
   .app-sesion:has(.casa) .nav-app--cabecera{display:flex;position:static;width:auto;margin:0;border:0;background:transparent;justify-content:center;gap:4px;padding:0}
-  .app-sesion:has(.casa) .nav-app--cabecera a{flex:none;flex-direction:row;gap:8px;padding:8px 16px}
+  .app-sesion:has(.casa) .nav-app--cabecera a{flex:none;flex-direction:row;gap:calc(8 * 100vw / 1440);height:calc(41.34 * 100vw / 1440);min-height:0;padding:0 calc(16 * 100vw / 1440)}
 }
 .ini{flex:1 0 auto;display:flex;flex-direction:column}
 .ini-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}
