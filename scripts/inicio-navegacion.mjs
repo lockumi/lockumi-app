@@ -111,16 +111,26 @@ for (const vp of anchos) {
   }
 
   await preparar(page, [])
-  const vacio = await page.locator('h1').innerText()
-  fila(vp.nombre, 'vacio', 'estado vacío', 'Sin alquileres aún', vacio, vacio.includes('Sin alquileres'))
+  const tituloVacio = vp.w >= 960 ? 'Tu próximo hogar empieza aquí.' : 'Sin alquileres aún'
+  const vacio = await page.locator('h1').filter({ visible: true }).innerText()
+  fila(vp.nombre, 'vacio', 'estado vacío', tituloVacio, vacio, vacio.includes(tituloVacio))
   r = await clic(page, page.getByRole('link', { name: 'Nuevo alquiler' }), '/crear')
   fila(vp.nombre, 'vacio', 'Nuevo alquiler', '/crear', r.got, r.got === '/crear')
   await page.goto(base + '/#/')
-  await page.waitForSelector('text=Sin alquileres')
-  r = await clic(page, page.getByRole('link', { name: 'Cómo funciona' }), '/ayuda')
-  fila(vp.nombre, 'vacio', 'Cómo funciona', '/ayuda', r.got, r.got === '/ayuda')
-  await page.goto(base + '/#/')
-  await page.waitForSelector('text=Sin alquileres')
+  await page.waitForSelector('main.casa--vacio')
+  if (vp.w >= 960) {
+    const inv = page.getByRole('button', { name: 'Aceptar invitación' })
+    const dis = await inv.isDisabled()
+    const antes = ruta(page)
+    fila(vp.nombre, 'vacio', 'Aceptar invitación', 'sin ruta: no navega', dis && antes === '/' ? 'deshabilitado, sigue en /' : ruta(page), dis && antes === '/')
+    const cierre = await page.locator('.aviso-red button, .aviso-red [aria-label*="errar"], .aviso-red [aria-label*="Cerrar"]').count()
+    fila(vp.nombre, 'vacio', 'X de la franja', 'no existe en la app', cierre === 0 ? 'no hay botón de cerrar' : 'hay botón', cierre === 0)
+  } else {
+    r = await clic(page, page.getByRole('link', { name: 'Cómo funciona' }), '/ayuda')
+    fila(vp.nombre, 'vacio', 'Cómo funciona', '/ayuda', r.got, r.got === '/ayuda')
+    await page.goto(base + '/#/')
+    await page.waitForSelector('main.casa--vacio')
+  }
   r = await clic(page, campana, '/avisos')
   fila(vp.nombre, 'vacio', 'Campana', '/avisos', r.got, r.got === '/avisos')
   await page.close()

@@ -20,6 +20,7 @@ export function Barra({ onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r
     <a href="#/" className="logo" aria-label="Lockumi, ir a Inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
+      <span className="barra-campana" />
       <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a2.9 2.9 0 0 1 5.6 1c0 2-2.7 2.2-2.7 4" /><path d="M12 17h.01" /></svg>
       </a>

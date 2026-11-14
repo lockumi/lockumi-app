@@ -722,11 +722,14 @@ html.sin-scroll{overflow:hidden}
 
 /* Inicio (solo esta pantalla). Paleta ya definida: teal del botón y de la barra, crema, chip suave. */
 .casa.cont{position:relative;max-width:1180px;display:flex;flex-direction:column;gap:16px;padding-top:8px;padding-bottom:28px}
+.app-cuerpo:has(.casa) .pie-legal{display:none}
 .casa-overline{margin:0;font:700 12px/16px var(--f-texto);letter-spacing:.08em;text-transform:uppercase;color:var(--accion)}
-.casa-hola{margin:2px 0 0;font:800 clamp(28px,6vw,40px)/1.12 var(--f-titulo);color:var(--cafe)}
-.casa-saludo{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(112px,38%);gap:8px;align-items:center}
+.casa-hola{margin:2px 0 0;font:800 clamp(23px,6vw,32px)/1.15 var(--f-titulo);color:var(--cafe);text-wrap:wrap}
+.casa-saludo{position:relative;display:block;min-height:180px}
+.casa-saludo__texto{position:relative;z-index:1;max-width:74%}
+.casa-saludo .casa-escena{position:absolute;right:0;top:0;width:46%;height:184px}
 .casa-saludo__sub{margin:6px 0 0;color:var(--cafe-suave);font:500 16px/22px var(--f-texto)}
-.casa-escena{position:relative;height:148px;min-width:0;overflow:hidden}
+.casa-escena{position:relative;height:168px;min-width:0;overflow:hidden}
 .casa-escena img{position:absolute;object-fit:contain;pointer-events:none;user-select:none}
 .casa-escena__paisaje{left:6%;right:4%;top:22%;width:90%;height:58%;object-fit:cover;opacity:.45;border-radius:28px}
 .casa-escena__hojas{width:42%;right:0;top:0;opacity:.8}
@@ -737,6 +740,7 @@ html.sin-scroll{overflow:hidden}
 .casa-todos{display:inline-flex;align-items:center;gap:2px;min-height:44px;color:var(--cafe-suave);font:600 15px/20px var(--f-texto);text-decoration:none;white-space:nowrap}
 .casa-todos .ico{width:16px;height:16px}
 .casa-cuerpo{display:flex;flex-direction:column;gap:12px}
+.casa-col{display:flex;flex-direction:column;gap:12px;min-width:0}
 .casa-card{display:grid;gap:14px;padding:16px}
 .casa-card__top{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start}
 .casa-card__foto{width:72px;height:72px;border-radius:16px;object-fit:cover;background:var(--mint)}
@@ -762,29 +766,54 @@ html.sin-scroll{overflow:hidden}
 .casa-como{display:none}
 .casa-vacio{display:grid;justify-items:center;text-align:center;gap:8px;padding:12px 0 4px}
 .casa-vacio .casa-escena{width:min(100%,280px);height:210px}
-.casa-vacio h1{margin:8px 0 0;font:800 clamp(26px,6vw,34px)/1.15 var(--f-titulo)}
+.casa-vacio h1{margin:8px 0 0;font:800 clamp(26px,6vw,34px)/1.15 var(--f-titulo);text-wrap:wrap}
 .casa-vacio p{margin:0;max-width:36ch;color:var(--cafe-suave);font:500 16px/24px var(--f-texto)}
 .casa-vacio__acciones{display:grid;gap:4px;width:100%;margin-top:8px}
 .casa-vacio .casa-como{display:inline-flex}
 .casa-como{align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 8px;color:var(--accion);font:700 16px/20px var(--f-texto);text-decoration:none}
-.casa-campana{position:absolute;z-index:36;top:-52px;right:0;width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:var(--tarjeta);color:var(--cafe);border:1px solid var(--borde);box-shadow:0 4px 12px rgba(41,51,50,.06);text-decoration:none}
+.casa-campana{position:relative;z-index:1;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:var(--tarjeta);color:var(--cafe);border:1px solid var(--borde);box-shadow:0 4px 12px rgba(41,51,50,.06);text-decoration:none}
+.barra-campana{display:inline-flex;flex:none}
+.barra-campana:empty{display:none}
 .casa-campana .ico{width:22px;height:22px}
 .casa-campana__punto{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--accion);box-shadow:0 0 0 2px var(--tarjeta)}
 @media (max-width:959px){
   .app-cuerpo:has(.casa) .barra__der>.boton-icono{display:none}
-  .app-sesion:has(.casa) .nav-app--pie{margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 8px 24px rgba(41,51,50,.06);padding:6px 8px}
-  .app-sesion:has(.casa) .nav-app--pie a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:20px}
-}
-@media (max-width:420px){
-  .casa-saludo{grid-template-columns:minmax(0,1fr) 104px;gap:4px}
-  .casa-hola{font-size:22px;line-height:1.2}
-  .casa-escena{height:116px}
+  .nav-app--pie{margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 8px 24px rgba(41,51,50,.06);padding:6px 8px}
+  .nav-app--pie a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:20px}
+  .casa-hero{display:none}
 }
 @media (min-width:960px){
-  .casa-campana{position:fixed;top:16px;right:calc(max(0px, (100vw - 1140px) / 2) + 114px);left:auto}
+  .app-cuerpo:has(.casa)>.barra{max-width:none;background:var(--fondo)}
+  .app-cuerpo:has(.casa) .boton-icono{background:var(--tarjeta);border:1px solid var(--borde)}
+  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:999px;padding:6px 14px}
+  .casa-vacio{display:none}
+  .casa.casa--vacio{max-width:none;flex:1;justify-content:center;padding-top:12px;padding-bottom:48px}
+  .casa.casa--vacio::before,.casa.casa--vacio::after{content:"";position:fixed;bottom:-80px;width:46vw;height:220px;background:var(--mint);opacity:.55;border-radius:50%;pointer-events:none;z-index:0}
+  .casa.casa--vacio::before{left:-12vw}
+  .casa.casa--vacio::after{right:-12vw}
+  .casa-hero{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:22px;width:min(820px,100%);margin:0 auto}
+  .casa-hero .casa-escena{width:min(100%,480px);height:280px;margin:0}
+  .casa-hero h1{margin:10px 0 0;font:800 clamp(36px,4.2vw,52px)/1.15 var(--f-titulo);color:var(--cafe);text-wrap:wrap}
+  .casa-hero p{margin:0;max-width:42ch;color:var(--cafe-suave);font:500 18px/28px var(--f-texto)}
+  .casa-hero__acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:6px}
+  .casa-hero__acciones .boton{min-width:220px;min-height:56px;padding:0 28px}
+  .casa-invitar{background:transparent;color:var(--cafe);border:1.5px solid var(--borde);box-shadow:none}
+  .casa-invitar[disabled]{opacity:1;cursor:default}
+  .casa-hero__sep{display:flex;align-items:center;gap:16px;width:min(460px,100%);margin-top:8px}
+  .casa-hero__sep span{flex:1;height:1px;background:var(--borde)}
+  .casa-hero__sep img{width:28px;height:28px;object-fit:contain}
+  .casa-hero__beneficios{display:flex;flex-wrap:wrap;justify-content:center;gap:0;margin:0;padding:0;list-style:none;color:var(--cafe-suave);font:600 15px/20px var(--f-texto)}
+  .casa-hero__beneficios li{display:inline-flex;align-items:center;gap:8px;padding:0 18px}
+  .casa-hero__beneficios li+li{border-left:1px solid var(--borde)}
+  .casa-hero__beneficios .ico{width:18px;height:18px;color:var(--accion)}
+  .casa-hoja{position:fixed;bottom:0;width:min(24vw,260px);pointer-events:none;user-select:none;z-index:1}
+  .casa-hoja--izq{left:0}
+  .casa-hoja--der{right:0;transform:scaleX(-1)}
 }
 @media (min-width:768px){
-  .casa-saludo{grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:24px;min-height:200px}
+  .casa-saludo{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:24px;min-height:200px}
+  .casa-saludo__texto{max-width:none}
+  .casa-saludo .casa-escena{position:relative;right:auto;top:auto;width:auto;height:220px}
   .casa-escena{height:220px}
   .casa-hola{font-size:40px}
   .casa-cuerpo{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(240px,.72fr);gap:20px;align-items:start}
@@ -795,9 +824,6 @@ html.sin-scroll{overflow:hidden}
   .casa-monto{font-size:24px}
   .casa-lado{position:sticky;top:16px;padding:20px;border:1px solid var(--borde);border-radius:28px;background:var(--tarjeta);box-shadow:0 1px 2px rgba(41,51,50,.04)}
   .casa-cuerpo .casa-como{display:inline-flex;justify-content:center}
-  .casa-vacio{grid-template-columns:minmax(240px,.85fr) minmax(280px,1fr);justify-items:stretch;text-align:left;align-items:center;gap:32px;padding:28px 8px 8px}
-  .casa-vacio .casa-escena{width:100%;height:280px}
-  .casa-vacio__acciones{width:min(100%,420px);justify-items:stretch}
 }
 @media (min-width:1280px){
   .casa-saludo{min-height:240px}

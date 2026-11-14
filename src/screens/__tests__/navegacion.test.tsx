@@ -34,7 +34,9 @@ describe('navegación de perfil, avisos y ayuda', () => {
   it('Inicio y Alquileres abren rutas distintas y el listado sigue siendo el de siempre', () => {
     const html = renderToStaticMarkup(<Navegacion r="/" />)
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => m[1])
-    expect(hrefs).toEqual(['#/', '#/avisos', '#/alquileres', '#/perfil'])
+    expect(hrefs).toEqual(['#/', '#/alquileres', '#/avisos', '#/perfil'])
+    const cab = renderToStaticMarkup(<Navegacion r="/" className="nav-app--cabecera" />)
+    expect([...cab.matchAll(/href="([^"]+)"/g)].map(m => m[1])).toEqual(['#/', '#/avisos', '#/alquileres', '#/perfil'])
     const enLista = renderToStaticMarkup(<Navegacion r="/alquileres" />)
     expect(enLista).toContain('href="#/alquileres" aria-current="page"')
     expect(enLista).not.toContain('href="#/" aria-current="page"')
