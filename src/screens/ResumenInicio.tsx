@@ -14,6 +14,7 @@ import { avisosVisibles } from './avisos-datos'
 const CASA = '/img/katherine/01-casa-simple-arbol.png'
 const ARBOL = '/img/katherine/04-arbol.png'
 const HOJAS = '/img/katherine/11-hojas.png'
+const HOJAS_ESCENA = '/img/katherine/11-hojas-sin-derecha.png'
 const PAISAJE = '/img/katherine/12-paisaje.png'
 const EDIFICIO = '/img/katherine/02-edificio-moderno.png'
 const ICO_CAL = ['M4 5h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M8 3v4', 'M16 3v4', 'M3 10h18']
@@ -53,7 +54,7 @@ function Ico({ d }: { d: string[] }) {
 function Escena() {
   return <div className="casa-escena" aria-hidden="true">
     <img className="casa-escena__paisaje" src={PAISAJE} alt="" />
-    <img className="casa-escena__hojas" src={HOJAS} alt="" />
+    <img className="casa-escena__hojas" src={HOJAS_ESCENA} alt="" />
     <img className="casa-escena__arbol" src={ARBOL} alt="" />
     <img className="casa-escena__casa" src={CASA} alt="" />
   </div>

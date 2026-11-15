@@ -729,9 +729,9 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .casa-hola{margin:2px 0 0;font:800 clamp(17px,4.5vw,21px)/1.2 var(--f-titulo);color:var(--cafe);text-wrap:wrap}
 .casa-saludo{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,44%);gap:2px;align-items:center}
 .casa-saludo__texto{min-width:0}
-.casa-saludo .casa-escena{position:relative;width:100%;height:auto;margin-right:0;overflow:visible;padding:4px}
+.casa-saludo .casa-escena{position:relative;width:100%;height:168px;margin-right:-6px}
 .casa-saludo .casa-escena__paisaje,.casa-saludo .casa-escena__hojas,.casa-saludo .casa-escena__arbol{display:none}
-.casa-saludo .casa-escena__casa{position:static;display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center}
+.casa-saludo .casa-escena__casa{top:0;right:0;bottom:0;left:0;width:100%;height:100%;max-height:none;object-fit:contain;object-position:center right}
 .casa-saludo__sub{margin:6px 0 0;color:var(--cafe-suave);font:500 14px/20px var(--f-texto)}
 .casa-escena{position:relative;height:168px;min-width:0;overflow:hidden}
 .casa-escena img{position:absolute;object-fit:contain;pointer-events:none;user-select:none}
@@ -769,9 +769,11 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .casa-nuevo{width:100%}
 .casa-como{display:none}
 .casa-vacio{display:grid;justify-items:center;text-align:center;gap:8px;padding:12px 0 4px}
-.casa-vacio .casa-escena{width:min(100%,280px);height:auto;overflow:visible;padding:4px}
-.casa-vacio .casa-escena__paisaje,.casa-vacio .casa-escena__hojas,.casa-vacio .casa-escena__arbol{display:none}
-.casa-vacio .casa-escena__casa{position:static;display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center}
+.casa-vacio .casa-escena{width:100%;aspect-ratio:1.45;height:auto;overflow:visible}
+.casa-vacio .casa-escena__hojas{display:none}
+.casa-vacio .casa-escena__arbol{left:4%;bottom:4%;width:46%;height:auto;max-height:none}
+.casa-vacio .casa-escena__casa{right:4%;bottom:4%;width:72%;height:auto;max-height:none;object-fit:contain}
+.casa-vacio .casa-escena__paisaje{left:8%;width:84%;top:18%;height:50%}
 .casa-vacio h1{margin:8px 0 0;font:800 clamp(21px,5vw,28px)/1.2 var(--f-titulo);text-wrap:wrap}
 .casa-vacio p{margin:0;max-width:36ch;color:var(--cafe-suave);font:500 14px/20px var(--f-texto)}
 .casa-vacio__acciones{display:grid;justify-items:center;gap:4px;width:100%;margin-top:8px}
@@ -808,9 +810,12 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa.casa--vacio::before{left:-14vw}
   .casa.casa--vacio::after{right:-14vw}
   .casa-hero{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(10px,1.5vh,18px);width:min(1040px,94%);margin:0 auto}
-  .casa-hero .casa-escena{width:min(33vw,480px);height:auto;margin:0;overflow:visible;padding:6px}
-  .casa-hero .casa-escena__paisaje,.casa-hero .casa-escena__hojas,.casa-hero .casa-escena__arbol{display:none}
-  .casa-hero .casa-escena__casa{position:static;display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center}
+  /* 1,05 × el bloque de botones de v7: (296,27×2+16)×0,86. Cabe entre 1,0 y 1,2. */
+  .casa-hero .casa-escena{width:calc(549.511 * 100vw / 1440);aspect-ratio:1.45;height:auto;margin:0;overflow:visible}
+  .casa-hero .casa-escena__hojas{display:none}
+  .casa-hero .casa-escena__arbol{left:4%;bottom:4%;width:46%;height:auto;max-height:none}
+  .casa-hero .casa-escena__casa{right:4%;bottom:4%;width:72%;height:auto;max-height:none;object-fit:contain}
+  .casa-hero .casa-escena__paisaje{left:8%;width:84%;top:18%;height:50%}
   .casa-hero h1{margin:0;max-width:none;font:800 calc(42.49 * 0.83 * 100vw / 1440)/1.15 var(--f-titulo);color:var(--cafe);text-wrap:wrap;white-space:nowrap}
   .casa-hero p{margin:0;max-width:none;color:var(--cafe-suave);font:500 calc(20.05 * 0.83 * 100vw / 1440)/1.4 var(--f-texto)}
   .casa-hero__acciones{display:flex;flex-wrap:wrap;justify-content:center;gap:calc(16 * 0.86 * 100vw / 1440);margin-top:4px}
@@ -830,7 +835,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa-hoja--izq{left:-3vw;object-position:left bottom}
   .casa-hoja--der{right:-3vw;object-position:right bottom;transform:scaleX(-1)}
   .casa-saludo{grid-template-columns:minmax(0,1fr) minmax(180px,18vw);gap:16px;align-items:center}
-  .casa-saludo .casa-escena{height:auto;overflow:visible}
+  .casa-saludo .casa-escena{height:min(230px,18vw)}
   .casa-hola{font-size:clamp(23px,2.16vw,33px)}
   .casa-cuerpo{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(220px,.55fr);gap:16px;align-items:start}
   .casa-card{padding:18px}
@@ -851,7 +856,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .app-sesion:has(.casa) .nav-app--cabecera a{font-size:14px;line-height:1;height:calc(41.34 * 1280 / 1440 * 1px);padding:0 calc(16 * 1280 / 1440 * 1px);gap:calc(8 * 1280 / 1440 * 1px)}
   .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * 1280 / 1440 * 1px);height:calc(16.5 * 1280 / 1440 * 1px)}
   .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{padding:0 calc(24.25 * 1280 / 1440 * 1px)}
-  .casa-hero .casa-escena{width:calc(33 * 1280 / 100 * 1px);height:auto;overflow:visible}
+  .casa-hero .casa-escena{width:calc(549.511 * 1280 / 1440 * 1px);aspect-ratio:1.45;height:auto;overflow:visible}
   .casa-hero h1{font-size:calc(42.49 * 0.83 * 1280 / 1440 * 1px)}
   .casa-hero p{font-size:calc(20.05 * 0.83 * 1280 / 1440 * 1px)}
   .casa-hero__acciones{flex-wrap:nowrap;gap:calc(16 * 0.86 * 1280 / 1440 * 1px)}
