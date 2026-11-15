@@ -769,7 +769,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .casa-nuevo{width:100%}
 .casa-como{display:none}
 .casa-vacio{display:grid;justify-items:center;text-align:center;gap:8px;padding:12px 0 4px}
-.casa-vacio .casa-escena{width:100%;aspect-ratio:1.45;height:auto;overflow:visible}
+.casa-vacio .casa-escena{width:300px;aspect-ratio:1.45;height:auto;overflow:visible}
 .casa-vacio .casa-escena__hojas{display:none}
 .casa-vacio .casa-escena__arbol{left:4%;bottom:4%;width:46%;height:auto;max-height:none}
 .casa-vacio .casa-escena__casa{right:4%;bottom:4%;width:72%;height:auto;max-height:none;object-fit:contain}
@@ -810,8 +810,8 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa.casa--vacio::before{left:-14vw}
   .casa.casa--vacio::after{right:-14vw}
   .casa-hero{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(10px,1.5vh,18px);width:min(1040px,94%);margin:0 auto}
-  /* 1,05 × el bloque de botones de v7: (296,27×2+16)×0,86. Cabe entre 1,0 y 1,2. */
-  .casa-hero .casa-escena{width:calc(549.511 * 100vw / 1440);aspect-ratio:1.45;height:auto;margin:0;overflow:visible}
+  /* 428 px a 1440. A 1280 queda en 380 px (428×1280/1440). */
+  .casa-hero .casa-escena{width:calc(428 * 100vw / 1440);aspect-ratio:1.45;height:auto;margin:0 auto;overflow:visible}
   .casa-hero .casa-escena__hojas{display:none}
   .casa-hero .casa-escena__arbol{left:4%;bottom:4%;width:46%;height:auto;max-height:none}
   .casa-hero .casa-escena__casa{right:4%;bottom:4%;width:72%;height:auto;max-height:none;object-fit:contain}
@@ -856,7 +856,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .app-sesion:has(.casa) .nav-app--cabecera a{font-size:14px;line-height:1;height:calc(41.34 * 1280 / 1440 * 1px);padding:0 calc(16 * 1280 / 1440 * 1px);gap:calc(8 * 1280 / 1440 * 1px)}
   .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * 1280 / 1440 * 1px);height:calc(16.5 * 1280 / 1440 * 1px)}
   .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{padding:0 calc(24.25 * 1280 / 1440 * 1px)}
-  .casa-hero .casa-escena{width:calc(549.511 * 1280 / 1440 * 1px);aspect-ratio:1.45;height:auto;overflow:visible}
+  .casa-hero .casa-escena{width:calc(428 * 1280 / 1440 * 1px);aspect-ratio:1.45;height:auto;margin:0 auto;overflow:visible}
   .casa-hero h1{font-size:calc(42.49 * 0.83 * 1280 / 1440 * 1px)}
   .casa-hero p{font-size:calc(20.05 * 0.83 * 1280 / 1440 * 1px)}
   .casa-hero__acciones{flex-wrap:nowrap;gap:calc(16 * 0.86 * 1280 / 1440 * 1px)}
