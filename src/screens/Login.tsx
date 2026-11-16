@@ -87,7 +87,6 @@ export function Entrando() {
     <img className="entrada-hoja entrada-hoja--inf" src={HOJAS} alt="" />
     <div className="entrada-logo carga-cuenta__logo"><img src="/img/logo-header.png" alt="" /><span>Lockumi</span></div>
     <div className="carga-cuenta__escena" aria-hidden="true">
-      <img className="carga-cuenta__hojas" src={HOJAS} alt="" />
       <div className="carga-cuenta__placa"><img className="carga-cuenta__casa" src="/img/bienvenida-escena.png" alt="" /></div>
     </div>
     <p className="entrada-app__titulo carga-cuenta__titulo" role="status">Entrando a tu cuenta…</p>
