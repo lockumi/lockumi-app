@@ -92,9 +92,13 @@ const ARBOL = '/img/katherine/04-arbol.png'
 const HOJAS = '/img/katherine/11-hojas.png'
 const PAISAJE = '/img/katherine/12-paisaje.png'
 
+/** Espejo de la casita, solo en esta pantalla. Katherine lo aprobó: queda encendido.
+ *  `false` vuelve a v1: se ve 04-arbol y la casa sin voltear. No toca ningún archivo de imagen. */
+const ESPEJO_CASA = true
+
 /** La casita de la entrada: las mismas capas de Katherine. La hoja grande de atrás es el 11-hojas original. */
 function EscenaEntrada() {
-  return <div className="porta-escena" aria-hidden="true">
+  return <div className={ESPEJO_CASA ? 'porta-escena porta-escena--espejo' : 'porta-escena'} aria-hidden="true">
     <img className="porta-escena__paisaje" src={PAISAJE} alt="" />
     <img className="porta-escena__hojas" src={HOJAS} alt="" />
     <img className="porta-escena__arbol" src={ARBOL} alt="" />
@@ -159,7 +163,7 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     <div className="entrada-lado">
       <a className="entrada-logo" href="#/" aria-label="Lockumi"><img src="/img/logo-header.png" alt="" /><span>Lockumi</span></a>
       <span className="entrada-rayita" aria-hidden="true" />
-      <h1 className="entrada-hero__titulo">{invitacion?.titulo ?? 'Tu espacio, más seguro.'}</h1>
+      <h1 className="entrada-hero__titulo">{invitacion ? invitacion.titulo : <>Tu espacio, <br />más seguro.</>}</h1>
       <p className="entrada-hero__bajada">{invitacion?.subtitulo ?? 'Accede a tu cuenta o crea una nueva para comenzar.'}</p>
       <EscenaEntrada />
     </div>
