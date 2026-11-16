@@ -78,15 +78,17 @@ export function Hoja({ onCerrar, onOk, correo, inicio = 'opciones' }: { onCerrar
 /** Mientras se confirma el regreso de Google o Apple: la casita con la llave y una línea, sin la pantalla Entrar.
  *  `aria-busy`, un `role="status"` y una barra indeterminada (no hay avance real que mostrar).
  *  Con «reducir movimiento» la barra queda quieta (regla global de index.css).
- *  La casita es un solo archivo: la llave y la puerta no existen por separado, así que no se animan. */
+ *  La casita es un solo archivo: la llave y la puerta no existen por separado, así que no se animan.
+ *  La franja de esta pantalla dice la frase de Stellar; el aviso del resto de la app no cambia. */
 export function Entrando() {
   return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app ingreso-cargando carga-cuenta" aria-busy="true">
+    <div className="aviso-red carga-cuenta__franja" role="note">Red de prueba de Stellar: sin dinero real.</div>
     <img className="entrada-hoja entrada-hoja--sup" src={HOJAS} alt="" />
     <img className="entrada-hoja entrada-hoja--inf" src={HOJAS} alt="" />
     <div className="entrada-logo carga-cuenta__logo"><img src="/img/logo-header.png" alt="" /><span>Lockumi</span></div>
     <div className="carga-cuenta__escena" aria-hidden="true">
       <img className="carga-cuenta__hojas" src={HOJAS} alt="" />
-      <img className="carga-cuenta__casa" src="/img/bienvenida-escena.png" alt="" />
+      <div className="carga-cuenta__placa"><img className="carga-cuenta__casa" src="/img/bienvenida-escena.png" alt="" /></div>
     </div>
     <p className="entrada-app__titulo carga-cuenta__titulo" role="status">Entrando a tu cuenta…</p>
     <div className="carga-cuenta__barra" role="progressbar" aria-label="Entrando a tu cuenta" aria-valuemin={0} aria-valuemax={100}><span /></div>
