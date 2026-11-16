@@ -40,13 +40,13 @@ export function ConfirmarAlquiler({ id, u, que }: { id: string; u: Usuario; que:
   const [error, setError] = useState(''), [ocupado, setOcupado] = useState(false)
   const boton = que === 'eliminar' ? T.si : T.siOcultar
   const volver = <a href={`#/alquiler/${id}`} className="volver">← {T.no}</a>
-  if (!a) return <main id="contenido" tabIndex={-1} className="cont cont--form ea"><a href="#/" className="volver">← Tus alquileres</a><p className="ea-error" role="alert">{T.errNoEsta}</p></main>
+  if (!a) return <main id="contenido" tabIndex={-1} className="cont cont--form ea"><a href="#/alquileres" className="volver">← Tus alquileres</a><p className="ea-error" role="alert">{T.errNoEsta}</p></main>
   const hacer = async () => {
     setOcupado(true); setError('')
     try {
       if (que === 'eliminar') { const d = await eliminarAlquiler(id, u.email, a); dejarAviso(T.listoEliminar(d)) }
       else { await ocultarAlquiler(id, u.email, true, a); dejarAviso(T.listoOcultar(a.direccion)) }
-      ir('/')
+      ir('/alquileres')
     } catch (e) { setError(textoError(e, a, boton)); setOcupado(false) }
   }
   // Si ya no corresponde (p. ej. se abrió el enlace después del depósito), se explica en vez de pedir confirmación.
@@ -76,10 +76,10 @@ export function ConfirmarReinicio({ u }: { u: Usuario }) {
   const nada = !p.eliminar.length && !p.ocultar.length && !p.quedan.length
   const hacer = async () => {
     setOcupado(true); setError('')
-    try { const r = await reiniciarMiDemo(u.email, todos); dejarAviso(T.listoReiniciar(r.eliminados, r.ocultos) + (r.quedan ? ' ' + T.listoQuedan(r.quedan) : '')); ir('/') }
+    try { const r = await reiniciarMiDemo(u.email, todos); dejarAviso(T.listoReiniciar(r.eliminados, r.ocultos) + (r.quedan ? ' ' + T.listoQuedan(r.quedan) : '')); ir('/alquileres') }
     catch (e) { setError(textoError(e, undefined, T.siReiniciar)); setOcupado(false) }
   }
-  return <main id="contenido" tabIndex={-1} className="cont cont--form ea"><a href="#/" className="volver">← {T.no}</a>
+  return <main id="contenido" tabIndex={-1} className="cont cont--form ea"><a href="#/alquileres" className="volver">← {T.no}</a>
     <section className="glass glass--fuerte tarjeta" role="alertdialog" aria-labelledby="ea-r">
       <h1 id="ea-r" className="h2">{T.tituloReiniciar}</h1>
       <p>{T.reiniciarIntro}</p>
@@ -90,7 +90,7 @@ export function ConfirmarReinicio({ u }: { u: Usuario }) {
       {error && <p className="ea-error" role="alert">{error}</p>}
       <div className="ea-botones">
         {!nada && <button type="button" className="boton ea-peligro" disabled={ocupado} onClick={hacer}>{T.siReiniciar}</button>}
-        <a className="boton boton--secundario" href="#/">{T.no}</a></div>
+        <a className="boton boton--secundario" href="#/alquileres">{T.no}</a></div>
     </section></main>
 }
 

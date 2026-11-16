@@ -1,12 +1,12 @@
 import { pruebaCompleta } from './prueba/interruptor'
 import { exacto } from '../api/_lib/centimos'
 import { modoReal } from './services/auth'
-import { abrirRecorrido } from './recorrido'
 import { modoPrueba, escrowReal } from './servidor/config'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Plegable } from './screens/Plegable'
 import type { Usuario, Alquiler } from './types'
 import { ETAPAS, etapaDe } from './flujo'
+import { Navegacion } from './screens/Navegacion'
 
 export const Demo = ({ t = 'Demo: simulado' }: { t?: string }) => modoReal ? null : <span className="demo" title="Integración simulada para la demo">{t}</span>
 export const Icono = ({ id, className = '' }: { id: string; className?: string }) =>
@@ -14,13 +14,16 @@ export const Icono = ({ id, className = '' }: { id: string; className?: string }
 export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: number; className?: string }) =>
   <svg className={'deco ' + className} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href={'#' + id} /></svg>
 
-export function Barra({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
+export function Barra({ onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
+  const enAyuda = r === '/ayuda' || r.startsWith('/ayuda/')
   return <header className="cont barra">
-    <a href="#/" className="logo" aria-label="Lockumi, ir a tus alquileres"><img src="/img/logo-lockumi.svg" alt="" /></a>
+    <a href="#/" className="logo" aria-label="Lockumi, ir a Inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
+    <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
-      <span className="barra__usuario cortar" title={u.email}>{u.email}</span>
-      <button type="button" className="boton-ayuda" aria-label="¿Cómo funciona?" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>
-        <span className="boton-ayuda__i" aria-hidden="true">?</span><span className="boton-ayuda__t" aria-hidden="true">¿Cómo funciona?</span></button>
+      <span className="barra-campana" />
+      <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>
+        <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a2.9 2.9 0 0 1 5.6 1c0 2-2.7 2.2-2.7 4" /><path d="M12 17h.01" /></svg>
+      </a>
       <button type="button" className="boton-icono" onClick={onSalir} aria-label="Salir" title="Salir">
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10"/></svg>
       </button>
@@ -111,14 +114,16 @@ export function CampoFecha({ etiqueta, valor, onCambio, onSalir, id, error, ayud
 }
 
 /** Línea de tiempo simple, igual para las dos personas. */
-export function LineaTiempo({ a }: { a: Alquiler }) {
+/** `ancla` solo en el paso actual: abre lo que la ficha ya muestra. Los pasos de adelante no son enlaces. */
+export function LineaTiempo({ a, ancla }: { a: Alquiler; ancla?: string }) {
   const actual = etapaDe(a); const fin = a.estado === 'cerrado'
   return <ol className="tiempo" aria-label="Cómo va el alquiler">
     {ETAPAS.map((t, i) => {
       const estado = i < actual || (fin && i === actual) ? 'hecho' : i === actual ? 'actual' : 'futuro'
+      const nombre = <>{t}{estado === 'actual' && <em className="nota"> · ahora</em>}</>
       return <li key={t} className={'tiempo__paso tiempo__paso--' + estado} aria-current={estado === 'actual' ? 'step' : undefined}>
         <span className="tiempo__punto">{estado === 'hecho' ? <Icono id="i-check" /> : <b>{i + 1}</b>}</span>
-        <span>{t}{estado === 'actual' && <em className="nota"> · ahora</em>}</span>
+        {estado === 'actual' && ancla ? <a href={ancla}>{nombre}</a> : <span>{nombre}</span>}
         <span className="sr">{estado === 'hecho' ? ' (listo)' : estado === 'actual' ? ' (paso actual)' : ' (pendiente)'}</span>
       </li>
     })}

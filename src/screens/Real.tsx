@@ -211,7 +211,7 @@ export function DetalleSolo({ a }: { a: Alquiler }) {
       <p>El inquilino de prueba recibió {recibe} de prueba en la red de prueba de Stellar. Todos los pasos quedaron registrados:</p></>,
   ][paso]
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
-    <a href="#/" className="volver">← Tus alquileres</a>
+    <a href="#/alquileres" className="volver">← Tus alquileres</a>
     <h1 className="h-lugar">{a.direccion}</h1>
     <div className="paso-cab"><p className="paso-cab__n">{paso >= 5 ? 'Terminado' : `Paso ${paso + 1} de 5`}</p><p className="paso-cab__t">{PASOS_SOLO[Math.min(paso, 4)]}</p>
       <div className="pasos-solo" aria-hidden="true">{PASOS_SOLO.map((_, i) => <span key={i} className={i < paso ? 'hecho' : i === paso ? 'actual' : ''} />)}</div></div>
