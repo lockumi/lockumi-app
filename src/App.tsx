@@ -73,6 +73,8 @@ export default function App() {
   // Sin pantalla de volver a aceptar (pedido de Katherine, 24/10): con la sesión abierta se entra directo, aunque la versión aceptada sea anterior.
   useRecorridoPrimeraVez(u, r)   // se abre solo la primera vez, en Inicio
   if (legal) return <Fondo>{skip}<PaginaLegal slug={legal} /><Pie /></Fondo>
+  // Vista de la pantalla de carga, solo lectura. #/entrando no entra, no llama a Cavos y no guarda sesión.
+  if (r === '/entrando') return <Fondo>{skip}<Alertas /><Entrando /></Fondo>
   // Si llegó por un link de invitación, se vuelve ahí después de entrar (también tras el regreso de Google o Apple).
   // paso21: también en localStorage por 30 min (src/regreso.ts) y, sin sesión, la pantalla Entrar dice que es una invitación.
   const invitado = !u && esRutaInvitacion(r)

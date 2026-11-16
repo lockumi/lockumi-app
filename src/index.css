@@ -1506,3 +1506,47 @@ body:has(.entrada-portada) .pie-legal{display:none}
   .entrada-hoja--sup{top:calc(-30 * var(--e));right:calc(-40 * var(--e))}
   .entrada-hoja--inf{bottom:calc(-40 * var(--e));left:calc(-50 * var(--e))}
 }
+
+/* Pantalla «Entrando a tu cuenta…». Solo .carga-cuenta. La entrada y el Inicio no usan esta clase.
+   Desde 768 se ve la franja amarilla de la app; en el teléfono, la píldora lila. */
+html:has(.carga-cuenta){overflow-x:clip}
+body:has(.carga-cuenta) .aurora,
+body:has(.carga-cuenta) .pie-legal{display:none}
+.entrada-app.carga-cuenta.cont.cont--form{max-width:none;width:100%;min-height:100dvh;margin:0;padding:24px 20px 40px;justify-content:center;align-items:center;gap:16px;overflow:visible}
+.carga-cuenta::before,.carga-cuenta::after{content:"";position:fixed;bottom:-12vh;height:54vh;width:92vw;border-radius:0;opacity:1;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 78%, var(--mint) 0%, transparent 70%)}
+.carga-cuenta::before{left:-40vw}
+.carga-cuenta::after{right:-42vw;background:radial-gradient(ellipse at 50% 78%, var(--protegido) 0%, transparent 70%)}
+.carga-cuenta .entrada-logo,.carga-cuenta__escena,.carga-cuenta__titulo,.carga-cuenta__barra,.carga-cuenta__pildora{position:relative;z-index:2}
+.carga-cuenta .entrada-logo{font-size:22px}
+.carga-cuenta .entrada-logo img{height:44px}
+.carga-cuenta .entrada-hoja{width:min(28vw,150px)}
+.carga-cuenta .entrada-hoja--sup{top:-18px;right:-22px;bottom:auto;left:auto;transform:none}
+.carga-cuenta .entrada-hoja--inf{top:auto;right:auto;bottom:-22px;left:-30px;transform:scaleX(-1)}
+.carga-cuenta__escena{width:min(360px,88vw);height:min(280px,70vw);display:grid;place-items:center;isolation:isolate;background:var(--fondo)}
+.carga-cuenta__escena::before{content:"";position:absolute;inset:-8% -10% -6%;border-radius:50%;background:radial-gradient(ellipse at 48% 50%, transparent 34%, var(--mint) 50%, transparent 76%);z-index:0}
+.carga-cuenta__hojas{position:absolute;left:-2%;top:12%;width:34%;height:auto;z-index:1;pointer-events:none;user-select:none}
+.carga-cuenta__casa{position:relative;z-index:2;width:86%;height:auto;pointer-events:none;user-select:none;mix-blend-mode:darken}
+.carga-cuenta .entrada-app__titulo{max-width:none;margin:0;white-space:nowrap;text-wrap:nowrap;font-family:var(--f-titulo);font-weight:800;font-size:22px;line-height:1.15;text-align:center}
+.carga-cuenta__barra{width:min(280px,78%);height:10px;border-radius:999px;background:rgba(41,51,50,.08);overflow:hidden}
+.carga-cuenta__barra>span{display:block;height:100%;width:42%;border-radius:inherit;background:linear-gradient(90deg, var(--sage), var(--exito));animation:carga-barra-va 1.8s ease-in-out infinite}
+@keyframes carga-barra-va{0%{transform:translateX(0)}50%{transform:translateX(130%)}100%{transform:translateX(0)}}
+.carga-cuenta__pildora{display:flex;align-items:center;gap:10px;margin:8px 0 0;padding:12px 16px;border-radius:18px;background:rgb(243, 232, 251);color:rgb(164, 124, 230);text-align:left}
+.carga-cuenta__pildora span{display:flex;flex-direction:column;gap:2px}
+.carga-cuenta__pildora strong{font-weight:700;font-size:15px;line-height:20px;font-family:var(--f-texto);color:rgb(42, 14, 164)}
+.carga-cuenta__pildora span span{font-weight:500;font-size:14px;line-height:20px;font-family:var(--f-texto);color:rgb(105, 106, 121)}
+@media (max-width:767px){
+  body:has(.carga-cuenta) .aviso-red,
+  body:has(.carga-cuenta) .aviso-red__extra{display:none}
+}
+@media (min-width:768px){
+  .entrada-app.carga-cuenta.cont.cont--form{min-height:calc(100dvh - 36px);padding-top:12px}
+  .carga-cuenta .entrada-logo{font-size:28px}
+  .carga-cuenta .entrada-logo img{height:56px}
+  .carga-cuenta .entrada-hoja{width:190px}
+  .carga-cuenta__escena{width:420px;height:320px}
+  .carga-cuenta .entrada-app__titulo{font-size:40px}
+  .carga-cuenta__barra{width:320px;height:12px}
+  .carga-cuenta__pildora{display:none}
+  body:has(.carga-cuenta) .aviso-red{display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:20px}
+  body:has(.carga-cuenta) .aviso-red::before{content:"";width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9 3h6M10 3v6L5.5 18A3.2 3.2 0 0 0 8.4 22h7.2a3.2 3.2 0 0 0 2.9-4L14 9V3'/><path d='M8 15h8'/></svg>") center / contain no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9 3h6M10 3v6L5.5 18A3.2 3.2 0 0 0 8.4 22h7.2a3.2 3.2 0 0 0 2.9-4L14 9V3'/><path d='M8 15h8'/></svg>") center / contain no-repeat}
+}
