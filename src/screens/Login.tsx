@@ -12,8 +12,8 @@ const G = () => <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="tru
 const A = () => <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#000" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.8 1.2 1.8 2.6 3.1 2.6 1.3-.1 1.7-.8 3.3-.8 1.5 0 1.9.8 3.3.8s2.2-1.3 3-2.5c1-1.4 1.3-2.7 1.4-2.8-.1 0-2.4-.9-2.4-4.2zM13.9 5c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4z"/></svg>
 
 /** `correo`: «Entrar de nuevo» con correo (firmante, 26/10): abre directo en el paso del correo, ya escrito. */
-export function Hoja({ onCerrar, onOk, correo }: { onCerrar: () => void; onOk: (u: Usuario) => void; correo?: string }) {
-  const [paso, setPaso] = useState<Paso>(correo ? 'correo' : 'opciones'); const [email, setEmail] = useState(correo ?? ''); const [codigo, setCodigo] = useState('')
+export function Hoja({ onCerrar, onOk, correo, inicio = 'opciones' }: { onCerrar: () => void; onOk: (u: Usuario) => void; correo?: string; inicio?: Paso }) {
+  const [paso, setPaso] = useState<Paso>(correo ? 'correo' : inicio); const [email, setEmail] = useState(correo ?? ''); const [codigo, setCodigo] = useState('')
   const [cargando, setC] = useState<string | null>(null); const [err, setErr] = useState(''); const [reenviado, setReenviado] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -87,6 +87,28 @@ export function Entrando() {
 /** Texto aprobado por Legal (23 oct 2026): el mismo del aviso `ingreso-fallo`. */
 const ERROR_INGRESO = alertaIngresoFallo()
 
+const CASA = '/img/katherine/01-casa-simple-arbol.png'
+const ARBOL = '/img/katherine/04-arbol.png'
+const HOJAS = '/img/katherine/11-hojas.png'
+const PAISAJE = '/img/katherine/12-paisaje.png'
+
+/** La casita de la entrada: las mismas capas de Katherine. La hoja grande de atrás es el 11-hojas original. */
+function EscenaEntrada() {
+  return <div className="porta-escena" aria-hidden="true">
+    <img className="porta-escena__paisaje" src={PAISAJE} alt="" />
+    <img className="porta-escena__hojas" src={HOJAS} alt="" />
+    <img className="porta-escena__arbol" src={ARBOL} alt="" />
+    <img className="porta-escena__casa" src={CASA} alt="" />
+  </div>
+}
+
+function Sobre() {
+  return <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>
+}
+function Matraz() {
+  return <svg className="entrada-matraz" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L5.5 18A3.2 3.2 0 0 0 8.4 22h7.2a3.2 3.2 0 0 0 2.9-4L14 9V3" /><path d="M8 15h8" /></svg>
+}
+
 // LEGAL: revisado (24/10) · dos-personas-textos.md, D: nota visible bajo el título (Ley 7472, art. 37)
 export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real. No es un seguro ni una garantía de devolución.'
 
@@ -94,6 +116,9 @@ export const NOTA_TITULO = 'Demo en la red de prueba de Stellar, sin dinero real
  *  título y subtítulo de la invitación en lugar del título, sin la lista de beneficios. Las casillas, «Entrar» y la nota legal no cambian. */
 export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: (u: Usuario) => void; error?: boolean; onReintento?: () => void; invitacion?: { titulo: string; subtitulo: string } }) {
   const [abierta, setAbierta] = useState(false)
+  const [tab, setTab] = useState<'iniciar' | 'crear'>('iniciar')
+  const [pasoHoja, setPasoHoja] = useState<Paso>('opciones')
+  const [falta, setFalta] = useState(false)
   // Dos casillas obligatorias y separadas: Términos, y Aviso de privacidad con transferencia de datos.
   // Paso 16: la versión vigente (1.7-demo con el interruptor encendido). La pantalla no cambia: solo el texto detrás de los enlaces.
   const PRIVACIDAD = privacidadActual(), pidePrivacidad = !!PRIVACIDAD
@@ -101,6 +126,7 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
   const [marcas, setMarcas] = useState(() => ({ terminos: aceptoVersion('terminos', VERSION.terminos), privacidad: !pidePrivacidad || aceptoVersion('privacidad', VERSION.privacidad) }))
   const [errores, setErrores] = useState<Partial<Record<ClaveLegal, string>>>(ERRORES_INICIALES)
   const refT = useRef<HTMLInputElement>(null), refP = useRef<HTMLInputElement>(null)
+  const aceptado = marcas.terminos && (!pidePrivacidad || marcas.privacidad)
   const entrar = () => {
     const e = validarAceptaciones(marcas); setErrores(e)
     if (e.terminos) return refT.current?.focus()
@@ -112,29 +138,85 @@ export function Login({ onOk, error = false, onReintento, invitacion }: { onOk: 
     setMarcas(m => ({ ...m, [c]: v })); setErrores(e => erroresTrasCambio(e, c, v))
     if (v) guardarAceptacion(c, VERSION[c]); else borrarAceptacion(c)
   }
-  return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app">
-    <h1 className="marca-c marca-c--texto">Lockumi</h1>
-    <div className="entrada-app__marco"><img className="entrada-app__escena" src="/img/bienvenida-escena.png" alt="" /></div>
-    <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>
-    {invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
-    {!invitacion && <p className="entrada-bajada">Custodia neutral · reglas claras · devolución automática</p>}
-    <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
-    {!invitacion && <p className="nota centro">Ni el dueño ni el inquilino pueden liberarlo solos.</p>}
-    {!invitacion && <ul className="entrada-papeles" aria-label="Los dos papeles. Esta lista no elige ninguno.">
-      <li><strong>Dueño</strong><span>Evidencia ordenada</span></li>
-      <li><strong>Inquilino</strong><span>Depósito seguro</span></li>
-    </ul>}
-    <div className="casillas-legales">
-      {/* Legal (26/10/2026): con la reputación, la casilla nombra la 1.13-demo y el perfil, con la línea de Legal debajo. Solo cambia el texto. */}
-      <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos} nota={casillaTerminos().linea}>
-        {casillaTerminos().antes}<a href="/terminos" target="_blank" rel="noopener">{casillaTerminos().enlace}</a>{casillaTerminos().despues}</CasillaLegal>
-      {pidePrivacidad && <CasillaLegal id="acepto-privacidad" ref={refP} marcada={marcas.privacidad} onCambio={cambiar('privacidad')} error={errores.privacidad}>
-        {consentimientoPrivacidad().antes}<a href="/privacidad" target="_blank" rel="noopener">{consentimientoPrivacidad().enlace}</a>{consentimientoPrivacidad().despues}</CasillaLegal>}
+  const marcarCrear = (v: boolean) => { setFalta(false); cambiar('terminos')(v); if (pidePrivacidad) cambiar('privacidad')(v) }
+  const anotar = () => {
+    for (const c of ['terminos', 'privacidad'] as const) if (VERSION[c] && (c === 'terminos' || pidePrivacidad) && !aceptoVersion(c, VERSION[c])) guardarAceptacion(c, VERSION[c])
+    setMarcas({ terminos: true, privacidad: true })
+  }
+  const conCorreo = () => { setPasoHoja('correo'); onReintento?.(); setAbierta(true) }
+  const crear = () => { if (!aceptado) return; anotar(); conCorreo() }
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const pulsar = async (m: 'google' | 'apple' | 'correo') => {
+    if (tab === 'crear' && !aceptado) { setFalta(true); document.getElementById('acepto-crear')?.focus(); return }
+    setOcupado(m); setFalta(false)
+    if (tab === 'iniciar') anotar()
+    if (m === 'correo') { setOcupado(null); return conCorreo() }
+    try { onOk(await (m === 'google' ? auth.loginGoogle() : auth.loginApple())) } catch { setOcupado(null) }
+  }
+  return <main id="contenido" tabIndex={-1} className="cont cont--form entrada-app entrada-portada">
+    <img className="entrada-hoja entrada-hoja--sup" src={HOJAS} alt="" />
+    <img className="entrada-hoja entrada-hoja--inf" src={HOJAS} alt="" />
+    <div className="entrada-lado">
+      <a className="entrada-logo" href="#/" aria-label="Lockumi"><img src="/img/logo-header.png" alt="" /><span>Lockumi</span></a>
+      <span className="entrada-rayita" aria-hidden="true" />
+      <h1 className="entrada-hero__titulo">{invitacion?.titulo ?? 'Tu espacio, más seguro.'}</h1>
+      <p className="entrada-hero__bajada">{invitacion?.subtitulo ?? 'Accede a tu cuenta o crea una nueva para comenzar.'}</p>
+      <EscenaEntrada />
     </div>
-    {error && <div id="error-ingreso" className="entrada-app__error"><strong>{ERROR_INGRESO.titulo}</strong> <span>{ERROR_INGRESO.hecho}</span></div>}
-    <button type="button" className="boton boton--primario boton--ancho" onClick={entrar} aria-haspopup="dialog" aria-describedby={error ? 'error-ingreso' : undefined}>Entrar</button>
-    <p className="nota centro">Con Google, Apple o tu correo. Sin contraseñas.</p>
-    <p className="centro"><Demo /></p>
-    {abierta && <Hoja onCerrar={() => setAbierta(false)} onOk={onOk} />}
+    <section className="entrada-tarjeta" aria-label="Acceso">
+      <div className="entrada-pestanas" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'iniciar'} className={tab === 'iniciar' ? 'is-on' : ''} onClick={() => setTab('iniciar')}>Iniciar sesión</button>
+        <button type="button" role="tab" aria-selected={tab === 'crear'} className={tab === 'crear' ? 'is-on' : ''} onClick={() => setTab('crear')}>Crear cuenta</button>
+      </div>
+      {tab === 'iniciar' ? <>
+        <h2 className="entrada-tarjeta__titulo">Inicia sesión</h2>
+        <p className="entrada-tarjeta__bajada">Usa tu método preferido para continuar.</p>
+      </> : <>
+        <h2 className="entrada-tarjeta__titulo">Crea tu cuenta</h2>
+        <p className="entrada-tarjeta__bajada">Es rápido, seguro y sin complicaciones.</p>
+      </>}
+      <div className="entrada-metodos">
+        <button type="button" className="entrada-metodo" disabled={!!ocupado} onClick={() => void pulsar('apple')}><A /><span>{ocupado === 'apple' ? 'Conectando…' : 'Continuar con Apple'}</span></button>
+        <button type="button" className="entrada-metodo" disabled={!!ocupado} onClick={() => void pulsar('google')}><G /><span>{ocupado === 'google' ? 'Conectando…' : 'Continuar con Google'}</span></button>
+        <button type="button" className="entrada-metodo entrada-metodo--correo" disabled={!!ocupado} onClick={() => void pulsar('correo')}><Sobre /><span>Continuar con correo electrónico</span></button>
+      </div>
+      {tab === 'iniciar' ? <>
+        <div className="entrada-linea" aria-hidden="true" />
+        <p className="entrada-legal">Al iniciar sesión, aceptas nuestros <a href="/terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.</p>
+      </> : <>
+        <label className="entrada-check">
+          <input id="acepto-crear" type="checkbox" checked={aceptado} onChange={e => marcarCrear(e.target.checked)} />
+          <span>Acepto los <a href="/terminos" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a></span>
+        </label>
+        {falta && <p className="error" role="alert">Marca la casilla para crear la cuenta.</p>}
+        <button type="button" className="boton boton--primario boton--ancho entrada-crear" disabled={!aceptado || !!ocupado} onClick={crear}>Crear cuenta</button>
+      </>}
+      {error && <div id="error-ingreso" className="entrada-app__error"><strong>{ERROR_INGRESO.titulo}</strong> <span>{ERROR_INGRESO.hecho}</span></div>}
+      <div className="entrada-red" role="note">
+        <Matraz />
+        <p><strong>Red de prueba de Stellar</strong><span>Estás usando una versión de prueba (testnet).</span></p>
+      </div>
+    </section>
+    {/* El bloque de siempre queda en el HTML (casillas, nota y Entrar) para no cambiar la aceptación ni las pruebas. No se muestra. */}
+    <div className="entrada-legado">
+      <h2 className="entrada-app__titulo">{invitacion?.titulo ?? 'El depósito de tu alquiler, protegido'}</h2>{invitacion && <p className="entrada-app__sub">{invitacion.subtitulo}</p>}
+      {!invitacion && <p className="entrada-bajada">Custodia neutral · reglas claras · devolución automática</p>}
+      <p className="nota centro entrada-app__nota">{NOTA_TITULO}</p>
+      {!invitacion && <p className="nota centro">Ni el dueño ni el inquilino pueden liberarlo solos.</p>}
+      {!invitacion && <ul className="entrada-papeles" aria-label="Los dos papeles. Esta lista no elige ninguno.">
+        <li><strong>Dueño</strong><span>Evidencia ordenada</span></li>
+        <li><strong>Inquilino</strong><span>Depósito seguro</span></li>
+      </ul>}
+      <div className="casillas-legales">
+        <CasillaLegal id="acepto-terminos" ref={refT} marcada={marcas.terminos} onCambio={cambiar('terminos')} error={errores.terminos} nota={casillaTerminos().linea}>
+          {casillaTerminos().antes}<a href="/terminos" target="_blank" rel="noopener">{casillaTerminos().enlace}</a>{casillaTerminos().despues}</CasillaLegal>
+        {pidePrivacidad && <CasillaLegal id="acepto-privacidad" ref={refP} marcada={marcas.privacidad} onCambio={cambiar('privacidad')} error={errores.privacidad}>
+          {consentimientoPrivacidad().antes}<a href="/privacidad" target="_blank" rel="noopener">{consentimientoPrivacidad().enlace}</a>{consentimientoPrivacidad().despues}</CasillaLegal>}
+      </div>
+      <button type="button" className="boton boton--primario boton--ancho" onClick={entrar} aria-haspopup="dialog" aria-describedby={error ? 'error-ingreso' : undefined}>Entrar</button>
+      <p className="nota centro">Con Google, Apple o tu correo. Sin contraseñas.</p>
+      <p className="centro"><Demo /></p>
+    </div>
+    {abierta && <Hoja inicio={pasoHoja} onCerrar={() => { setAbierta(false); setPasoHoja('opciones') }} onOk={onOk} />}
   </main>
 }

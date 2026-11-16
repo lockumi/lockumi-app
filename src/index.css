@@ -1387,3 +1387,65 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.na-pliegue__flecha{transition:none}}
 @media (max-width:959px){.na-form>.na-pie{background:transparent;box-shadow:none}}
 .aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
+
+/* Entrada: Iniciar sesión / Crear cuenta. Solo esta pantalla. El Inicio no usa estas clases. */
+body:has(.entrada-portada) .aviso-red,
+body:has(.entrada-portada) .aviso-red__extra,
+body:has(.entrada-portada) .aurora,
+body:has(.entrada-portada) .pie-legal{display:none}
+.entrada-app.entrada-portada.cont.cont--form{max-width:1120px}
+.entrada-portada{position:relative;z-index:1;width:100%;min-height:100vh;margin:0 auto;padding:28px 20px 48px;gap:22px;overflow:visible;justify-content:flex-start}
+.entrada-portada::before,.entrada-portada::after{content:"";position:fixed;bottom:-10vh;height:26vh;width:62vw;border-radius:50%;background:var(--mint);opacity:.7;pointer-events:none;z-index:0}
+.entrada-portada::before{left:-22vw}
+.entrada-portada::after{right:-24vw;background:var(--protegido);opacity:.9}
+.entrada-hoja{position:fixed;width:min(22vw,240px);height:auto;pointer-events:none;user-select:none;z-index:1}
+.entrada-hoja--sup{top:-28px;right:-36px}
+.entrada-hoja--inf{bottom:-36px;left:-48px;transform:scaleX(-1)}
+.entrada-lado,.entrada-tarjeta{position:relative;z-index:2}
+.entrada-lado{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.entrada-logo{display:inline-flex;align-items:center;gap:10px;color:var(--cafe);text-decoration:none;font:800 22px/1 var(--f-titulo)}
+.entrada-logo img{height:40px;width:auto}
+.entrada-rayita{width:42px;height:5px;border-radius:999px;background:var(--sage);margin:6px 0 4px}
+.entrada-portada .entrada-hero__titulo{margin:0;max-width:12ch;font:800 clamp(32px,5vw,52px)/1.05 var(--f-titulo);letter-spacing:-.03em;color:var(--cafe);text-align:center;align-self:center}
+.entrada-hero__bajada{margin:0;max-width:28ch;color:var(--cafe-suave);font:500 16px/24px var(--f-texto)}
+.porta-escena{position:relative;width:min(220px,70vw);aspect-ratio:1.25;margin-top:8px}
+.porta-escena img{position:absolute;object-fit:contain;pointer-events:none;user-select:none}
+.porta-escena__paisaje{left:10%;width:80%;top:24%;height:42%;object-fit:cover;opacity:.35;border-radius:28px}
+.porta-escena__hojas{width:46%;right:-2%;top:-2%;opacity:.95;z-index:1}
+.porta-escena__arbol{width:48%;left:-2%;bottom:2%;z-index:2}
+.porta-escena__casa{width:74%;right:0;bottom:0;z-index:3}
+.entrada-tarjeta{width:min(100%,460px);margin:0 auto;padding:22px 22px 18px;border-radius:28px;background:var(--tarjeta);border:1px solid var(--borde);box-shadow:0 16px 40px rgba(41,51,50,.08);display:flex;flex-direction:column;gap:12px}
+.entrada-pestanas{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--fondo)}
+.entrada-pestanas button{min-height:44px;border:0;border-radius:999px;background:transparent;color:var(--cafe-suave);font:700 15px/20px var(--f-texto);cursor:pointer}
+.entrada-pestanas button.is-on{background:var(--mint);color:var(--cafe)}
+.entrada-tarjeta__titulo{margin:8px 0 0;font:800 28px/1.15 var(--f-titulo);color:var(--cafe);text-align:left;align-self:stretch;max-width:none}
+.entrada-tarjeta__bajada{margin:0;color:var(--cafe-suave);font:500 15px/22px var(--f-texto);text-align:left}
+.entrada-metodos{display:grid;gap:10px}
+.entrada-metodo{position:relative;display:flex;align-items:center;justify-content:center;min-height:52px;padding:0 14px 0 44px;border-radius:999px;border:1.5px solid var(--borde);background:#fff;color:var(--cafe);font:600 15px/20px var(--f-texto);cursor:pointer;white-space:nowrap}
+.entrada-metodo svg,.entrada-metodo .ico{position:absolute;left:18px;width:22px;height:22px}
+.entrada-metodo--correo{border-color:var(--sage);color:var(--sage);background:#fff}
+.entrada-metodo[disabled]{opacity:.6;cursor:wait}
+.entrada-linea{height:1px;background:var(--borde);margin:4px 0}
+.entrada-legal{margin:0;color:var(--cafe-suave);font-weight:500;font-size:13px;line-height:18px;font-family:var(--f-texto);text-align:center}
+.entrada-legal a,.entrada-check a{color:var(--sage);font-weight:700;text-underline-offset:2px}
+.entrada-check{display:flex;align-items:flex-start;gap:10px;margin:0;color:var(--cafe);font:500 14px/20px var(--f-texto);text-align:left}
+.entrada-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--sage)}
+.entrada-crear{min-height:52px;font-size:16px}
+.entrada-red{display:flex;align-items:flex-start;gap:10px;margin-top:4px;padding:12px 14px;border-radius:16px;background:var(--lavender);color:var(--lavender-btn);text-align:left}
+.entrada-red p{margin:0;display:flex;flex-direction:column;gap:2px}
+.entrada-red strong{font:700 14px/18px var(--f-texto)}
+.entrada-red span{font-weight:500;font-size:13px;line-height:18px;font-family:var(--f-texto)}
+.entrada-matraz{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.entrada-legado{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (min-width:768px){
+  .porta-escena{width:240px}
+  .entrada-portada{padding-top:28px}
+  .entrada-metodo{padding:0 18px 0 48px;font-size:16px}
+}
+@media (min-width:1024px){
+  .entrada-portada{display:grid;grid-template-columns:minmax(320px,1fr) minmax(400px,480px);align-items:center;justify-content:center;column-gap:64px;padding:32px 56px;min-height:100vh}
+  .entrada-lado{align-items:flex-start;text-align:left}
+  .entrada-portada .entrada-hero__titulo,.entrada-hero__bajada{text-align:left;align-self:flex-start}
+  .porta-escena{width:340px;margin-top:18px}
+  .entrada-tarjeta{margin:0}
+}
