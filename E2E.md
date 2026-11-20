@@ -1,37 +1,37 @@
 # E2E automática
 
-- Hora: 19 nov 2026, 6:21 p. m. (hora de Costa Rica)
+- Hora: 20 nov 2026, 8:53 a. m. (hora de Costa Rica)
 - URL: https://app.lockumi.com
 - Evento: schedule
 - Resultado: 4 ✔ · 19 ✘ · 3 omitidas
-- Red de prueba: escrow CAWF6MOYC6JDHR7MXUXSBDPHFHRF24KTMGA24ECFDHJ26E4RVEYLTS65 · liberación https://stellar.expert/explorer/testnet/tx/a8f36d730ed78afd6eaba12f514114caab451efa33753e092ad2617e86316049
+- Red de prueba: escrow CAHVQJDY7SQHU6F63MSXGJBQ5AN7RQ6YBRQNBUOSU3KPY55UC4CC7LM4 · liberación https://stellar.expert/explorer/testnet/tx/6827399ebf40f2149980e90d7e271dc101c6163b733bd672adbe53cbebc4b058
 - disputeResolver: GDYFRQ7TRNLTWJAH4YSSF3OQWHWAA3QBL5FWRUKGO4FWNBOBRGU7WLZI (modo fase 1 (plataforma); ¿es el mediador? sin clave pública configurada)
 
 | Prueba | Papel | Resultado | Duración |
 |---|---|---|---|
-| crear.e2e.ts › crear alquiler de prueba | inquilino | ✘ | 13.6 s |
-| crear.e2e.ts › crear alquiler de prueba | dueno | ✘ | 9.0 s |
-| estados.e2e.ts › estados del alquiler › inicio con la lista de alquileres | inquilino | ✔ | 6.8 s |
-| estados.e2e.ts › estados del alquiler › detalle firmas | inquilino | ✘ | 6.5 s |
-| estados.e2e.ts › estados del alquiler › detalle en_curso | inquilino | ✘ | 6.6 s |
-| estados.e2e.ts › estados del alquiler › detalle ventana_reclamo | inquilino | ✘ | 6.6 s |
-| estados.e2e.ts › estados del alquiler › detalle reclamo | inquilino | ✘ | 6.7 s |
-| estados.e2e.ts › estados del alquiler › detalle mediacion | inquilino | ✘ | 6.9 s |
-| estados.e2e.ts › estados del alquiler › detalle cerrado | inquilino | ✘ | 6.6 s |
-| estados.e2e.ts › estados del alquiler › inicio con la lista de alquileres | dueno | ✔ | 3.9 s |
-| estados.e2e.ts › estados del alquiler › detalle firmas | dueno | ✘ | 6.3 s |
-| estados.e2e.ts › estados del alquiler › detalle en_curso | dueno | ✘ | 6.4 s |
-| estados.e2e.ts › estados del alquiler › detalle ventana_reclamo | dueno | ✘ | 6.3 s |
-| estados.e2e.ts › estados del alquiler › detalle reclamo | dueno | ✘ | 6.1 s |
-| estados.e2e.ts › estados del alquiler › detalle mediacion | dueno | ✘ | 6.6 s |
-| estados.e2e.ts › estados del alquiler › detalle cerrado | dueno | ✘ | 7.2 s |
-| paginas.e2e.ts › páginas públicas › entrar | inquilino | ✔ | 2.4 s |
-| paginas.e2e.ts › páginas públicas › terminos | inquilino | ✘ | 6.0 s |
-| paginas.e2e.ts › páginas públicas › privacidad | inquilino | ✘ | 6.0 s |
-| paginas.e2e.ts › páginas públicas › entrar | dueno | ✔ | 2.7 s |
-| paginas.e2e.ts › páginas públicas › terminos | dueno | ✘ | 5.9 s |
-| paginas.e2e.ts › páginas públicas › privacidad | dueno | ✘ | 5.9 s |
-| red.e2e.ts › depósito y devolución reales en la red de prueba + disputeResolver | inquilino | ✘ | 57.5 s |
+| crear.e2e.ts › crear alquiler de prueba | inquilino | ✘ | 122.4 s |
+| crear.e2e.ts › crear alquiler de prueba | dueno | ✘ | 4.8 s |
+| estados.e2e.ts › estados del alquiler › inicio con la lista de alquileres | inquilino | ✔ | 3.8 s |
+| estados.e2e.ts › estados del alquiler › detalle firmas | inquilino | ✘ | 6.3 s |
+| estados.e2e.ts › estados del alquiler › detalle en_curso | inquilino | ✘ | 6.4 s |
+| estados.e2e.ts › estados del alquiler › detalle ventana_reclamo | inquilino | ✘ | 6.0 s |
+| estados.e2e.ts › estados del alquiler › detalle reclamo | inquilino | ✘ | 6.3 s |
+| estados.e2e.ts › estados del alquiler › detalle mediacion | inquilino | ✘ | 6.4 s |
+| estados.e2e.ts › estados del alquiler › detalle cerrado | inquilino | ✘ | 6.2 s |
+| estados.e2e.ts › estados del alquiler › inicio con la lista de alquileres | dueno | ✔ | 2.5 s |
+| estados.e2e.ts › estados del alquiler › detalle firmas | dueno | ✘ | 6.0 s |
+| estados.e2e.ts › estados del alquiler › detalle en_curso | dueno | ✘ | 6.0 s |
+| estados.e2e.ts › estados del alquiler › detalle ventana_reclamo | dueno | ✘ | 5.9 s |
+| estados.e2e.ts › estados del alquiler › detalle reclamo | dueno | ✘ | 6.0 s |
+| estados.e2e.ts › estados del alquiler › detalle mediacion | dueno | ✘ | 6.0 s |
+| estados.e2e.ts › estados del alquiler › detalle cerrado | dueno | ✘ | 6.2 s |
+| paginas.e2e.ts › páginas públicas › entrar | inquilino | ✔ | 1.3 s |
+| paginas.e2e.ts › páginas públicas › terminos | inquilino | ✘ | 5.7 s |
+| paginas.e2e.ts › páginas públicas › privacidad | inquilino | ✘ | 5.8 s |
+| paginas.e2e.ts › páginas públicas › entrar | dueno | ✔ | 1.1 s |
+| paginas.e2e.ts › páginas públicas › terminos | dueno | ✘ | 5.6 s |
+| paginas.e2e.ts › páginas públicas › privacidad | dueno | ✘ | 5.6 s |
+| red.e2e.ts › depósito y devolución reales en la red de prueba + disputeResolver | inquilino | ✘ | 59.4 s |
 | red.e2e.ts › depósito y devolución reales en la red de prueba + disputeResolver | dueno | — | 0.0 s |
 | reputacion.e2e.ts › reputación con dos cuentas (local, nunca producción) › dueño e inquilino | inquilino | — | 0.0 s |
 | reputacion.e2e.ts › reputación con dos cuentas (local, nunca producción) › dueño e inquilino | dueno | — | 0.0 s |
