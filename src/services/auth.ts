@@ -2,7 +2,7 @@
 // - Con VITE_CAVOS_APP_ID definido: login REAL (Google / Apple por redirección, correo con código de 9 caracteres).
 // - Sin VITE_CAVOS_APP_ID: proveedor SIMULADO (sin red; cualquier código de 6 dígitos sirve).
 // El kit solo se carga (import dinámico) en modo real. No hay llaves en el código: el App ID es público.
-// Fuentes: https://docs.cavos.xyz/docs/auth · README de @cavos/kit 0.4.2 (npm).
+// Fuentes: https://docs.cavos.xyz/docs/auth · README de @cavos/kit 0.7.0 (npm).
 import type { Usuario } from '../types'
 import { guardarSesion, reponerSesion, borrarSesion } from './sesionCavos'
 
@@ -44,8 +44,13 @@ const simulado: CavosLike = {
 /** Proveedor real sobre CavosAuth, cargado bajo demanda. */
 let realP: Promise<CavosLike> | null = null
 let cavosAuth: import('@cavos/kit').CavosAuth | null = null
-const real = () => realP ??= import('@cavos/kit').then(({ CavosAuth }) => {
-  const c = cavosAuth = new CavosAuth({ appId: APP_ID })
+// 27/11: el vault de Cavos (vault.cavos.xyz, kit 0.7.0 desde el 26/11) solo abre la billetera si la llave del login vive
+// en el vault. Con la llave en la página falla «kit/auth: this sign-in did not start here…». Igual que CavosProvider
+// (vaultLoginHost, @cavos/kit 0.7.0 dist/react): el login empieza y se verifica en el mismo iframe que usa Cavos.connect.
+const real = () => realP ??= import('@cavos/kit').then(({ CavosAuth, VaultClient }) => {
+  const v = () => VaultClient.attach({ appId: APP_ID })
+  const c = cavosAuth = new CavosAuth({ appId: APP_ID,
+    login: { start: () => v().loginStart(), verify: (r) => v().loginVerify(r), end: () => v().loginEnd() } })
   const a = (i: { userId: string; email?: string; name?: string }) => ({ email: i.email ?? i.userId, nombre: i.name })
   return {
     getGoogleOAuthUrl: (r) => c.getGoogleOAuthUrl(r),

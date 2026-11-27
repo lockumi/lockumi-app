@@ -2,10 +2,10 @@
 // Prueba en Stellar testnet con cuentas DESECHABLES (nunca billeteras de usuarios):
 //   - Clave de control de Cavos local (WebCryptoControlKey, la misma clase que usa el kit) como dueña de la cuenta G.
 //   - La XDR la arma "otro" (simulada y preparada con el RPC, igual que una API), y se firma con el método REAL
-//     CavosStellar.prototype.signXdr de @cavos/kit 0.4.2 (en producción lo único distinto es que la clave vive en el vault).
+//     CavosStellar.prototype.signXdr de @cavos/kit 0.7.0 (en producción lo único distinto es que la clave vive en el vault).
 // Uso: node scripts/probar-firma-cavos.mjs
 import { CavosStellar } from '@cavos/kit/stellar'
-import { WebCryptoControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs' // misma clase que usa el kit (no se exporta)
+import { WebCryptoControlKey } from '../node_modules/@cavos/kit/dist/chunk-GBAKP5G5.mjs' // misma clase que usa el kit (no se exporta)
 import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { Keypair, Networks, rpc, TransactionBuilder, Operation, Asset, Address, nativeToScVal, BASE_FEE, Horizon } from '@stellar/stellar-sdk'
 const RPC = new rpc.Server('https://soroban-testnet.stellar.org'); const HZ = new Horizon.Server('https://horizon-testnet.stellar.org')
