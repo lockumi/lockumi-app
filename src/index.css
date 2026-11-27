@@ -111,7 +111,7 @@ main:focus{outline:none}
 .boton-icono .ico{width:20px;height:20px;vertical-align:0}
 .roles button{min-height:32px}
 .roles--ancho{display:flex;margin-top:6px}.roles--ancho button{flex:1;min-height:40px}
-.volver{display:inline-block;margin:4px 0 8px;font-size:14px;color:var(--cafe-suave)}
+.volver{display:inline-block;margin:0 0 8px;font-size:14px;color:var(--cafe-suave)}
 .titulo{align-items:center;margin-bottom:4px}
 .titulo h1{font-size:clamp(24px,6vw,36px);min-width:0;overflow-wrap:anywhere}
 .ayuda{display:block;margin-top:4px;font-size:13px;color:var(--cafe-suave);min-height:18px}
@@ -1011,6 +1011,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .app-sesion{flex:1;min-height:0;display:flex;flex-direction:column}
 .app-cuerpo{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
 .app-cuerpo>.barra{position:sticky;top:0;z-index:35;background:var(--fondo);flex:none}
+.app-cuerpo>.cont:not(.barra){padding-top:28px}
 .nav-app{position:relative;z-index:40;flex:none;display:flex;justify-content:space-around;gap:4px;background:var(--tarjeta);border-top:1px solid var(--borde);padding:4px 8px calc(4px + env(safe-area-inset-bottom))}
 .nav-app a{min-width:44px;min-height:44px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--cafe-suave);text-decoration:none;font:700 12px/16px var(--f-texto);border-radius:12px}
 .nav-app a[aria-current="page"]{color:var(--accion)}
@@ -1049,10 +1050,54 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
   .app-sesion:has(.casa) .nav-app--cabecera a{gap:calc(8 * 1280 / 1440 * 1px);height:calc(41.34 * 1280 / 1440 * 1px);min-height:0;padding:0 calc(16 * 1280 / 1440 * 1px)}
 }
 @media (min-width:1280px){
-  .app-sesion:has(.casa){--u:min(100vw / 1440,(100dvh - 96px) / 740,1px)}
+  .app-sesion:has(.casa){--u:min(100vw / 1360,(100dvh - 72px) / 680,1.08px)}
+}
+/* Cabecera a todo el ancho. El contenido usa la misma columna que el cuerpo.
+   La regla de Inicio (.app-cuerpo:has(.casa)>.barra) es más específica: hay que repetirla. */
+@media (min-width:768px){
+  .app-cuerpo>.barra.cont,
+  .app-cuerpo:has(.casa)>.barra.cont{
+    --col:960px;
+    max-width:none;width:100%;margin:0;background:var(--fondo);
+    padding-block:16px;
+    padding-inline:max(var(--margen),calc((100% - var(--col)) / 2 + var(--margen)))
+  }
+  .app-cuerpo:has(.casa)>.barra.cont{--col:1180px}
+  .app-cuerpo>.cont:not(.barra){padding-top:28px}
+  .casa.casa--vacio{padding-top:0}
+  .ini-cab{margin-top:0}
+}
+@media (min-width:960px){
+  .app-cuerpo>.barra.cont{--col:1140px}
+  .app-cuerpo:has(.casa)>.barra.cont{--col:1180px}
+}
+@media (min-width:768px){
+  .casa.cont:not(.casa--vacio){flex:1;justify-content:safe center;gap:clamp(20px,3vh,40px)}
+  .casa-lado{top:96px}
+}
+@media (min-width:1280px){
+  .cont{max-width:1200px}
+  .app-cuerpo>.barra.cont,
+  .app-cuerpo:has(.casa)>.barra.cont{--col:1200px}
+  .casa.cont:not(.casa--vacio){max-width:1200px}
+}
+@media (min-width:1280px) and (min-height:801px){
+  .casa-saludo .casa-escena{height:min(240px,26vh)}
+  .casa-hola{font-size:clamp(28px,calc(36 * var(--u)),40px)}
+  .casa-card{padding:22px 24px}
+  .casa-card__foto{width:calc(96 * var(--u));height:calc(96 * var(--u))}
+  .casa-card__top{grid-template-columns:calc(96 * var(--u)) minmax(0,1fr)}
+  .casa-card__titulo{font-size:calc(24 * var(--u));line-height:1.25}
+  .casa-monto{font-size:calc(28 * var(--u))}
+  .casa-cuerpo{gap:clamp(16px,2.4vh,28px)}
+}
+@media (min-width:1280px) and (max-height:800px){
+  .casa-saludo .casa-escena{height:min(176px,24vh)}
+  .casa.cont:not(.casa--vacio){padding-bottom:16px;gap:16px}
+  .casa-hola{font-size:clamp(24px,2.2vw,32px)}
 }
 .ini{flex:1 0 auto;display:flex;flex-direction:column}
-.ini-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}
+.ini-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}
 .ini-mas{width:56px;height:56px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--accion);color:var(--tarjeta);text-decoration:none}
 .ini-mas svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .ini-lista{display:flex;flex-direction:column;gap:12px}
@@ -1073,16 +1118,17 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .ini-compacta__tit{grid-column:1}
 .ini-compacta__meta{grid-column:1}
 .ini-ir{grid-column:2;grid-row:1 / span 2;align-self:center;color:var(--cafe-suave)}
-.ini-seguir{margin-top:4px}
+.ini-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ini-seguir{margin-top:0}
 @media (max-width:959px){
-  .ini-lista{flex:1}
-  .ini-seguir{width:100%;margin-top:auto}
+  .ini-lista{flex:none}
+  .ini-seguir{width:100%}
 }
 @media (min-width:960px){
   .ini-lista{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.9fr);align-items:start;column-gap:16px}
-  .ini-principal{grid-column:1;grid-row:1}
+  .ini-col{grid-column:1;grid-row:1}
   .ini-resto{grid-column:2;grid-row:1}
-  .ini-seguir{grid-column:1;grid-row:2;justify-self:start;width:auto;min-width:220px}
+  .ini-seguir{width:100%}
 }
 @media (max-width:719px){.barra__usuario{max-width:22vw}}
 
@@ -1176,16 +1222,15 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
   .na-par{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .na-par .na-sec+.na-sec{margin-top:0}
   .na .na-crear{width:auto;min-width:220px}
-  .perfil{display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:40px;align-items:start;max-width:920px}
-  .perfil__cab{grid-row:1;position:sticky;top:88px}
+  .perfil{display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:40px;align-items:start}
+  .perfil__cab{grid-row:1;align-self:start;position:sticky;top:84px;margin-top:0}
   .perfil__menu{display:grid;gap:16px;align-content:start}
   .anillo{width:100%;max-width:none;padding:28px 24px 32px}
   .ini-vacio{grid-template-columns:minmax(220px,320px) minmax(240px,380px);align-items:center;justify-content:center;max-width:760px;margin:64px auto 24px;column-gap:36px}
   .ini-vacio .ini-seguir{width:auto;min-width:220px;justify-self:start}
   .ini:has(.ini-vacio) .pie{max-width:760px;margin-inline:auto;justify-content:center;text-align:center}
-  .ayuda{max-width:960px}
   .ayuda__lista{grid-template-columns:1fr 1fr;align-items:start}
-  .avisos-centro,.legal__doc{max-width:720px}
+  .legal__doc{max-width:720px}
   .legal__doc{margin-inline:auto}
 }
 /* Recorrido guiado (driver.js): globo crema sólido con la casita, «Paso N de 6», 6 puntos y botones de 44 px. Velo café al 55 % (en recorrido.ts). */

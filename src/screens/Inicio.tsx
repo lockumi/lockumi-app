@@ -48,13 +48,16 @@ export function Inicio({ u }: { u: Usuario }) {
     {import.meta.env.VITE_REPUTACION === '1' && <EntradaReputacion email={u.email} />}
     {todos.length === 0 && <div className="ini-vacio"><div className="glass tarjeta vacio"><IlustracionPendiente /></div><div className="ini-vacio__lado"><p className="ini-vacio__t">Aún sin alquileres</p><p className="ini-vacio__b">Crea el primero o acepta una invitación.</p><a className="boton boton--primario boton--ancho ini-seguir" href="#/crear">Nuevo alquiler</a></div></div>}
     {principal && <div className="ini-lista">
-      <a className="glass ini-principal" href={'#/alquiler/' + principal.id}>
-        <div className="ini-principal__top"><h2 className="h3">{principal.direccion}</h2><ChipRol rol={rolDe(principal, u.email)} /></div>
-        <p className="ini-monto">{usd(principal.monto)}</p>
-        <p className="ini-monto-et">depósito</p>
-        <p className="ini-fechas"><Dibujo n="cal" />{fecha(principal.inicio)} → {fecha(principal.fin)}</p>
-        <Avance a={principal} />
-      </a>
+      <div className="ini-col">
+        <a className="glass ini-principal" href={'#/alquiler/' + principal.id}>
+          <div className="ini-principal__top"><h2 className="h3">{principal.direccion}</h2><ChipRol rol={rolDe(principal, u.email)} /></div>
+          <p className="ini-monto">{usd(principal.monto)}</p>
+          <p className="ini-monto-et">depósito</p>
+          <p className="ini-fechas"><Dibujo n="cal" />{fecha(principal.inicio)} → {fecha(principal.fin)}</p>
+          <Avance a={principal} />
+        </a>
+        <a className="boton boton--primario ini-seguir" href={'#/alquiler/' + principal.id}>Continuar paso {etapaDe(principal) + 1}</a>
+      </div>
       {resto.length > 0 && <ul className="ini-resto">
         {resto.map(a => <li key={a.id}><a className="glass ini-compacta" href={'#/alquiler/' + a.id}>
           <span className="ini-compacta__tit"><strong>{a.direccion}</strong><ChipRol rol={rolDe(a, u.email)} /></span>
@@ -63,7 +66,6 @@ export function Inicio({ u }: { u: Usuario }) {
           <Dibujo n="der" className="ini-ir" />
         </a></li>)}
       </ul>}
-      <a className="boton boton--primario ini-seguir" href={'#/alquiler/' + principal.id}>Continuar paso {etapaDe(principal) + 1}</a>
     </div>}
     {ocultos.length > 0 && <p className="ea-ocultos"><button type="button" className="boton boton--secundario boton--chico" aria-pressed={verOcultos} onClick={() => setVerOcultos(v => !v)}>{verOcultos ? TE.esconderOcultos : TE.verOcultos(ocultos.length)}</button></p>}
     <div className="pie nota"><span>{modoSolo ? 'Tus alquileres de prueba se guardan solo en este navegador. El depósito, la aprobación y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales.' : modoVideo ? <>{dosPersonas ? 'Tus alquileres de prueba se guardan en tu cuenta.' : 'Tus alquileres de prueba se guardan solo en este navegador.'} El depósito, el reclamo y la devolución quedan registrados en la red de prueba de Stellar, sin datos personales. La persona mediadora es simulada. <Simulado /></> : <>En la demo ves todos los alquileres. Los datos son de ejemplo, ficticios, y se guardan solo en este navegador. <Demo /></>}</span>
