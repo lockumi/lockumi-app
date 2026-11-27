@@ -106,7 +106,7 @@ main:focus{outline:none}
 .logo__nombre{letter-spacing:-.02em}
 @media (min-width:720px){.logo img{height:40px}.logo{font-size:20px}.barra{padding:16px var(--margen)}}
 .barra__der{display:flex;gap:6px;align-items:center;min-width:0}
-.boton-icono{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;background:#DCEAE5;color:var(--cafe);box-shadow:none;cursor:pointer}
+.boton-icono{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;background:var(--mint);color:var(--cafe);box-shadow:none;cursor:pointer}
 .boton-icono:hover{background:#fff}
 .boton-icono .ico{width:20px;height:20px;vertical-align:0}
 .roles button{min-height:32px}
@@ -792,7 +792,7 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .casa-vacio .casa-como{display:inline-flex}
 .casa-como{align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 8px;color:var(--accion);font:700 16px/20px var(--f-texto);text-decoration:none}
 .casa-campana{position:relative;z-index:1;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;background:var(--tarjeta);color:var(--cafe);border:1px solid var(--borde);box-shadow:0 4px 12px rgba(41,51,50,.06);text-decoration:none}
-.barra__der .casa-campana{width:40px;height:40px;background:#DCEAE5;border:0;box-shadow:none}
+.barra__der .casa-campana{width:40px;height:40px;background:var(--mint);border:0;box-shadow:none}
 .barra__der .casa-campana:hover{background:#fff}
 .barra-campana{display:inline-flex;flex:none}
 .barra-campana:empty{display:none}
@@ -807,15 +807,6 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
   .casa-hero{display:none}
 }
 @media (min-width:768px){
-  .app-cuerpo:has(.casa)>.barra{max-width:none;width:100%;background:var(--fondo);padding:14px clamp(20px,2.4vw,40px)}
-  /* Medidas del PNG (1672 px de ancho) llevadas a 1440: valor × 1440/1672. A 1280 bajan con el ancho. */
-  .app-cuerpo:has(.casa) .logo img{height:calc(46.51 * var(--u))}
-  .app-cuerpo:has(.casa) .logo{font-size:calc(27.2 * var(--u));gap:calc(15.5 * var(--u))}
-  .app-cuerpo:has(.casa) .boton-icono,.app-cuerpo:has(.casa) .casa-campana{width:calc(46.51 * var(--u));height:calc(46.51 * var(--u));background:var(--tarjeta);border:1px solid var(--borde)}
-  .app-cuerpo:has(.casa) .boton-icono .ico,.app-cuerpo:has(.casa) .casa-campana .ico{width:calc(19.5 * var(--u));height:calc(19.5 * var(--u))}
-  .app-sesion:has(.casa) .nav-app--cabecera a{font-size:calc(14.1 * var(--u));line-height:1;min-height:0;height:calc(41.34 * var(--u));padding:0 calc(16 * var(--u));gap:calc(8 * var(--u))}
-  .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * var(--u));height:calc(16.5 * var(--u))}
-  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:999px;padding:0 calc(24.25 * var(--u))}
   .casa-vacio{display:none}
   .app-cuerpo:has(.casa--vacio){overflow:hidden}
   .casa.casa--vacio{max-width:none;width:100%;flex:1;justify-content:center;padding-top:0;padding-bottom:0;background:var(--fondo)}
@@ -862,14 +853,6 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 }
 /* Tablet: los mismos px que a 1280. 390, 1280 y 1440 no entran en esta consulta. */
 @media (min-width:768px) and (max-width:1279px){
-  .app-cuerpo:has(.casa)>.barra{padding:14px calc(2.4 * 1280 / 100 * 1px)}
-  .app-cuerpo:has(.casa) .logo img{height:calc(46.51 * 1280 / 1440 * 1px)}
-  .app-cuerpo:has(.casa) .logo{font-size:calc(27.2 * 1280 / 1440 * 1px);gap:calc(15.5 * 1280 / 1440 * 1px)}
-  .app-cuerpo:has(.casa) .boton-icono,.app-cuerpo:has(.casa) .casa-campana{width:calc(46.51 * 1280 / 1440 * 1px);height:calc(46.51 * 1280 / 1440 * 1px)}
-  .app-cuerpo:has(.casa) .boton-icono .ico,.app-cuerpo:has(.casa) .casa-campana .ico{width:calc(19.5 * 1280 / 1440 * 1px);height:calc(19.5 * 1280 / 1440 * 1px)}
-  .app-sesion:has(.casa) .nav-app--cabecera a{font-size:14px;line-height:1;height:calc(41.34 * 1280 / 1440 * 1px);padding:0 calc(16 * 1280 / 1440 * 1px);gap:calc(8 * 1280 / 1440 * 1px)}
-  .app-sesion:has(.casa) .nav-app--cabecera .ico{width:calc(16.5 * 1280 / 1440 * 1px);height:calc(16.5 * 1280 / 1440 * 1px)}
-  .app-sesion:has(.casa) .nav-app--cabecera a[aria-current="page"]{padding:0 calc(24.25 * 1280 / 1440 * 1px)}
   .casa-hero .casa-escena{width:calc(428 * 1280 / 1440 * 1px);aspect-ratio:1.45;height:auto;margin:0 auto;overflow:visible}
   .casa-hero h1{font-size:calc(42.49 * 0.83 * 1280 / 1440 * 1px)}
   .casa-hero p{font-size:calc(20.05 * 0.83 * 1280 / 1440 * 1px)}
@@ -1002,6 +985,9 @@ body:has(.casa),#root:has(.casa),.app-sesion:has(.casa),.app-cuerpo:has(.casa){b
 .avisos-centro__item span:not(.chip),.avisos-centro__item time{font:500 14px/20px var(--f-texto);color:var(--cafe-suave)}
 .avisos-centro__item .chip{justify-self:start;width:max-content}
 .avisos-centro__item--salida{background:var(--estado-pendiente-fondo)}
+/* La tarjeta es opaca: el aurora de atrás no se cuela por el cristal ni por el desenfoque. */
+.avisos-centro__item.glass,.avisos-centro__vacio.glass{background:var(--tarjeta);-webkit-backdrop-filter:none;backdrop-filter:none}
+.avisos-centro__item--salida.glass{background:var(--estado-pendiente-fondo)}
 .ayuda{display:grid;gap:16px;padding-bottom:32px}
 .ayuda h1{margin:0;font:800 clamp(28px,6vw,36px)/1.1 var(--f-titulo)}
 .ayuda__temas{display:flex;flex-wrap:wrap;gap:8px}
@@ -1033,6 +1019,7 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
   .barra{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
   .nav-app--cabecera{display:flex;position:static;width:auto;margin:0;border:0;background:transparent;justify-content:center;gap:4px;padding:0}
   .nav-app--cabecera a{flex:none;flex-direction:row;gap:6px;padding:0 12px}
+  .nav-app--cabecera a[aria-current="page"]{background:var(--mint);color:var(--accion);border-radius:999px;padding:0 16px}
   body:has(.nav-app) .tostadas{bottom:24px}
 }
 @media (min-width:960px){
@@ -1043,13 +1030,6 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 }
 @media (min-width:768px){
   .app-sesion:has(.casa){--u:calc(1280 / 1440 * 1px)}
-  .app-sesion:has(.casa) .nav-app--pie{display:none}
-  .app-cuerpo:has(.casa)>.barra{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
-  .app-sesion:has(.casa) .nav-app--cabecera{display:flex;position:static;width:auto;margin:0;border:0;background:transparent;justify-content:center;gap:4px;padding:0}
-  .app-sesion:has(.casa) .nav-app--cabecera a{flex:none;flex-direction:row;gap:calc(8 * var(--u));height:calc(41.34 * var(--u));min-height:0;padding:0 calc(16 * var(--u))}
-}
-@media (min-width:768px) and (max-width:1279px){
-  .app-sesion:has(.casa) .nav-app--cabecera a{gap:calc(8 * 1280 / 1440 * 1px);height:calc(41.34 * 1280 / 1440 * 1px);min-height:0;padding:0 calc(16 * 1280 / 1440 * 1px)}
 }
 @media (min-width:1280px){
   .app-sesion:has(.casa){--u:min(100vw / 1360,(100dvh - 72px) / 680,1.08px)}
@@ -1064,14 +1044,12 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
     padding-block:16px;
     padding-inline:max(var(--margen),calc((100% - var(--col)) / 2 + var(--margen)))
   }
-  .app-cuerpo:has(.casa)>.barra.cont{--col:1180px}
   .app-cuerpo>.cont:not(.barra){padding-top:28px}
   .casa.casa--vacio{padding-top:0}
   .ini-cab{margin-top:0}
 }
 @media (min-width:960px){
   .app-cuerpo>.barra.cont{--col:1140px}
-  .app-cuerpo:has(.casa)>.barra.cont{--col:1180px}
 }
 @media (min-width:768px){
   .casa.cont:not(.casa--vacio){flex:1;justify-content:safe center;gap:clamp(20px,3vh,40px)}
