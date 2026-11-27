@@ -1,6 +1,5 @@
-// Paso 19 · Reputación APAGADA (VITE_REPUTACION sin definir, como en producción): «Tus alquileres» se ve igual que en master.
-// La foto de referencia (__snapshots__/inicio-master*.html) se generó con el código de master (fb7cafc) ANTES de agregar la reputación;
-// si esta prueba falla, algo de la reputación se coló en la app con el interruptor apagado.
+// Paso 19 · Reputación APAGADA (VITE_REPUTACION sin definir, como en producción): «Tus alquileres» no muestra la reputación.
+// La referencia incluye el diseño Sage Teal (chip de rol y sin el hero terracota). Si falla, revisar que no entre UI de reputación.
 import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Usuario } from '../../types'

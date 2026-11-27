@@ -55,10 +55,10 @@ export function Alertas() {
     }
     const luego = () => { cancelAnimationFrame(cuadro); cuadro = requestAnimationFrame(poner) }
     poner(); const t = setTimeout(poner, 350)
-    addEventListener('resize', luego); addEventListener('scroll', luego, { passive: true }); addEventListener('hashchange', luego)
+    addEventListener('resize', luego); document.addEventListener('scroll', luego, { passive: true, capture: true }); addEventListener('hashchange', luego)
     const m = typeof MutationObserver === 'undefined' ? null : new MutationObserver(luego)
     m?.observe(document.getElementById('contenido') ?? document.body, { childList: true, subtree: true })
-    return () => { cancelAnimationFrame(cuadro); clearTimeout(t); m?.disconnect(); removeEventListener('resize', luego); removeEventListener('scroll', luego); removeEventListener('hashchange', luego) }
+    return () => { cancelAnimationFrame(cuadro); clearTimeout(t); m?.disconnect(); removeEventListener('resize', luego); document.removeEventListener('scroll', luego, { capture: true }); removeEventListener('hashchange', luego) }
   }, [pila, altos])
   // Un aviso que se cierra no avisa «blur» ni «pointerout»: se revisa de nuevo al cambiar la pila (si no, la pausa quedaría puesta).
   useEffect(() => { const c = caja.current
