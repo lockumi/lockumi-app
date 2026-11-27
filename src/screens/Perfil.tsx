@@ -29,7 +29,7 @@ export function Perfil({ u, onSalir }: { u: Usuario; onSalir: () => void }) {
         {hayPrivacidad && <a href="/privacidad">Aviso de privacidad</a>}
         {import.meta.env.VITE_REPUTACION === '1' && <a href="#/perfil/llave">Mi Llave Lockumi</a>}
       </nav>
-      <button type="button" className="boton boton--primario" onClick={onSalir}>Salir</button>
+      <button type="button" className="boton boton--secundario" onClick={onSalir}>Salir</button>
     </div>
   </main>
 }

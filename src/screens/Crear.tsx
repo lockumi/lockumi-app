@@ -80,7 +80,7 @@ export function Hoja({ id, titulo, abierta, onCerrar, ancla, alDerecha, children
     const d = ref.current; if (!d) return
     const colocar = () => {
       const a = ancla?.current
-      if (!a || !matchMedia('(min-width: 720px)').matches) { d.style.top = ''; d.style.left = ''; d.style.maxHeight = ''; return }
+      if (!a || !matchMedia('(min-width: 720px) and (max-width: 1023px)').matches) { d.style.top = ''; d.style.left = ''; d.style.maxHeight = ''; return }
       const r = a.getBoundingClientRect(); const margen = 12; const w = d.offsetWidth
       const alto = d.scrollHeight
       const abajo = innerHeight - margen - (r.bottom + 8), arriba = r.top - 8 - margen

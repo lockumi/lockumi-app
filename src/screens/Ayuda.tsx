@@ -6,7 +6,7 @@ import { NOTA_AYUDA, preguntasVisibles, TEMAS, type TemaAyuda } from './ayuda-da
 export function Ayuda({ u }: { u: Usuario }) {
   const [filtro, setFiltro] = useState<TemaAyuda | null>(null)
   const lista = preguntasVisibles(filtro)
-  return <main id="contenido" tabIndex={-1} className="cont ayuda">
+  return <main id="contenido" tabIndex={-1} className="cont ayuda-pagina">
     <h1>¿Cómo te ayudamos?</h1>
     <p className="nota" role="note">{NOTA_AYUDA}</p>
     <button type="button" className="boton boton--secundario" onClick={e => abrirRecorrido(u, { quien: e.currentTarget })}>Ver el recorrido</button>

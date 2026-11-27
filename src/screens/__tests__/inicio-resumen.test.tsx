@@ -66,7 +66,9 @@ describe('pantalla de inicio', () => {
     bolsa.estado = 'listo'; bolsa.lista = [curso, firma]
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
     expect(h).toContain('Hola, Katherine')
-    expect(h).toContain('Casa ejemplo · Heredia centro')
+    expect(h).toContain('Casa ejemplo')
+    expect(h).toContain('Heredia centro')
+    expect(h).toContain('lugar-a')
     expect(h).toContain('Dueño')
     expect(h).toContain('Firmas')
     expect(h).toContain('Paso 2 de 8')
@@ -120,14 +122,10 @@ describe('pantalla de inicio', () => {
   it('sin alquileres ofrece crear y cómo funciona, sin montos', () => {
     bolsa.estado = 'listo'; bolsa.lista = []
     const h = renderToStaticMarkup(<ResumenInicio u={U} />)
-    expect(h).toContain('Sin alquileres aún')
-    expect(h).toContain('Inicia tu primer alquiler y gestiona todo de forma segura.')
+    expect(h).toContain('Tu próximo hogar empieza aquí.')
     expect(h).toContain('href="#/crear"')
     expect(h).toContain('Nuevo alquiler')
     expect(h).toContain('data-recorrido="nuevo"')
-    expect(h).toContain('href="#/ayuda"')
-    expect(h).toContain('Cómo funciona')
-    expect(h).toContain('Tu próximo hogar empieza aquí.')
     expect(h).toContain('Crea tu primer alquiler o acepta una invitación.')
     expect(h).toContain('Seguro y confiable')
     expect(h).toContain('Rápido y 100% digital')

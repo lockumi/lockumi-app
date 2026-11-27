@@ -35,7 +35,7 @@ export function Barra({ u, onSalir, r = '/' }: { u: Usuario; onSalir: () => void
       <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a2.9 2.9 0 0 1 5.6 1c0 2-2.7 2.2-2.7 4" /><path d="M12 17h.01" /></svg>
       </a>
-      <button type="button" className="boton-icono" onClick={onSalir} aria-label="Salir" title="Salir">
+      <button type="button" className="boton-icono barra-salir" onClick={onSalir} aria-label="Salir" title="Salir">
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10"/></svg>
       </button>
     </div>
@@ -91,6 +91,13 @@ export const usd = (n: number) => pruebaCompleta() ? dos(n) + ' USDC de prueba'
 /** Lo que se devuelve o se reparte (ya sin la comisión real de Trustless Work): mismo criterio que usd() (coma decimal, al menos
  *  2 decimales y el mismo sufijo), pero exacto, sin redondear ni ceros de más: «0,997 USDC», «1,994 USDC de prueba», «1,00 USDC».
  *  Pedido de Katherine (27/10/2026, 1:05 p. m. CR). El cálculo está en api/_lib/centimos.ts (netoTrustless). */
+/** Pega el «·» al primer tramo para que el título no parta en el separador. El texto visible no cambia. */
+export function Lugar({ texto }: { texto: string }) {
+  const sep = ' · '
+  const i = texto.indexOf(sep)
+  if (i <= 0) return <>{texto}</>
+  return <><span className="lugar-a">{texto.slice(0, i)}{'\u00A0'}·</span> {texto.slice(i + sep.length)}</>
+}
 export const usdExacto = (n: number) => pruebaCompleta() ? exacto(n) + ' USDC de prueba'
   : escrowReal ? exacto(n) + ' USDC'
   : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code', minimumFractionDigits: 2, maximumFractionDigits: 7 }).format(n)

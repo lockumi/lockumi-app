@@ -2,7 +2,7 @@ import { useAlquileres, useEstadoAlquileres, rolDe } from '../store'
 import { modoPrueba } from '../servidor/config'
 import { esMio, oculto } from '../prueba/eliminar'
 import { ETIQUETA_ESTADO, NOMBRE_ROL, type Usuario, type Alquiler, type Foto } from '../types'
-import { usd, fecha } from '../ui'
+import { usd, fecha, Lugar } from '../ui'
 import { ETAPAS, etapaDe } from '../flujo'
 import { claseEstado } from '../estados'
 import { activos, tareasPropias } from './inicio-resumen'
@@ -84,7 +84,7 @@ function Tarjeta({ a, email }: { a: Alquiler; email: string }) {
       <img className="casa-card__foto" src={foto ?? EDIFICIO} alt="" />
       <div className="casa-card__datos">
         <div className="casa-card__titulo-fila">
-          <h3 className="casa-card__titulo">{a.direccion}</h3>
+          <h3 className="casa-card__titulo"><Lugar texto={a.direccion} /></h3>
           <span className={'casa-estado ' + claseEstado(a.estado)}><i />{ETIQUETA_ESTADO[a.estado]}</span>
         </div>
         <p className="casa-meta"><Ico d={ICO_PERSONA} />{NOMBRE_ROL[rol]}</p>
@@ -112,20 +112,6 @@ function ComoFunciona() {
     <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4z" /></svg>
     Cómo funciona
   </a>
-}
-
-function Vacio() {
-  return <section className="casa-vacio">
-    <Escena />
-    <div className="casa-vacio__texto">
-      <h1>Sin alquileres aún</h1>
-      <p>Inicia tu primer alquiler y gestiona todo de forma segura.</p>
-      <div className="casa-vacio__acciones">
-        <a className="boton boton--primario boton--ancho" href="#/crear" data-recorrido="nuevo">+ Nuevo alquiler</a>
-        <ComoFunciona />
-      </div>
-    </div>
-  </section>
 }
 
 // LEGAL: pendiente. Copy de marketing del escritorio vacío (Katherine, 14/11). No es texto legal.
@@ -181,6 +167,6 @@ export function ResumenInicio({ u }: { u: Usuario }) {
         </aside>
       </div>}
     </div>}
-    {vacio && <><Vacio /><HeroVacio /></>}
+    {vacio && <HeroVacio />}
   </main>
 }

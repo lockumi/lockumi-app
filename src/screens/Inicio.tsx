@@ -1,6 +1,6 @@
 import { useAlquileres, store, rolDe } from '../store'
 import { NOMBRE_ROL, ETIQUETA_ESTADO, type Usuario, type Alquiler, type Rol } from '../types'
-import { Demo, Simulado, usd, fecha } from '../ui'
+import { Demo, Simulado, usd, fecha, Lugar } from '../ui'
 import { modoReal } from '../services/auth'
 import { Billetera } from './Billetera'
 import { modoSolo, modoVideo, dosPersonas } from '../servidor/config'
@@ -13,8 +13,6 @@ import { AvisoLista } from '../prueba/Eliminar'
 import { T as TE } from '../prueba/eliminar-textos'
 import { ETAPAS, etapaDe } from '../flujo'
 import { ordenarInicio } from './inicio-lista'
-import { IlustracionPendiente } from './ilustracion'
-
 function Avance({ a }: { a: Alquiler }) {
   const i = etapaDe(a)
   return <div className="ini-avance">
@@ -35,7 +33,7 @@ export function Inicio({ u }: { u: Usuario }) {
   const ocultos = mios.filter(a => oculto(a, u.email))
   const todos = verOcultos ? mios : mios.filter(a => !oculto(a, u.email))
   const { principal, resto } = ordenarInicio(todos, u.email)
-  return <main id="contenido" tabIndex={-1} className="cont ini">
+  return <main id="contenido" tabIndex={-1} className={'cont ini' + (todos.length === 0 ? ' ini--vacio' : '')}>
     <div className="ini-cab">
       <h1>Tus alquileres</h1>
       <a className="ini-mas" href="#/crear" data-recorrido="nuevo" aria-label="Nuevo alquiler">
@@ -46,21 +44,21 @@ export function Inicio({ u }: { u: Usuario }) {
     {aviso && <AvisoLista texto={aviso} cerrar={() => setAviso(null)} />}
     {(modoReal || (import.meta.env.DEV && localStorage.getItem('lockumi.billetera.prueba'))) && <Billetera />}
     {import.meta.env.VITE_REPUTACION === '1' && <EntradaReputacion email={u.email} />}
-    {todos.length === 0 && <div className="ini-vacio"><div className="glass tarjeta vacio"><IlustracionPendiente /></div><div className="ini-vacio__lado"><p className="ini-vacio__t">Aún sin alquileres</p><p className="ini-vacio__b">Crea el primero o acepta una invitación.</p><a className="boton boton--primario boton--ancho ini-seguir" href="#/crear">Nuevo alquiler</a></div></div>}
+    {todos.length === 0 && <div className="ini-vacio"><div className="ini-vacio__lado"><p className="ini-vacio__t">Aún sin alquileres</p><p className="ini-vacio__b">Crea el primero o acepta una invitación.</p><a className="boton boton--primario boton--ancho ini-seguir" href="#/crear">Nuevo alquiler</a></div></div>}
     {principal && <div className="ini-lista">
       <div className="ini-col">
-        <a className="glass ini-principal" href={'#/alquiler/' + principal.id}>
-          <div className="ini-principal__top"><h2 className="h3">{principal.direccion}</h2><ChipRol rol={rolDe(principal, u.email)} /></div>
+        <article className="glass ini-principal casa-tarjeta">
+          <div className="ini-principal__top"><h2 className="h3"><Lugar texto={principal.direccion} /></h2><ChipRol rol={rolDe(principal, u.email)} /></div>
           <p className="ini-monto">{usd(principal.monto)}</p>
           <p className="ini-monto-et">depósito</p>
           <p className="ini-fechas"><Dibujo n="cal" />{fecha(principal.inicio)} → {fecha(principal.fin)}</p>
           <Avance a={principal} />
-        </a>
-        <a className="boton boton--primario ini-seguir" href={'#/alquiler/' + principal.id}>Continuar paso {etapaDe(principal) + 1}</a>
+          <a className="boton boton--primario boton--ancho ini-seguir" href={'#/alquiler/' + principal.id}>Continuar paso {etapaDe(principal) + 1}</a>
+        </article>
       </div>
       {resto.length > 0 && <ul className="ini-resto">
         {resto.map(a => <li key={a.id}><a className="glass ini-compacta" href={'#/alquiler/' + a.id}>
-          <span className="ini-compacta__tit"><strong>{a.direccion}</strong><ChipRol rol={rolDe(a, u.email)} /></span>
+          <span className="ini-compacta__tit"><strong><Lugar texto={a.direccion} /></strong><ChipRol rol={rolDe(a, u.email)} /></span>
           <span className="ini-compacta__meta">{usd(a.monto)} · {ETIQUETA_ESTADO[a.estado]}</span>
           {verOcultos && oculto(a, u.email) && <span className="chip chip--neutro chip--mini">{TE.chipOculto}</span>}
           <Dibujo n="der" className="ini-ir" />

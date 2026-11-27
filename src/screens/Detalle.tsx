@@ -13,7 +13,7 @@ import { estadoAceptaciones, type Aceptacion } from '../servidor/aceptaciones'
 import { modoReal } from '../services/auth'
 import { NOMBRE_ROL, type Alquiler, type Rol, type Foto, type Usuario } from '../types'
 import { fotoEjemplo } from '../demoFotos'
-import { Demo, Simulado, Icono, LineaTiempo, usd, usdExacto, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
+import { Demo, Simulado, Icono, LineaTiempo, Lugar, usd, usdExacto, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
 import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
@@ -90,7 +90,7 @@ function TarjetaContrato({ a, integro, onAlternar }: { a: Alquiler; integro: boo
     </div>
     <div className="ct-resumen__firmas-cab"><h2 className="ct-resumen__firmas-t">Firmas</h2><p className="ct-resumen__cuenta">{n} de 2</p></div>
     <ul className="ct-resumen__firmas">{ROLES_FIRMA.map(r => <li key={r}><span className="ct-resumen__quien">{trazo(ICO_PERSONA)}<span>{NOMBRE_ROL[r]}</span></span>{f[r] ? <span className="chip chip--exito">Firmó</span> : <span className="chip chip--pendiente">Pendiente</span>}</li>)}</ul>
-    <button type="button" className="boton boton--primario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{trazo(ICO_LAPIZ)}{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
+    <button type="button" className="boton boton--secundario boton--ancho" aria-expanded={integro} aria-controls="ct-firma" onClick={onAlternar}>{trazo(ICO_LAPIZ)}{integro ? 'Ocultar contrato completo' : 'Ver contrato completo'}</button>
   </section>
 }
 // LEGAL: revisado (25/10, P-05) · texto literal aprobado para la espera de la mediación en C (alquileres con otra persona)
@@ -231,7 +231,7 @@ export function AnilloDias({ a }: { a: Alquiler }) {
   const { total, quedan } = diasQueQuedan(a.inicio, a.fin, hoyCostaRica(ahoraDe(a)))
   const r = 58, c = 2 * Math.PI * r
   const parte = total > 0 ? Math.min(1, quedan / total) : 0
-  return <figure className="anillo glass tarjeta">
+  return <figure className="anillo anillo--plano">
     <div className="anillo__aro">
       <svg viewBox="0 0 140 140" aria-hidden="true">
         <circle cx="70" cy="70" r={r} fill="none" stroke="var(--mint)" strokeWidth="10" />
@@ -252,7 +252,6 @@ const marcarConfirmacion = (id: string) => { try { localStorage.setItem(CLAVE_CO
 export function ConfirmacionDeposito({ a, onContinuar }: { a: Alquiler; onContinuar: () => void }) {
   const etapa = etapaDe(a)
   return <section className="pila confirmacion-deposito" aria-label="Depósito protegido">
-    <IlustracionPendiente />
     <span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
     <h2>Depósito protegido</h2>
     <div className="monto">{usd(a.monto)}</div>
@@ -270,8 +269,8 @@ function Entrada(p: P) {
 }
 
 export function EnCurso({ a }: P) {
-  return <section className="pila"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
-    <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div>
+  return <section className="pila en-curso"><div className="en-curso__top"><AnilloDias a={a} /><div className="en-curso__datos"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
+    <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div></div></div>
     {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
     <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
     <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
@@ -336,7 +335,7 @@ function FormReclamo({ a, onCancelar }: { a: Alquiler; onCancelar: () => void })
     void p.correr(av => acciones.reclamar(a, m, motivo.trim(), fotos, av))
   }
   return <div className="pila">
-    <label className={'campo' + (env && e.monto ? ' campo--error' : '')}><span>¿Cuánto reclamas? ({escrowReal ? 'USDC de prueba' : 'USD'})</span><input inputMode="decimal" value={monto} onChange={x => setMonto(x.target.value)} />{env && e.monto && <small className="campo__error" role="alert">{e.monto}</small>}</label>
+    <label className={'campo campo--monto' + (env && e.monto ? ' campo--error' : '')}><span>¿Cuánto reclamas? ({escrowReal ? 'USDC de prueba' : 'USD'})</span><input inputMode="decimal" value={monto} onChange={x => setMonto(x.target.value)} />{env && e.monto && <small className="campo__error" role="alert">{e.monto}</small>}</label>
     <label className={'campo' + (env && e.motivo ? ' campo--error' : '')}><span>¿Qué pasó?</span><textarea rows={3} value={motivo} onChange={x => setMotivo(x.target.value)} placeholder="Ej.: mancha en la pared de la sala que no estaba al entrar" />{env && e.motivo && <small className="campo__error" role="alert">{e.motivo}</small>}</label>
     <FotoLista fotos={fotos} vacio="Sin fotos del daño todavía." />
     <TomarFoto por="dueno" etiqueta="Tomar foto del daño" principal={false} onFoto={f => setFotos(v => [...v, f])} />
@@ -363,14 +362,14 @@ function Reclamo({ a, rol }: P) {
     void (async () => { try { if (rol === 'inquilino') await acciones.abrirAvisoReclamo!(a); await acciones.aplicarSilencio!(a) } catch { /* se reintenta al volver a abrir */ } })()
   }, [modoServidor, rol, a.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const aceptar = () => p.correr(av => acciones.responder(a, true, av))
-  return <section className="pila"><div className="cab"><h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}</div>{/* LEGAL: revisado (24/10) */}<Evidencia a={a} />
+  return <section className="pila reclamo-vista"><div className="cab"><h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}</div>{/* LEGAL: revisado (24/10) */}<Evidencia a={a} />
     {/* LEGAL: revisado (24/10) · ronda 8. modoSolo: solo el alquiler de ejemplo (sin red, reclamo simulado). modoVideo (producción): disputa real en la red de prueba (acciones.reclamar → escrow.disputar) */}
     {modoSolo && <p className="nota">En este ejemplo, el reclamo es simulado: no se registra en la red de prueba ni bloquea ningún depósito. La mediación también es simulada.</p>}
     {modoVideo && <p className="nota">El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.</p>}
     {rol === 'inquilino' ? <>
       {p.error}
-      <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button>
-      <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
+      <div className="pie-paso"><button type="button" className="boton boton--secundario" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
+      <button type="button" className="boton boton--primario boton--grande pie-paso__principal" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button></div>
       <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {escrowReal && p.ocupado && NOTA_TIEMPO}
     </> : <Espera texto="Esperando que el inquilino responda tu reclamo." />}
@@ -390,7 +389,7 @@ function Mediacion({ a, rol }: P) {
   const est = estadoAceptaciones(rol, filas, a.monto)
   const vence = modoServidor ? venceMediacionC(a) : null
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
-  return <section className="pila"><IlustracionPendiente /><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
+  return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     <div className="ct-resumen" aria-label="Resumen de la mediación"><p className="ct-resumen__monto">{usd(r.monto)}</p><p>Reclamo de {usd(r.monto)}. Una persona mediadora revisa las fotos y ayuda a buscar un acuerdo. No decide por ustedes. No hay un costo configurado en este alquiler.</p></div>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
@@ -481,7 +480,6 @@ export function Cerrado({ a, rol }: P) {
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
       : esDosPersonas(a) ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : <ul className="lista"><li><span>Inquilino</span><strong>{usdExacto(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usdExacto(r.dueno)}</strong></li></ul>}{/* una persona: r ya es lo que llegó (escrow.ts) */}
-    <IlustracionPendiente />
     <p>{auto2 ? TEXTO_CERRADO_AUTO : dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p>
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
@@ -520,7 +518,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
     const x = antes.current; antes.current = a ? instantanea(a) : null
     if (x && a && !ejemplo) avisar(alertaPorCambio(x, a, rol, { prueba: modoPrueba, video: modoVideo, red: escrowReal }))
   })
-  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta"><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/alquileres">Volver a tus alquileres</a></div></main>
+  if (!a) return <main id="contenido" tabIndex={-1} className="cont estado-vacio"><div className="glass tarjeta estado-vacio__caja"><svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7" /><path d="M6 10v9h12v-9" /></svg><p>No encontramos ese alquiler.</p><a className="boton boton--primario" href="#/alquileres">Volver a tus alquileres</a></div></main>
   if (modoSolo && !ejemplo) return <DetalleSolo a={a} />
   const p = { a, rol }; const t = turno(a, rol); const etapa = etapaDe(a)
   const panel = {
@@ -532,11 +530,10 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   return <main id="contenido" tabIndex={-1} className="cont" style={{ paddingBottom: 48 }}>
     <a href="#/alquileres" className="volver">← Tus alquileres</a>
     {ejemplo && <p className="ejemplo-cinta">Alquiler de ejemplo · solo para ver</p>}
-    <h1 className="h-lugar">{a.direccion}</h1>
+    <h1 className="h-lugar"><Lugar texto={a.direccion} /></h1>
     {modoServidor && rol === 'dueno' && a.inquilinoUnido === false && <Invitacion a={a} />}
     <div className="paso-cab"><p className="paso-cab__n">{a.estado === 'cerrado' ? 'Terminado' : pasoTexto(a)}</p><p className="paso-cab__t">{ETAPAS[etapa]}</p>
       <div className="barra-paso" aria-hidden="true">{ETAPAS.map((_, n) => <span key={n} className={a.estado === 'cerrado' || n < etapa ? 'hecho' : n === etapa ? 'actual' : ''} />)}</div></div>
-    {a.estado === 'en_curso' && <AnilloDias a={a} />}
     <div className="detalle" inert={!!ejemplo}>
       <div className="detalle__principal pila">
         {modoVideo && <p className="ahora" role="status" aria-live="polite">{ahoraPrueba(a)}</p>}
@@ -551,7 +548,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
         {a.estado !== 'firmas' && !escritorio && <div className="cc-arriba" inert={!!ejemplo}><ContratoCompacto a={a} como="barra" /></div>}
         {puedeCambiarVersion(a) && !ejemplo && <CambioVersion a={a} rol={rol} />}{/* paso 16: solo con el interruptor encendido */}
       </div>
-      <section className={'glass tarjeta pasos-lista' + (a.estado === 'firmas' ? ' pasos-lista--primero' : '')} aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} ancla="#accion-actual" /></section>
+      <section className="glass tarjeta pasos-lista" aria-labelledby="t-estado" data-recorrido="pasos"><h3 id="t-estado">Los pasos</h3><LineaTiempo a={a} ancla="#accion-actual" /></section>
       <aside className="detalle__lado pila">
         {a.estado !== 'firmas' && escritorio && <ContratoCompacto a={a} como="tarjeta" />}
         {escrowReal && <Comprobantes a={a} />}
