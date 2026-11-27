@@ -1,5 +1,5 @@
 // Camino feliz COMPLETO contra la API real de testnet de Trustless Work, con cuentas DESECHABLES (ninguna billetera de personas).
-//   dueño e inquilino = cuentas Cavos desechables (clave WebCryptoControlKey del kit; firman con el signXdr REAL de @cavos/kit 0.4.2)
+//   dueño e inquilino = cuentas Cavos desechables (clave WebCryptoControlKey del kit; firman con el signXdr REAL de @cavos/kit 0.7.0)
 //   plataforma        = cuenta de testnet de Lockumi (platformAddress, serviceProvider, releaseSigner, disputeResolver)
 // Pasos: cuentas + trustlines → USDC (DEX de testnet, XLM→USDC de Circle) → deploy → depósito → evidencia → aprobación → liberación.
 // Uso: node scripts/e2e-testnet-tw.mjs [monto=2]
@@ -8,7 +8,7 @@
 import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { readFileSync } from 'node:fs'
 import { CavosStellar, StellarAdapter } from '@cavos/kit/stellar'
-import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs' // mismas clases del kit (no exportadas)
+import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-GBAKP5G5.mjs' // mismas clases del kit (no exportadas)
 import { Keypair, Asset, Networks, Operation, TransactionBuilder, Horizon, rpc, scValToNative, xdr, BASE_FEE } from '@stellar/stellar-sdk'
 
 const SEC = '/workspace/lockumi/.secrets/'
