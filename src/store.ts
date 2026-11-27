@@ -94,6 +94,7 @@ const subscribeMezcla = (f: () => void) => {
 export const estadoAlquileres = (): 'cargando' | 'listo' | 'error' =>
   modoServidor || (dosPersonas && tieneSesionServidor()) ? repositorio.estado() : 'listo'
 export const useAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : dosPersonas ? subscribeMezcla : store.subscribe,
+  modoServidor ? repositorio.todos : dosPersonas ? todosMezcla : store.todos,
   modoServidor ? repositorio.todos : dosPersonas ? todosMezcla : store.todos)
 /** Igual que `estadoAlquileres`, pero vuelve a dibujar cuando cambia (también cuando la carga falla sin cambiar la lista). */
 export const useEstadoAlquileres = () => useSyncExternalStore(modoServidor ? repositorio.subscribe : dosPersonas ? subscribeMezcla : store.subscribe, estadoAlquileres, estadoAlquileres)

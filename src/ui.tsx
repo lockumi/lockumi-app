@@ -7,6 +7,8 @@ import { Plegable } from './screens/Plegable'
 import type { Usuario, Alquiler } from './types'
 import { ETAPAS, etapaDe } from './flujo'
 import { Navegacion } from './screens/Navegacion'
+import { useAlquileres } from './store'
+import { avisosVisibles } from './screens/avisos-datos'
 
 export const Demo = ({ t = 'Demo: simulado' }: { t?: string }) => modoReal ? null : <span className="demo" title="Integración simulada para la demo">{t}</span>
 export const Icono = ({ id, className = '' }: { id: string; className?: string }) =>
@@ -14,13 +16,22 @@ export const Icono = ({ id, className = '' }: { id: string; className?: string }
 export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: number; className?: string }) =>
   <svg className={'deco ' + className} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href={'#' + id} /></svg>
 
-export function Barra({ onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
+function Campana({ sinLeer }: { sinLeer: boolean }) {
+  return <a href="#/avisos" className="casa-campana" aria-label="Avisos">
+    <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9" /><path d="M10 18a2 2 0 0 0 4 0" /></svg>
+    {sinLeer && <span className="casa-campana__punto" />}
+    {sinLeer && <span className="sr">Hay avisos sin leer.</span>}
+  </a>
+}
+
+export function Barra({ u, onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
   const enAyuda = r === '/ayuda' || r.startsWith('/ayuda/')
+  const sinLeer = avisosVisibles(useAlquileres(), u.email).some(x => !x.aviso.abierto)
   return <header className="cont barra">
     <a href="#/" className="logo" aria-label="Lockumi, ir a Inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
-      <span className="barra-campana" />
+      <span className="barra-campana"><Campana sinLeer={sinLeer} /></span>
       <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a2.9 2.9 0 0 1 5.6 1c0 2-2.7 2.2-2.7 4" /><path d="M12 17h.01" /></svg>
       </a>

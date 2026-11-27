@@ -12,7 +12,7 @@ const ayuda = fs.readFileSync(new URL('../Ayuda.tsx', import.meta.url), 'utf8')
 const U: Usuario = { email: 'katherine@ejemplo.cr', nombre: 'Katherine', metodo: 'correo' }
 
 describe('navegación de perfil, avisos y ayuda', () => {
-  it('la barra tiene Inicio, Avisos, Alquileres y Perfil; Ayuda no está en la barra', () => {
+  it('la barra tiene Inicio, Alquileres, Avisos y Perfil; Ayuda no está en la barra', () => {
     const inicio = renderToStaticMarkup(<Navegacion r="/" />)
     expect(inicio).toContain('>Inicio<')
     expect(inicio).toContain('>Avisos<')
@@ -36,21 +36,25 @@ describe('navegación de perfil, avisos y ayuda', () => {
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(m => m[1])
     expect(hrefs).toEqual(['#/', '#/alquileres', '#/avisos', '#/perfil'])
     const cab = renderToStaticMarkup(<Navegacion r="/" className="nav-app--cabecera" />)
-    expect([...cab.matchAll(/href="([^"]+)"/g)].map(m => m[1])).toEqual(['#/', '#/avisos', '#/alquileres', '#/perfil'])
+    expect([...cab.matchAll(/href="([^"]+)"/g)].map(m => m[1])).toEqual(['#/', '#/alquileres', '#/avisos', '#/perfil'])
+    expect(html).toContain('M7 3.5h7.2')
+    expect(cab).toContain('M7 3.5h7.2')
+    expect(cab).not.toContain('M16.5 7.5')
     const enLista = renderToStaticMarkup(<Navegacion r="/alquileres" />)
     expect(enLista).toContain('href="#/alquileres" aria-current="page"')
     expect(enLista).not.toContain('href="#/" aria-current="page"')
     expect(app).toContain("r === '/alquileres' ? <Inicio")
     expect(app).toContain('<ResumenInicio')
   })
-  it('la cabecera abre Ayuda con un icono vectorial, sin campana ni texto visible', () => {
+  it('la cabecera abre Ayuda con un icono vectorial y la misma campana en todas las vistas', () => {
     const h = renderToStaticMarkup(<Barra u={U} onSalir={() => {}} r="/ayuda" />)
     expect(h).toContain('href="#/ayuda"')
     expect(h).toContain('aria-label="Ayuda"')
     expect(h).toContain('aria-current="page"')
     expect(h).toContain('<circle')
+    expect(h).toContain('class="casa-campana"')
+    expect(h).toContain('aria-label="Avisos"')
     expect(h).not.toContain('nav-campana')
-    expect(h).not.toContain('aria-label="Avisos"')
     expect(h).not.toContain('¿Cómo funciona?')
     expect(h).not.toContain('>?<')
     expect(h).toContain('aria-label="Salir"')

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Alquiler, Usuario } from '../../types'
-import { usd } from '../../ui'
+import { usd, Barra } from '../../ui'
 import { saldosDe, tareasPropias, esperas, enCursoSinTarea, puedePagar, copiaTarea, textoEspera, textoEnCurso } from '../inicio-resumen'
 
 const bolsa = vi.hoisted(() => ({ lista: [] as Alquiler[], estado: 'listo' as 'listo' | 'cargando' | 'error' }))
@@ -83,9 +83,8 @@ describe('pantalla de inicio', () => {
     expect(h).toContain('data-recorrido="nuevo"')
     expect(h).toContain('href="#/ayuda"')
     expect(h).toContain('Cómo funciona')
-    expect(h).toContain('class="casa-campana"')
-    expect(h).toContain('href="#/avisos"')
-    expect(h).toContain('aria-label="Avisos"')
+    expect(h).toContain('class="casa-rejilla"')
+    expect(h).not.toContain('casa-campana')
     expect(h).not.toContain('Tus alquileres')
     expect(h).toContain('/img/katherine/02-edificio-moderno.png')
   })
@@ -128,7 +127,6 @@ describe('pantalla de inicio', () => {
     expect(h).toContain('data-recorrido="nuevo"')
     expect(h).toContain('href="#/ayuda"')
     expect(h).toContain('Cómo funciona')
-    expect(h).toContain('href="#/avisos"')
     expect(h).toContain('Tu próximo hogar empieza aquí.')
     expect(h).toContain('Crea tu primer alquiler o acepta una invitación.')
     expect(h).toContain('Seguro y confiable')
@@ -142,15 +140,19 @@ describe('pantalla de inicio', () => {
     expect(h).not.toContain('Ver mis alquileres')
   })
 
-  it('la campana marca el aviso que todavía no se abrió', () => {
+  it('la campana de la cabecera marca el aviso que todavía no se abrió', () => {
     const conAviso = base({ id: 'av', avisos: [{ id: '1', para: 'dueno', dia: 1, asunto: 'Plazo', texto: 't', entregado: '2026-10-01T00:00:00Z', entregadoReal: '2026-10-01T00:00:00Z' }] })
     bolsa.estado = 'listo'; bolsa.lista = [conAviso]
-    const h = renderToStaticMarkup(<ResumenInicio u={U} />)
+    const h = renderToStaticMarkup(<Barra u={U} onSalir={() => {}} />)
+    expect(h).toContain('class="casa-campana"')
+    expect(h).toContain('href="#/avisos"')
+    expect(h).toContain('aria-label="Avisos"')
     expect(h).toContain('casa-campana__punto')
     expect(h).toContain('Hay avisos sin leer.')
     const leido = base({ id: 'av2', avisos: [{ id: '2', para: 'dueno', dia: 1, asunto: 'Plazo', texto: 't', entregado: '2026-10-02T00:00:00Z', entregadoReal: '2026-10-02T00:00:00Z', abierto: '2026-10-03T00:00:00Z' }] })
     bolsa.lista = [leido]
-    expect(renderToStaticMarkup(<ResumenInicio u={U} />)).not.toContain('casa-campana__punto')
+    expect(renderToStaticMarkup(<Barra u={U} onSalir={() => {}} />)).not.toContain('casa-campana__punto')
+    expect(renderToStaticMarkup(<ResumenInicio u={U} />)).not.toContain('casa-campana')
   })
 
   it('usa la foto real del lugar cuando no es de ejemplo', () => {
