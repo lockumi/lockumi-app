@@ -100,7 +100,7 @@ const Espera = ({ texto }: { texto: string }) => <div className="espera" role="s
 export function Contrato({ a, rol }: P) {
   const [integro, setIntegro] = useState(false)
   const { prueba: modoPrueba } = modoDe(a)
-  useEffect(() => { if (integro) document.getElementById('ct-firma')?.scrollIntoView({ block: 'nearest' }) }, [integro])
+  useEffect(() => { if (integro) document.getElementById('ct-titulo')?.scrollIntoView({ block: 'start' }) }, [integro])
   // Prueba completa: antes de firmar, el inquilino decide la Regla de propuesta automática (B.1); queda registrada.
   // C (Legal, 25/10, 2:53 a. m.; Términos 1.9-demo, 6.5.1 d): en dos personas la regla no se ofrece ni se guarda; solo una nota sin casilla.
   if (reglas17(a) && !esDosPersonas(a) && rol === 'inquilino' && !a.regla && !a.contrato.firmas.inquilino)
@@ -192,7 +192,7 @@ function Fotos({ a, rol, cual }: P & { cual: 'entrada' | 'salida' }) {
   const acta = a[cual]!; const n = acta.cuartos.length
   const { listos, puedeConfirmar } = progresoCuartos(acta.cuartos)
   const [i, setI] = useState<number | 'fin' | null>(acta.firmas[rol] ? 'fin' : null); const [err, setErr] = useState('')
-  useEffect(() => { window.scrollTo(0, 0) }, [i])
+  useEffect(() => { document.querySelector('.app-cuerpo')?.scrollTo(0, 0); window.scrollTo(0, 0) }, [i])
   const firmaCuarto = JSON.stringify(typeof i === 'number' ? acta.cuartos[i] : null)
   useEffect(() => { setErr('') }, [firmaCuarto])
   const guardar = () => {
@@ -503,7 +503,7 @@ export function Detalle({ id, u, ejemplo }: { id: string; u: Usuario; ejemplo?: 
   const { servidor: modoServidor, solo: modoSolo, prueba: modoPrueba, video: modoVideo, escrowReal } = modoDe(a) // cada alquiler con su modo: el de dos personas usa el servidor
   const real: Rol = a ? rolDe(a, u.email) : 'dueno'
   const rol: Rol = a ? vistaDe(a, u.email) : 'dueno'
-  useEffect(() => { window.scrollTo(0, 0) }, [a?.estado, rol])
+  useEffect(() => { document.querySelector('.app-cuerpo')?.scrollTo(0, 0); window.scrollTo(0, 0) }, [a?.estado, rol])
   // Red de prueba: el dueño de prueba firma/confirma solo apenas firmaste tú (también al abrir un alquiler que quedó esperando).
   const pendienteDueno = !ejemplo && !!a && modoPrueba && !modoSolo && (
     (a.estado === 'firmas' && !!a.contrato.firmas.inquilino && !a.contrato.firmas.dueno) ||

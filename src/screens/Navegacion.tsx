@@ -1,5 +1,5 @@
 /** Abajo en el teléfono: Inicio, Alquileres, Avisos, Perfil (Alquileres con documento).
- *  En la cabecera, desde 960 px: Inicio, Avisos, Alquileres, Perfil (Alquileres con la llave).
+ *  En la cabecera, desde 768 px: Inicio, Avisos, Alquileres, Perfil (Alquileres con la llave).
  *  Ayuda no está aquí: el ? de la cabecera abre `#/ayuda`.
  *  Inicio (`#/`) es el resumen. Alquileres (`#/alquileres`) es el listado que ya existía.
  *  Dentro de un alquiler se marca Alquileres. */
