@@ -1389,13 +1389,16 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
 
 /* Entrada: Iniciar sesión / Crear cuenta. Solo esta pantalla. El Inicio no usa estas clases.
-   Medidas de la referencia 1536×1024 (el archivo de 1024×683 a 1,5×): a 1280 y 1440, --e = 100vw/1536. */
+   La referencia sigue siendo 1536×1024, pero --e ya no crece solo con el ancho: una laptop
+   es más ancha que alta (1280×720, 1440×900) y el ancho solo dejaba el título, la casita
+   y la tarjeta más altos que la ventana. --e toma el ancho (con piso 0.64px para que 1024
+   no se encoja), el alto útil y un tope de 0.8px. */
 body:has(.entrada-portada) .aviso-red,
 body:has(.entrada-portada) .aviso-red__extra,
 body:has(.entrada-portada) .aurora,
 body:has(.entrada-portada) .pie-legal{display:none}
 .entrada-app.entrada-portada.cont.cont--form{max-width:none}
-.entrada-portada{position:relative;z-index:1;width:100%;min-height:100vh;margin:0 auto;padding:22px 20px 36px;gap:20px;overflow:visible;justify-content:flex-start;align-items:center}
+.entrada-portada{position:relative;z-index:1;width:100%;min-height:100vh;margin:0 auto;padding:16px 18px 16px;gap:10px;overflow:visible;justify-content:flex-start;align-items:center}
 .entrada-portada::before,.entrada-portada::after{content:"";position:fixed;bottom:-12vh;height:54vh;width:92vw;border-radius:0;opacity:1;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 78%, var(--mint) 0%, transparent 70%)}
 .entrada-portada::before{left:-40vw}
 .entrada-portada::after{right:-42vw;background:radial-gradient(ellipse at 50% 78%, var(--protegido) 0%, transparent 70%)}
@@ -1403,13 +1406,13 @@ body:has(.entrada-portada) .pie-legal{display:none}
 .entrada-hoja--sup{top:-22px;right:-28px}
 .entrada-hoja--inf{bottom:-28px;left:-36px;transform:scaleX(-1)}
 .entrada-lado,.entrada-tarjeta{position:relative;z-index:2;width:min(100%,440px)}
-.entrada-lado{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px}
-.entrada-logo{display:inline-flex;align-items:center;gap:10px;color:var(--cafe);text-decoration:none;font-weight:800;font-size:22px;line-height:1;font-family:var(--f-titulo)}
-.entrada-logo img{height:44px;width:auto}
-.entrada-rayita{width:48px;height:6px;border-radius:999px;background:var(--sage);margin:0}
-.entrada-portada .entrada-hero__titulo{margin:0;max-width:12ch;font-weight:800;font-size:36px;line-height:1.05;font-family:var(--f-titulo);letter-spacing:-.03em;color:var(--cafe);text-align:center;align-self:center;text-wrap:wrap}
+.entrada-lado{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.entrada-logo{display:inline-flex;align-items:center;gap:8px;color:var(--cafe);text-decoration:none;font-weight:800;font-size:20px;line-height:1;font-family:var(--f-titulo)}
+.entrada-logo img{height:36px;width:auto}
+.entrada-rayita{width:40px;height:5px;border-radius:999px;background:var(--sage);margin:0}
+.entrada-portada .entrada-hero__titulo{margin:0;max-width:12ch;font-weight:800;font-size:30px;line-height:1.05;font-family:var(--f-titulo);letter-spacing:-.03em;color:var(--cafe);text-align:center;align-self:center;text-wrap:wrap}
 .entrada-hero__bajada{margin:0;max-width:32ch;color:var(--cafe-suave);font-weight:500;font-size:16px;line-height:22px;font-family:var(--f-texto)}
-.porta-escena{position:relative;width:min(300px,78vw);aspect-ratio:1.54;margin-top:0}
+.porta-escena{position:relative;width:min(210px,64vw);aspect-ratio:1.54;margin-top:0}
 .porta-escena img{position:absolute;object-fit:contain;pointer-events:none;user-select:none}
 .porta-escena__paisaje{display:none}
 .porta-escena__hojas{width:46%;right:-2%;top:-2%;opacity:.95;z-index:1}
@@ -1418,14 +1421,14 @@ body:has(.entrada-portada) .pie-legal{display:none}
 .porta-escena--espejo .porta-escena__casa{transform:scaleX(-1)}
 .porta-escena--espejo .porta-escena__arbol{display:none}
 .porta-escena--espejo{transform:translateX(-14%)}
-.entrada-tarjeta{margin:0 auto;padding:22px 20px 22px;border-radius:28px;background:var(--tarjeta);border:1px solid var(--borde);box-shadow:0 8px 18px rgba(41,51,50,.06);display:flex;flex-direction:column;gap:12px}
+.entrada-tarjeta{margin:0 auto;padding:14px 14px 14px;border-radius:24px;background:var(--tarjeta);border:1px solid var(--borde);box-shadow:0 8px 18px rgba(41,51,50,.06);display:flex;flex-direction:column;gap:6px}
 .entrada-pestanas{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--fondo)}
-.entrada-pestanas button{min-height:48px;border:0;border-radius:999px;background:transparent;color:var(--cafe-suave);font-weight:700;font-size:15px;line-height:20px;font-family:var(--f-texto);cursor:pointer}
+.entrada-pestanas button{min-height:40px;border:0;border-radius:999px;background:transparent;color:var(--cafe-suave);font-weight:700;font-size:14px;line-height:18px;font-family:var(--f-texto);cursor:pointer}
 .entrada-pestanas button.is-on{background:var(--mint);color:var(--cafe)}
-.entrada-tarjeta__titulo{margin:4px 0 0;font-weight:800;font-size:26px;line-height:1.15;font-family:var(--f-titulo);color:var(--cafe);text-align:left;align-self:stretch;max-width:none}
-.entrada-tarjeta__bajada{margin:0;color:var(--cafe-suave);font-weight:500;font-size:16px;line-height:22px;font-family:var(--f-texto);text-align:left}
-.entrada-metodos{display:grid;gap:10px;min-width:0}
-.entrada-metodo{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:52px;padding:0 18px 0 56px;border-radius:999px;border:1.5px solid var(--borde);background:#fff;color:var(--cafe);font-weight:600;font-size:14px;line-height:18px;font-family:var(--f-texto);cursor:pointer;white-space:nowrap}
+.entrada-tarjeta__titulo{margin:2px 0 0;font-weight:800;font-size:22px;line-height:1.15;font-family:var(--f-titulo);color:var(--cafe);text-align:left;align-self:stretch;max-width:none}
+.entrada-tarjeta__bajada{margin:0;color:var(--cafe-suave);font-weight:500;font-size:14px;line-height:20px;font-family:var(--f-texto);text-align:left}
+.entrada-metodos{display:grid;gap:8px;min-width:0}
+.entrada-metodo{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:44px;padding:0 12px 0 44px;border-radius:999px;border:1.5px solid var(--borde);background:#fff;color:var(--cafe);font-weight:600;font-size:14px;line-height:18px;font-family:var(--f-texto);cursor:pointer;white-space:nowrap}
 .entrada-metodo svg,.entrada-metodo .ico{position:absolute;left:14px;width:22px;height:22px}
 .entrada-metodo--correo{border-color:var(--sage);color:var(--sage);background:#fff}
 .entrada-metodo[disabled]{opacity:.6;cursor:wait}
@@ -1434,7 +1437,7 @@ body:has(.entrada-portada) .pie-legal{display:none}
 .entrada-legal a,.entrada-check a{color:var(--sage);font-weight:700;text-underline-offset:2px}
 .entrada-check{display:flex;align-items:flex-start;gap:10px;margin:0;color:var(--cafe);font-weight:500;font-size:15px;line-height:20px;font-family:var(--f-texto);text-align:left}
 .entrada-check input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--sage)}
-.entrada-crear{min-height:52px;font-size:16px}
+.entrada-crear{min-height:44px;font-size:15px}
 .entrada-red{display:flex;align-items:flex-start;gap:10px;margin-top:2px;padding:12px 14px;border-radius:16px;background:rgb(243, 232, 251);color:rgb(164, 124, 230);text-align:left}
 .entrada-red p{margin:0;display:flex;flex-direction:column;gap:2px}
 .entrada-red strong{font-weight:700;font-size:15px;line-height:20px;font-family:var(--f-texto);color:rgb(42, 14, 164)}
@@ -1442,25 +1445,25 @@ body:has(.entrada-portada) .pie-legal{display:none}
 .entrada-matraz{width:22px;height:22px;flex:none;fill:none;stroke:rgb(164, 124, 230);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .entrada-legado{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (min-width:768px) and (max-width:1023px){
-  .entrada-portada{padding:36px 28px 48px;gap:22px}
-  .entrada-lado,.entrada-tarjeta{width:min(100%,560px)}
-  .entrada-logo{font-size:26px}
-  .entrada-logo img{height:52px}
-  .entrada-rayita{width:56px;height:7px}
-  .entrada-portada .entrada-hero__titulo{font-size:44px}
-  .entrada-hero__bajada{font-size:18px;line-height:26px}
-  .porta-escena{width:340px}
-  .entrada-tarjeta{padding:24px 22px 22px;gap:14px}
-  .entrada-metodo svg,.entrada-metodo .ico{left:18px;width:42px;height:42px}
-  .entrada-metodo{padding:0 16px 0 68px;font-size:16px}
-  .entrada-tarjeta__titulo{font-size:32px}
-  .entrada-pestanas button{min-height:52px;font-size:16px}
-  .entrada-metodo,.entrada-crear{min-height:56px}
-  .entrada-hoja{width:180px}
+  .entrada-portada{padding:20px 24px 28px;gap:14px;justify-content:center}
+  .entrada-lado,.entrada-tarjeta{width:min(100%,440px)}
+  .entrada-logo{font-size:22px;gap:10px}
+  .entrada-logo img{height:40px}
+  .entrada-rayita{width:44px;height:5px}
+  .entrada-portada .entrada-hero__titulo{font-size:32px}
+  .entrada-hero__bajada{font-size:16px;line-height:22px}
+  .porta-escena{width:min(220px,42vw)}
+  .entrada-tarjeta{padding:16px 16px 16px;gap:10px}
+  .entrada-metodo svg,.entrada-metodo .ico{left:14px;width:22px;height:22px}
+  .entrada-metodo{padding:0 14px 0 44px;font-size:14px}
+  .entrada-tarjeta__titulo{font-size:22px}
+  .entrada-pestanas button{min-height:42px;font-size:15px}
+  .entrada-metodo,.entrada-crear{min-height:46px}
+  .entrada-hoja{width:140px}
 }
 @media (min-width:1024px){
   .entrada-portada{
-    --e:calc(100vw / 1536);
+    --e:min(max(100vw / 1800, 0.64px), (100vh - 48px) / 740, 0.8px);
     display:grid;
     grid-template-columns:minmax(0,1fr) calc(702 * var(--e));
     align-items:center;
@@ -1478,23 +1481,23 @@ body:has(.entrada-portada) .pie-legal{display:none}
   .porta-escena--espejo{transform:none}
   .entrada-lado,.entrada-tarjeta{width:auto}
   .entrada-lado{align-items:flex-start;text-align:left;gap:calc(14 * var(--e));width:100%}
-  .entrada-logo{gap:calc(12 * var(--e));font-size:calc(46 * var(--e))}
-  .entrada-logo img{height:calc(66 * var(--e))}
+  .entrada-logo{gap:calc(10 * var(--e));font-size:max(22px,calc(36 * var(--e)))}
+  .entrada-logo img{height:max(40px,calc(48 * var(--e)))}
   .entrada-rayita{width:calc(76 * var(--e));height:calc(10 * var(--e));margin:calc(6 * var(--e)) 0 calc(2 * var(--e))}
   .entrada-portada .entrada-hero__titulo,.entrada-hero__bajada{text-align:left;align-self:flex-start}
-  .entrada-portada .entrada-hero__titulo{max-width:calc(420 * var(--e));font-size:calc(62 * var(--e));line-height:1.05}
-  .entrada-hero__bajada{max-width:calc(500 * var(--e));font-size:calc(26 * var(--e));line-height:calc(36 * var(--e))}
-  .porta-escena{width:calc(568 * var(--e));margin-top:calc(8 * var(--e));margin-left:calc(-28 * var(--e))}
-  .entrada-tarjeta{width:100%;margin:0;min-height:calc(804 * var(--e));padding:calc(54 * var(--e)) calc(29 * var(--e)) calc(48 * var(--e));gap:calc(22 * var(--e));border-radius:calc(32 * var(--e));box-shadow:0 16px 40px rgba(41,51,50,.08)}
+  .entrada-portada .entrada-hero__titulo{max-width:12ch;font-size:max(34px,calc(52 * var(--e)));line-height:1.05}
+  .entrada-hero__bajada{max-width:calc(460 * var(--e));font-size:max(15px,calc(22 * var(--e)));line-height:calc(30 * var(--e))}
+  .porta-escena{width:min(100%,340px);margin-top:calc(4 * var(--e));margin-left:0}
+  .entrada-tarjeta{width:100%;margin:0;min-height:0;padding:calc(28 * var(--e)) calc(26 * var(--e)) calc(24 * var(--e));gap:calc(14 * var(--e));border-radius:calc(28 * var(--e));box-shadow:0 16px 40px rgba(41,51,50,.08)}
   .entrada-pestanas{padding:calc(6 * var(--e));gap:calc(4 * var(--e))}
-  .entrada-pestanas button{min-height:calc(60 * var(--e));font-size:calc(22 * var(--e))}
-  .entrada-tarjeta__titulo{margin:calc(10 * var(--e)) 0 0;font-size:calc(44 * var(--e))}
-  .entrada-tarjeta__bajada{font-size:calc(24 * var(--e));line-height:calc(32 * var(--e))}
-  .entrada-metodos{gap:calc(18 * var(--e))}
-  .entrada-metodo,.entrada-crear{min-height:calc(67 * var(--e));font-size:calc(22 * var(--e))}
-  .entrada-metodo{padding:0 calc(20 * var(--e)) 0 calc(86 * var(--e))}
-  .entrada-crear{padding:0 calc(24 * var(--e))}
-  .entrada-metodo svg,.entrada-metodo .ico{left:calc(22 * var(--e));width:calc(51 * var(--e));height:calc(51 * var(--e))}
+  .entrada-pestanas button{min-height:max(40px,calc(48 * var(--e)));font-size:max(14px,calc(18 * var(--e)))}
+  .entrada-tarjeta__titulo{margin:calc(6 * var(--e)) 0 0;font-size:max(22px,calc(36 * var(--e)))}
+  .entrada-tarjeta__bajada{font-size:max(14px,calc(18 * var(--e)));line-height:calc(26 * var(--e))}
+  .entrada-metodos{gap:calc(12 * var(--e))}
+  .entrada-metodo,.entrada-crear{min-height:max(44px,calc(52 * var(--e)));font-size:max(14px,calc(18 * var(--e)))}
+  .entrada-metodo{padding:0 16px 0 46px}
+  .entrada-crear{padding:0 20px}
+  .entrada-metodo svg,.entrada-metodo .ico{left:14px;width:22px;height:22px}
   .entrada-legal{font-size:max(14px,calc(20 * var(--e)));line-height:calc(28 * var(--e))}
   .entrada-check{font-size:calc(22 * var(--e));line-height:calc(30 * var(--e));gap:calc(12 * var(--e))}
   .entrada-check input{width:calc(22 * var(--e));height:calc(22 * var(--e))}
