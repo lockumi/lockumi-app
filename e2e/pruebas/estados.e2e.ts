@@ -9,7 +9,10 @@ test.describe('estados del alquiler', () => {
     const errores: string[] = []; page.on('pageerror', e => errores.push(e.message))
     await entrar(page, rol, ALQ); await page.goto('/#/alquiler/' + a.id)
     await expect(page.getByRole('heading', { name: 'Casa de prueba E2E' })).toBeVisible()
-    await expect(page.getByText(rol === 'dueno' ? /dueño/i : /inquilino/i).first()).toBeVisible()
+    // El grupo de la demo, no un /dueño|inquilino/ suelto: el «Plazo de devolución» plegado tiene un «El dueño tiene 7 días…» oculto.
+    const vista = page.getByRole('group', { name: 'Demo: cambiar de persona' })
+    await expect(vista).toBeVisible()
+    await expect(vista).toContainText(rol === 'dueno' ? 'Estás viendo como dueño' : 'Estás viendo como inquilino')
     await expect(page.locator('body')).not.toContainText('No encontramos ese alquiler')
     await captura(page, 'estados', a.estado, rol); expect(errores).toEqual([])
   })
