@@ -1,6 +1,8 @@
 // Red de prueba (Stellar testnet), por los MISMOS endpoints de la app: cuenta de prueba → dueño → escrow → depósito → aprobación → liberación.
-// Comprobación (a): quién es el disputeResolver del escrow nuevo. Fase 1 (/api/solo): la plataforma (api/_lib/solo.ts:291).
-// Cuando el modo de dos personas esté publicado (PR 9), E2E_RESOLVER=mediador exige la clave pública del mediador (E2E_MEDIADOR_PUBLICA).
+// Comprobación (a): quién es el disputeResolver del escrow nuevo.
+// Con el modo de dos personas encendido (LOCKUMI_DOS_PERSONAS=1 en producción desde el 25/10/2026), el esperado es el mediador:
+// E2E_RESOLVER=mediador y E2E_MEDIADOR_PUBLICA (secreto LOCKUMI_TW_MEDIADOR_PUBLICA en Actions). Si el secreto no está, el depósito
+// y la liberación se comprueban igual y la aserción del resolver falla con un mensaje claro (no se carga el secreto desde este PR).
 import { test, expect } from '@playwright/test'
 import { randomUUID, randomBytes } from 'node:crypto'
 import { rpc, xdr, scValToNative, Address, Horizon } from '@stellar/stellar-sdk'
@@ -34,12 +36,17 @@ test('depósito y devolución reales en la red de prueba + disputeResolver', asy
   for (const c of [{ accion: 'desplegar', contrato: randomUUID(), inquilino: cp.inquilino, monto: 20.5 }, { accion: 'liberar', escrow: dep.escrow }, { accion: 'transferir' }])
     await expect(api(c)).rejects.toThrow()
   const r = await roles(dep.escrow)
-  const esperado = process.env.E2E_RESOLVER === 'mediador' ? process.env.E2E_MEDIADOR_PUBLICA : r.platform
-  const mediador = process.env.E2E_MEDIADOR_PUBLICA
+  const modoMediador = process.env.E2E_RESOLVER === 'mediador'
+  const mediador = process.env.E2E_MEDIADOR_PUBLICA?.trim() || ''
+  const esperado = modoMediador ? mediador : r.platform
   const res = { escrow: dep.escrow, liberacion: lib.tx, dispute_resolver: r.dispute_resolver, platform: r.platform, approver: r.approver,
-    resolver_es_mediador: mediador ? r.dispute_resolver === mediador : null, modo: process.env.E2E_RESOLVER === 'mediador' ? 'mediador' : 'fase 1 (plataforma)' }
+    resolver_es_mediador: mediador ? r.dispute_resolver === mediador : null, modo: modoMediador ? 'mediador' : 'fase 1 (plataforma)' }
   mkdirSync('test-results', { recursive: true }); writeFileSync('test-results/red.json', JSON.stringify(res, null, 2))
   info.annotations.push({ type: 'disputeResolver', description: JSON.stringify(res) })
-  expect(esperado, process.env.E2E_RESOLVER === 'mediador' ? 'falta E2E_MEDIADOR_PUBLICA' : 'el escrow no tiene plataforma').toBeTruthy()
+  if (modoMediador) {
+    expect(mediador, 'Falta E2E_MEDIADOR_PUBLICA (secreto LOCKUMI_TW_MEDIADOR_PUBLICA en Actions): la clave pública del mediador. El depósito y la liberación sí se completaron; no se pudo comprobar que el disputeResolver sea el mediador.').toBeTruthy()
+  } else {
+    expect(esperado, 'el escrow no tiene plataforma').toBeTruthy()
+  }
   expect(r.dispute_resolver).toBe(esperado)
 })

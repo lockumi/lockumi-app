@@ -15,6 +15,10 @@ export const ALQ = [
   alq('55555555-5555-4555-8555-555555555555', 'cerrado', { salida: acta(true), ventanaInicio: T, resultado: { inquilino: 15, dueno: 5, via: 'mediacion', fecha: T } }),
 ]
 export async function entrar(page: Page, rol: Rol, alquileres: object[] = []) {
+  // La sesión inyectada no trae Cavos ni correo confirmado. En producción, lk_necesita_rep01 responde 28000 y aparece «Revisa tu correo».
+  // Solo en el test: contestamos esa RPC como confirmada. No toca la app ni Supabase.
+  await page.route('**/rest/v1/rpc/lk_necesita_rep01**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: 'false' }))
   await page.goto('/')
   await page.evaluate(async ({ v16, alquileres, rol, email }) => {
     localStorage.clear()

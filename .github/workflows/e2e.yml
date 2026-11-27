@@ -12,8 +12,8 @@ on:
         description: URL a probar
         default: https://app.lockumi.com
       resolver:
-        description: "disputeResolver esperado: plataforma (fase 1) o mediador (modo de dos personas, PR 9)"
-        default: plataforma
+        description: "disputeResolver esperado: mediador (modo de dos personas, el de producción) o plataforma (fase 1)"
+        default: mediador
   schedule:
     - cron: '0 */6 * * *'
 
@@ -34,8 +34,9 @@ jobs:
     timeout-minutes: 30
     env:
       E2E_BASE: ${{ inputs.base || 'https://app.lockumi.com' }}
-      E2E_RESOLVER: ${{ inputs.resolver || 'plataforma' }}
-      # Clave PÚBLICA del mediador (no es secreta, pero se guarda como secreto para no fijarla en el repo). Sin ella, el resumen lo dice.
+      E2E_RESOLVER: ${{ inputs.resolver || 'mediador' }}
+      # Clave PÚBLICA del mediador (no es secreta, pero se guarda como secreto para no fijarla en el repo).
+      # No está cargada todavía: hace falta el OK de Katherine. Sin ella, la prueba de red completa el depósito y falla con un mensaje claro.
       E2E_MEDIADOR_PUBLICA: ${{ secrets.LOCKUMI_TW_MEDIADOR_PUBLICA }}
     steps:
       - uses: actions/checkout@v4
