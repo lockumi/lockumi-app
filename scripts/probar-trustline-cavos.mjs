@@ -1,8 +1,8 @@
-// Prueba con cuenta DESECHABLE: addTrustline real de @cavos/kit 0.4.2 (sin patrocinio) sobre una cuenta creada por la tesorería (LOCKUMI_TW_PLATAFORMA_SECRET en el entorno).
+// Prueba con cuenta DESECHABLE: addTrustline real de @cavos/kit 0.7.0 (sin patrocinio) sobre una cuenta creada por la tesorería (LOCKUMI_TW_PLATAFORMA_SECRET en el entorno).
 // Uso: node scripts/probar-trustline-cavos.mjs
 import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { CavosStellar, StellarAdapter } from '@cavos/kit/stellar'
-import { WebCryptoControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs'
+import { WebCryptoControlKey } from '../node_modules/@cavos/kit/dist/chunk-GBAKP5G5.mjs'
 const control = await WebCryptoControlKey.create(); const G = control.publicAddress(); console.log('Cuenta desechable:', G)
 const adapter = new StellarAdapter({ network: 'stellar-testnet' })
 const w = Object.assign(Object.create(CavosStellar.prototype), { address: G, control, adapter, statusValue: 'ready' })

@@ -8,7 +8,7 @@
 import { crearCuenta } from './crear-cuenta-testnet.mjs'
 import { randomUUID } from 'node:crypto'
 import { CavosStellar, StellarAdapter } from '@cavos/kit/stellar'
-import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-CEOXXKEN.mjs'
+import { WebCryptoControlKey, signTransactionWithControlKey } from '../node_modules/@cavos/kit/dist/chunk-GBAKP5G5.mjs'
 import { Asset, Networks, Operation, TransactionBuilder, Horizon } from '@stellar/stellar-sdk'
 
 const BASE = (process.env.BASE || 'http://localhost:8787').replace(/\/$/, ''), MONTO = Number(process.argv[2] || 2)
