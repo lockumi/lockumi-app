@@ -132,6 +132,17 @@ export function Pago({ a, rol }: P) {
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
+/** Deja a la vista solo `frase`, que ya está dentro de `texto`. El resto conserva las mismas palabras. */
+function NotaLegal({ texto, frase }: { texto: string; frase: string }) {
+  const i = texto.indexOf(frase)
+  const visible = i < 0 ? texto : texto.slice(i, i + frase.length)
+  const resto = (i < 0 ? '' : texto.slice(0, i) + texto.slice(i + frase.length)).replace(/ {2,}/g, ' ').trim()
+  return <>
+    <p className="nota">{visible}</p>
+    {resto && <VerMas><p className="nota">{resto}</p></VerMas>}
+  </>
+}
+
 function PagoSimulado({ a, rol }: P) {
   const { video: modoVideo, escrowReal } = modoDe(a)
   const p = useProceso()
@@ -154,10 +165,10 @@ function PagoSimulado({ a, rol }: P) {
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
       {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
-      {etapa === 0 && <>{dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
-        : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
-        : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
-        : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}</>}
+      {etapa === 0 && <>{dos ? <NotaLegal frase="Son USDC de prueba, sin valor." texto={`${TEXTO_PAGO_DOS} ${TEXTO_ESCROW_DOS}`} />
+        : escrowReal && usaCuentaPropia(a) ? <NotaLegal frase="Son USDC de prueba, sin valor" texto={`Son USDC de prueba, sin valor, de tu cuenta (${abreviar(a.red!.inquilino!)}). ${a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.`} />
+        : escrowReal ? <NotaLegal frase="Son USDC de prueba, sin valor" texto="Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos." />
+        : (!modoReal || modoVideo) && <NotaLegal frase="Es una prueba: no se cobra nada." texto="Es una prueba: no se cobra nada." />}</>}
       {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
       {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
       <ConSesion activo={modoDe(a).trustless && etapa === 0}>
