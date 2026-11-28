@@ -11,6 +11,7 @@ import { textoFoto } from '../fotos'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { textoFotoPC, selloFoto } from '../prueba/fotosFecha'
 import { estadoFirma, otro, NOMBRE, ErrorFirma, type Firmas } from '../flujo'
+import { VerMas } from './Plegable'
 
 export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: Foto[]; vacio?: string }) {
   if (!fotos.length) return <p className="nota">{vacio}</p>
@@ -51,7 +52,7 @@ export function CuartoEditor({ a, cual, idx, rol }: { a: Alquiler; cual: 'entrad
     <label className="campo"><span>Notas (opcional)</span>
       <textarea rows={2} defaultValue={c.nota} onBlur={e => { if (e.target.value !== c.nota) hacer(acciones.nota(a, cual, idx, e.target.value)) }} placeholder="Ej.: rayón pequeño en la puerta" /></label>
     {err && <p className="error" role="alert">{err}</p>}
-    {habiaFirmas && <p className="nota">Si cambias algo, los dos tienen que volver a confirmar.</p>}
+    {habiaFirmas && <VerMas><p className="nota">Si cambias algo, los dos tienen que volver a confirmar.</p></VerMas>}
   </section>
 }
 export const cuartoListo = (c: Cuarto) => c.fotos.length > 0 && c.items.every(i => i.estado)

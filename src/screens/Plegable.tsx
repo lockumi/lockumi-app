@@ -15,3 +15,16 @@ export function Plegable({ titulo, children, abierto: inicial = false, className
     <div className="cp-completo" id={id} role="region" aria-label={titulo} hidden={!abierto}>{children}</div>
   </div>
 }
+
+/** Mismo botón que Plegable. Empieza cerrado: el texto sigue en el HTML, con `hidden`, y no ocupa alto hasta el toque. */
+export function VerMas({ children, etiqueta = 'Ver detalles' }: { children: ReactNode; etiqueta?: string }) {
+  const [abierto, setAbierto] = useState(false)
+  const id = 'plegable-' + useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  return <div className="plegable plegable--ver">
+    <button type="button" className="cp-abrir" aria-expanded={abierto} aria-controls={id} onClick={() => setAbierto(v => !v)}>
+      <span className="cp-abrir__txt">{etiqueta}</span>
+      <span className="cp-abrir__ico"><Icono id="i-chevron" /></span>
+    </button>
+    <div className="cp-completo" id={id} role="region" aria-label={etiqueta} hidden={!abierto}>{children}</div>
+  </div>
+}

@@ -49,6 +49,13 @@ describe('B.5 Anexo 6-A al crear el alquiler', () => {
     expect(h).toContain('No se cobra (desgaste normal y paso del tiempo)'); expect(h).toContain('Se puede cobrar (daño), con pruebas completas')
     expect((h.match(/type="checkbox"/g) ?? []).length).toBe(5)
     expect(h).not.toMatch(/checked/)
+    const boton = h.match(/<button type="button" class="cp-abrir" aria-expanded="false" aria-controls="([^"]+)"><span class="cp-abrir__txt">Ver más<\/span>/)
+    expect(boton).toBeTruthy()
+    const oculto = h.slice(h.indexOf(`id="${boton![1]}"`), h.indexOf('id="acepto-anexo"'))
+    expect(oculto).toContain('hidden=""')
+    expect(oculto).toContain('Se puede cobrar (daño), con pruebas completas')
+    expect(h.indexOf('Antes de firmar, revisen juntos')).toBeLessThan(h.indexOf('cp-abrir'))
+    expect(h.indexOf('id="acepto-anexo"')).toBeGreaterThan(h.indexOf('hidden=""'))
   })
   it('registro del anexo con fecha y reparaciones marcadas', () => {
     expect(reparacionesDe({ acepta: true, reparaciones: ['Cambio de bombillos'], otra: '  Pintar la verja ' })).toEqual(['Cambio de bombillos', 'Pintar la verja'])

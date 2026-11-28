@@ -5,6 +5,7 @@ import { store } from '../store'
 import { NOMBRE_PASO, ORDEN, esHash } from '../services/comprobantes'
 import type { Alquiler, PasoRed, Rol } from '../types'
 import { usd, usdExacto, fechaHora, Simulado } from '../ui'
+import { VerMas } from './Plegable'
 import { netoTW } from '../../api/_lib/centimos'
 import { enlaceTx, enlaceCuenta, enlaceContrato, TOPE_USDC } from '../../api/_lib/red'
 import { consultarUsdc, conectarBilletera, abreviar } from '../services/billetera'
@@ -112,8 +113,8 @@ export function PagoReal({ a, rol }: { a: Alquiler; rol: Rol }) {
     {!listo ? <><p className="mini">Parte 1 de 2 · Consigue USDC de prueba</p><ObtenerUsdc objetivo={a.monto} onListo={r => setListo(Number(r.saldo) >= a.monto)} /></> : <>
       <p className="mini">Parte 2 de 2 · Deposita</p>
       {/* LEGAL: revisado (24/10) */}
-      <p>Tus {usd(a.monto)} de prueba quedan bloqueados en una cuenta segura de Trustless Work en la red de prueba de Stellar. Ni el dueño ni el inquilino pueden tomarlos solos.
-        {!prueba && ' Tu billetera te mostrará una ventana para confirmar el depósito.'}</p>
+      <p>Tus {usd(a.monto)} de prueba quedan bloqueados en una cuenta segura de Trustless Work en la red de prueba de Stellar.</p>
+      <VerMas><p>Ni el dueño ni el inquilino pueden tomarlos solos.{!prueba && ' Tu billetera te mostrará una ventana para confirmar el depósito.'}</p></VerMas>
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado} onClick={() => void pagar()}>{ocupado ? (avance || 'Un momento…') : `Depositar ${usd(a.monto)}`}</button>
       <p className="nota">Esto toma entre 20 y 60 segundos.</p></>}
     <Error m={err} />
@@ -139,7 +140,8 @@ export function CierreReal({ a, rol }: { a: Alquiler; rol: Rol }) {
   })
   return <div className="pila cierre-real">
     {!aprobado ? (rol === 'dueno' ? <>
-      <p>Si todo está bien, aprueba la devolución. Como dueño de prueba, Lockumi firma esta aprobación por ti en la red de prueba.</p>
+      <p>Si todo está bien, aprueba la devolución.</p>
+      <VerMas><p>Como dueño de prueba, Lockumi firma esta aprobación por ti en la red de prueba.</p></VerMas>
       <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={ocupado} onClick={() => void aprobarYa()}>{ocupado ? (avance || 'Un momento…') : 'Todo está bien: aprobar la devolución'}</button>
     </> : <div className="espera" role="status"><span aria-hidden="true">⏳</span><p>Esperando que el dueño de prueba apruebe. Toca «Ver como dueño» para hacerlo.</p></div>) : <>
       <p>El dueño de prueba aprobó. Ya se puede devolver el depósito al inquilino.</p>
@@ -198,14 +200,17 @@ export function DetalleSolo({ a }: { a: Alquiler }) {
     null,
     <><h2>Obtener USDC de prueba</h2><ObtenerUsdc objetivo={a.monto} onListo={r => anotar(a.id, r.txs, x => { x.red!.inquilino = r.g; x.red!.inquilinoPrueba = true; if (Number(r.saldo) >= a.monto) x.red!.usdcListo = true })} /></>,
     <>{ultimo('compra')}<h2>Depositar en la cuenta segura</h2>
-      <p>{usd(a.monto)} de prueba quedan bloqueados en una cuenta segura (escrow) de Trustless Work en la red de prueba de Stellar. Lockumi firma el depósito por el {minuscula(INQUILINO_PRUEBA)}.</p>
+      <p>{usd(a.monto)} de prueba quedan bloqueados en una cuenta segura (escrow) de Trustless Work en la red de prueba de Stellar.</p>
+      <VerMas><p>Lockumi firma el depósito por el {minuscula(INQUILINO_PRUEBA)}.</p></VerMas>
       {boton(`Depositar ${usd(a.monto)}`, depositarYa)}<p className="nota">Tarda entre 20 y 60 segundos.</p></>,
     <>{ultimo('deposito')}<h2>El dueño de prueba aprueba</h2>
-      <p>Al terminar el alquiler, si todo está bien, el dueño aprueba devolver el depósito. Como es un {minuscula(DUENO_PRUEBA)}, Lockumi firma esa aprobación por él.</p>
+      <p>Al terminar el alquiler, si todo está bien, el dueño aprueba devolver el depósito.</p>
+      <VerMas><p>Como es un {minuscula(DUENO_PRUEBA)}, Lockumi firma esa aprobación por él.</p></VerMas>
       {boton('Aprobar la devolución', aprobarYa)}
-      <div className="simulado-caja"><p className="nota"><Simulado /> ¿Y si hubiera un daño? El reclamo y la persona mediadora son simulados en esta demo: no se registran en la red de prueba.</p></div></>,
+      <VerMas><div className="simulado-caja"><p className="nota"><Simulado /> ¿Y si hubiera un daño? El reclamo y la persona mediadora son simulados en esta demo: no se registran en la red de prueba.</p></div></VerMas></>,
     <>{ultimo('aprobacion')}<h2>Devolver el depósito</h2>
-      <p>El dueño de prueba ya aprobó. Lockumi libera el depósito de la cuenta segura al inquilino. Trustless Work descuenta 0,3 %: llegan {recibe} de prueba.</p>
+      <p>El dueño de prueba ya aprobó.</p>
+      <VerMas><p>Lockumi libera el depósito de la cuenta segura al inquilino. Trustless Work descuenta 0,3 %: llegan {recibe} de prueba.</p></VerMas>
       {boton('Devolver el depósito', liberarYa)}</>,
     <>{ultimo('liberacion')}<span className="chip chip--exito">✓ Terminado</span><h2>Depósito devuelto</h2>
       <p>El inquilino de prueba recibió {recibe} de prueba en la red de prueba de Stellar. Todos los pasos quedaron registrados:</p></>,

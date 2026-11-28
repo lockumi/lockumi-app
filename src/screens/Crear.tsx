@@ -14,6 +14,7 @@ import { DUENO_PRUEBA } from './Real'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { declaracionInvitacion, enviarInvitacionUnaVez, nombreInvitacion, tokenDeLink } from '../prueba/invitacion'
 import { EsperaVista } from './EsperaVista'
+import { VerMas } from './Plegable'
 import { SuscripcionB8, RendimientoB13 } from '../prueba/SuscripcionPC'
 import { Anexo6A, registroAnexo, reparacionesDe, type ValorAnexo } from '../prueba/Anexo'
 import { store, activarServidor } from '../store'
@@ -158,7 +159,7 @@ export function Crear({ u }: { u: Usuario }) {
   const guardado = leerBorrador()
   const [f, setF] = useState({ direccion: guardado?.direccion ?? '', monto: guardado?.monto ?? '', email: guardado?.email ?? '', inicio: guardado?.inicio ?? '', fin: guardado?.fin ?? '' })
   const [tocado, setTocado] = useState<Partial<Record<Campo, boolean>>>({}); const [enviado, setEnviado] = useState(false)
-  const [reglas, setReglas] = useState<string[]>(guardado?.reglas?.length ? guardado.reglas : ['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState(''); const enviando = useRef(false)
+  const [reglas, setReglas] = useState<string[]>(guardado?.reglas?.length ? guardado.reglas : ['No se permiten mascotas']); const [regla, setRegla] = useState(''); const [reglasAbiertas, setReglasAbiertas] = useState(false); const [ocupado, setOcupado] = useState(false); const [errSrv, setErrSrv] = useState(''); const enviando = useRef(false)
   // Red de prueba: tú eres el inquilino y el dueño es una cuenta de prueba de Lockumi.
   // Origen de los USDC de prueba: «USDC de prueba de Lockumi» (sin valor, tope de 20) o tu propia cuenta (el límite es tu saldo real, máximo 50 000).
   const [origen, setOrigen] = useState<'lockumi' | 'propia'>('lockumi')
@@ -300,12 +301,14 @@ export function Crear({ u }: { u: Usuario }) {
       </section>
       </div>
 
-      <details className="na-sec na-pliegue" data-recorrido="reglas">
-        <summary className="na-pliegue__sum" id="et-reglas"><span className="na-et"><Ico n="reglas" />Reglas</span><span className="na-pliegue__n">{reglas.length}</span><Ico n="der" c="na-pliegue__flecha" /></summary>
+      <details className="na-sec na-pliegue" data-recorrido="reglas" onToggle={e => setReglasAbiertas(e.currentTarget.open)}>
+        <summary className="na-pliegue__sum" id="et-reglas" aria-expanded={reglasAbiertas} aria-controls="na-reglas-cuerpo"><span className="na-et"><Ico n="reglas" />Reglas</span><span className="na-pliegue__mas">Ver más</span><span className="na-pliegue__n">{reglas.length}</span><Ico n="der" c="na-pliegue__flecha" /></summary>
+        <div className="na-pliegue__cuerpo" id="na-reglas-cuerpo">
         <ul className="na-reglas" aria-labelledby="et-reglas">{reglas.map((r, i) => <li key={i}><span className="na-reglas__ico"><Ico n={/mascota/i.test(r) ? 'pata' : 'check'} /></span><span className="na-reglas__txt">{r}</span>
           <button type="button" className="na-quitar" aria-label={'Quitar regla: ' + r} onClick={() => setReglas(reglas.filter((_, j) => j !== i))}><Ico n="x" /></button></li>)}</ul>
         <div className="na-agregar"><div className="na-input"><input aria-label="Nueva regla" value={regla} onChange={e => setRegla(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregar() } }} placeholder="Agregar una regla" /></div>
           <button type="button" className="na-mas" aria-label="Agregar regla" onClick={agregar}><Ico n="mas" /></button></div>
+        </div>
       </details>
 
       {!prueba1 && <section className={'na-sec' + (invitar ? ' pila' : '')}><label className={'campo' + (ver('email') ? ' campo--error' : '')}><span>Correo del inquilino</span>
@@ -323,7 +326,7 @@ export function Crear({ u }: { u: Usuario }) {
       <button type="submit" className="boton boton--primario boton--ancho boton--grande na-crear" disabled={ocupado || (pruebaCompleta() && !anexo.acepta) || (invitar && (!declara || !aceptaVersion))}>{ocupado ? 'Creando…' : prueba1 ? 'Crear alquiler de prueba' : 'Crear alquiler e invitar'}</button>
       {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal (cambios-1.5-vs-1.4.md, «Línea de la fase 1»), palabra por palabra. */}
       {prueba1 ? <p className="na-priv"><Ico n="escudo" /><span>Lugar y fotos: se quedan en tu navegador; a la red solo va una huella de las fotos.</span></p>
-        : <p className="nota">Tú quedas como dueño. La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p>}
+        : <><p className="nota">Tú quedas como dueño.</p><VerMas etiqueta="Ver más"><p className="nota">La persona invitada entra como inquilino. Lo siguiente es firmar el contrato los dos.</p></VerMas></>}
       </div>
     </form>
 
@@ -332,6 +335,7 @@ export function Crear({ u }: { u: Usuario }) {
         {/* LEGAL: revisado (25/10, lista de Legal). Hoja «Red de prueba» 1.5 (borrador): 1.er párrafo = ⓘ de la píldora propuesto por Legal; el resto, versión corta del texto 1.4 con los cambios pedidos. */}
         {info === 'red' && <>
           <p>Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.</p>
+          <VerMas etiqueta="Ver más">
           {/* LEGAL: revisado (25/10, lista de Legal) · hoja de «Invitar a la otra persona» (C), texto exacto de Legal */}
           {invitar ? <>
             <p>Tú eres el dueño y la persona que invitas es el inquilino. Cada uno entra con su propia cuenta y firma por sí mismo.</p>
@@ -346,16 +350,17 @@ export function Crear({ u }: { u: Usuario }) {
             {/* LEGAL: revisado (24/10) · ronda 8: modoVideo (producción): el reclamo abre una disputa real en la red de prueba (acciones.reclamar → escrow.disputar); la mediación es simulada */}
             <p>Lockumi firma y confirma por el dueño de prueba. La mediación es simulada. El reclamo lo haces tú con un botón, en nombre del dueño de prueba, y queda registrado en la red de prueba.</p>
           </>}
-          {!invitar && <p>El nombre del lugar y las fotos se quedan en tu navegador; a la red solo va una huella de las fotos.</p>}</>}
+          {!invitar && <p>El nombre del lugar y las fotos se quedan en tu navegador; a la red solo va una huella de las fotos.</p>}
+          </VerMas></>}
         {/* LEGAL: revisado (25/10, lista de Legal). Hoja «USDC de prueba» 1.5 (borrador): base = ⓘ propuesto por Legal, más billeteras (Cavos o Freighter) y «hasta tu saldo». */}
         {info === 'usdc' && <>
           <p>El USDC de prueba no es dinero real y no tiene valor. Tienes dos opciones:</p>
-          <ul>
+          <VerMas etiqueta="Ver más"><ul>
             <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.</li>
             <li><strong>Usar mi propio USDC de prueba:</strong> con tu billetera de Lockumi (Cavos), Lockumi te envía hasta {TOPE_USDC} USDC de prueba de su propia cuenta, sin valor. Con Freighter, usas el que ya tengas, hasta {MONTO_MAX_USDC.toLocaleString('es-CR')} USDC de prueba. Si tu cuenta de Cavos no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline). Firmas tú el depósito.</li>
-          </ul></>}
+          </ul></VerMas></>}
         {/* LEGAL: revisado (25/10, lista de Legal). Texto propuesto por Legal para la ⓘ de «Fechas», palabra por palabra. */}
-        {info === 'fechas' && <p>En esta demo, la fecha de entrada es de hoy en adelante (hasta 1 año) y la duración va de 1 mes a 5 años. Son valores de prueba, no plazos legales.</p>}
+        {info === 'fechas' && <><p>En esta demo, la fecha de entrada es de hoy en adelante (hasta 1 año) y la duración va de 1 mes a 5 años.</p><VerMas etiqueta="Ver más"><p>Son valores de prueba, no plazos legales.</p></VerMas></>}
       </div>
       <button type="button" className="boton boton--primario boton--ancho na-hoja__listo" onClick={() => setInfo(null)}>Entendido</button>
     </Hoja>

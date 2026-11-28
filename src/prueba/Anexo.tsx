@@ -1,6 +1,7 @@
 // B.5 · Reglas de desgaste al crear el alquiler (Anexo 6-A de los Términos 1.7-demo). «Crear» queda inactivo hasta marcar la casilla (F.13).
 import './prueba.css'
 import { CasillaLegal } from '../legal/CasillaLegal'
+import { VerMas } from '../screens/Plegable'
 
 // LEGAL: revisado (24/10) · B.5 y Anexo 6-A (A.7), palabra por palabra
 export const INTRO_ANEXO = ['Antes de firmar, revisen juntos qué se cobra y qué no. ', 'El desgaste normal nunca se cobra.', ' Si quieren que el inquilino haga algunas reparaciones de uso, márquenlas aquí.'] as const
@@ -21,12 +22,14 @@ export function Anexo6A({ valor, onCambio }: { valor: ValorAnexo; onCambio: (v: 
   return <section className="na-sec pila anexo" aria-labelledby="t-anexo">
     <h2 id="t-anexo" className="na-et">Anexo 6-A. Desgaste normal y daños</h2>
     <p>{INTRO_ANEXO[0]}<strong>{INTRO_ANEXO[1]}</strong>{INTRO_ANEXO[2]}</p>
+    <VerMas etiqueta="Ver más">
     <p><strong>A. No se cobra (desgaste normal y paso del tiempo):</strong> {LISTA_A}</p>
     <fieldset className="anexo__b"><legend><strong>B. Reparaciones de uso que el contrato puede asignar al inquilino, solo si se marcan:</strong></legend>
       {REPARACIONES_B.map((r, i) => <label key={r} className="casilla-legal__fila"><input type="checkbox" id={'anexo-b-' + i} checked={valor.reparaciones.includes(r)} onChange={e => marcar(r, e.target.checked)} /><span>{r}</span></label>)}
       <label className="campo"><span>{OTRA_B} (opcional)</span><input type="text" id="anexo-b-otra" maxLength={120} value={valor.otra ?? ''} onChange={e => onCambio({ ...valor, otra: e.target.value })} /></label>
       <p className="nota">{NOTA_B}</p></fieldset>
     <p><strong>C. Se puede cobrar (daño), con pruebas completas:</strong> {LISTA_C}</p>
+    </VerMas>
     <CasillaLegal id="acepto-anexo" marcada={valor.acepta} onCambio={v => onCambio({ ...valor, acepta: v })}>{CASILLA_ANEXO}</CasillaLegal>
   </section>
 }

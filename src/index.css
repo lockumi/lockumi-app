@@ -497,7 +497,6 @@ body:has(.camara) .nav-app--pie{display:none}
 .na-form{padding:16px 16px 12px;margin-bottom:var(--s4)}
 .na-sec+.na-sec,.na-sec+.na-par,.na-par+.na-sec{margin-top:24px}
 .na-par .na-sec+.na-sec{margin-top:24px}
-@media (min-width:768px) and (max-width:959px){.na-pie{position:sticky;bottom:0;z-index:3;margin-top:12px;padding:10px 0 4px;background:var(--fondo)}}
 .na-et{display:flex;align-items:center;gap:8px;font:600 15px/20px var(--f-texto);color:var(--cafe);margin:0 0 10px}
 .na-et>.ico{color:var(--accion);width:18px;height:18px}
 .na-et__der{margin-left:auto;font-weight:500;color:var(--cafe-suave)}
@@ -703,6 +702,8 @@ html.sin-scroll{overflow:hidden}
 .inv-titulo{margin:12px 0 20px}
 .entrada-app .entrada-app__sub{margin:-4px 0 0;font:600 18px/26px var(--f-texto);color:var(--cafe-suave);text-align:center;align-self:center}
 .cp-completo[hidden]{display:none}
+@keyframes cp-revelar{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.cp-completo:not([hidden]){animation:cp-revelar var(--t-ui) var(--ease)}
 .cp-completo>.ct__sec:last-child{border-bottom:1px solid var(--linea)}
 /* Con el contrato cerrado, el pie queda pegado al botón */
 .ct .cp-abrir+.ct__pie,.ct .cp-completo[hidden]+.ct__pie{padding-top:14px}
@@ -712,7 +713,7 @@ html.sin-scroll{overflow:hidden}
 .plegable--plazo .cp-abrir:focus-visible{border-radius:999px}
 .plegable--plazo .cp-abrir__ico{width:22px;height:22px}.plegable--plazo .cp-abrir__ico .ico{width:13px;height:13px}
 .plegable--plazo .cp-completo{max-width:640px;margin:4px auto 0;font:400 12px/17px var(--f-texto);color:#5C4A00}.plegable--plazo .cp-completo p{margin:0}
-@media (prefers-reduced-motion:reduce){.cp-abrir__ico .ico{transition:none}}
+@media (prefers-reduced-motion:reduce){.cp-abrir__ico .ico{transition:none}.cp-completo:not([hidden]),.na-pliegue[open]>.na-pliegue__cuerpo{animation:none}}
 .impresion{display:none}
 @media print{
   html.imprimiendo body>*:not(.impresion){display:none!important}
@@ -1470,8 +1471,11 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .na-pliegue__sum::-webkit-details-marker{display:none}
 .na-pliegue__sum .na-et{margin:0;flex:1}
 .na-pliegue__n{min-width:28px;height:28px;padding:0 8px;border-radius:999px;display:grid;place-items:center;background:var(--tarjeta);font:700 14px/1 var(--f-texto);color:var(--cafe)}
+.na-pliegue__mas{font:600 14px/20px var(--f-texto);white-space:nowrap}
+.na-pliegue__sum:focus-visible{outline:none;box-shadow:var(--foco);border-radius:16px}
 .na-pliegue__flecha{width:18px;height:18px;color:var(--cafe);transition:transform var(--t-ui) var(--ease)}
 .na-pliegue[open] .na-pliegue__flecha{transform:rotate(90deg)}
+.na-pliegue[open]>.na-pliegue__cuerpo{animation:cp-revelar var(--t-ui) var(--ease)}
 @media (prefers-reduced-motion:reduce){.na-pliegue__flecha{transition:none}}
 @media (max-width:959px){.na-form>.na-pie{background:transparent;box-shadow:none}}
 .aviso-app{background:var(--tarjeta);border:0;border-radius:16px}
@@ -1844,7 +1848,7 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .app-cuerpo>.cont:has(.campo--monto){padding-top:8px}
   .cont:has(.en-curso) .h-lugar,
   .cont:has(.reclamo-vista) .h-lugar,
-  .cont:has(.campo--monto) .h-lugar{font-size:22px;line-height:1.15;margin:0 0 4px}
+  .cont:has(.campo--monto) .h-lugar{margin:0 0 4px}
   .cont:has(.en-curso) .paso-cab,
   .cont:has(.reclamo-vista) .paso-cab,
   .cont:has(.campo--monto) .paso-cab{margin-bottom:6px}
@@ -1859,17 +1863,12 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .en-curso__datos{flex:1;min-width:0}
   .en-curso .chip{max-width:100%;white-space:normal}
   .en-curso .anillo--plano .anillo__aro{width:64px;height:64px}
-  .en-curso .anillo__c strong{font-size:18px}
-  .en-curso .anillo figcaption{font-size:13px;line-height:16px}
-  .en-curso h2{font-size:18px;line-height:22px}
-  .en-curso .monto{font-size:22px;line-height:1.1}
   .en-curso .boton--grande{min-height:48px}
   .reclamo-vista>*+*{margin-top:8px}
   .reclamo-vista .fotos{margin:0}
   .reclamo-vista .fotos:has(>li:only-child){grid-template-columns:minmax(0,1fr)}
   .reclamo-vista .fotos img,
   .reclamo-vista .fotos:has(>li:only-child) img{aspect-ratio:16/7;min-height:0;max-height:84px;object-fit:cover}
-  .reclamo-vista .monto{font-size:22px}
   .reclamo-vista .pie-paso{flex-wrap:nowrap}
   .reclamo-vista .pie-paso .boton{min-width:0;min-height:44px;padding:0 12px}
   .app-cuerpo>.cont.casa.casa--vacio{padding-top:0}
@@ -1883,10 +1882,8 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .casa-hero__beneficios .ico{width:18px;height:18px}
   .cont:has(.campo--monto) .tarjeta{padding:10px}
   .cont:has(.campo--monto) .pila>*+*{margin-top:6px}
-  .cont:has(.campo--monto) .cuenta__n{font-size:26px}
   .cont:has(.campo--monto) .dias-plazo span{width:28px;min-height:28px}
   .cont:has(.campo--monto) textarea{height:52px}
-  .cont:has(.campo--monto) h2{font-size:18px;line-height:22px}
 }
 
 /* Ronda 6: columna de avisos, perfil compacto y lo que roza la barra. */
@@ -1924,43 +1921,32 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .ct-resumen{gap:2px}
   .ct-resumen__hero{grid-template-columns:minmax(0,1fr)}
   .ct-resumen__casita{display:none}
-  .ct-resumen__titulo{font-size:18px;line-height:22px}
-  .ct-resumen__monto{font-size:20px}
-  .ct-resumen__fechas{font-size:14px;line-height:18px}
   .ct-resumen__bloques p,.ct-resumen__firmas li{padding:4px 8px}
-  .ct-resumen__bloques span,.ct-resumen__bloques strong,.ct-resumen__quien{font-size:13px;line-height:16px}
-  .ct-resumen__firmas-t{font-size:15px;line-height:18px}
   .pila:has(.ct-resumen)>*+*{margin-top:4px}
   .firma-breve>*+*{margin-top:2px}
   .firma-breve .estado-firma{padding:4px 8px}
-  .firma-breve p{font-size:14px;line-height:18px;margin:0}
+  .firma-breve p{margin:0}
   .firma-breve .boton--grande,.cont:has(.ct-resumen) .boton--secundario{min-height:40px}
-  .cont:has(.en-curso) .h-lugar{font-size:18px;margin:0}
+  .app-cuerpo>.cont:has(.en-curso){padding-top:0}
+  .cont:has(.en-curso) .h-lugar{margin:0}
   .cont:has(.en-curso) .paso-cab{margin-bottom:0}
+  .cont:has(.en-curso) .cp-abrir{min-height:44px;padding-top:4px;padding-bottom:4px}
   .en-curso>*+*{margin-top:2px}
-  .en-curso p{font-size:13px;line-height:16px}
   .en-curso .anillo__aro{width:52px;height:52px}
-  .en-curso .anillo figcaption{font-size:13px;line-height:16px}
-  .en-curso h2{font-size:16px;line-height:18px}
-  .en-curso .monto{font-size:20px}
   .en-curso .boton--grande{min-height:40px}
   .cont:has(.en-curso) .detalle__principal>*+*{margin-top:4px}
   .cont:has(.en-curso) .turno{padding:6px 10px;gap:2px}
-  .cont:has(.en-curso) .turno p:first-child{font-size:15px;line-height:18px}
   .cont:has(.reclamo-vista) .volver{margin:0}
-  .cont:has(.reclamo-vista) .h-lugar{font-size:18px;line-height:1.1;margin:0}
+  .cont:has(.reclamo-vista) .h-lugar{margin:0}
   .cont:has(.reclamo-vista) .paso-cab{margin-bottom:2px}
   .cont:has(.reclamo-vista) .tarjeta{padding:8px}
   .reclamo-vista>*+*{margin-top:4px}
-  .reclamo-vista h2{font-size:17px;line-height:20px}
-  .reclamo-vista .cab .mini,.reclamo-vista .foto__pie{font-size:12px;line-height:16px}
-  .reclamo-vista .monto{font-size:20px}
   .reclamo-vista .fotos{margin:0}
   .reclamo-vista .fotos:has(>li:only-child){grid-template-columns:minmax(0,1fr)}
   .reclamo-vista .fotos img,
   .reclamo-vista .fotos:has(>li:only-child) img{width:100%;height:148px;min-height:140px;max-height:160px;aspect-ratio:auto;object-fit:cover}
   .reclamo-vista .pie-paso .boton{min-height:40px;padding:0 10px}
-  .reclamo-vista>p{font-size:13px;line-height:17px;margin-top:4px}
+  .reclamo-vista>p{margin-top:4px}
 }
 @media (min-width:1024px) and (max-height:740px){
   .na:has(.campo__error) .na-sec+.na-sec,
