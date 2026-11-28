@@ -1245,16 +1245,16 @@ body:has(.nav-app) .tostadas{bottom:calc(92px + env(safe-area-inset-bottom))}
 .driver-popover.recorrido .driver-popover-title{font:800 18px/24px Nunito,system-ui,sans-serif;color:var(--tarjeta);margin:0 0 4px}
 .driver-popover.recorrido .driver-popover-description{font:500 15px/22px Inter,system-ui,sans-serif;color:var(--tarjeta);margin:0}
 .driver-popover.recorrido .driver-popover-footer{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
-.driver-popover.recorrido .recorrido__puntos{display:flex;gap:5px;margin-right:auto}
+.driver-popover.recorrido .recorrido__puntos{display:flex;flex:1 0 100%;order:-1;justify-content:center;gap:5px;margin:0 0 2px}
 .driver-popover.recorrido .recorrido__puntos i{width:7px;height:7px;border-radius:50%;background:rgba(255,254,250,.35)}
 .driver-popover.recorrido .recorrido__puntos i.ya{background:var(--salvia)}
 .driver-popover.recorrido .recorrido__puntos i.es{width:18px;border-radius:4px;background:var(--tarjeta)}
 .driver-popover.recorrido .driver-popover-footer button,.driver-popover.recorrido .recorrido__saltar{min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;font:700 15px/1 Inter,system-ui,sans-serif;text-shadow:none;cursor:pointer;border:0;background:var(--mint);color:var(--ink)}
-.driver-popover.recorrido .recorrido__saltar{text-decoration:none;padding:0 16px}
+.driver-popover.recorrido .recorrido__saltar{flex:none;white-space:nowrap;text-decoration:none;padding:0 16px}
 .driver-popover.recorrido .driver-popover-navigation-btns{display:flex;gap:8px;flex:none}
-.driver-popover.recorrido .driver-popover-footer{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:8px}
+.driver-popover.recorrido .driver-popover-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .driver-popover.recorrido .driver-popover-navigation-btns{flex:none}
-.driver-popover.recorrido .driver-popover-navigation-btns button{flex:none;width:auto}
+.driver-popover.recorrido .driver-popover-navigation-btns button{flex:none;width:auto;white-space:nowrap}
 @media (max-width:959px){
   .driver-popover.recorrido.recorrido--fotos{top:auto!important;bottom:72px!important;height:auto!important}
   .driver-popover.recorrido.recorrido--fotos .driver-popover-arrow{display:none}

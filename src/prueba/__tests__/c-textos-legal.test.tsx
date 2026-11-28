@@ -163,7 +163,7 @@ describe('7) Legal 3:16: sin «LEGAL: revisar» en lo que Legal aprobó', () => 
   })
   it('Detalle.tsx: nota de 07, pago de C y cierre de C', async () => {
     const src = (await import('../../screens/Detalle.tsx?raw')).default as string
-    for (const a of ['{esDosPersonas(a) && rol === \'inquilino\' && !a.contrato.firmas.inquilino && <div className="auto-dos"', '{dos ? <NotaLegal']) expect(antesDe(src, a)).not.toMatch(/LEGAL: revisar/)
+    for (const a of ['{esDosPersonas(a) && rol === \'inquilino\' && !a.contrato.firmas.inquilino && <div className="auto-dos"', 'partirNota(`${TEXTO_PAGO_DOS}']) expect(antesDe(src, a)).not.toMatch(/LEGAL: revisar/)
     expect(src).toMatch(/\{dosAceptan && <p className="nota">\{notaComisionReparto\(r\.inquilino, r\.dueno\)\}<\/p>\}\n/)
   })
   it('flujo.ts: «Qué sigue» de C', async () => {

@@ -22,7 +22,6 @@ import { modoServidor } from '../servidor/config'
 /** Primera letra en minúscula, sin tocar el resto («cuenta de Lockumi» conserva la L). */
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 const HOJA_RED_INTRO = 'Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.'
-const CORTE_RED = HOJA_RED_INTRO.indexOf('. ') + 1
 import { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio } from '../services/solo'
 import { conectar, saldoPropio, hayFreighter, hayCavos, NOMBRE_FIRMA, type Firma } from '../services/cuentaPropia'
 import { abreviar } from '../services/billetera'
@@ -336,9 +335,8 @@ export function Crear({ u }: { u: Usuario }) {
       <div className="na-hoja__texto">
         {/* LEGAL: revisado (25/10, lista de Legal). Hoja «Red de prueba» 1.5 (borrador): 1.er párrafo = ⓘ de la píldora propuesto por Legal; el resto, versión corta del texto 1.4 con los cambios pedidos. */}
         {info === 'red' && <>
-          <p>{HOJA_RED_INTRO.slice(0, CORTE_RED)}</p>
+          <p>{HOJA_RED_INTRO}</p>
           <VerMas etiqueta="Ver más">
-          <p>{HOJA_RED_INTRO.slice(CORTE_RED + 1)}</p>
           {/* LEGAL: revisado (25/10, lista de Legal) · hoja de «Invitar a la otra persona» (C), texto exacto de Legal */}
           {invitar ? <>
             <p>Tú eres el dueño y la persona que invitas es el inquilino. Cada uno entra con su propia cuenta y firma por sí mismo.</p>

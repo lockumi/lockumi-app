@@ -132,15 +132,12 @@ export function Pago({ a, rol }: P) {
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
-/** Deja a la vista solo `frase`, que ya está dentro de `texto`. El resto conserva las mismas palabras. */
-function NotaLegal({ texto, frase }: { texto: string; frase: string }) {
+/** Parte `frase` (ya está dentro de `texto`) y el resto, sin cambiar palabras. */
+function partirNota(texto: string, frase: string) {
   const i = texto.indexOf(frase)
   const visible = i < 0 ? texto : texto.slice(i, i + frase.length)
   const resto = (i < 0 ? '' : texto.slice(0, i) + texto.slice(i + frase.length)).replace(/ {2,}/g, ' ').trim()
-  return <>
-    <p className="nota">{visible}</p>
-    {resto && <VerMas><p className="nota">{resto}</p></VerMas>}
-  </>
+  return { visible, resto }
 }
 
 function PagoSimulado({ a, rol }: P) {
@@ -157,18 +154,22 @@ function PagoSimulado({ a, rol }: P) {
     })
   }
   const dos = esDosPersonas(a)   // PR #22 (a): en C el depósito va a la red de prueba de Trustless Work; nada de «simulado»
+  const nota = !dos ? null
+    : partirNota(`${TEXTO_PAGO_DOS} ${TEXTO_ESCROW_DOS}`, 'Son USDC de prueba, sin valor.')
+  const notaInquilino = dos ? nota
+    : escrowReal && usaCuentaPropia(a) ? partirNota(`Son USDC de prueba, sin valor, de tu cuenta (${abreviar(a.red!.inquilino!)}). ${a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.`, 'Son USDC de prueba, sin valor')
+    : escrowReal ? partirNota('Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.', 'Son USDC de prueba, sin valor')
+    : (!modoReal || modoVideo) ? partirNota('Es una prueba: no se cobra nada.', 'Es una prueba: no se cobra nada.')
+    : null
   return <section className={'pila' + (etapa > 0 ? ' pago-espera' : '')}>{etapa > 0 && <IlustracionPendiente />}
     {etapa === 0 && <><div className="cab"><h2>Depósito</h2>{escrowReal || dos ? <span className="chip chip--neutro">Red de prueba</span> : modoVideo ? <Simulado /> : <Demo t="Pago simulado" />}</div>
     <div className="monto">{usd(a.monto)}</div>
     <p>El dinero queda guardado.</p>
-    <VerMas><p>El dueño no lo recibe ahora: se decide al final del alquiler.</p></VerMas></>}
+    <VerMas><p>El dueño no lo recibe ahora: se decide al final del alquiler.</p>{rol === 'inquilino' && notaInquilino?.resto && <p className="nota">{notaInquilino.resto}</p>}</VerMas>
+    {rol === 'inquilino' && notaInquilino && <p className="nota">{notaInquilino.visible}</p>}</>}
     {/* LEGAL: revisado (24/10) · «Ni el dueño ni el inquilino pueden sacarlos solos.» (las dos notas: cuenta propia y USDC de Lockumi) */}
     {rol === 'inquilino' ? <>
       {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
-      {etapa === 0 && <>{dos ? <NotaLegal frase="Son USDC de prueba, sin valor." texto={`${TEXTO_PAGO_DOS} ${TEXTO_ESCROW_DOS}`} />
-        : escrowReal && usaCuentaPropia(a) ? <NotaLegal frase="Son USDC de prueba, sin valor" texto={`Son USDC de prueba, sin valor, de tu cuenta (${abreviar(a.red!.inquilino!)}). ${a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.`} />
-        : escrowReal ? <NotaLegal frase="Son USDC de prueba, sin valor" texto="Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos." />
-        : (!modoReal || modoVideo) && <NotaLegal frase="Es una prueba: no se cobra nada." texto="Es una prueba: no se cobra nada." />}</>}
       {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
       {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
       <ConSesion activo={modoDe(a).trustless && etapa === 0}>

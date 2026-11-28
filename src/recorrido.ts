@@ -1,32 +1,29 @@
 // Recorrido guiado (driver.js, estilo joyride): 6 pasos con los textos aprobados (diseno/envio/recorrido-formulario/textos.md,
 // LEGAL: revisado el 23/10). Se abre solo la primera vez en Inicio y se vuelve a ver desde «¿Cómo funciona?».
 // Los pasos 4 a 6 usan un alquiler de ejemplo de solo lectura (#/ejemplo): no crea nada ni llama a la red.
-import { createElement } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
 import { driver, type Driver, type DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import type { Alquiler, Estado, Usuario } from './types'
-import { VerMas } from './screens/Plegable'
 import { actaVacia } from './store'
 import { CASITA_AVISO_SVG } from './LogoAviso'
 
 export const VERSION_RECORRIDO = 'v1'
 export const RUTA_EJEMPLO = '/ejemplo'
-export interface PasoRecorrido { ruta: string; estado?: Estado; el: string; /** En el teléfono (menos de 720 px), si el bloque es muy alto para el globo. */ elMovil?: string; titulo: string; texto: string; lado?: 'top' | 'bottom' | 'left' | 'right'; /** La primera oración queda a la vista; el resto es explicación. */ plegar?: boolean }
+export interface PasoRecorrido { ruta: string; estado?: Estado; el: string; /** En el teléfono (menos de 720 px), si el bloque es muy alto para el globo. */ elMovil?: string; titulo: string; texto: string; lado?: 'top' | 'bottom' | 'left' | 'right' }
 // LEGAL: revisado el 23/10 (textos exactos de la maqueta aprobada; pasos 5 y 6 con las correcciones de Legal).
 export const PASOS_RECORRIDO: PasoRecorrido[] = [
   { ruta: '/alquileres', el: '[data-recorrido="nuevo"]', lado: 'bottom', titulo: 'Te damos la bienvenida a Lockumi',
     texto: 'Lockumi guarda el depósito del alquiler en una cuenta de la red de prueba, con USDC de prueba. Empecemos por crear un alquiler.' },
   { ruta: '/crear', el: '[data-recorrido="datos"]', titulo: 'Los datos del alquiler',
     texto: 'El lugar, las fechas y el monto del depósito. Toca una opción: casi no hay que escribir.' },
-  { ruta: '/crear', el: '[data-recorrido="reglas"]', titulo: 'Las reglas del dueño', plegar: true,
+  { ruta: '/crear', el: '[data-recorrido="reglas"]', titulo: 'Las reglas del dueño',
     texto: 'Toca las reglas del lugar. Quedan escritas en el contrato que firman los dos.' },
-  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', lado: 'right', titulo: 'Fotos y lista de entrada', plegar: true,
+  { ruta: RUTA_EJEMPLO, estado: 'fotos_entrada', el: '[data-recorrido="fotos"]', lado: 'right', titulo: 'Fotos y lista de entrada',
     texto: 'Al entrar, una foto de cada espacio y una lista para marcar. Al salir se repite. Así los dos ven cómo estaba el lugar.' },
   // LEGAL: revisado (24/10)
-  { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito', plegar: true,
+  { ruta: RUTA_EJEMPLO, estado: 'pendiente_pago', el: '.detalle__principal > .tarjeta', titulo: 'Firmas y depósito',
     texto: 'Los dos firman el contrato. Después el inquilino paga el depósito y queda guardado. Ni el dueño ni el inquilino lo pueden sacar solos. Al entregar el lugar, hay 7 días para hacer un reclamo.' },
-  { ruta: RUTA_EJEMPLO, estado: 'ventana_reclamo', el: '[data-recorrido="pasos"]', elMovil: '[data-recorrido="pasos"] h3', titulo: 'La devolución', plegar: true,
+  { ruta: RUTA_EJEMPLO, estado: 'ventana_reclamo', el: '[data-recorrido="pasos"]', elMovil: '[data-recorrido="pasos"] h3', titulo: 'La devolución',
     texto: 'Si no hay reclamos en 7 días, el depósito se puede devolver al inquilino. Si hay un reclamo, buscamos que una persona mediadora les ayude a llegar a un acuerdo. En esta prueba, la mediación es una simulación.' },
 ]
 
@@ -60,13 +57,6 @@ const reducir = () => typeof matchMedia === 'function' && matchMedia('(prefers-r
 const esperar = (sel: string, ms = 3000) => new Promise<Element | null>(listo => {
   const fin = Date.now() + ms; const mirar = () => { const e = document.querySelector(sel); if (e || Date.now() > fin) listo(e); else requestAnimationFrame(mirar) }; mirar() })
 let activo: Driver | null = null
-let raizPaso: Root | null = null
-const soltarPaso = () => { raizPaso?.unmount(); raizPaso = null }
-const fraseClave = (texto: string) => {
-  const m = texto.match(/\. (?=\p{Lu})/u)
-  if (!m || m.index === undefined) return null
-  return { clave: texto.slice(0, m.index + 1), resto: texto.slice(m.index + 2) }
-}
 export const recorridoActivo = () => !!activo?.isActive()
 // 26/10 (2:32 a. m.): quien tapa el formulario de «Nuevo alquiler» (p. ej. «Nombre visible y cantón») se aparta mientras dura el recorrido;
 // si no, los pasos 2 y 3 no encuentran su bloque y el recorrido se queda trabado.
@@ -97,15 +87,6 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
     popoverClass: 'recorrido', allowClose: true, allowKeyboardControl: true, overlayClickBehavior: 'none', disableActiveInteraction: true, popoverOffset: 16,
     onPopoverRender: (pop, { state }) => {
       const i = state.activeIndex ?? 0, n = PASOS_RECORRIDO.length
-      soltarPaso()
-      const trozo = PASOS_RECORRIDO[i].plegar ? fraseClave(PASOS_RECORRIDO[i].texto) : null
-      if (trozo) {
-        pop.description.textContent = trozo.clave
-        const caja = document.createElement('div')
-        pop.description.after(caja)
-        raizPaso = createRoot(caja)
-        raizPaso.render(createElement(VerMas, { children: createElement('p', null, trozo.resto) }))
-      }
       pop.wrapper.setAttribute('aria-modal', 'true')
       pop.title.id = 'recorrido-t'; pop.description.id = 'recorrido-d'
       pop.wrapper.setAttribute('aria-labelledby', 'recorrido-t'); pop.wrapper.setAttribute('aria-describedby', 'recorrido-d')
@@ -145,7 +126,7 @@ export function abrirRecorrido(u: Pick<Usuario, 'email'>, { desde = 0, quien: q 
     onCloseClick: () => cerrar(),
     onDestroyStarted: () => { void marcarVisto(u); d.destroy() },   // Esc = Saltar
     onDestroyed: () => {
-      soltarPaso(); activo = null; ponerEnCurso(false)
+      activo = null; ponerEnCurso(false)
       if ((location.hash.slice(1) || '/') !== origen) location.hash = origen
       setTimeout(() => { if (quien?.isConnected) quien.focus({ preventScroll: true }) }, 0)
     },
