@@ -40,6 +40,8 @@ const Reputacion = import.meta.env.VITE_REPUTACION === '1' ? lazy(() => import('
 const volver = tomarRegreso
 export default function App() {
   const [u, setU] = useState(auth.actual()); const r = useHash()
+  // El desplazamiento real es .app-cuerpo (la ventana no se mueve). Cada ruta empieza arriba.
+  useEffect(() => { document.querySelector('.app-cuerpo')?.scrollTo(0, 0) }, [r])
   // La sesión del servidor es de la cuenta que entró (cuenta-sesion.ts): con otra cuenta se termina la anterior. Si otra pestaña entra
   // con otra cuenta, esta se recarga para no mostrar la lista ni el rol de una cuenta con el nombre de otra.
   const correoU = u?.email ?? ''

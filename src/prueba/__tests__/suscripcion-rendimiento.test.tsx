@@ -7,7 +7,8 @@ const texto = (h: string) => h.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
 describe('B.8 suscripción', () => {
   const t = texto(renderToStaticMarkup(<SuscripcionB8 />))
   it('texto de Legal', () => {
-    expect(t).toContain('En la demo, la app es gratis. No hay suscripción ni se cobra nada. En el servicio con dinero real, el inquilino pagaría una suscripción anual de USD 15 (monto provisional), que se informaría antes de firmar.')
+    expect(t).toContain('En la demo, la app es gratis.')
+    expect(t).toContain('No hay suscripción ni se cobra nada. En el servicio con dinero real, el inquilino pagaría una suscripción anual de USD 15 (monto provisional), que se informaría antes de firmar.')
   })
   it('cuadro del servicio real sin casillas, con las dos autorizaciones', () => {
     expect(t).toContain('En el servicio con dinero real (no disponible en la demo): se pedirían dos autorizaciones aparte.')

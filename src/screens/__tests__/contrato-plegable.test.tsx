@@ -21,7 +21,7 @@ const A: Alquiler = {
   contrato: { firmas: {} }, entrada: { cuartos: [], firmas: {} }, diasSimulados: 0,
 }
 const SIEMPRE = ['Contrato', 'Pendiente de firmas', 'Referencia 3F2A9C1B', 'El alquiler', 'Apartamento en Barreal de Heredia', 'Partes', 'demo@lockumi.com',
-  'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.', 'Descargar o imprimir']
+  'Este contrato se guarda solo en tu navegador.', 'El lugar y las fotos no salen de él.', 'Descargar o imprimir']
 const PLEGADO = ['Reglas', 'No se permiten mascotas', 'El depósito', 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.',
   '7 días para reclamos', 'Mediación', 'Si no se ponen de acuerdo, una persona mediadora revisa con ustedes las fotos', 'Firmas', 'Pendiente</span>']
 

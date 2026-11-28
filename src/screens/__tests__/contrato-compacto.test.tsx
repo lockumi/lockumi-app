@@ -22,7 +22,7 @@ const A: Alquiler = {
 }
 const ids = (html: string) => [...html.matchAll(/ id="([^"]+)"/g)].map(m => m[1])
 const COMPLETO = ['El alquiler', 'Partes', 'Reglas', 'No se permiten mascotas', 'El depósito', 'Ni el dueño ni el inquilino pueden tomarlo solos. En esta prueba, si hay un reclamo, la cuenta de Lockumi es la que ejecuta el reparto que se elige en la simulación.',
-  '7 días para reclamos', 'Mediación', 'Firmas', 'Este contrato se guarda solo en tu navegador. El lugar y las fotos no salen de él.']
+  '7 días para reclamos', 'Mediación', 'Firmas', 'Este contrato se guarda solo en tu navegador.', 'El lugar y las fotos no salen de él.']
 
 describe('contrato compacto: tarjeta (escritorio)', () => {
   const html = renderToStaticMarkup(<ContratoCompacto a={A} como="tarjeta" />)
@@ -88,7 +88,8 @@ describe('contrato compacto: pantalla y estilos', () => {
 describe('Mediación en el contrato', () => {
   it('la persona mediadora ayuda a buscar un acuerdo; no decide por ustedes', () => {
     const t = renderToStaticMarkup(<PanelContrato a={A} abierto onCerrar={() => {}} hoja={false} />)
-    expect(t).toContain('Si no se ponen de acuerdo, una persona mediadora revisa con ustedes las fotos de entrada y de salida y les ayuda a buscar un acuerdo sobre el reparto del depósito. No decide por ustedes.')
+    expect(t).toContain('Si no se ponen de acuerdo, una persona mediadora revisa con ustedes las fotos de entrada y de salida y les ayuda a buscar un acuerdo sobre el reparto del depósito.')
+    expect(t).toContain('No decide por ustedes.')
     expect(t).not.toMatch(/mediadora[^.]*decide cómo/)
   })
   // LEGAL: revisado (24/10) · ronda 2: el depósito ya no promete «ni Lockumi» y los botones registran el acuerdo, no deciden.

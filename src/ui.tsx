@@ -7,6 +7,8 @@ import { Plegable } from './screens/Plegable'
 import type { Usuario, Alquiler } from './types'
 import { ETAPAS, etapaDe } from './flujo'
 import { Navegacion } from './screens/Navegacion'
+import { useAlquileres } from './store'
+import { avisosVisibles } from './screens/avisos-datos'
 
 export const Demo = ({ t = 'Demo: simulado' }: { t?: string }) => modoReal ? null : <span className="demo" title="Integración simulada para la demo">{t}</span>
 export const Icono = ({ id, className = '' }: { id: string; className?: string }) =>
@@ -14,17 +16,26 @@ export const Icono = ({ id, className = '' }: { id: string; className?: string }
 export const Deco = ({ id, size = 48, className = '' }: { id: string; size?: number; className?: string }) =>
   <svg className={'deco ' + className} width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href={'#' + id} /></svg>
 
-export function Barra({ onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
+function Campana({ sinLeer }: { sinLeer: boolean }) {
+  return <a href="#/avisos" className="casa-campana" aria-label="Avisos">
+    <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9" /><path d="M10 18a2 2 0 0 0 4 0" /></svg>
+    {sinLeer && <span className="casa-campana__punto" />}
+    {sinLeer && <span className="sr">Hay avisos sin leer.</span>}
+  </a>
+}
+
+export function Barra({ u, onSalir, r = '/' }: { u: Usuario; onSalir: () => void; r?: string }) {
   const enAyuda = r === '/ayuda' || r.startsWith('/ayuda/')
+  const sinLeer = avisosVisibles(useAlquileres(), u.email).some(x => !x.aviso.abierto)
   return <header className="cont barra">
     <a href="#/" className="logo" aria-label="Lockumi, ir a Inicio"><img src="/img/logo-header.png" alt="" /><span className="logo__nombre">Lockumi</span></a>
     <Navegacion r={r} className="nav-app--cabecera" />
     <div className="barra__der">
-      <span className="barra-campana" />
+      <span className="barra-campana"><Campana sinLeer={sinLeer} /></span>
       <a href="#/ayuda" className="boton-icono" aria-label="Ayuda" aria-current={enAyuda ? 'page' : undefined}>
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a2.9 2.9 0 0 1 5.6 1c0 2-2.7 2.2-2.7 4" /><path d="M12 17h.01" /></svg>
       </a>
-      <button type="button" className="boton-icono" onClick={onSalir} aria-label="Salir" title="Salir">
+      <button type="button" className="boton-icono barra-salir" onClick={onSalir} aria-label="Salir" title="Salir">
         <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10"/></svg>
       </button>
     </div>
@@ -80,6 +91,13 @@ export const usd = (n: number) => pruebaCompleta() ? dos(n) + ' USDC de prueba'
 /** Lo que se devuelve o se reparte (ya sin la comisión real de Trustless Work): mismo criterio que usd() (coma decimal, al menos
  *  2 decimales y el mismo sufijo), pero exacto, sin redondear ni ceros de más: «0,997 USDC», «1,994 USDC de prueba», «1,00 USDC».
  *  Pedido de Katherine (27/10/2026, 1:05 p. m. CR). El cálculo está en api/_lib/centimos.ts (netoTrustless). */
+/** Pega el «·» al primer tramo para que el título no parta en el separador. El texto visible no cambia. */
+export function Lugar({ texto }: { texto: string }) {
+  const sep = ' · '
+  const i = texto.indexOf(sep)
+  if (i <= 0) return <>{texto}</>
+  return <><span className="lugar-a">{texto.slice(0, i)}{'\u00A0'}·</span> {texto.slice(i + sep.length)}</>
+}
 export const usdExacto = (n: number) => pruebaCompleta() ? exacto(n) + ' USDC de prueba'
   : escrowReal ? exacto(n) + ' USDC'
   : new Intl.NumberFormat('es-CR', { style:'currency', currency:'USD', currencyDisplay:'code', minimumFractionDigits: 2, maximumFractionDigits: 7 }).format(n)

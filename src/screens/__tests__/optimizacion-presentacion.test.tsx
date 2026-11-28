@@ -30,7 +30,7 @@ describe('tarjeta del contrato', () => {
     expect(html).not.toContain('USD XX')
     expect(html).toContain('/img/casita-inmueble.png')
     expect(html).not.toContain('logo-header')
-    expect(html).toMatch(/class="boton boton--primario boton--ancho"[^>]*>.*?Ver contrato completo/)
+    expect(html).toMatch(/class="boton boton--secundario boton--ancho"[^>]*>.*?Ver contrato completo/)
     const alerta = html.indexOf('Te toca firmar')
     expect(html.lastIndexOf('<p', alerta)).toBeGreaterThan(html.lastIndexOf('<button', alerta))
   })

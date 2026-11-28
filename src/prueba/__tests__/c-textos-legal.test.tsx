@@ -80,7 +80,9 @@ describe('2) «Qué sigue» y otros textos de C: la propuesta solo se aplica si 
 describe('3) pago en C: confirma la cuenta Lockumi (Cavos), la única que firma el depósito de dos personas', () => {
   it('nota del inquilino, palabra por palabra', () => {
     const h = renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino', cuentas: { inquilino: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUV' } })} rol="inquilino" />)
-    expect(h).toContain(`<p class="nota">${PAGO} `); expect(h).not.toContain('Freighter')
+    expect(h).toContain('<p class="nota">Son USDC de prueba, sin valor.</p>')
+    expect(h.slice(h.indexOf('hidden=""'))).toContain('Tu cuenta Lockumi te pedirá confirmar el pago en la red de prueba.')
+    expect(h).not.toContain('Freighter')
   })
   // Opción A (26/10/2026): la billetera Cavos firma la prueba de cada acción (firmarPrueba) y, en escrows de antes, la aprobación
   // (firmarXdr); el depósito lo pone el ramp simulado de testnet. Ninguna otra billetera.
@@ -117,7 +119,12 @@ describe('5) Legal 3:16: pago de C con la cuenta de garantía (escrow), sin «na
   it('la nota del pago es la línea de Legal y, después, la del escrow, palabra por palabra', () => {
     expect(D.TEXTO_ESCROW_DOS).toBe(ESCROW)
     const h = renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino' })} rol="inquilino" />)
-    expect(h).toContain(`<p class="nota">${PAGO} ${ESCROW}</p>`); expect(h).not.toMatch(SOLOS)
+    expect(h).toContain('<p class="nota">Son USDC de prueba, sin valor.</p>')
+    const oculto = h.slice(h.indexOf('hidden=""'))
+    expect(oculto).toContain('Tu cuenta Lockumi te pedirá confirmar el pago en la red de prueba.')
+    expect(oculto).toContain(ESCROW)
+    expect(h).toContain(PAGO.slice(0, PAGO.indexOf('Son USDC')))
+    expect(h).not.toMatch(SOLOS)
   })
   it('ninguna pantalla de C dice que nadie puede sacar el depósito solo (pago, contrato, en curso, aviso del pago)', () => {
     const hs = [renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'inquilino' })} rol="inquilino" />), renderToStaticMarkup(<Pago a={A({ estado: 'pendiente_pago', miRol: 'dueno' })} rol="dueno" />),
@@ -156,7 +163,7 @@ describe('7) Legal 3:16: sin «LEGAL: revisar» en lo que Legal aprobó', () => 
   })
   it('Detalle.tsx: nota de 07, pago de C y cierre de C', async () => {
     const src = (await import('../../screens/Detalle.tsx?raw')).default as string
-    for (const a of ['{esDosPersonas(a) && rol === \'inquilino\' && !a.contrato.firmas.inquilino && <div className="auto-dos"', '{dos ? <p className="nota">']) expect(antesDe(src, a)).not.toMatch(/LEGAL: revisar/)
+    for (const a of ['{esDosPersonas(a) && rol === \'inquilino\' && !a.contrato.firmas.inquilino && <div className="auto-dos"', 'partirNota(`${TEXTO_PAGO_DOS}']) expect(antesDe(src, a)).not.toMatch(/LEGAL: revisar/)
     expect(src).toMatch(/\{dosAceptan && <p className="nota">\{notaComisionReparto\(r\.inquilino, r\.dueno\)\}<\/p>\}\n/)
   })
   it('flujo.ts: «Qué sigue» de C', async () => {
@@ -179,7 +186,9 @@ const SOLOS_C = 'Ni el dueño ni el inquilino pueden tomarlo solos. Lockumi mane
 describe('8) Legal 3:34: contrato y «En curso» de C con el texto de Legal; el aviso del pago no cambia', () => {
   it('la constante es la de Legal, palabra por palabra', () => { expect(D.TEXTO_SOLOS_DOS).toBe(SOLOS_C) })
   it('contrato de C: el texto de Legal y, después, quién ejecuta el reparto', () => {
-    expect(renderToStaticMarkup(<ContratoDoc a={A()} completo />)).toContain(`El depósito queda guardado hasta el final. ${SOLOS_C} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`)
+    const html = renderToStaticMarkup(<ContratoDoc a={A()} completo />)
+    expect(html).toContain('El depósito queda guardado hasta el final.')
+    expect(html).toContain(`${SOLOS_C} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`)
   })
   it('«En curso» de C', () => {
     expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)).toContain(`El depósito sigue guardado. ${SOLOS_C}</p>`)

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { crearFoto } from './fotos'
 import type { Foto, Rol } from './types'
 import { Icono } from './ui'
@@ -44,12 +45,14 @@ function VisorCamara({ onCerrar, onCaptura, onFallo }: { onCerrar: () => void; o
     const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight
     c.getContext('2d')!.drawImage(v, 0, 0); c.toBlob(b => b && onCaptura(b), 'image/jpeg', 0.9)
   }
-  return <div className="camara" role="dialog" aria-modal="true" aria-label="Cámara">
-    <video ref={video} playsInline muted onLoadedData={() => setListo(true)} />
-    <div className="camara__barra">
-      <button type="button" className="boton boton--secundario" onClick={onCerrar}>Cancelar</button>
-      <button type="button" className="camara__disparo" aria-label="Tomar foto" disabled={!listo} onClick={disparar}><span /></button>
-      <span style={{ width: 96 }} />
+  return createPortal(<div className="camara" role="dialog" aria-modal="true" aria-label="Cámara">
+    <div className="camara__marco">
+      <video ref={video} playsInline muted onLoadedData={() => setListo(true)} />
+      <div className="camara__barra">
+        <button type="button" className="boton boton--secundario" onClick={onCerrar}>Cancelar</button>
+        <button type="button" className="camara__disparo" aria-label="Tomar foto" disabled={!listo} onClick={disparar}><span /></button>
+        <span className="camara__equilibrio" aria-hidden="true" />
+      </div>
     </div>
-  </div>
+  </div>, document.body)
 }

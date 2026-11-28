@@ -11,7 +11,6 @@ import { textoFoto } from '../fotos'
 import { pruebaCompleta } from '../prueba/interruptor'
 import { textoFotoPC, selloFoto } from '../prueba/fotosFecha'
 import { estadoFirma, otro, NOMBRE, ErrorFirma, type Firmas } from '../flujo'
-
 export function FotoLista({ fotos, vacio = 'Todavía no hay fotos.' }: { fotos: Foto[]; vacio?: string }) {
   if (!fotos.length) return <p className="nota">{vacio}</p>
   return <ul className="fotos">{fotos.map((f, i) => <li key={i}>

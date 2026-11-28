@@ -109,6 +109,9 @@ export function Tostada({ a, indice, pausa, abierta, desplazar, onCerrar, onAlto
     {accion && <button type="button" className="tostada__accion" aria-label={accion.etiqueta}
       onClick={e => { e.stopPropagation(); cerrar(false); irA(accion.ir) }}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrar() } }}>{accion.texto}</button>}
+    {tono === 'error' && <button type="button" className="tostada__cerrar" aria-label="Cerrar" onClick={e => { e.stopPropagation(); cerrar() }}>
+      <svg className="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+    </button>}
     {dur != null && <span className="tostada__tiempo" aria-hidden="true" style={{ animationDuration: dur + 'ms' }} />}
     <span className="tostada__manija" aria-hidden="true" />
   </div>
