@@ -1966,3 +1966,11 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .avisos-centro{justify-items:start}
   .avisos-centro h1,.avisos-centro__lista,.avisos-centro__vacio{width:min(100%,720px);max-width:720px;justify-self:start}
 }
+/* Ronda 7d: en Pago (USDC de Lockumi y cuenta propia) a 1280×720, la frase y «Ver detalles»
+   bajaban «Pagar» 36 px. Se quita ese aire, solo con alto de hasta 760 px. La letra no cambia. */
+@media (min-width:1280px) and (max-height:760px){
+  .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver){padding-top:8px}
+  .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota{margin-top:0}
+  .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota + .plegable--ver{margin-top:0}
+  .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota + .plegable--ver > .cp-abrir{margin-top:0}
+}
