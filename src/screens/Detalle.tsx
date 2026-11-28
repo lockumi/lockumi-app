@@ -16,7 +16,7 @@ import { fotoEjemplo } from '../demoFotos'
 import { Demo, Simulado, Icono, LineaTiempo, Lugar, usd, usdExacto, fecha, fechaHora, useDevolucionAutomatica, FIN_CONTADOR_AUTO, FIN_CONTADOR_SIN_CORRIDA, textoErrorDevolucion, RELOJ_ADELANTADO } from '../ui'
 import { CuartoEditor, Firma, FotoLista, cuartoListo } from './Acta'
 import { ContratoDoc } from './ContratoDoc'
-import { VerMas } from './Plegable'
+import { TextoClave, VerMas } from './Plegable'
 import { ContratoCompacto, useEscritorio } from './ContratoCompacto'
 import { TomarFoto } from '../Camara'
 import { ETAPAS, etapaDe, pasoTexto, turno, otro, NOMBRE, ahoraPrueba, diasQueQuedan, hoyCostaRica } from '../flujo'
@@ -110,7 +110,7 @@ export function Contrato({ a, rol }: P) {
     {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <TarjetaContrato a={a} integro={integro} onAlternar={() => setIntegro(v => !v)} />
-    {modoPrueba && <VerMas><p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p></VerMas>}
+    {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
     {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
         U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
     <ConSesion activo={pideSesionAntesDeFirmar(a, rol)}>
@@ -316,16 +316,16 @@ export function Ventana({ a, rol }: P) {
       : p.err ? <>{escrowReal ? <p className="error" role="alert">{textoErrorDevolucion(p.err)}</p> : p.error}<button type="button" className="boton boton--primario boton--ancho" onClick={() => void devolver()}>Volver a intentar la devolución</button></> : null)}
     {modoSolo && <CierreReal a={a} rol={rol} />}
     {modoVideo && resta > 0 && rol === 'inquilino' && (form ? <FormReclamo a={a} onCancelar={() => setForm(false)} /> : <div className="pila">
-      <VerMas><p className="nota">La regla: el dueño tiene {textoPlazo(a)} para reclamar. Si no reclama, después de ese plazo el depósito se devuelve al inquilino.</p></VerMas>{/* LEGAL: revisado (24/10) */}
+      <TextoClave className="nota" texto={`La regla: el dueño tiene ${textoPlazo(a)} para reclamar. Si no reclama, después de ese plazo el depósito se devuelve al inquilino.`} />{/* LEGAL: revisado (24/10) */}
       {adelantoPermitido() && <button type="button" className="boton boton--primario boton--ancho boton--grande" disabled={p.ocupado} onClick={adelantar}>Solo red de prueba: adelantar el plazo</button>}
       <button type="button" className="boton boton--secundario boton--ancho" disabled={p.ocupado} onClick={() => setForm(true)}>Hacer un reclamo como dueño de prueba</button>
-      <VerMas><p className="nota">«Adelantar el plazo» termina los {textoPlazo(a)} ahora y te devuelve el depósito. «Hacer un reclamo» lo haces en nombre del dueño de prueba.</p></VerMas>
+      <p className="nota">«Adelantar el plazo» termina los {textoPlazo(a)} ahora y te devuelve el depósito. «Hacer un reclamo» lo haces en nombre del dueño de prueba.</p>
     </div>)}
     {resta > 0 && !(modoVideo && rol === 'inquilino') && (rol === 'dueno'
       ? (form ? <FormReclamo a={a} onCancelar={() => setForm(false)} /> : <>
         {/* LEGAL: revisado (24/10) · ronda 8. modoSolo: solo el alquiler de ejemplo del recorrido (DetalleSolo no tiene reclamo), sin red: reclamo y mediación simulados. Si no (modoVideo, producción): el reclamo abre una disputa real en la red de prueba (acciones.reclamar → escrow.disputar) */}
-        {modoSolo ? <VerMas><p className="nota">¿Encontraste un daño? Puedes reclamar. <Simulado /> En este ejemplo, el reclamo y la mediación son simulados: no se registran en la red de prueba ni bloquean ningún depósito.</p></VerMas>
-          : <><p>¿Encontraste un daño que no estaba en las fotos de entrada?</p><VerMas><p>Puedes reclamar. Si todo está bien, no hagas nada.</p></VerMas></>}
+        {modoSolo ? <p className="nota">¿Encontraste un daño? Puedes reclamar. <Simulado /> En este ejemplo, el reclamo y la mediación son simulados: no se registran en la red de prueba ni bloquean ningún depósito.</p>
+          : <><p>¿Encontraste un daño que no estaba en las fotos de entrada?</p><p>Puedes reclamar. Si todo está bien, no hagas nada.</p></>}
         <button type="button" className={'boton boton--ancho ' + (modoSolo ? 'boton--secundario' : 'boton--primario boton--grande')} onClick={() => setForm(true)}>Reclamar un daño</button></>)
       : <Espera texto={`Esperando. Si el dueño no reclama, después de ${textoPlazo(a)} se te devuelve el depósito.`} />)}{/* LEGAL: revisado (24/10) */}
     <EscrowReal a={a} rol={rol} />
@@ -379,12 +379,12 @@ function Reclamo({ a, rol }: P) {
   return <section className="pila reclamo-vista"><div className="cab"><h2>Reclamo del dueño</h2>{modoPrueba && <Simulado texto="Mediación simulada" />}</div>{/* LEGAL: revisado (24/10) */}<Evidencia a={a} />
     {/* LEGAL: revisado (24/10) · ronda 8. modoSolo: solo el alquiler de ejemplo (sin red, reclamo simulado). modoVideo (producción): disputa real en la red de prueba (acciones.reclamar → escrow.disputar) */}
     {modoSolo && <p className="nota">En este ejemplo, el reclamo es simulado: no se registra en la red de prueba ni bloquea ningún depósito. La mediación también es simulada.</p>}
-    {modoVideo && <VerMas><p className="nota">El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva.</p></VerMas>}
+    {modoVideo && <TextoClave className="nota" texto="El dueño de prueba es una cuenta de Lockumi. Su reclamo quedó registrado en la cuenta segura de la red de prueba: el depósito no se mueve hasta que se resuelva." />}
     {rol === 'inquilino' ? <>
       {p.error}
       <div className="pie-paso"><button type="button" className="boton boton--secundario" disabled={p.ocupado} onClick={() => void p.correr(() => acciones.responder(a, false))}>No estoy de acuerdo</button>
       <button type="button" className="boton boton--primario boton--grande pie-paso__principal" disabled={p.ocupado} onClick={() => void aceptar()}>{p.texto('Aceptar reclamo')}</button></div>
-      <VerMas><p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p></VerMas>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
+      <p>Si aceptas, recibes {usdExacto(llegaria(r.monto, a.monto).inquilino)} y el dueño {usdExacto(llegaria(r.monto, a.monto).dueno)}{escrowReal ? ` (menos ${COMISION_TEXTO} de comisión de la red de prueba)` : ''}. Si no estás de acuerdo, una persona mediadora revisa las fotos con ustedes y les ayuda a buscar un acuerdo.</p>{/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
       {escrowReal && p.ocupado && NOTA_TIEMPO}
     </> : <Espera texto="Esperando que el inquilino responda tu reclamo." />}
   </section>
@@ -405,11 +405,13 @@ function Mediacion({ a, rol }: P) {
   const aceptar = () => p.correr(async () => { await acciones.aceptarAcuerdo!(a, aDueno); await leer() })
   return <section className="pila"><div className="cab"><h2>Con una persona mediadora</h2>{modoPrueba && <Simulado />}</div>
     <div className="ct-resumen" aria-label="Resumen de la mediación"><p className="ct-resumen__monto">{usd(r.monto)}</p><p>Reclamo de {usd(r.monto)}.</p></div>
-    <VerMas>
     {/* LEGAL: revisado (24/10) · el reparto sí se ejecuta en la red de prueba: acciones.decidir → escrow.resolver → /api/solo «resolver» (resolve_dispute) */}
-    <p>Una persona mediadora revisa las fotos y ayuda a buscar un acuerdo. No decide por ustedes. No hay un costo configurado en este alquiler.</p>
+    <p>Una persona mediadora revisa las fotos y ayuda a buscar un acuerdo.</p>
     {modoSolo && <p className="nota">La mediación es simulada: el reparto que elijas se ejecuta con tokens de prueba, sin valor.</p>}
-    {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)». El reparto que elijas sí se hace de verdad en la red de prueba.</p>}
+    {modoVideo && <p className="nota">En esta prueba la persona mediadora es simulada: decides tú con «Resolver el reclamo (simulación)».</p>}
+    <VerMas>
+    <p>No decide por ustedes. No hay un costo configurado en este alquiler.</p>
+    {modoVideo && <p className="nota">El reparto que elijas sí se hace de verdad en la red de prueba.</p>}
     {/* LEGAL: revisado (24/10) · la persona mediadora ayuda, no decide */}
     <p>No hubo acuerdo. Una persona mediadora revisa con ustedes las fotos de entrada y salida y les ayuda a buscar un acuerdo sobre el reparto.</p>
     </VerMas>

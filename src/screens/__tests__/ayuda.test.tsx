@@ -33,7 +33,8 @@ describe('ayuda mínima', () => {
   it('la pantalla abre el recorrido que ya existe y enlaza los documentos', () => {
     const h = renderToStaticMarkup(<Ayuda u={U} />)
     expect(h).toContain('Ver el recorrido')
-    expect(h).toContain(NOTA_AYUDA)
+    expect(h).toContain('Pendiente de revisión legal antes de producción.')
+    expect(h).toContain('Las respuestas copian textos que ya están en la app y enlazan los documentos vigentes.')
     expect(h).toContain('¿Lockumi es un seguro?')
     expect(h).toContain('href="/terminos"')
     expect(h).toContain('href="#/terminos"')

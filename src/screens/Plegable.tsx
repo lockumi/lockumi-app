@@ -28,3 +28,19 @@ export function VerMas({ children, etiqueta = 'Ver detalles' }: { children: Reac
     <div className="cp-completo" id={id} role="region" aria-label={etiqueta} hidden={!abierto}>{children}</div>
   </div>
 }
+
+/** Primera oración a la vista; el resto, en «Ver detalles» o «Ver más». `completo` (imprimir) deja el párrafo entero, sin botón. */
+const CORTE_FRASE = /\. (?=\p{Lu})/u
+export function TextoClave({ texto, etiqueta = 'Ver detalles', className, completo = false, como: Tag = 'p', role }: {
+  texto: string; etiqueta?: string; className?: string; completo?: boolean; como?: 'p' | 'span'; role?: string
+}) {
+  const m = texto.match(CORTE_FRASE)
+  if (completo || !m || m.index === undefined) return <Tag className={className} role={role}>{texto}</Tag>
+  const clave = texto.slice(0, m.index + 1)
+  const resto = texto.slice(m.index + 2)
+  if (!resto) return <Tag className={className} role={role}>{texto}</Tag>
+  return <>
+    <Tag className={className} role={role}>{clave}</Tag>
+    <VerMas etiqueta={etiqueta}><Tag className={className}>{resto}</Tag></VerMas>
+  </>
+}

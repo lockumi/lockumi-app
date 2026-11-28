@@ -186,7 +186,9 @@ const SOLOS_C = 'Ni el dueño ni el inquilino pueden tomarlo solos. Lockumi mane
 describe('8) Legal 3:34: contrato y «En curso» de C con el texto de Legal; el aviso del pago no cambia', () => {
   it('la constante es la de Legal, palabra por palabra', () => { expect(D.TEXTO_SOLOS_DOS).toBe(SOLOS_C) })
   it('contrato de C: el texto de Legal y, después, quién ejecuta el reparto', () => {
-    expect(renderToStaticMarkup(<ContratoDoc a={A()} completo />)).toContain(`El depósito queda guardado hasta el final. ${SOLOS_C} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`)
+    const html = renderToStaticMarkup(<ContratoDoc a={A()} completo />)
+    expect(html).toContain('El depósito queda guardado hasta el final.')
+    expect(html).toContain(`${SOLOS_C} Si hay un reclamo, el reparto que acuerden o que se registre en la mediación lo ejecuta en la red de prueba la cuenta de Lockumi que resuelve disputas.`)
   })
   it('«En curso» de C', () => {
     expect(renderToStaticMarkup(<EnCurso a={A({ estado: 'en_curso' })} rol="inquilino" />)).toContain(`El depósito sigue guardado. ${SOLOS_C}</p>`)

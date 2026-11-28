@@ -21,6 +21,8 @@ import { store, activarServidor } from '../store'
 import { modoServidor } from '../servidor/config'
 /** Primera letra en minúscula, sin tocar el resto («cuenta de Lockumi» conserva la L). */
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+const HOJA_RED_INTRO = 'Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.'
+const CORTE_RED = HOJA_RED_INTRO.indexOf('. ') + 1
 import { TOPE_USDC, MONTO_MAX_USDC, montoValido, mensajeSaldoPropio } from '../services/solo'
 import { conectar, saldoPropio, hayFreighter, hayCavos, NOMBRE_FIRMA, type Firma } from '../services/cuentaPropia'
 import { abreviar } from '../services/billetera'
@@ -334,8 +336,9 @@ export function Crear({ u }: { u: Usuario }) {
       <div className="na-hoja__texto">
         {/* LEGAL: revisado (25/10, lista de Legal). Hoja «Red de prueba» 1.5 (borrador): 1.er párrafo = ⓘ de la píldora propuesto por Legal; el resto, versión corta del texto 1.4 con los cambios pedidos. */}
         {info === 'red' && <>
-          <p>Esta demo funciona en la red de prueba (testnet) de Stellar. Los tokens no tienen valor y la red se reinicia de vez en cuando. No uses la red principal ni envíes dinero real.</p>
+          <p>{HOJA_RED_INTRO.slice(0, CORTE_RED)}</p>
           <VerMas etiqueta="Ver más">
+          <p>{HOJA_RED_INTRO.slice(CORTE_RED + 1)}</p>
           {/* LEGAL: revisado (25/10, lista de Legal) · hoja de «Invitar a la otra persona» (C), texto exacto de Legal */}
           {invitar ? <>
             <p>Tú eres el dueño y la persona que invitas es el inquilino. Cada uno entra con su propia cuenta y firma por sí mismo.</p>
@@ -354,8 +357,8 @@ export function Crear({ u }: { u: Usuario }) {
           </VerMas></>}
         {/* LEGAL: revisado (25/10, lista de Legal). Hoja «USDC de prueba» 1.5 (borrador): base = ⓘ propuesto por Legal, más billeteras (Cavos o Freighter) y «hasta tu saldo». */}
         {info === 'usdc' && <>
-          <p>El USDC de prueba no es dinero real y no tiene valor. Tienes dos opciones:</p>
-          <VerMas etiqueta="Ver más"><ul>
+          <p>El USDC de prueba no es dinero real y no tiene valor.</p>
+          <VerMas etiqueta="Ver más"><p>Tienes dos opciones:</p><ul>
             <li><strong>USDC de prueba de Lockumi:</strong> USDC de prueba que te da Lockumi, sin valor, hasta {TOPE_USDC}{dosPersonas && ' USDC de prueba'}.</li>
             <li><strong>Usar mi propio USDC de prueba:</strong> con tu billetera de Lockumi (Cavos), Lockumi te envía hasta {TOPE_USDC} USDC de prueba de su propia cuenta, sin valor. Con Freighter, usas el que ya tengas, hasta {MONTO_MAX_USDC.toLocaleString('es-CR')} USDC de prueba. Si tu cuenta de Cavos no está activa en la red de prueba, Lockumi paga su reserva y tú firmas la habilitación del USDC de prueba (trustline). Firmas tú el depósito.</li>
           </ul></VerMas></>}
