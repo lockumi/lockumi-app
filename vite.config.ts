@@ -20,5 +20,7 @@ export default defineConfig(({ mode }) => ({
   // api/ y supabase/migrations/; api/_lib/guarda-correos.ts).
   // Paso 19: el build falla si se enciende la reputación sin la fecha real de encendido (src/legal/encendido.ts).
   plugins: [react(), guardaCorreos(process.env, archivosGuarda), guardaEncendido({ ...loadEnv(mode, process.cwd(), ''), ...process.env })],
+  // Para src/servidor/config.ts: en el build de producción de Vercel el plazo de reclamos es siempre de 7 días.
+  define: { __ENTORNO_VERCEL__: JSON.stringify(process.env.VERCEL_ENV ?? '') },
   base: '/', // absoluta: la app también se sirve desde rutas como /terminos (ver vercel.json)
 }))

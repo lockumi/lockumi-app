@@ -30,9 +30,16 @@ describe('interruptor VITE_DOS_PERSONAS', () => {
     const m = calcularModos({ ...PROD, ...SUPA, VITE_DOS_PERSONAS: '1' })
     expect(m).toMatchObject({ servidor: false, prueba: true, video: true, escrowReal: true, dosPersonas: true })
   })
-  it('el interruptor solo vale con Supabase y con la prueba completa', () => {
+  it('el interruptor solo vale con Supabase y con la red de prueba (ya NO depende de VITE_PRUEBA_COMPLETA)', () => {
     expect(calcularModos({ ...PROD, VITE_DOS_PERSONAS: '1' }).dosPersonas).toBe(false)
-    expect(calcularModos({ ...SUPA, VITE_TRUSTLESS: '1', VITE_DOS_PERSONAS: '1' }).dosPersonas).toBe(false)
+    expect(calcularModos({ ...SUPA, VITE_PRUEBA_COMPLETA: '1', VITE_DOS_PERSONAS: '1' }).dosPersonas).toBe(false)
+    const sinPC = calcularModos({ ...SUPA, VITE_TRUSTLESS: '1', VITE_DOS_PERSONAS: '1' })
+    expect(sinPC).toMatchObject({ servidor: false, prueba: true, escrowReal: true, dosPersonas: true })
+    expect(calcularModos({ ...SUPA, VITE_TRUSTLESS: '1', VITE_DOS_PERSONAS: '1', VITE_PRUEBA_COMPLETA: '0' }).dosPersonas).toBe(true)
+  })
+  it('sin VITE_DOS_PERSONAS no hay dos personas, con o sin la prueba completa', () => {
+    expect(calcularModos({ ...SUPA, VITE_TRUSTLESS: '1' }).dosPersonas).toBe(false)
+    expect(calcularModos({ ...SUPA, VITE_TRUSTLESS: '1', VITE_PRUEBA_COMPLETA: '1' }).dosPersonas).toBe(false)
   })
   it('cada alquiler elige su modo: el de dos personas va al servidor (con Trustless Work); el de una persona, como hoy', () => {
     const m = calcularModos({ ...PROD, ...SUPA, VITE_DOS_PERSONAS: '1' })
