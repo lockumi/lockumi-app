@@ -1935,17 +1935,18 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .firma-breve .estado-firma{padding:4px 8px}
   .firma-breve p{font-size:14px;line-height:18px;margin:0}
   .firma-breve .boton--grande,.cont:has(.ct-resumen) .boton--secundario{min-height:40px}
-  .cont:has(.en-curso) .h-lugar{font-size:20px;margin:0 0 2px}
-  .cont:has(.en-curso) .paso-cab{margin-bottom:2px}
-  .en-curso>*+*{margin-top:4px}
-  .en-curso p{font-size:14px;line-height:18px}
-  .en-curso .anillo__aro{width:56px;height:56px}
+  .cont:has(.en-curso) .h-lugar{font-size:18px;margin:0}
+  .cont:has(.en-curso) .paso-cab{margin-bottom:0}
+  .en-curso>*+*{margin-top:2px}
+  .en-curso p{font-size:13px;line-height:16px}
+  .en-curso .anillo__aro{width:52px;height:52px}
   .en-curso .anillo figcaption{font-size:13px;line-height:16px}
-  .en-curso h2{font-size:16px;line-height:20px}
-  .en-curso .monto{font-size:22px}
-  .en-curso .boton--grande{min-height:44px}
-  .cont:has(.en-curso) .detalle__principal>*+*{margin-top:6px}
+  .en-curso h2{font-size:16px;line-height:18px}
+  .en-curso .monto{font-size:20px}
+  .en-curso .boton--grande{min-height:40px}
+  .cont:has(.en-curso) .detalle__principal>*+*{margin-top:4px}
   .cont:has(.en-curso) .turno{padding:6px 10px;gap:2px}
+  .cont:has(.en-curso) .turno p:first-child{font-size:15px;line-height:18px}
   .cont:has(.reclamo-vista) .volver{margin:0}
   .cont:has(.reclamo-vista) .h-lugar{font-size:18px;line-height:1.1;margin:0}
   .cont:has(.reclamo-vista) .paso-cab{margin-bottom:2px}
@@ -1973,4 +1974,8 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .na:has(.campo__error) .titulo{margin-bottom:2px}
   .app-cuerpo>.cont.na:has(.campo__error){padding-top:12px}
   .na:has(.campo__error) .na-fechas2 .na-entrada{min-height:60px;padding:6px 10px}
+}
+@media (min-width:1024px){
+  .avisos-centro{justify-items:start}
+  .avisos-centro h1,.avisos-centro__lista,.avisos-centro__vacio{width:min(100%,720px);max-width:720px;justify-self:start}
 }
