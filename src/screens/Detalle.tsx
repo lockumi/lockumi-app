@@ -110,7 +110,7 @@ export function Contrato({ a, rol }: P) {
     {/* C: nota «Si hay un reclamo» (Legal, 25/10, 2:53 a. m.; aprobada a las 3:16 a. m.), en el recuadro informativo de la devolución automática */}
     {esDosPersonas(a) && rol === 'inquilino' && !a.contrato.firmas.inquilino && <div className="auto-dos" role="note" aria-label={TITULO_RECLAMO_DOS}><p><strong>{TITULO_RECLAMO_DOS}</strong></p><p>{TEXTO_RECLAMO_DOS}</p></div>}
     <TarjetaContrato a={a} integro={integro} onAlternar={() => setIntegro(v => !v)} />
-    {modoPrueba && <p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p>}
+    {modoPrueba && <VerMas><p className="nota">El dueño es una cuenta de Lockumi para la demo: por eso no te pedimos su correo. Firma solo después de ti.</p></VerMas>}
     {/* Firmante (26/10): en C, si esta pestaña perdió la sesión, primero «Entrar de nuevo» (después se paga con la billetera).
         U4 (27/10): también el dueño, solo si al alquiler le falta su cuenta Stellar (sesionFirma.ts) */}
     <ConSesion activo={pideSesionAntesDeFirmar(a, rol)}>
@@ -132,11 +132,12 @@ export function Pago({ a, rol }: P) {
   if (modoSolo) return <PagoReal a={a} rol={rol} />
   return <PagoSimulado a={a} rol={rol} />
 }
-/** Parte `frase` (ya está dentro de `texto`) y el resto, sin cambiar palabras. */
-function partirNota(texto: string, frase: string) {
+/** Parte `frase` (ya está dentro de `texto`) y el resto, sin cambiar palabras.
+ *  `entera`: el detalle repite la oración completa desde su inicio (la frase visible no se recorta). */
+function partirNota(texto: string, frase: string, entera = false) {
   const i = texto.indexOf(frase)
   const visible = i < 0 ? texto : texto.slice(i, i + frase.length)
-  const resto = (i < 0 ? '' : texto.slice(0, i) + texto.slice(i + frase.length)).replace(/ {2,}/g, ' ').trim()
+  const resto = entera ? texto : (i < 0 ? '' : texto.slice(0, i) + texto.slice(i + frase.length)).replace(/ {2,}/g, ' ').trim()
   return { visible, resto }
 }
 
@@ -157,8 +158,8 @@ function PagoSimulado({ a, rol }: P) {
   const nota = !dos ? null
     : partirNota(`${TEXTO_PAGO_DOS} ${TEXTO_ESCROW_DOS}`, 'Son USDC de prueba, sin valor.')
   const notaInquilino = dos ? nota
-    : escrowReal && usaCuentaPropia(a) ? partirNota(`Son USDC de prueba, sin valor, de tu cuenta (${abreviar(a.red!.inquilino!)}). ${a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.`, 'Son USDC de prueba, sin valor')
-    : escrowReal ? partirNota('Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.', 'Son USDC de prueba, sin valor')
+    : escrowReal && usaCuentaPropia(a) ? partirNota(`Son USDC de prueba, sin valor, de tu cuenta (${abreviar(a.red!.inquilino!)}). ${a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.`, 'Son USDC de prueba, sin valor', true)
+    : escrowReal ? partirNota('Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.', 'Son USDC de prueba, sin valor', true)
     : (!modoReal || modoVideo) ? partirNota('Es una prueba: no se cobra nada.', 'Es una prueba: no se cobra nada.')
     : null
   return <section className={'pila' + (etapa > 0 ? ' pago-espera' : '')}>{etapa > 0 && <IlustracionPendiente />}
@@ -287,8 +288,8 @@ export function EnCurso({ a }: P) {
   return <section className="pila en-curso"><div className="en-curso__top"><AnilloDias a={a} /><div className="en-curso__datos"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
     <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div></div></div>
     {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
-    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
-    <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
+    <VerMas><p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
+    <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p></VerMas>
     <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={() => void acciones.iniciarSalida(a)}>Empezar fotos de salida</button>
   </section>
 }

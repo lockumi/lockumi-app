@@ -60,9 +60,8 @@ describe('B.5 Anexo 6-A al crear el alquiler', () => {
     expect(h.indexOf('id="acepto-anexo"')).toBeGreaterThan(h.indexOf('hidden=""'))
     expect(h.indexOf('Ver más')).toBeGreaterThan(h.indexOf('id="anexo-b-0"'))
     expect(h.indexOf('id="acepto-anexo"')).toBeGreaterThan(h.indexOf('Ver más'))
-    const nota = h.slice(h.indexOf('Ver detalles'), h.indexOf('Ver más'))
-    expect(nota).toContain('hidden=""')
-    expect(nota).toContain('No aplica a la vivienda de interés social')
+    expect(oculto).toContain('No aplica a la vivienda de interés social')
+    expect(oculto.indexOf('No aplica a la vivienda de interés social')).toBeLessThan(oculto.indexOf('No se cobra (desgaste normal y paso del tiempo)'))
   })
   it('registro del anexo con fecha y reparaciones marcadas', () => {
     expect(reparacionesDe({ acepta: true, reparaciones: ['Cambio de bombillos'], otra: '  Pintar la verja ' })).toEqual(['Cambio de bombillos', 'Pintar la verja'])

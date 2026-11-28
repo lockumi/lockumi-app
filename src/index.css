@@ -1800,6 +1800,8 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
 
 @media (min-width:960px){
   .detalle__lado,.pasos-lista{top:92px}
+  /* La lista y las tarjetas de la columna derecha dejan de ser sticky: si las dos se fijan al mismo borde, las tarjetas tapan los pasos. */
+  .pasos-lista,.detalle__lado{position:static;top:auto;max-height:none;overflow:visible}
 }
 @media (min-width:1024px){
   .en-curso .anillo--plano .anillo__aro{width:112px;height:112px}
@@ -1973,4 +1975,8 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota{margin-top:0}
   .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota + .plegable--ver{margin-top:0}
   .detalle:has(#t-comp) #accion-actual:has(> .pila > .nota + .plegable--ver) > .pila > .nota + .plegable--ver > .cp-abrir{margin-top:0}
+}
+@media (max-width:767px){
+  .reclamo-vista .pie-paso{flex-direction:column;margin-top:var(--s4)}
+  .reclamo-vista .pie-paso .boton{width:100%;min-width:0;min-height:48px;padding:0 16px;white-space:nowrap}
 }
