@@ -155,8 +155,8 @@ function PagoSimulado({ a, rol }: P) {
     {rol === 'inquilino' ? <>
       {/* C (Legal, 25/10, 3:16 a. m.): la línea del pago y, después, la del escrow; sin «nadie puede sacarlo solo» */}
       {etapa === 0 && <>{dos ? <p className="nota">{TEXTO_PAGO_DOS} {TEXTO_ESCROW_DOS}</p>
-        : escrowReal && usaCuentaPropia(a) ? <VerMas><p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p></VerMas>
-        : escrowReal ? <VerMas><p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p></VerMas>
+        : escrowReal && usaCuentaPropia(a) ? <p className="nota">Son USDC de prueba, sin valor, de tu cuenta ({abreviar(a.red!.inquilino!)}). {a.red!.firma === 'freighter' ? 'Freighter' : 'Tu cuenta Lockumi'} te pedirá confirmar el depósito; después quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
+        : escrowReal ? <p className="nota">Son USDC de prueba, sin valor: Lockumi los pone en tu cuenta de prueba y quedan bloqueados en una cuenta segura de la red de prueba. Ni el dueño ni el inquilino pueden sacarlos solos.</p>
         : (!modoReal || modoVideo) && <p className="nota">Es una prueba: no se cobra nada.</p>}</>}
       {/* Firmante (26/10): el error de firma o de sesión (con sesión cerrada, «Entrar de nuevo») */}
       {esTextoNoFirmante(p.err) || esTextoSinSesion(p.err) ? <ErrorPago m={p.err} /> : p.error}
@@ -275,8 +275,8 @@ export function EnCurso({ a }: P) {
   return <section className="pila en-curso"><div className="en-curso__top"><AnilloDias a={a} /><div className="en-curso__datos"><span className="chip chip--exito"><Icono id="i-candado" /> Depósito guardado</span>
     <h2>Alquiler en curso</h2><div className="monto">{usd(a.monto)}</div></div></div>
     {/* LEGAL: revisado (24/10). C: aprobado por Legal (25/10, 3:34 a. m.) */}
-    <VerMas><p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
-    <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p></VerMas>
+    <p>Del {fecha(a.inicio)} al {fecha(a.fin)}. {esDosPersonas(a) ? `El depósito sigue guardado. ${TEXTO_SOLOS_DOS}` : 'El depósito sigue guardado y ni el dueño ni el inquilino pueden tomarlo solos.'}</p>
+    <p className="nota">Cuando el inquilino entregue el lugar, cualquiera de los dos puede empezar las fotos de salida.</p>
     <button type="button" className="boton boton--primario boton--ancho boton--grande" onClick={() => void acciones.iniciarSalida(a)}>Empezar fotos de salida</button>
   </section>
 }
@@ -478,6 +478,10 @@ export function Cerrado({ a, rol }: P) {
     propuesta: 'Se aplicó la propuesta automática.',   // LEGAL: revisado (24/10) · B.10 (título)
     simulacion: 'El reparto se eligió con «Resolver el reclamo (simulación)».',   // LEGAL: revisado (25/10, lista de Legal) · B.14
     devuelto: escrowReal ? 'El dueño de prueba tocó «Todo bien, devolver». Lockumi devolvió todo el depósito en la red de prueba.' : 'El dueño tocó «Todo bien, devolver».' }[r.via]   // LEGAL: revisado (25/10, lista de Legal)
+  const textoCierre = auto2 ? TEXTO_CERRADO_AUTO : dosAceptan ? TEXTO_ACEPTARON_DOS : via
+  const corteCierre = textoCierre.indexOf('. ')
+  const claveCierre = corteCierre < 0 ? textoCierre : textoCierre.slice(0, corteCierre + 1)
+  const restoCierre = corteCierre < 0 ? '' : textoCierre.slice(corteCierre + 2)
   return <section className="pila cerrado">
     <span className="chip chip--exito"><Icono id="i-check" /> Terminado</span>
     <h2>¡Depósito devuelto!</h2>
@@ -486,7 +490,8 @@ export function Cerrado({ a, rol }: P) {
       : auto2 || dev2 ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(0, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{montoPrueba(r.dueno)}</strong></li></ul>
       : esDosPersonas(a) ? <ul className="lista"><li><span>Inquilino</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaInquilino)}</strong></li><li><span>Dueño</span><strong>{llegaPrueba(repartoCentimos(r.dueno, r.inquilino).llegaDueno)}</strong></li></ul>
       : <ul className="lista"><li><span>Inquilino</span><strong>{usdExacto(r.inquilino)}</strong></li><li><span>Dueño</span><strong>{usdExacto(r.dueno)}</strong></li></ul>}{/* una persona: r ya es lo que llegó (escrow.ts) */}
-    <VerMas><p>{auto2 ? TEXTO_CERRADO_AUTO : dosAceptan ? TEXTO_ACEPTARON_DOS : via}</p></VerMas>
+    <p>{claveCierre}</p>
+    {restoCierre && <VerMas><p>{restoCierre}</p></VerMas>}
     <p className="nota">{fechaHora(r.fecha)}</p>
     {pruebaCompleta() && r.via === 'simulacion' && <ResueltoSimulacion a={a} />}
     {pruebaCompleta() && <GuardarDatosMediacion a={a} rol={rol} />}{/* paso16-unido: pedir guardar los datos (si no, se borran a los 30 días) */}

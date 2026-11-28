@@ -1913,18 +1913,18 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
 }
 @media (max-width:767px) and (max-height:700px){
   .app-cuerpo>.cont:has(.ct-resumen),
-  .app-cuerpo>.cont:has(.reclamo-vista){padding-top:4px}
+  .app-cuerpo>.cont:has(.reclamo-vista){padding-top:0}
   .cont:has(.ct-resumen) .volver{margin:0}
-  .cont:has(.ct-resumen) .paso-cab{margin-bottom:2px}
-  .cont:has(.ct-resumen) .detalle{margin-top:2px;gap:2px}
-  .cont:has(.ct-resumen) .tarjeta{padding:8px}
-  .ct-resumen{gap:2px}
+  .cont:has(.ct-resumen) .paso-cab{margin-bottom:0}
+  .cont:has(.ct-resumen) .detalle{margin-top:0;gap:0}
+  .cont:has(.ct-resumen) .tarjeta{padding:4px}
+  .ct-resumen{gap:0}
   .ct-resumen__hero{grid-template-columns:minmax(0,1fr)}
   .ct-resumen__casita{display:none}
-  .ct-resumen__bloques p,.ct-resumen__firmas li{padding:4px 8px}
-  .pila:has(.ct-resumen)>*+*{margin-top:4px}
-  .firma-breve>*+*{margin-top:2px}
-  .firma-breve .estado-firma{padding:4px 8px}
+  .ct-resumen__bloques p,.ct-resumen__firmas li{padding:2px 8px}
+  .pila:has(.ct-resumen)>*+*{margin-top:2px}
+  .firma-breve>*+*{margin-top:0}
+  .firma-breve .estado-firma{padding:2px 8px}
   .firma-breve p{margin:0}
   .firma-breve .boton--grande,.cont:has(.ct-resumen) .boton--secundario{min-height:40px}
   .app-cuerpo>.cont:has(.en-curso){padding-top:0}
@@ -1938,13 +1938,14 @@ body:has(.carga-cuenta) .aviso-red__extra{display:none}
   .cont:has(.en-curso) .turno{padding:6px 10px;gap:2px}
   .cont:has(.reclamo-vista) .volver{margin:0}
   .cont:has(.reclamo-vista) .h-lugar{margin:0}
-  .cont:has(.reclamo-vista) .paso-cab{margin-bottom:2px}
-  .cont:has(.reclamo-vista) .tarjeta{padding:8px}
-  .reclamo-vista>*+*{margin-top:4px}
+  .cont:has(.reclamo-vista) .paso-cab{margin-bottom:0}
+  .cont:has(.reclamo-vista) .detalle{margin-top:0;gap:0}
+  .cont:has(.reclamo-vista) .tarjeta{padding:4px}
+  .reclamo-vista>*+*{margin-top:2px}
   .reclamo-vista .fotos{margin:0}
   .reclamo-vista .fotos:has(>li:only-child){grid-template-columns:minmax(0,1fr)}
   .reclamo-vista .fotos img,
-  .reclamo-vista .fotos:has(>li:only-child) img{width:100%;height:148px;min-height:140px;max-height:160px;aspect-ratio:auto;object-fit:cover}
+  .reclamo-vista .fotos:has(>li:only-child) img{width:100%;height:140px;min-height:140px;max-height:160px;aspect-ratio:auto;object-fit:cover}
   .reclamo-vista .pie-paso .boton{min-height:40px;padding:0 10px}
   .reclamo-vista>p{margin-top:4px}
 }

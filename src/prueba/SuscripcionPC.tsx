@@ -3,13 +3,17 @@
 import { useRef } from 'react'
 import './prueba.css'
 import { Simulado } from '../ui'
+import { VerMas } from '../screens/Plegable'
 
 export function SuscripcionB8() {
   // LEGAL: revisado (24/10) · B.8
   return <section className="pila" aria-labelledby="t-b8">
     <h3 id="t-b8">Suscripción</h3>
-    <p><strong>En la demo, la app es gratis.</strong> No hay suscripción ni se cobra nada. En el servicio con dinero real, el inquilino pagaría una suscripción anual de USD 15 (monto provisional), que se informaría antes de firmar.</p>
+    <p><strong>En la demo, la app es gratis.</strong></p>
+    <VerMas etiqueta="Ver más">
+    <p>No hay suscripción ni se cobra nada. En el servicio con dinero real, el inquilino pagaría una suscripción anual de USD 15 (monto provisional), que se informaría antes de firmar.</p>
     <div className="cuadro-real"><strong>En el servicio con dinero real (no disponible en la demo):</strong> se pedirían dos autorizaciones aparte. Texto que se pediría al inquilino: «Si no pago la suscripción a tiempo, autorizo que se descuente solo de la parte del depósito que me toca a mí, al final y después de los reclamos del dueño. Lockumi me avisaría 7 días antes y me daría un recibo.» Texto que se pediría al dueño: «Acepto que, si el inquilino no paga la suscripción, se descuente solo de la parte del depósito que le toca al inquilino, al final y después de mis reclamos.»</div>
+    </VerMas>
   </section>
 }
 
